@@ -24,6 +24,7 @@ import {
   crearTrabajador,
   actualizarTrabajador,
 } from "@/lib/api/trabajadores.functions";
+import { PUESTOS, type TrabajadorPuesto } from "./imss";
 
 export type TrabajadorFormInitial = {
   id?: string;
@@ -37,7 +38,7 @@ export type TrabajadorFormInitial = {
   fecha_nacimiento?: string | null;
   sexo?: "masculino" | "femenino" | null;
   estado_civil?: string | null;
-  puesto?: string | null;
+  puesto?: TrabajadorPuesto | null;
   sueldo_diario?: number | null;
   tipo_contrato?: "eventual_urbano" | "eventual_campo" | "permanente" | null;
   fecha_ingreso?: string | null;
@@ -122,7 +123,7 @@ export function TrabajadorFormDialog({
       fecha_nacimiento: f.fecha_nacimiento || null,
       sexo: f.sexo ?? null,
       estado_civil: f.estado_civil?.trim() || null,
-      puesto: f.puesto?.trim() || null,
+      puesto: f.puesto ?? null,
       sueldo_diario:
         f.sueldo_diario == null || isNaN(Number(f.sueldo_diario))
           ? null
@@ -257,10 +258,21 @@ export function TrabajadorFormDialog({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Puesto</Label>
-                <Input
+                <Select
                   value={f.puesto ?? ""}
-                  onChange={(e) => set("puesto", e.target.value)}
-                />
+                  onValueChange={(v) => set("puesto", v as TrabajadorPuesto)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona puesto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PUESTOS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Sueldo diario (MXN)</Label>

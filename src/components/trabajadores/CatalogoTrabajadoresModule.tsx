@@ -52,7 +52,10 @@ import {
   DOCS_LABEL,
   IMSS_BADGE,
   IMSS_LABEL,
+  PUESTOS,
+  PUESTO_LABEL,
   mascararCurp,
+  type TrabajadorPuesto,
 } from "./imss";
 import { TrabajadorFormDialog } from "./TrabajadorFormDialog";
 import { TrabajadorDetalle } from "./TrabajadorDetalle";
@@ -62,7 +65,7 @@ type Row = {
   nombre_completo: string;
   curp: string | null;
   nss: string | null;
-  puesto: string | null;
+  puesto: TrabajadorPuesto | null;
   imss_estatus: "alta_activa" | "sin_alta" | "en_tramite" | "baja";
   estatus_autorizacion: "autorizado" | "pendiente";
   fecha_ingreso: string | null;
@@ -117,7 +120,7 @@ export function CatalogoTrabajadoresModule() {
 
   const [search, setSearch] = useState("");
   const [imssFiltro, setImssFiltro] = useState<"todos" | Row["imss_estatus"]>("todos");
-  const [puestoFiltro, setPuestoFiltro] = useState<string>("todos");
+  const [puestoFiltro, setPuestoFiltro] = useState<TrabajadorPuesto | "todos">("todos");
   const [tab, setTab] = useState<"todos" | "pendientes">("todos");
   const [creating, setCreating] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
@@ -140,11 +143,6 @@ export function CatalogoTrabajadoresModule() {
 
   const rows: Row[] = (listQ.data ?? []) as Row[];
 
-  const puestos = useMemo(() => {
-    const set = new Set<string>();
-    rows.forEach((r) => r.puesto && set.add(r.puesto));
-    return Array.from(set).sort();
-  }, [rows]);
 
   const stats = useMemo(() => {
     const total = rows.length;
@@ -250,15 +248,18 @@ export function CatalogoTrabajadoresModule() {
             <SelectItem value="baja">Baja</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={puestoFiltro} onValueChange={setPuestoFiltro}>
+        <Select
+          value={puestoFiltro}
+          onValueChange={(v) => setPuestoFiltro(v as TrabajadorPuesto | "todos")}
+        >
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los puestos</SelectItem>
-            {puestos.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
+            {PUESTOS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                {p.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -316,7 +317,7 @@ export function CatalogoTrabajadoresModule() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{r.puesto ?? "—"}</TableCell>
+                  <TableCell className="text-sm">{r.puesto ? PUESTO_LABEL[r.puesto] : "—"}</TableCell>
                   <TableCell>
                     <Badge className={IMSS_BADGE[r.imss_estatus]} variant="secondary">
                       {IMSS_LABEL[r.imss_estatus]}

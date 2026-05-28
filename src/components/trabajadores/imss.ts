@@ -29,3 +29,26 @@ export function mascararCurp(curp: string | null | undefined): string {
   if (curp.length < 8) return curp;
   return `${curp.slice(0, 4)}••••••${curp.slice(-4)}`;
 }
+
+export type TrabajadorPuesto =
+  | "oficial"
+  | "ayudante"
+  | "operador_maquinaria"
+  | "sobrestante"
+  | "residente"
+  | "auxiliar"
+  | "administrativo";
+
+export const PUESTOS: { value: TrabajadorPuesto; label: string }[] = [
+  { value: "oficial", label: "Oficial" },
+  { value: "ayudante", label: "Ayudante" },
+  { value: "operador_maquinaria", label: "Operador de maquinaria" },
+  { value: "sobrestante", label: "Sobrestante" },
+  { value: "residente", label: "Residente" },
+  { value: "auxiliar", label: "Auxiliar" },
+  { value: "administrativo", label: "Administrativo" },
+];
+
+export const PUESTO_LABEL: Record<TrabajadorPuesto, string> = Object.fromEntries(
+  PUESTOS.map((p) => [p.value, p.label]),
+) as Record<TrabajadorPuesto, string>;

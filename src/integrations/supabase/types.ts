@@ -419,7 +419,7 @@ export type Database = {
           imss_tipo_trabajador: string | null
           nombre_completo: string
           nss: string | null
-          puesto: string | null
+          puesto: Database["public"]["Enums"]["trabajador_puesto"] | null
           rfc: string | null
           sexo: Database["public"]["Enums"]["trabajador_sexo"] | null
           sueldo_diario: number | null
@@ -448,7 +448,7 @@ export type Database = {
           imss_tipo_trabajador?: string | null
           nombre_completo: string
           nss?: string | null
-          puesto?: string | null
+          puesto?: Database["public"]["Enums"]["trabajador_puesto"] | null
           rfc?: string | null
           sexo?: Database["public"]["Enums"]["trabajador_sexo"] | null
           sueldo_diario?: number | null
@@ -477,7 +477,7 @@ export type Database = {
           imss_tipo_trabajador?: string | null
           nombre_completo?: string
           nss?: string | null
-          puesto?: string | null
+          puesto?: Database["public"]["Enums"]["trabajador_puesto"] | null
           rfc?: string | null
           sexo?: Database["public"]["Enums"]["trabajador_sexo"] | null
           sueldo_diario?: number | null
@@ -596,6 +596,14 @@ export type Database = {
         | "sin_alta"
         | "en_tramite"
         | "baja"
+      trabajador_puesto:
+        | "oficial"
+        | "ayudante"
+        | "operador_maquinaria"
+        | "sobrestante"
+        | "residente"
+        | "auxiliar"
+        | "administrativo"
       trabajador_sexo: "masculino" | "femenino"
       trabajador_tipo_contrato:
         | "eventual_urbano"
@@ -753,6 +761,15 @@ export const Constants = {
         "sin_alta",
         "en_tramite",
         "baja",
+      ],
+      trabajador_puesto: [
+        "oficial",
+        "ayudante",
+        "operador_maquinaria",
+        "sobrestante",
+        "residente",
+        "auxiliar",
+        "administrativo",
       ],
       trabajador_sexo: ["masculino", "femenino"],
       trabajador_tipo_contrato: [

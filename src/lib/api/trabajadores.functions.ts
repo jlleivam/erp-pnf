@@ -7,6 +7,15 @@ const TIPO_CONTRATO = z.enum(["eventual_urbano", "eventual_campo", "permanente"]
 const IMSS_ESTATUS = z.enum(["alta_activa", "sin_alta", "en_tramite", "baja"]);
 const AUTORIZACION = z.enum(["autorizado", "pendiente"]);
 const DOC_TIPO = z.enum(["ine", "curp", "domicilio", "contrato"]);
+const PUESTO = z.enum([
+  "oficial",
+  "ayudante",
+  "operador_maquinaria",
+  "sobrestante",
+  "residente",
+  "auxiliar",
+  "administrativo",
+]);
 
 const trabajadorFieldsSchema = z.object({
   nombre_completo: z.string().trim().min(1).max(255),
@@ -25,7 +34,7 @@ const trabajadorFieldsSchema = z.object({
   fecha_nacimiento: z.string().nullable().optional(),
   sexo: SEXO.nullable().optional(),
   estado_civil: z.string().trim().max(50).nullable().optional(),
-  puesto: z.string().trim().max(100).nullable().optional(),
+  puesto: PUESTO.nullable().optional(),
   sueldo_diario: z.number().min(0).nullable().optional(),
   tipo_contrato: TIPO_CONTRATO.nullable().optional(),
   fecha_ingreso: z.string().nullable().optional(),
@@ -100,7 +109,7 @@ export const listTrabajadores = createServerFn({ method: "POST" })
       .object({
         search: z.string().trim().max(255).optional(),
         imss_estatus: IMSS_ESTATUS.optional(),
-        puesto: z.string().trim().max(100).optional(),
+        puesto: PUESTO.optional(),
         solo_pendientes: z.boolean().optional(),
       })
       .default({})

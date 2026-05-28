@@ -27,7 +27,7 @@ import {
   TrabajadorFormDialog,
   type TrabajadorFormInitial,
 } from "./TrabajadorFormDialog";
-import { IMSS_BADGE, IMSS_LABEL } from "./imss";
+import { IMSS_BADGE, IMSS_LABEL, PUESTO_LABEL } from "./imss";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -104,7 +104,7 @@ export function TrabajadorDetalle({
                 <SheetDescription>
                   {t && (
                     <span className="flex items-center gap-2 flex-wrap">
-                      {t.puesto && <Badge variant="secondary">{t.puesto}</Badge>}
+                      {t.puesto && <Badge variant="secondary">{PUESTO_LABEL[t.puesto as keyof typeof PUESTO_LABEL] ?? t.puesto}</Badge>}
                       <Badge className={IMSS_BADGE[t.imss_estatus]} variant="secondary">
                         {IMSS_LABEL[t.imss_estatus]}
                       </Badge>
@@ -187,7 +187,7 @@ export function TrabajadorDetalle({
                 <div>
                   <h4 className="text-sm font-medium mb-3">Datos laborales</h4>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <Field label="Puesto" value={t.puesto} />
+                    <Field label="Puesto" value={t.puesto ? (PUESTO_LABEL[t.puesto as keyof typeof PUESTO_LABEL] ?? t.puesto) : null} />
                     <Field
                       label="Sueldo diario"
                       value={t.sueldo_diario != null ? formatMXN(Number(t.sueldo_diario)) : null}
