@@ -65,7 +65,7 @@ type Row = {
   nombre_completo: string;
   curp: string | null;
   nss: string | null;
-  puesto: string | null;
+  puesto: TrabajadorPuesto | null;
   imss_estatus: "alta_activa" | "sin_alta" | "en_tramite" | "baja";
   estatus_autorizacion: "autorizado" | "pendiente";
   fecha_ingreso: string | null;
