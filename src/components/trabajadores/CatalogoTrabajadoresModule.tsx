@@ -248,15 +248,18 @@ export function CatalogoTrabajadoresModule() {
             <SelectItem value="baja">Baja</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={puestoFiltro} onValueChange={setPuestoFiltro}>
+        <Select
+          value={puestoFiltro}
+          onValueChange={(v) => setPuestoFiltro(v as TrabajadorPuesto | "todos")}
+        >
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los puestos</SelectItem>
-            {puestos.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
+            {PUESTOS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                {p.label}
               </SelectItem>
             ))}
           </SelectContent>
