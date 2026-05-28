@@ -120,7 +120,7 @@ export function CatalogoTrabajadoresModule() {
 
   const [search, setSearch] = useState("");
   const [imssFiltro, setImssFiltro] = useState<"todos" | Row["imss_estatus"]>("todos");
-  const [puestoFiltro, setPuestoFiltro] = useState<string>("todos");
+  const [puestoFiltro, setPuestoFiltro] = useState<TrabajadorPuesto | "todos">("todos");
   const [tab, setTab] = useState<"todos" | "pendientes">("todos");
   const [creating, setCreating] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
