@@ -174,7 +174,9 @@ export const crearTrabajador = createServerFn({ method: "POST" })
       if (dup) throw new Error(`Ya existe un trabajador con CURP ${curp}`);
     }
 
-    const estatus_autorizacion = canManage(roles) ? "autorizado" : "pendiente";
+    const estatus_autorizacion: "autorizado" | "pendiente" = canManage(roles)
+      ? "autorizado"
+      : "pendiente";
 
     const insertPayload = {
       company_id: companyId,
