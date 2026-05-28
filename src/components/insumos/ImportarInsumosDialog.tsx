@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import * as XLSX from "xlsx";
+
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -55,8 +55,8 @@ export function ImportarInsumosDialog({
     if (!b) reset();
     onOpenChange(b);
   }
-
-  function descargarPlantilla() {
+  async function descargarPlantilla() {
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.aoa_to_sheet([
       ["nombre", "unidad", "categoría"],
       ["Cemento Portland 50kg", "PZA", "Materiales"],
@@ -68,7 +68,8 @@ export function ImportarInsumosDialog({
     XLSX.writeFile(wb, "plantilla-insumos.xlsx");
   }
 
-  function descargarErrores() {
+  async function descargarErrores() {
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.aoa_to_sheet([
       ["Fila", "nombre", "unidad", "categoría", "Error"],
       ...errores.map((e) => [e.row, e.nombre, e.unidad, e.categoria, e.error]),
@@ -78,6 +79,7 @@ export function ImportarInsumosDialog({
     XLSX.utils.book_append_sheet(wb, ws, "Errores");
     XLSX.writeFile(wb, "insumos-con-errores.xlsx");
   }
+  }
 
   async function handleFile(file: File) {
     if (file.size > 2 * 1024 * 1024) {
@@ -86,6 +88,7 @@ export function ImportarInsumosDialog({
     }
     setParsing(true);
     try {
+      const XLSX = await import("xlsx");
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
