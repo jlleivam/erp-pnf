@@ -125,10 +125,10 @@ export function AppShell() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-2">
-            <Building2 className="size-5 text-muted-foreground md:hidden" />
-            <span className="text-sm font-medium text-foreground md:hidden">ERP PNF</span>
-          </div>
+          <Link to="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Building2 className="size-5 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">ERP PNF</span>
+          </Link>
 
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm" className="gap-2" title="Configuración de la empresa">
