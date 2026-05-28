@@ -199,8 +199,6 @@ function NuevaObra() {
             </div>
             <div>
               <Label htmlFor="ft">Fecha de terminación</Label>
-            <div>
-              <Label htmlFor="ft">Fecha de terminación</Label>
               <Input id="ft" type="date" value={fechaTerm} onChange={(e) => setFechaTerm(e.target.value)} />
             </div>
             <div className="sm:col-span-2">
@@ -218,7 +216,6 @@ function NuevaObra() {
           </div>
           <div className="flex justify-between">
 
-          <div className="flex justify-between">
             <Button variant="ghost" onClick={() => navigate({ to: "/app" })}>Cancelar</Button>
             <Button onClick={goStep1}>Continuar</Button>
           </div>
