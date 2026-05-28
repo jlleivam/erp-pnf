@@ -1,38 +1,84 @@
-# Mostrar módulos en el dashboard principal (`/app`)
+# Módulo Catálogo de Insumos
 
-Hoy `/app` solo muestra obras. Agregaré, debajo de la lista de obras, una vista de "Módulos disponibles" filtrada por el rol del usuario, para que cada quien vea de un vistazo a qué tiene acceso (aunque la mayoría sean placeholders "Próximamente").
+Crear el módulo completo en `/app/obras/:obraId/catalogos` y `/app/admin/catalogos` (mismo componente reutilizado), reemplazando los placeholders actuales.
 
-## Cómo se verá
+## 1. Base de datos (migración Supabase)
 
-Estructura nueva en `/app`, en este orden:
+Una sola migración con:
 
-1. **Obras** (lo que ya existe, sin cambios)
-2. **Administración** — tarjetas con los 13 módulos administrativos (solo visible para Director y Administrativo)
-3. **Configuración** — tarjetas con Facturación, Equipo, Otras (solo Director)
+**Enum**
+- `insumo_unidad`: KG, M2, M3, ML, PZA, LT, TON
+- `insumo_estatus`: autorizado, pendiente
 
-Cada tarjeta de módulo:
-- Ícono + nombre del módulo
-- Badge "Próximamente" en gris para los placeholder, sin badge para los que ya funcionan (ej. Clientes, Equipo)
-- Hover sutil; click navega al módulo (o muestra la página placeholder que ya existe)
-- Grid responsivo: 2 col móvil, 3 col tablet, 4 col desktop
+**Tablas (todas con RLS scoping por `company_id` vía `current_company_id()` + `is_director_of()` para mutaciones sensibles)**
 
-Los módulos *de obra* (Estimaciones, Nómina, etc.) NO se incluyen aquí porque dependen de una obra específica — siguen viviendo dentro del detalle de cada obra.
+- `insumo_categorias` — id, company_id, nombre, created_at
+  - SELECT: misma company
+  - ALL: solo director de la company
+- `insumos` — id, company_id, categoria_id (FK → insumo_categorias), nombre, unidad, estatus (default 'pendiente'), solicitado_por (uuid), autorizado_por (uuid null), autorizado_at (timestamptz null), created_at
+  - SELECT: misma company
+  - INSERT: usuarios de la company (solicitar)
+  - UPDATE/DELETE: director (autorizar/rechazar)
+- `insumos_historial_precios` — id, insumo_id (FK), precio_unitario numeric, proveedor text, fecha date, obra_id uuid, cantidad numeric, created_at
+  - SELECT: misma company (vía join a insumos)
+  - INSERT: futura integración órdenes de compra (por ahora director)
 
-## Filtrado por rol
+Cada `CREATE TABLE` con sus `GRANT` (authenticated + service_role), `ENABLE RLS`, y políticas.
 
-- **Director**: ve Obras + Administración + Configuración
-- **Administrativo**: ve Obras + Administración
-- **Residente / Auxiliar / Supervisor**: solo ven Obras (igual que hoy)
+## 2. Server functions (`src/lib/api/insumos.functions.ts`)
 
-Respeta el "Asumir rol" del header (usa `useAuthStore` con `assumedRole` ya implementado).
+Todas con `requireSupabaseAuth`:
 
-## Cambios técnicos
+- `listInsumos({ estatus?, categoriaId?, unidad?, search? })` — lista insumos de la company del usuario, con join a `insumo_categorias` y subselect del último precio + proveedor desde `insumos_historial_precios` ordenado por fecha DESC.
+- `listCategorias()` — categorías de la company.
+- `getMetricasInsumos()` — totales: insumos, categorías, con historial, pendientes.
+- `solicitarInsumo({ nombre, unidad, categoriaId })` — inserta con estatus 'pendiente', `solicitado_por = userId`.
+- `autorizarInsumo({ id })` — solo director: estatus='autorizado', autorizado_por=userId, autorizado_at=now().
+- `rechazarInsumo({ id })` — solo director: delete del insumo pendiente.
+- `crearCategoria({ nombre })` / `editarCategoria({ id, nombre })` / `eliminarCategoria({ id })` — solo director; eliminar valida que no haya insumos con esa categoría.
 
-- Editar `src/routes/_authenticated/app.index.tsx`:
-  - Mantener bloque actual de obras
-  - Agregar secciones nuevas debajo, condicionadas por rol
-  - Reusar la lista `ADMIN_MODULES` (extraerla a `src/lib/modules.ts` para compartir entre `AppShell` y dashboard)
-- Crear `src/lib/modules.ts` con las constantes de módulos (admin + configuración) e íconos lucide por módulo
-- `AppShell.tsx`: importar la lista desde el nuevo archivo (sin cambios de comportamiento)
+Verificación de director: leer `user_roles` por `userId + company_id` y comprobar role='director' (la RLS también lo respalda).
 
-Sin cambios de backend, base de datos ni lógica de negocio. Es puramente UI.
+## 3. UI
+
+### Componente único `CatalogoInsumosModule`
+Ubicación: `src/components/insumos/CatalogoInsumosModule.tsx`. Aceptado por ambas rutas (admin y obra).
+
+**Rutas a actualizar**
+- `src/routes/_authenticated/app.obras.$obraId.$.tsx`: si `slug === "catalogos"`, render `<CatalogoInsumosModule />` en lugar de placeholder.
+- `src/routes/_authenticated/app.admin.$.tsx`: idem para `catalogos`.
+
+**Layout (desktop-first, paleta primary #0f1e3d ya como token o se agrega a `styles.css`)**
+
+```
+Header: título "Catálogo de Insumos" + botones [Categorías] (director) [Solicitar insumo]
+Banner alerta: visible si hay pendientes y user es director
+Grid 4 cards métricas: Total insumos / Categorías / Con historial / Pendientes
+Toolbar: input búsqueda, Select categoría, Select unidad
+Tabs: [Autorizados (n)] [Pendientes (n) — solo director]
+  Tab Autorizados: Table cols Nombre | Unidad | Categoría (badge color) | Último precio | Proveedor | Acciones (📈 historial, ✏️ editar)
+  Tab Pendientes: Table cols Nombre | Unidad | Categoría | Solicitado por | Fecha | Acciones (Autorizar / Rechazar)
+```
+
+**Dialogs**
+- `SolicitarInsumoDialog`: form con nombre (Input), unidad (Select), categoría (Select dinámico). Submit → `solicitarInsumo` + invalidate queries + toast.
+- `CategoriasDialog` (director): lista categorías con inline edit/delete, input + botón agregar nueva.
+- `HistorialPreciosDialog`: tabla con fecha, precio, proveedor, cantidad, obra del insumo seleccionado (read-only por ahora).
+- `EditarInsumoDialog`: editar nombre, unidad, categoría.
+
+**Color de badge por categoría**: hash del id de categoría → uno de ~6 tonos del design system (no colores ad-hoc, usar tokens).
+
+**TanStack Query**: queryKeys `["insumos", filtros]`, `["insumo-categorias"]`, `["insumos-metricas"]`, `["insumo-historial", id]`. Invalidation tras cada mutación.
+
+## 4. Notas técnicas
+
+- Detección de director: `useAuthStore` → `isDirector(roles)`. Las queries de pendientes y los botones solo se montan si director.
+- Validación con Zod en `inputValidator` de cada server fn.
+- No se modifica `client.ts`, `types.ts` ni `config.toml`.
+- Se requiere también añadir token CSS `--primary` actualizado solo si la paleta actual difiere — primero reviso `styles.css` y si ya es navy oscuro se reutiliza; si no, se ajusta solamente la variable primary del tema actual.
+
+## 5. Orden de ejecución
+1. Migración Supabase (espera aprobación).
+2. Crear `insumos.functions.ts`.
+3. Crear componente y subcomponentes/dialogs.
+4. Actualizar las dos rutas splat para enrutar a `CatalogoInsumosModule`.
