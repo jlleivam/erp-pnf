@@ -348,17 +348,16 @@ export function CatalogoTrabajadoresModule() {
                           variant="ghost"
                           size="icon"
                           title="Autorizar"
-      {(creating || editing) && (
-        <TrabajadorFormDialog
-          open
-          canManage={canManage}
-          initial={editing ?? null}
-          onClose={() => {
-            setCreating(false);
-            setEditing(null);
-          }}
-        />
-      )}
+                          onClick={() => autM.mutate({ data: { id: r.id } })}
+                          disabled={autM.isPending}
+                          className="text-emerald-600 hover:text-emerald-700"
+                        >
+                          <CheckCircle2 className="size-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setEditing(r)}
                         title="Editar"
                       >
@@ -385,7 +384,7 @@ export function CatalogoTrabajadoresModule() {
         <TrabajadorFormDialog
           open
           canManage={canManage}
-          initial={editing as unknown as never}
+          initial={editing ?? null}
           onClose={() => {
             setCreating(false);
             setEditing(null);
