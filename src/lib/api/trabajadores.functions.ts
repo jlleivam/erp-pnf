@@ -34,7 +34,7 @@ const trabajadorFieldsSchema = z.object({
   fecha_nacimiento: z.string().nullable().optional(),
   sexo: SEXO.nullable().optional(),
   estado_civil: z.string().trim().max(50).nullable().optional(),
-  puesto: z.string().trim().max(100).nullable().optional(),
+  puesto: PUESTO.nullable().optional(),
   sueldo_diario: z.number().min(0).nullable().optional(),
   tipo_contrato: TIPO_CONTRATO.nullable().optional(),
   fecha_ingreso: z.string().nullable().optional(),
