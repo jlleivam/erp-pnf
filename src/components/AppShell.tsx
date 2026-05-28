@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Building2, LayoutDashboard, Users, Settings, LogOut, ChevronDown, HardHat } from "lucide-react";
+import { Building2, LayoutDashboard, Users, Settings, LogOut, ChevronDown, HardHat, UserCog } from "lucide-react";
 import { useAuthStore, isDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,14 @@ export function AppShell() {
             </p>
             <NavItem to="/app" exact label="Dashboard" icon={<LayoutDashboard className="size-4" />} active={pathname === "/app"} />
             <NavItem to="/app/clientes" label="Clientes" icon={<Users className="size-4" />} active={pathname.startsWith("/app/clientes")} />
+            {director && (
+              <NavItem
+                to="/app/equipo"
+                label="Equipo"
+                icon={<UserCog className="size-4" />}
+                active={pathname.startsWith("/app/equipo")}
+              />
+            )}
             {director && (
               <NavItem
                 to="/app/obras/nueva"
