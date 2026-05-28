@@ -3,7 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  AlertTriangle, BarChart3, Boxes, Check, FolderTree, Pencil, Plus, Search,
+import {
+  AlertTriangle, BarChart3, Boxes, Check, FileSpreadsheet, FolderTree, Pencil, Plus, Search,
   Tag, Trash2, TrendingUp, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
