@@ -37,7 +37,7 @@ export type TrabajadorFormInitial = {
   fecha_nacimiento?: string | null;
   sexo?: "masculino" | "femenino" | null;
   estado_civil?: string | null;
-  puesto?: string | null;
+  puesto?: TrabajadorPuesto | null;
   sueldo_diario?: number | null;
   tipo_contrato?: "eventual_urbano" | "eventual_campo" | "permanente" | null;
   fecha_ingreso?: string | null;
