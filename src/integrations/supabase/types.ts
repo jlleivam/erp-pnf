@@ -398,6 +398,131 @@ export type Database = {
           },
         ]
       }
+      trabajadores: {
+        Row: {
+          company_id: string
+          correo: string | null
+          creado_por: string | null
+          created_at: string
+          curp: string | null
+          direccion: string | null
+          estado_civil: string | null
+          estatus_autorizacion: Database["public"]["Enums"]["trabajador_autorizacion"]
+          fecha_baja: string | null
+          fecha_ingreso: string | null
+          fecha_nacimiento: string | null
+          id: string
+          imss_estatus: Database["public"]["Enums"]["trabajador_imss_estatus"]
+          imss_fecha_alta: string | null
+          imss_nss: string | null
+          imss_sbc: number | null
+          imss_tipo_trabajador: string | null
+          nombre_completo: string
+          nss: string | null
+          puesto: string | null
+          rfc: string | null
+          sexo: Database["public"]["Enums"]["trabajador_sexo"] | null
+          sueldo_diario: number | null
+          telefono: string | null
+          tipo_contrato:
+            | Database["public"]["Enums"]["trabajador_tipo_contrato"]
+            | null
+        }
+        Insert: {
+          company_id: string
+          correo?: string | null
+          creado_por?: string | null
+          created_at?: string
+          curp?: string | null
+          direccion?: string | null
+          estado_civil?: string | null
+          estatus_autorizacion?: Database["public"]["Enums"]["trabajador_autorizacion"]
+          fecha_baja?: string | null
+          fecha_ingreso?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          imss_estatus?: Database["public"]["Enums"]["trabajador_imss_estatus"]
+          imss_fecha_alta?: string | null
+          imss_nss?: string | null
+          imss_sbc?: number | null
+          imss_tipo_trabajador?: string | null
+          nombre_completo: string
+          nss?: string | null
+          puesto?: string | null
+          rfc?: string | null
+          sexo?: Database["public"]["Enums"]["trabajador_sexo"] | null
+          sueldo_diario?: number | null
+          telefono?: string | null
+          tipo_contrato?:
+            | Database["public"]["Enums"]["trabajador_tipo_contrato"]
+            | null
+        }
+        Update: {
+          company_id?: string
+          correo?: string | null
+          creado_por?: string | null
+          created_at?: string
+          curp?: string | null
+          direccion?: string | null
+          estado_civil?: string | null
+          estatus_autorizacion?: Database["public"]["Enums"]["trabajador_autorizacion"]
+          fecha_baja?: string | null
+          fecha_ingreso?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          imss_estatus?: Database["public"]["Enums"]["trabajador_imss_estatus"]
+          imss_fecha_alta?: string | null
+          imss_nss?: string | null
+          imss_sbc?: number | null
+          imss_tipo_trabajador?: string | null
+          nombre_completo?: string
+          nss?: string | null
+          puesto?: string | null
+          rfc?: string | null
+          sexo?: Database["public"]["Enums"]["trabajador_sexo"] | null
+          sueldo_diario?: number | null
+          telefono?: string | null
+          tipo_contrato?:
+            | Database["public"]["Enums"]["trabajador_tipo_contrato"]
+            | null
+        }
+        Relationships: []
+      }
+      trabajadores_documentos: {
+        Row: {
+          created_at: string
+          fecha_vencimiento: string | null
+          id: string
+          tipo: Database["public"]["Enums"]["trabajador_doc_tipo"]
+          trabajador_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          tipo: Database["public"]["Enums"]["trabajador_doc_tipo"]
+          trabajador_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          tipo?: Database["public"]["Enums"]["trabajador_doc_tipo"]
+          trabajador_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trabajadores_documentos_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string
@@ -464,6 +589,18 @@ export type Database = {
         | "vivienda_serie"
         | "urbanizacion"
       tipo_persona: "moral" | "fisica"
+      trabajador_autorizacion: "autorizado" | "pendiente"
+      trabajador_doc_tipo: "ine" | "curp" | "domicilio" | "contrato"
+      trabajador_imss_estatus:
+        | "alta_activa"
+        | "sin_alta"
+        | "en_tramite"
+        | "baja"
+      trabajador_sexo: "masculino" | "femenino"
+      trabajador_tipo_contrato:
+        | "eventual_urbano"
+        | "eventual_campo"
+        | "permanente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -609,6 +746,20 @@ export const Constants = {
         "urbanizacion",
       ],
       tipo_persona: ["moral", "fisica"],
+      trabajador_autorizacion: ["autorizado", "pendiente"],
+      trabajador_doc_tipo: ["ine", "curp", "domicilio", "contrato"],
+      trabajador_imss_estatus: [
+        "alta_activa",
+        "sin_alta",
+        "en_tramite",
+        "baja",
+      ],
+      trabajador_sexo: ["masculino", "femenino"],
+      trabajador_tipo_contrato: [
+        "eventual_urbano",
+        "eventual_campo",
+        "permanente",
+      ],
     },
   },
 } as const
