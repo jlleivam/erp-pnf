@@ -79,6 +79,115 @@ export type Database = {
         }
         Relationships: []
       }
+      insumo_categorias: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
+      insumos: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          categoria_id: string | null
+          company_id: string
+          created_at: string
+          estatus: Database["public"]["Enums"]["insumo_estatus"]
+          id: string
+          nombre: string
+          solicitado_por: string | null
+          unidad: Database["public"]["Enums"]["insumo_unidad"]
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          categoria_id?: string | null
+          company_id: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["insumo_estatus"]
+          id?: string
+          nombre: string
+          solicitado_por?: string | null
+          unidad: Database["public"]["Enums"]["insumo_unidad"]
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          categoria_id?: string | null
+          company_id?: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["insumo_estatus"]
+          id?: string
+          nombre?: string
+          solicitado_por?: string | null
+          unidad?: Database["public"]["Enums"]["insumo_unidad"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insumos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "insumo_categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insumos_historial_precios: {
+        Row: {
+          cantidad: number | null
+          created_at: string
+          fecha: string
+          id: string
+          insumo_id: string
+          obra_id: string | null
+          precio_unitario: number
+          proveedor: string | null
+        }
+        Insert: {
+          cantidad?: number | null
+          created_at?: string
+          fecha?: string
+          id?: string
+          insumo_id: string
+          obra_id?: string | null
+          precio_unitario: number
+          proveedor?: string | null
+        }
+        Update: {
+          cantidad?: number | null
+          created_at?: string
+          fecha?: string
+          id?: string
+          insumo_id?: string
+          obra_id?: string | null
+          precio_unitario?: number
+          proveedor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insumos_historial_precios_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_comisiones: {
         Row: {
           base_calculo: string
@@ -294,6 +403,8 @@ export type Database = {
         | "auxiliar"
         | "administrativo"
         | "supervisor"
+      insumo_estatus: "autorizado" | "pendiente"
+      insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON"
       tipo_obra:
         | "industrial"
         | "comercial"
@@ -436,6 +547,8 @@ export const Constants = {
         "administrativo",
         "supervisor",
       ],
+      insumo_estatus: ["autorizado", "pendiente"],
+      insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON"],
       tipo_obra: [
         "industrial",
         "comercial",
