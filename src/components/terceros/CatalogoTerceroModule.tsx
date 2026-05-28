@@ -125,7 +125,8 @@ export function CatalogoTerceroModule() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const rows: TerceroListRow[] = (listQ.data ?? []) as TerceroListRow[];
+  const rows: TerceroListRow[] = (listQ.data ?? []) as unknown as TerceroListRow[];
+
 
   const rowsWithStatus = useMemo(
     () =>
