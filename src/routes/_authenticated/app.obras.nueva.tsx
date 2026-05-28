@@ -57,10 +57,7 @@ function NuevaObra() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { roles, profile } = useAuthStore();
-
-  if (!isDirector(roles)) {
-    return <p className="text-sm text-destructive">Solo el Director puede crear obras.</p>;
-  }
+  const director = isDirector(roles);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
