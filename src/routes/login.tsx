@@ -78,7 +78,7 @@ function LoginPage() {
             <p className="text-sm text-center text-muted-foreground">
               ¿No tienes cuenta?{" "}
               <Link to="/onboarding" className="text-primary hover:underline">
-                Registra tu empresa
+                Registra tu usuario
               </Link>
             </p>
           </form>
