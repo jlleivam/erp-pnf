@@ -62,6 +62,7 @@ export function CatalogoInsumosModule() {
   const [unidad, setUnidad] = useState<string>("all");
 
   const [openSolicitar, setOpenSolicitar] = useState(false);
+  const [openImportar, setOpenImportar] = useState(false);
   const [openCategorias, setOpenCategorias] = useState(false);
   const [editInsumo, setEditInsumo] = useState<any | null>(null);
   const [historialFor, setHistorialFor] = useState<any | null>(null);
