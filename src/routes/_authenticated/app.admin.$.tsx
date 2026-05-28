@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
+import { CatalogoInsumosModule } from "@/components/insumos/CatalogoInsumosModule";
 
 const LABELS: Record<string, string> = {
   requisiciones: "Requisiciones",
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/app/admin/$")({
 function AdminModule() {
   const { _splat } = Route.useParams();
   const slug = (_splat ?? "").split("/")[0];
+  if (slug === "catalogos") return <CatalogoInsumosModule />;
   const title = LABELS[slug] ?? "Módulo administrativo";
   return <ModulePlaceholder title={title} description="Módulo administrativo" />;
 }
