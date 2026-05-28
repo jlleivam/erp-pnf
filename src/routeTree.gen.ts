@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppEquipoRouteImport } from './routes/_authenticated/app.equipo'
 import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app.configuracion'
 import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated/app.clientes'
 import { Route as AuthenticatedAppObrasNuevaRouteImport } from './routes/_authenticated/app.obras.nueva'
@@ -50,6 +51,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppEquipoRoute = AuthenticatedAppEquipoRouteImport.update({
+  id: '/equipo',
+  path: '/equipo',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppConfiguracionRoute =
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/app/clientes': typeof AuthenticatedAppClientesRoute
   '/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
+  '/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
   '/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/app/clientes': typeof AuthenticatedAppClientesRoute
   '/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
+  '/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
   '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/app/clientes': typeof AuthenticatedAppClientesRoute
   '/_authenticated/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
+  '/_authenticated/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
   '/_authenticated/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/clientes'
     | '/app/configuracion'
+    | '/app/equipo'
     | '/app/'
     | '/app/admin/$'
     | '/app/obras/$obraId'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/app/clientes'
     | '/app/configuracion'
+    | '/app/equipo'
     | '/app'
     | '/app/admin/$'
     | '/app/obras/nueva'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/app/clientes'
     | '/_authenticated/app/configuracion'
+    | '/_authenticated/app/equipo'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/$'
     | '/_authenticated/app/obras/$obraId'
@@ -230,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/equipo': {
+      id: '/_authenticated/app/equipo'
+      path: '/equipo'
+      fullPath: '/app/equipo'
+      preLoaderRoute: typeof AuthenticatedAppEquipoRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/configuracion': {
@@ -305,6 +324,7 @@ const AuthenticatedAppObrasObraIdRouteWithChildren =
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppClientesRoute: typeof AuthenticatedAppClientesRoute
   AuthenticatedAppConfiguracionRoute: typeof AuthenticatedAppConfiguracionRoute
+  AuthenticatedAppEquipoRoute: typeof AuthenticatedAppEquipoRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminSplatRoute: typeof AuthenticatedAppAdminSplatRoute
   AuthenticatedAppObrasObraIdRoute: typeof AuthenticatedAppObrasObraIdRouteWithChildren
@@ -314,6 +334,7 @@ interface AuthenticatedAppRouteChildren {
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppClientesRoute: AuthenticatedAppClientesRoute,
   AuthenticatedAppConfiguracionRoute: AuthenticatedAppConfiguracionRoute,
+  AuthenticatedAppEquipoRoute: AuthenticatedAppEquipoRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminSplatRoute: AuthenticatedAppAdminSplatRoute,
   AuthenticatedAppObrasObraIdRoute:

@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Building2, LayoutDashboard, Users, Settings, LogOut, ChevronDown, HardHat } from "lucide-react";
+import { Building2, LayoutDashboard, Users, Settings, LogOut, ChevronDown, HardHat, UserCog } from "lucide-react";
 import { useAuthStore, isDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
