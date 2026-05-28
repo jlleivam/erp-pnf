@@ -140,6 +140,10 @@ function NuevaObra() {
     });
   };
 
+  if (!director) {
+    return <p className="text-sm text-destructive">Solo el Director puede crear obras.</p>;
+  }
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
