@@ -477,10 +477,10 @@ function CategoriasDialog({
                   <>
                     <Input
                       value={editing.nombre}
-                      onChange={(e) => setEditing({ ...editing, nombre: e.target.value })}
+                      onChange={(e) => setEditing((prev) => prev ? { ...prev, nombre: e.target.value } : prev)}
                       maxLength={100}
                     />
-                    <Button size="sm" onClick={() => editMut.mutate({ data: editing })}>Guardar</Button>
+                    <Button size="sm" onClick={() => editing && editMut.mutate({ data: editing })}>Guardar</Button>
                     <Button size="sm" variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
                   </>
                 ) : (
