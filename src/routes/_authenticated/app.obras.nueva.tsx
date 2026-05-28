@@ -82,7 +82,8 @@ function NuevaObra() {
   const fetchUsers = useServerFn(listCompanyUsers);
   const createObraFn = useServerFn(crearObra);
 
-  const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes() });
+  const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes({ data: {} }) });
+
   const usersQ = useQuery({ queryKey: ["company-users"], queryFn: () => fetchUsers() });
 
   const createObraM = useMutation({
