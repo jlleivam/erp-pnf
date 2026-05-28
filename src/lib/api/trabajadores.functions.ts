@@ -7,6 +7,15 @@ const TIPO_CONTRATO = z.enum(["eventual_urbano", "eventual_campo", "permanente"]
 const IMSS_ESTATUS = z.enum(["alta_activa", "sin_alta", "en_tramite", "baja"]);
 const AUTORIZACION = z.enum(["autorizado", "pendiente"]);
 const DOC_TIPO = z.enum(["ine", "curp", "domicilio", "contrato"]);
+const PUESTO = z.enum([
+  "oficial",
+  "ayudante",
+  "operador_maquinaria",
+  "sobrestante",
+  "residente",
+  "auxiliar",
+  "administrativo",
+]);
 
 const trabajadorFieldsSchema = z.object({
   nombre_completo: z.string().trim().min(1).max(255),
