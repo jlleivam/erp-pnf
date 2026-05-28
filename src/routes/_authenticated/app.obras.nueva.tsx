@@ -134,11 +134,11 @@ function NuevaObra() {
         cliente_id: clienteId || null,
         numero_contrato: numeroContrato.trim() || undefined,
         ubicacion: ubicacion.trim() || undefined,
+        fecha_inicio: fechaInicio || undefined,
         fecha_terminacion: fechaTerm || undefined,
         presupuesto_url: presupuestoUrl,
         monto_contratado: montoContratado === "" ? null : Number(montoContratado),
 
-        presupuesto_url: presupuestoUrl,
         team,
         comisiones,
       },
