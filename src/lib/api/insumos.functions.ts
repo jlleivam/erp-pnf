@@ -222,3 +222,89 @@ export const getHistorialPrecios = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+export const importarInsumos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      filas: z.array(
+        z.object({
+          nombre: z.string().trim().min(1).max(200),
+          unidad: z.enum(UNIDADES),
+          categoria: z.string().trim().min(1).max(100),
+          row: z.number().int().positive(),
+        })
+      ).min(1).max(500),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede importar insumos");
+
+    // Cargar insumos existentes de la compañía para detectar duplicados
+    const { data: existingInsumos, error: exErr } = await supabase
+      .from("insumos").select("nombre").eq("company_id", companyId);
+    if (exErr) throw new Error(exErr.message);
+    const existingNames = new Set(
+      (existingInsumos ?? []).map((i: any) => String(i.nombre).trim().toLowerCase())
+    );
+
+    // Validar duplicados contra BD y duplicados internos
+    const errores: { row: number; nombre: string; unidad: string; categoria: string; error: string }[] = [];
+    const seenInFile = new Map<string, number>();
+    for (const f of data.filas) {
+      const key = f.nombre.trim().toLowerCase();
+      if (existingNames.has(key)) {
+        errores.push({ row: f.row, nombre: f.nombre, unidad: f.unidad, categoria: f.categoria, error: "Ya existe en la base de datos" });
+      } else if (seenInFile.has(key)) {
+        errores.push({ row: f.row, nombre: f.nombre, unidad: f.unidad, categoria: f.categoria, error: `Duplicado en el archivo (fila ${seenInFile.get(key)})` });
+      } else {
+        seenInFile.set(key, f.row);
+      }
+    }
+    if (errores.length > 0) {
+      return { ok: false as const, errores };
+    }
+
+
+    // Cargar categorías existentes
+    const { data: existingCats, error: catErr } = await supabase
+      .from("insumo_categorias").select("id, nombre").eq("company_id", companyId);
+    if (catErr) throw new Error(catErr.message);
+    const catMap = new Map<string, string>();
+    for (const c of existingCats ?? []) catMap.set(String(c.nombre).trim().toLowerCase(), c.id);
+
+    // Crear categorías nuevas
+    const nuevasCats = new Map<string, string>(); // key -> nombre original
+    for (const f of data.filas) {
+      const key = f.categoria.trim().toLowerCase();
+      if (!catMap.has(key) && !nuevasCats.has(key)) {
+        nuevasCats.set(key, f.categoria.trim());
+      }
+    }
+    if (nuevasCats.size > 0) {
+      const toInsert = Array.from(nuevasCats.values()).map((nombre) => ({ company_id: companyId, nombre }));
+      const { data: inserted, error: insCatErr } = await supabase
+        .from("insumo_categorias").insert(toInsert).select("id, nombre");
+      if (insCatErr) throw new Error(`Error creando categorías: ${insCatErr.message}`);
+      for (const c of inserted ?? []) catMap.set(String(c.nombre).trim().toLowerCase(), c.id);
+    }
+
+    // Bulk insert insumos como autorizados
+    const now = new Date().toISOString();
+    const rows = data.filas.map((f) => ({
+      company_id: companyId,
+      categoria_id: catMap.get(f.categoria.trim().toLowerCase()) ?? null,
+      nombre: f.nombre.trim(),
+      unidad: f.unidad,
+      estatus: "autorizado" as const,
+      solicitado_por: userId,
+      autorizado_por: userId,
+      autorizado_at: now,
+    }));
+    const { error: insErr } = await supabase.from("insumos").insert(rows);
+    if (insErr) throw new Error(`Error insertando insumos: ${insErr.message}`);
+
+    return { ok: true as const, insertadas: rows.length, categoriasCreadas: nuevasCats.size };
+  });

@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  AlertTriangle, BarChart3, Boxes, Check, FolderTree, Pencil, Plus, Search,
+  AlertTriangle, BarChart3, Boxes, Check, FileSpreadsheet, FolderTree, Pencil, Plus, Search,
   Tag, Trash2, TrendingUp, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   autorizarInsumo, rechazarInsumo, crearCategoria, editarCategoria, eliminarCategoria,
   getHistorialPrecios,
 } from "@/lib/api/insumos.functions";
+import { ImportarInsumosDialog } from "./ImportarInsumosDialog";
 
 const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON"] as const;
 type Unidad = (typeof UNIDADES)[number];
@@ -61,6 +62,7 @@ export function CatalogoInsumosModule() {
   const [unidad, setUnidad] = useState<string>("all");
 
   const [openSolicitar, setOpenSolicitar] = useState(false);
+  const [openImportar, setOpenImportar] = useState(false);
   const [openCategorias, setOpenCategorias] = useState(false);
   const [editInsumo, setEditInsumo] = useState<any | null>(null);
   const [historialFor, setHistorialFor] = useState<any | null>(null);
@@ -117,6 +119,11 @@ export function CatalogoInsumosModule() {
           {director && (
             <Button variant="outline" onClick={() => setOpenCategorias(true)}>
               <FolderTree /> Categorías
+            </Button>
+          )}
+          {director && (
+            <Button variant="outline" onClick={() => setOpenImportar(true)}>
+              <FileSpreadsheet /> Importar Excel
             </Button>
           )}
           <Button onClick={() => setOpenSolicitar(true)}>
@@ -308,6 +315,9 @@ export function CatalogoInsumosModule() {
         onOpenChange={setOpenSolicitar}
         categorias={categoriasQ.data ?? []}
       />
+      {director && (
+        <ImportarInsumosDialog open={openImportar} onOpenChange={setOpenImportar} />
+      )}
       {director && (
         <CategoriasDialog
           open={openCategorias}
