@@ -111,7 +111,7 @@ export function TerceroFormDialog({
   const createM = useMutation({
     mutationFn: create,
     onSuccess: (t) => {
-      toast.success("Tercero creado");
+      toast.success("Creado");
       qc.invalidateQueries({ queryKey: ["terceros"] });
       onSaved?.(t?.id);
       onClose();
@@ -121,7 +121,7 @@ export function TerceroFormDialog({
   const updateM = useMutation({
     mutationFn: update,
     onSuccess: () => {
-      toast.success("Tercero actualizado");
+      toast.success("Actualizado");
       qc.invalidateQueries({ queryKey: ["terceros"] });
       qc.invalidateQueries({ queryKey: ["tercero", initial?.id] });
       onSaved?.(initial?.id);
@@ -507,7 +507,7 @@ export function TerceroFormDialog({
             disabled={pending}
             className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90"
           >
-            {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear tercero"}
+            {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear"}
           </Button>
         </DialogFooter>
       </DialogContent>
