@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth";
 
 export const Route = createFileRoute("/onboarding")({
-  head: () => ({ meta: [{ title: "Registra tu usuario — ERP PNF" }] }),
+  head: () => ({ meta: [{ title: "Registrar empresa — ERP PNF" }] }),
   component: Onboarding,
 });
 
@@ -103,7 +103,7 @@ function Onboarding() {
     <div className="min-h-screen grid place-items-center bg-background px-4 py-10">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>Registra tu usuario</CardTitle>
+          <CardTitle>Registrar empresa</CardTitle>
           <CardDescription>
             Paso {step} de 2 — {step === 1 ? "Datos de la empresa" : "Cuenta del Director"}
           </CardDescription>
