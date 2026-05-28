@@ -121,6 +121,11 @@ export function CatalogoInsumosModule() {
               <FolderTree /> Categorías
             </Button>
           )}
+          {director && (
+            <Button variant="outline" onClick={() => setOpenImportar(true)}>
+              <FileSpreadsheet /> Importar Excel
+            </Button>
+          )}
           <Button onClick={() => setOpenSolicitar(true)}>
             <Plus /> Solicitar insumo
           </Button>
