@@ -24,6 +24,7 @@ import {
   crearTrabajador,
   actualizarTrabajador,
 } from "@/lib/api/trabajadores.functions";
+import { PUESTOS, type TrabajadorPuesto } from "./imss";
 
 export type TrabajadorFormInitial = {
   id?: string;
