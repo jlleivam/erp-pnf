@@ -147,18 +147,6 @@ export function CatalogoInsumosModule() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard icon={<Boxes className="size-5" />} label="Total insumos" value={metricasQ.data?.total ?? 0} />
-        <MetricCard icon={<Tag className="size-5" />} label="Categorías" value={metricasQ.data?.categorias ?? 0} />
-        <MetricCard icon={<TrendingUp className="size-5" />} label="Con historial" value={metricasQ.data?.conHistorial ?? 0} />
-        <MetricCard
-          icon={<AlertTriangle className="size-5" />}
-          label="Pendientes"
-          value={pendientesCount}
-          accent={pendientesCount > 0}
-        />
-      </div>
-
       <Card className="p-4">
         <div className="flex flex-wrap items-end gap-3 mb-4">
           <div className="flex-1 min-w-[220px]">
