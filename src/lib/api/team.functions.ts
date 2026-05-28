@@ -7,8 +7,9 @@ const ROLES = ["director", "residente", "auxiliar", "administrativo", "superviso
 const roleEnum = z.enum(ROLES);
 
 /** Verify the caller is a Director of their own company. Returns companyId. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function requireDirector(
-  supabase: Awaited<ReturnType<typeof import("@/integrations/supabase/auth-middleware")["requireSupabaseAuth"]>> extends infer _ ? any : any,
+  supabase: any,
   userId: string
 ): Promise<string> {
   const { data: profile } = await supabase
