@@ -79,7 +79,6 @@ export function ImportarInsumosDialog({
     XLSX.utils.book_append_sheet(wb, ws, "Errores");
     XLSX.writeFile(wb, "insumos-con-errores.xlsx");
   }
-  }
 
   async function handleFile(file: File) {
     if (file.size > 2 * 1024 * 1024) {
