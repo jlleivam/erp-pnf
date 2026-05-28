@@ -32,7 +32,7 @@ function Landing() {
               <Link to="/login">Iniciar sesión</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/onboarding">Registrar empresa</Link>
+              <Link to="/onboarding">Registra tu usuario</Link>
             </Button>
           </div>
         </div>
@@ -53,7 +53,7 @@ function Landing() {
           <div className="mt-8 flex items-center justify-center gap-3">
             <Button asChild size="lg">
               <Link to="/onboarding">
-                Registrar empresa
+                Registra tu usuario
                 <ArrowRight className="size-4 ml-2" />
               </Link>
             </Button>
