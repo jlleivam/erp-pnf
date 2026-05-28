@@ -109,7 +109,7 @@ export const listTrabajadores = createServerFn({ method: "POST" })
       .object({
         search: z.string().trim().max(255).optional(),
         imss_estatus: IMSS_ESTATUS.optional(),
-        puesto: z.string().trim().max(100).optional(),
+        puesto: PUESTO.optional(),
         solo_pendientes: z.boolean().optional(),
       })
       .default({})
