@@ -317,7 +317,7 @@ export function CatalogoTrabajadoresModule() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{r.puesto ?? "—"}</TableCell>
+                  <TableCell className="text-sm">{r.puesto ? PUESTO_LABEL[r.puesto] : "—"}</TableCell>
                   <TableCell>
                     <Badge className={IMSS_BADGE[r.imss_estatus]} variant="secondary">
                       {IMSS_LABEL[r.imss_estatus]}
