@@ -316,6 +316,9 @@ export function CatalogoInsumosModule() {
         categorias={categoriasQ.data ?? []}
       />
       {director && (
+        <ImportarInsumosDialog open={openImportar} onOpenChange={setOpenImportar} />
+      )}
+      {director && (
         <CategoriasDialog
           open={openCategorias}
           onOpenChange={setOpenCategorias}
