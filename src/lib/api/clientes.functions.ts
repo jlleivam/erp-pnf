@@ -52,6 +52,14 @@ async function getMyContext(supabase: ReturnType<typeof requireGetSupabase>, use
   const { data: profile } = await supabase
     .from("profiles")
     .select("company_id")
+async function getMyContext(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+): Promise<{ companyId: string; roles: string[] }> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("company_id")
     .eq("id", userId)
     .maybeSingle();
   if (!profile?.company_id) throw new Error("Sin empresa asociada");
@@ -61,15 +69,8 @@ async function getMyContext(supabase: ReturnType<typeof requireGetSupabase>, use
     .select("role")
     .eq("user_id", userId)
     .eq("company_id", profile.company_id);
-  const roles = (roleRows ?? []).map((r) => r.role as string);
+  const roles = ((roleRows ?? []) as Array<{ role: string }>).map((r) => r.role);
   return { companyId: profile.company_id as string, roles };
-}
-
-// helper type alias so we don't need a value import of supabase types
-type SupabaseClient = Parameters<Parameters<typeof requireSupabaseAuth.server>[0]>[0]["context"]["supabase"];
-// fallback signature (unused at runtime)
-function requireGetSupabase() {
-  return null as unknown as SupabaseClient;
 }
 
 function assertCanManage(roles: string[]) {
@@ -78,8 +79,6 @@ function assertCanManage(roles: string[]) {
   }
 }
 
-// =============== LIST ===============
-export const listClientes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
