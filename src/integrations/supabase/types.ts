@@ -398,6 +398,137 @@ export type Database = {
           },
         ]
       }
+      terceros: {
+        Row: {
+          banco: string | null
+          beneficiario: string | null
+          categoria: Database["public"]["Enums"]["tercero_categoria"]
+          categoria_productos: string | null
+          clabe: string | null
+          company_id: string
+          contacto_nombre: string | null
+          contacto_telefono: string | null
+          correo: string | null
+          creado_por: string | null
+          created_at: string
+          credito_disponible: number | null
+          curp: string | null
+          dias_credito: number | null
+          direccion_fiscal: string | null
+          fondo_garantia: boolean
+          fondo_garantia_pct: number | null
+          id: string
+          razon_social: string
+          regimen_fiscal: string | null
+          requiere_factura: boolean
+          retencion_isr: boolean
+          retencion_isr_pct: number | null
+          retencion_iva: boolean
+          retencion_iva_pct: number | null
+          rfc: string
+          telefono: string | null
+          tipo_persona: Database["public"]["Enums"]["tercero_tipo_persona"]
+          tipo_trabajos: string | null
+        }
+        Insert: {
+          banco?: string | null
+          beneficiario?: string | null
+          categoria?: Database["public"]["Enums"]["tercero_categoria"]
+          categoria_productos?: string | null
+          clabe?: string | null
+          company_id: string
+          contacto_nombre?: string | null
+          contacto_telefono?: string | null
+          correo?: string | null
+          creado_por?: string | null
+          created_at?: string
+          credito_disponible?: number | null
+          curp?: string | null
+          dias_credito?: number | null
+          direccion_fiscal?: string | null
+          fondo_garantia?: boolean
+          fondo_garantia_pct?: number | null
+          id?: string
+          razon_social: string
+          regimen_fiscal?: string | null
+          requiere_factura?: boolean
+          retencion_isr?: boolean
+          retencion_isr_pct?: number | null
+          retencion_iva?: boolean
+          retencion_iva_pct?: number | null
+          rfc: string
+          telefono?: string | null
+          tipo_persona: Database["public"]["Enums"]["tercero_tipo_persona"]
+          tipo_trabajos?: string | null
+        }
+        Update: {
+          banco?: string | null
+          beneficiario?: string | null
+          categoria?: Database["public"]["Enums"]["tercero_categoria"]
+          categoria_productos?: string | null
+          clabe?: string | null
+          company_id?: string
+          contacto_nombre?: string | null
+          contacto_telefono?: string | null
+          correo?: string | null
+          creado_por?: string | null
+          created_at?: string
+          credito_disponible?: number | null
+          curp?: string | null
+          dias_credito?: number | null
+          direccion_fiscal?: string | null
+          fondo_garantia?: boolean
+          fondo_garantia_pct?: number | null
+          id?: string
+          razon_social?: string
+          regimen_fiscal?: string | null
+          requiere_factura?: boolean
+          retencion_isr?: boolean
+          retencion_isr_pct?: number | null
+          retencion_iva?: boolean
+          retencion_iva_pct?: number | null
+          rfc?: string
+          telefono?: string | null
+          tipo_persona?: Database["public"]["Enums"]["tercero_tipo_persona"]
+          tipo_trabajos?: string | null
+        }
+        Relationships: []
+      }
+      terceros_documentos: {
+        Row: {
+          created_at: string
+          fecha_vencimiento: string | null
+          id: string
+          tercero_id: string
+          tipo: Database["public"]["Enums"]["tercero_documento_tipo"]
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          tercero_id: string
+          tipo: Database["public"]["Enums"]["tercero_documento_tipo"]
+          url: string
+        }
+        Update: {
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          tercero_id?: string
+          tipo?: Database["public"]["Enums"]["tercero_documento_tipo"]
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terceros_documentos_tercero_id_fkey"
+            columns: ["tercero_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trabajadores: {
         Row: {
           company_id: string
@@ -581,6 +712,13 @@ export type Database = {
         | "supervisor"
       insumo_estatus: "autorizado" | "pendiente"
       insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON"
+      tercero_categoria: "proveedor" | "contratista" | "ambos"
+      tercero_documento_tipo:
+        | "constancia_fiscal"
+        | "opinion_sat"
+        | "domicilio_fiscal"
+        | "repse"
+      tercero_tipo_persona: "moral" | "fisica"
       tipo_obra:
         | "industrial"
         | "comercial"
@@ -745,6 +883,14 @@ export const Constants = {
       ],
       insumo_estatus: ["autorizado", "pendiente"],
       insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON"],
+      tercero_categoria: ["proveedor", "contratista", "ambos"],
+      tercero_documento_tipo: [
+        "constancia_fiscal",
+        "opinion_sat",
+        "domicilio_fiscal",
+        "repse",
+      ],
+      tercero_tipo_persona: ["moral", "fisica"],
       tipo_obra: [
         "industrial",
         "comercial",

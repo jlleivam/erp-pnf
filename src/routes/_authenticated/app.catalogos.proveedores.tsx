@@ -1,11 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ModulePlaceholder } from "@/components/ModulePlaceholder";
+import { CatalogoTerceroModule } from "@/components/terceros/CatalogoTerceroModule";
 
 export const Route = createFileRoute("/_authenticated/app/catalogos/proveedores")({
-  component: () => (
-    <ModulePlaceholder
-      title="Proveedores"
-      description="Catálogo de proveedores (próximamente)."
-    />
-  ),
+  component: CatalogoTerceroModule,
 });
