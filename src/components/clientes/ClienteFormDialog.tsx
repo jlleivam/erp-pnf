@@ -186,7 +186,14 @@ export function ClienteFormDialog({
                 <Label>Tipo de persona</Label>
                 <Select
                   value={f.tipo_persona}
-                  onValueChange={(v) => set("tipo_persona", v as "moral" | "fisica")}
+                  onValueChange={(v) => {
+                    const next = v as "moral" | "fisica";
+                    setF((p) => ({
+                      ...p,
+                      tipo_persona: next,
+                      regimen_fiscal: p.tipo_persona === next ? p.regimen_fiscal : null,
+                    }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -227,11 +234,23 @@ export function ClienteFormDialog({
             )}
             <div>
               <Label>Régimen fiscal</Label>
-              <Input
+              <Select
                 value={f.regimen_fiscal ?? ""}
-                onChange={(e) => set("regimen_fiscal", e.target.value)}
-                placeholder="Ej. 601 — General de Ley Personas Morales"
-              />
+                onValueChange={(v) => set("regimen_fiscal", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un régimen fiscal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(f.tipo_persona === "moral" ? REGIMENES_MORAL : REGIMENES_FISICA).map(
+                    (r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </Section>
 
