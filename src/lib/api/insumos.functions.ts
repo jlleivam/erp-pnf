@@ -223,14 +223,6 @@ export const getHistorialPrecios = createServerFn({ method: "POST" })
     return rows ?? [];
   });
 
-export class ImportarInsumosValidationError extends Error {
-  errores: { row: number; nombre: string; unidad: string; categoria: string; error: string }[];
-  constructor(errores: { row: number; nombre: string; unidad: string; categoria: string; error: string }[]) {
-    super(`${errores.length} errores de validación`);
-    this.errores = errores;
-  }
-}
-
 export const importarInsumos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -272,8 +264,9 @@ export const importarInsumos = createServerFn({ method: "POST" })
       }
     }
     if (errores.length > 0) {
-      throw new ImportarInsumosValidationError(errores);
+      return { ok: false as const, errores };
     }
+
 
     // Cargar categorías existentes
     const { data: existingCats, error: catErr } = await supabase
