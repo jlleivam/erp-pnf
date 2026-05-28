@@ -65,13 +65,15 @@ type Member = {
 
 function EquipoPage() {
   const { roles } = useAuthStore();
-  if (!isDirector(roles)) {
-    return <p className="text-sm text-destructive">Solo el Director puede gestionar el equipo.</p>;
-  }
+  const director = isDirector(roles);
 
   const qc = useQueryClient();
   const fetchList = useServerFn(listTeamMembers);
-  const listQ = useQuery({ queryKey: ["team-members"], queryFn: () => fetchList() });
+  const listQ = useQuery({
+    queryKey: ["team-members"],
+    queryFn: () => fetchList(),
+    enabled: director,
+  });
 
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<Member | null>(null);
@@ -87,6 +89,12 @@ function EquipoPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  if (!director) {
+    return <p className="text-sm text-destructive">Solo el Director puede gestionar el equipo.</p>;
+  }
+
+
 
   return (
     <div className="space-y-6">
