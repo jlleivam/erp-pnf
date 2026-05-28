@@ -97,23 +97,24 @@ export const listTerceros = createServerFn({ method: "POST" })
     let q = supabase.from("terceros").select(SELECT_LIST).order("razon_social");
     if (data.categoria) q = q.eq("categoria", data.categoria);
     if (data.tipo_persona) q = q.eq("tipo_persona", data.tipo_persona);
-    if (data.search && data.search.length > 0) {
-      const s = data.search.replace(/[%_]/g, "");
-      q = q.or(`razon_social.ilike.%${s}%,rfc.ilike.%${s}%`);
-    }
-    const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
-
     const ids = (rows ?? []).map((r: { id: string }) => r.id);
-    let docsByTercero: Record<string, unknown[]> = {};
+    type DocRow = {
+      id: string;
+      tercero_id: string;
+      tipo: string;
+      url: string;
+      fecha_vencimiento: string | null;
+      created_at: string;
+    };
+    let docsByTercero: Record<string, DocRow[]> = {};
     if (ids.length > 0) {
       const { data: docs, error: dErr } = await supabase
         .from("terceros_documentos")
         .select("id, tercero_id, tipo, url, fecha_vencimiento, created_at")
         .in("tercero_id", ids);
       if (dErr) throw new Error(dErr.message);
-      docsByTercero = (docs ?? []).reduce(
-        (acc: Record<string, unknown[]>, d: { tercero_id: string }) => {
+      docsByTercero = ((docs ?? []) as DocRow[]).reduce(
+        (acc: Record<string, DocRow[]>, d) => {
           (acc[d.tercero_id] ??= []).push(d);
           return acc;
         },
@@ -122,6 +123,10 @@ export const listTerceros = createServerFn({ method: "POST" })
     }
 
     return (rows ?? []).map((r: { id: string }) => ({
+      ...r,
+      documentos: docsByTercero[r.id] ?? [],
+    }));
+
       ...r,
       documentos: docsByTercero[r.id] ?? [],
     }));
