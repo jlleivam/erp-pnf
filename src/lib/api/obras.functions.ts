@@ -77,6 +77,8 @@ const crearObraSchema = z.object({
   fecha_inicio: z.string().optional(),
   fecha_terminacion: z.string().optional(),
   presupuesto_url: z.string().max(1000).nullable().optional(),
+  monto_contratado: z.number().min(0).nullable().optional(),
+
   team: z
     .array(
       z.object({
@@ -126,7 +128,9 @@ export const crearObra = createServerFn({ method: "POST" })
         fecha_inicio: data.fecha_inicio || null,
         fecha_terminacion: data.fecha_terminacion || null,
         presupuesto_url: data.presupuesto_url || null,
+        monto_contratado: data.monto_contratado ?? null,
         created_by: userId,
+
       })
       .select("id")
       .single();
