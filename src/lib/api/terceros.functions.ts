@@ -148,7 +148,7 @@ export const getTercero = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!tercero) throw new Error("Tercero no encontrado");
+    if (!tercero) throw new Error("Proveedor o contratista no encontrado");
 
     const { data: documentos, error: dErr } = await supabase
       .from("terceros_documentos")
@@ -217,7 +217,7 @@ export const crearTercero = createServerFn({ method: "POST" })
       .eq("company_id", companyId)
       .eq("rfc", rfcUpper)
       .maybeSingle();
-    if (dup) throw new Error(`Ya existe un tercero con RFC ${rfcUpper}`);
+    if (dup) throw new Error(`Ya existe un proveedor o contratista con RFC ${rfcUpper}`);
 
     const payload = {
       company_id: companyId,
@@ -253,7 +253,7 @@ export const actualizarTercero = createServerFn({ method: "POST" })
       .eq("rfc", rfcUpper)
       .neq("id", data.id)
       .maybeSingle();
-    if (dup) throw new Error(`Ya existe otro tercero con RFC ${rfcUpper}`);
+    if (dup) throw new Error(`Ya existe otro proveedor o contratista con RFC ${rfcUpper}`);
 
     const { error } = await supabase
       .from("terceros")

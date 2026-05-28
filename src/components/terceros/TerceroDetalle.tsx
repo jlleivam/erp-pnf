@@ -89,7 +89,7 @@ export function TerceroDetalle({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="truncate">
-                  {t?.razon_social ?? (q.isLoading ? "Cargando…" : "Tercero")}
+                  {t?.razon_social ?? (q.isLoading ? "Cargando…" : "Proveedor / Contratista")}
                 </SheetTitle>
                 <SheetDescription>
                   {t && (
@@ -273,7 +273,7 @@ export function TerceroDetalle({
                   <Alert>
                     <Info className="size-4" />
                     <AlertDescription>
-                      Este tercero no tiene la categoría Contratista activa. Edita la
+                      Este proveedor / contratista no tiene la categoría Contratista activa. Edita la
                       ficha para activarla y capturar la información de contratos.
                     </AlertDescription>
                   </Alert>

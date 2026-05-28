@@ -118,7 +118,7 @@ export function CatalogoTerceroModule() {
   const delM = useMutation({
     mutationFn: eliminar,
     onSuccess: () => {
-      toast.success("Tercero eliminado");
+      toast.success("Eliminado");
       qc.invalidateQueries({ queryKey: ["terceros"] });
       setToDelete(null);
     },
@@ -154,7 +154,7 @@ export function CatalogoTerceroModule() {
             Proveedores y Contratistas
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Terceros que te suministran materiales o ejecutan trabajos contratados.
+            Proveedores y contratistas que te suministran materiales o ejecutan trabajos contratados.
           </p>
         </div>
         {canEdit && (
@@ -162,7 +162,7 @@ export function CatalogoTerceroModule() {
             onClick={() => setCreating(true)}
             className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90"
           >
-            <Plus className="size-4 mr-1" /> Nuevo tercero
+            <Plus className="size-4 mr-1" /> Nuevo
           </Button>
         )}
       </div>
@@ -250,7 +250,7 @@ export function CatalogoTerceroModule() {
                 <TableCell colSpan={canEdit ? 7 : 6}>
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Building2 className="size-10 text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">Sin terceros aún</p>
+                    <p className="text-sm font-medium">Sin registros aún</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Crea tu primer proveedor o contratista para empezar.
                     </p>
@@ -337,7 +337,7 @@ export function CatalogoTerceroModule() {
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar tercero?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar proveedor o contratista?</AlertDialogTitle>
             <AlertDialogDescription>
               Se eliminará "{toDelete?.razon_social}". Si tiene órdenes de compra o
               contratos vinculados, la eliminación será bloqueada.
