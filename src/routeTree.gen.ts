@@ -18,11 +18,19 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppEquipoRouteImport } from './routes/_authenticated/app.equipo'
 import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app.configuracion'
 import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated/app.clientes'
+import { Route as AuthenticatedAppCatalogosRouteImport } from './routes/_authenticated/app.catalogos'
+import { Route as AuthenticatedAppCatalogosIndexRouteImport } from './routes/_authenticated/app.catalogos.index'
 import { Route as AuthenticatedAppObrasNuevaRouteImport } from './routes/_authenticated/app.obras.nueva'
 import { Route as AuthenticatedAppObrasObraIdRouteImport } from './routes/_authenticated/app.obras.$obraId'
+import { Route as AuthenticatedAppCatalogosTrabajadoresRouteImport } from './routes/_authenticated/app.catalogos.trabajadores'
+import { Route as AuthenticatedAppCatalogosSubcontratistasRouteImport } from './routes/_authenticated/app.catalogos.subcontratistas'
+import { Route as AuthenticatedAppCatalogosProveedoresRouteImport } from './routes/_authenticated/app.catalogos.proveedores'
+import { Route as AuthenticatedAppCatalogosInsumosRouteImport } from './routes/_authenticated/app.catalogos.insumos'
+import { Route as AuthenticatedAppCatalogosClientesRouteImport } from './routes/_authenticated/app.catalogos.clientes'
 import { Route as AuthenticatedAppAdminSplatRouteImport } from './routes/_authenticated/app.admin.$'
 import { Route as AuthenticatedAppObrasObraIdIndexRouteImport } from './routes/_authenticated/app.obras.$obraId.index'
 import { Route as AuthenticatedAppObrasObraIdSplatRouteImport } from './routes/_authenticated/app.obras.$obraId.$'
+import { Route as AuthenticatedAppCatalogosClientesClienteIdRouteImport } from './routes/_authenticated/app.catalogos.clientes.$clienteId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -70,6 +78,18 @@ const AuthenticatedAppClientesRoute =
     path: '/clientes',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppCatalogosRoute =
+  AuthenticatedAppCatalogosRouteImport.update({
+    id: '/catalogos',
+    path: '/catalogos',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppCatalogosIndexRoute =
+  AuthenticatedAppCatalogosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
 const AuthenticatedAppObrasNuevaRoute =
   AuthenticatedAppObrasNuevaRouteImport.update({
     id: '/obras/nueva',
@@ -81,6 +101,36 @@ const AuthenticatedAppObrasObraIdRoute =
     id: '/obras/$obraId',
     path: '/obras/$obraId',
     getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppCatalogosTrabajadoresRoute =
+  AuthenticatedAppCatalogosTrabajadoresRouteImport.update({
+    id: '/trabajadores',
+    path: '/trabajadores',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosSubcontratistasRoute =
+  AuthenticatedAppCatalogosSubcontratistasRouteImport.update({
+    id: '/subcontratistas',
+    path: '/subcontratistas',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosProveedoresRoute =
+  AuthenticatedAppCatalogosProveedoresRouteImport.update({
+    id: '/proveedores',
+    path: '/proveedores',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosInsumosRoute =
+  AuthenticatedAppCatalogosInsumosRouteImport.update({
+    id: '/insumos',
+    path: '/insumos',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosClientesRoute =
+  AuthenticatedAppCatalogosClientesRouteImport.update({
+    id: '/clientes',
+    path: '/clientes',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
   } as any)
 const AuthenticatedAppAdminSplatRoute =
   AuthenticatedAppAdminSplatRouteImport.update({
@@ -100,19 +150,33 @@ const AuthenticatedAppObrasObraIdSplatRoute =
     path: '/$',
     getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
   } as any)
+const AuthenticatedAppCatalogosClientesClienteIdRoute =
+  AuthenticatedAppCatalogosClientesClienteIdRouteImport.update({
+    id: '/$clienteId',
+    path: '/$clienteId',
+    getParentRoute: () => AuthenticatedAppCatalogosClientesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/app/catalogos': typeof AuthenticatedAppCatalogosRouteWithChildren
   '/app/clientes': typeof AuthenticatedAppClientesRoute
   '/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
   '/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
+  '/app/catalogos/clientes': typeof AuthenticatedAppCatalogosClientesRouteWithChildren
+  '/app/catalogos/insumos': typeof AuthenticatedAppCatalogosInsumosRoute
+  '/app/catalogos/proveedores': typeof AuthenticatedAppCatalogosProveedoresRoute
+  '/app/catalogos/subcontratistas': typeof AuthenticatedAppCatalogosSubcontratistasRoute
+  '/app/catalogos/trabajadores': typeof AuthenticatedAppCatalogosTrabajadoresRoute
   '/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
   '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
+  '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
   '/app/obras/$obraId/': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
@@ -125,7 +189,14 @@ export interface FileRoutesByTo {
   '/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
+  '/app/catalogos/clientes': typeof AuthenticatedAppCatalogosClientesRouteWithChildren
+  '/app/catalogos/insumos': typeof AuthenticatedAppCatalogosInsumosRoute
+  '/app/catalogos/proveedores': typeof AuthenticatedAppCatalogosProveedoresRoute
+  '/app/catalogos/subcontratistas': typeof AuthenticatedAppCatalogosSubcontratistasRoute
+  '/app/catalogos/trabajadores': typeof AuthenticatedAppCatalogosTrabajadoresRoute
   '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/app/catalogos': typeof AuthenticatedAppCatalogosIndexRoute
+  '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
   '/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
@@ -136,13 +207,21 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/app/catalogos': typeof AuthenticatedAppCatalogosRouteWithChildren
   '/_authenticated/app/clientes': typeof AuthenticatedAppClientesRoute
   '/_authenticated/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
   '/_authenticated/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
+  '/_authenticated/app/catalogos/clientes': typeof AuthenticatedAppCatalogosClientesRouteWithChildren
+  '/_authenticated/app/catalogos/insumos': typeof AuthenticatedAppCatalogosInsumosRoute
+  '/_authenticated/app/catalogos/proveedores': typeof AuthenticatedAppCatalogosProveedoresRoute
+  '/_authenticated/app/catalogos/subcontratistas': typeof AuthenticatedAppCatalogosSubcontratistasRoute
+  '/_authenticated/app/catalogos/trabajadores': typeof AuthenticatedAppCatalogosTrabajadoresRoute
   '/_authenticated/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
   '/_authenticated/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/_authenticated/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
+  '/_authenticated/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/_authenticated/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
   '/_authenticated/app/obras/$obraId/': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
@@ -153,13 +232,21 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/app'
+    | '/app/catalogos'
     | '/app/clientes'
     | '/app/configuracion'
     | '/app/equipo'
     | '/app/'
     | '/app/admin/$'
+    | '/app/catalogos/clientes'
+    | '/app/catalogos/insumos'
+    | '/app/catalogos/proveedores'
+    | '/app/catalogos/subcontratistas'
+    | '/app/catalogos/trabajadores'
     | '/app/obras/$obraId'
     | '/app/obras/nueva'
+    | '/app/catalogos/'
+    | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
     | '/app/obras/$obraId/'
   fileRoutesByTo: FileRoutesByTo
@@ -172,7 +259,14 @@ export interface FileRouteTypes {
     | '/app/equipo'
     | '/app'
     | '/app/admin/$'
+    | '/app/catalogos/clientes'
+    | '/app/catalogos/insumos'
+    | '/app/catalogos/proveedores'
+    | '/app/catalogos/subcontratistas'
+    | '/app/catalogos/trabajadores'
     | '/app/obras/nueva'
+    | '/app/catalogos'
+    | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
     | '/app/obras/$obraId'
   id:
@@ -182,13 +276,21 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/_authenticated/app'
+    | '/_authenticated/app/catalogos'
     | '/_authenticated/app/clientes'
     | '/_authenticated/app/configuracion'
     | '/_authenticated/app/equipo'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/$'
+    | '/_authenticated/app/catalogos/clientes'
+    | '/_authenticated/app/catalogos/insumos'
+    | '/_authenticated/app/catalogos/proveedores'
+    | '/_authenticated/app/catalogos/subcontratistas'
+    | '/_authenticated/app/catalogos/trabajadores'
     | '/_authenticated/app/obras/$obraId'
     | '/_authenticated/app/obras/nueva'
+    | '/_authenticated/app/catalogos/'
+    | '/_authenticated/app/catalogos/clientes/$clienteId'
     | '/_authenticated/app/obras/$obraId/$'
     | '/_authenticated/app/obras/$obraId/'
   fileRoutesById: FileRoutesById
@@ -265,6 +367,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppClientesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/catalogos': {
+      id: '/_authenticated/app/catalogos'
+      path: '/catalogos'
+      fullPath: '/app/catalogos'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/catalogos/': {
+      id: '/_authenticated/app/catalogos/'
+      path: '/'
+      fullPath: '/app/catalogos/'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosIndexRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
     '/_authenticated/app/obras/nueva': {
       id: '/_authenticated/app/obras/nueva'
       path: '/obras/nueva'
@@ -278,6 +394,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/obras/$obraId'
       preLoaderRoute: typeof AuthenticatedAppObrasObraIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/catalogos/trabajadores': {
+      id: '/_authenticated/app/catalogos/trabajadores'
+      path: '/trabajadores'
+      fullPath: '/app/catalogos/trabajadores'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosTrabajadoresRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/subcontratistas': {
+      id: '/_authenticated/app/catalogos/subcontratistas'
+      path: '/subcontratistas'
+      fullPath: '/app/catalogos/subcontratistas'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosSubcontratistasRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/proveedores': {
+      id: '/_authenticated/app/catalogos/proveedores'
+      path: '/proveedores'
+      fullPath: '/app/catalogos/proveedores'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosProveedoresRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/insumos': {
+      id: '/_authenticated/app/catalogos/insumos'
+      path: '/insumos'
+      fullPath: '/app/catalogos/insumos'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosInsumosRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/clientes': {
+      id: '/_authenticated/app/catalogos/clientes'
+      path: '/clientes'
+      fullPath: '/app/catalogos/clientes'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosClientesRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
     }
     '/_authenticated/app/admin/$': {
       id: '/_authenticated/app/admin/$'
@@ -300,8 +451,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppObrasObraIdSplatRouteImport
       parentRoute: typeof AuthenticatedAppObrasObraIdRoute
     }
+    '/_authenticated/app/catalogos/clientes/$clienteId': {
+      id: '/_authenticated/app/catalogos/clientes/$clienteId'
+      path: '/$clienteId'
+      fullPath: '/app/catalogos/clientes/$clienteId'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosClientesClienteIdRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosClientesRoute
+    }
   }
 }
+
+interface AuthenticatedAppCatalogosClientesRouteChildren {
+  AuthenticatedAppCatalogosClientesClienteIdRoute: typeof AuthenticatedAppCatalogosClientesClienteIdRoute
+}
+
+const AuthenticatedAppCatalogosClientesRouteChildren: AuthenticatedAppCatalogosClientesRouteChildren =
+  {
+    AuthenticatedAppCatalogosClientesClienteIdRoute:
+      AuthenticatedAppCatalogosClientesClienteIdRoute,
+  }
+
+const AuthenticatedAppCatalogosClientesRouteWithChildren =
+  AuthenticatedAppCatalogosClientesRoute._addFileChildren(
+    AuthenticatedAppCatalogosClientesRouteChildren,
+  )
+
+interface AuthenticatedAppCatalogosRouteChildren {
+  AuthenticatedAppCatalogosClientesRoute: typeof AuthenticatedAppCatalogosClientesRouteWithChildren
+  AuthenticatedAppCatalogosInsumosRoute: typeof AuthenticatedAppCatalogosInsumosRoute
+  AuthenticatedAppCatalogosProveedoresRoute: typeof AuthenticatedAppCatalogosProveedoresRoute
+  AuthenticatedAppCatalogosSubcontratistasRoute: typeof AuthenticatedAppCatalogosSubcontratistasRoute
+  AuthenticatedAppCatalogosTrabajadoresRoute: typeof AuthenticatedAppCatalogosTrabajadoresRoute
+  AuthenticatedAppCatalogosIndexRoute: typeof AuthenticatedAppCatalogosIndexRoute
+}
+
+const AuthenticatedAppCatalogosRouteChildren: AuthenticatedAppCatalogosRouteChildren =
+  {
+    AuthenticatedAppCatalogosClientesRoute:
+      AuthenticatedAppCatalogosClientesRouteWithChildren,
+    AuthenticatedAppCatalogosInsumosRoute:
+      AuthenticatedAppCatalogosInsumosRoute,
+    AuthenticatedAppCatalogosProveedoresRoute:
+      AuthenticatedAppCatalogosProveedoresRoute,
+    AuthenticatedAppCatalogosSubcontratistasRoute:
+      AuthenticatedAppCatalogosSubcontratistasRoute,
+    AuthenticatedAppCatalogosTrabajadoresRoute:
+      AuthenticatedAppCatalogosTrabajadoresRoute,
+    AuthenticatedAppCatalogosIndexRoute: AuthenticatedAppCatalogosIndexRoute,
+  }
+
+const AuthenticatedAppCatalogosRouteWithChildren =
+  AuthenticatedAppCatalogosRoute._addFileChildren(
+    AuthenticatedAppCatalogosRouteChildren,
+  )
 
 interface AuthenticatedAppObrasObraIdRouteChildren {
   AuthenticatedAppObrasObraIdSplatRoute: typeof AuthenticatedAppObrasObraIdSplatRoute
@@ -322,6 +524,7 @@ const AuthenticatedAppObrasObraIdRouteWithChildren =
   )
 
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppCatalogosRoute: typeof AuthenticatedAppCatalogosRouteWithChildren
   AuthenticatedAppClientesRoute: typeof AuthenticatedAppClientesRoute
   AuthenticatedAppConfiguracionRoute: typeof AuthenticatedAppConfiguracionRoute
   AuthenticatedAppEquipoRoute: typeof AuthenticatedAppEquipoRoute
@@ -332,6 +535,7 @@ interface AuthenticatedAppRouteChildren {
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppCatalogosRoute: AuthenticatedAppCatalogosRouteWithChildren,
   AuthenticatedAppClientesRoute: AuthenticatedAppClientesRoute,
   AuthenticatedAppConfiguracionRoute: AuthenticatedAppConfiguracionRoute,
   AuthenticatedAppEquipoRoute: AuthenticatedAppEquipoRoute,
