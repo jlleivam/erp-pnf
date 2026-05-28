@@ -197,7 +197,8 @@ function NuevaObra() {
               <Input id="ft" type="date" value={fechaTerm} onChange={(e) => setFechaTerm(e.target.value)} />
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button variant="ghost" onClick={() => navigate({ to: "/app" })}>Cancelar</Button>
             <Button onClick={goStep1}>Continuar</Button>
           </div>
         </Card>
@@ -225,9 +226,12 @@ function NuevaObra() {
               </span>
             )}
           </div>
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
-            <Button onClick={() => setStep(3)}>Continuar</Button>
+          <div className="flex justify-between items-center">
+            <Button variant="ghost" onClick={() => navigate({ to: "/app" })}>Cancelar</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
+              <Button onClick={() => setStep(3)}>Continuar</Button>
+            </div>
           </div>
         </Card>
       )}
@@ -368,11 +372,14 @@ function NuevaObra() {
             </div>
           </div>
 
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(2)}>Atrás</Button>
-            <Button onClick={handleSubmit} disabled={createObraM.isPending}>
-              {createObraM.isPending ? "Creando…" : "Crear obra"}
-            </Button>
+          <div className="flex justify-between items-center">
+            <Button variant="ghost" onClick={() => navigate({ to: "/app" })} disabled={createObraM.isPending}>Cancelar</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep(2)} disabled={createObraM.isPending}>Atrás</Button>
+              <Button onClick={handleSubmit} disabled={createObraM.isPending}>
+                {createObraM.isPending ? "Creando…" : "Crear obra"}
+              </Button>
+            </div>
           </div>
         </Card>
       )}
