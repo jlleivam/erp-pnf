@@ -16,30 +16,78 @@ export type Database = {
     Tables: {
       clientes: {
         Row: {
+          banco: string | null
+          beneficiario: string | null
+          clabe: string | null
           company_id: string
+          condiciones_pago: number | null
+          constancia_fiscal_url: string | null
+          constancia_fiscal_vencimiento: string | null
+          contacto_nombre: string | null
+          contacto_telefono: string | null
+          correo: string | null
           created_at: string
+          curp: string | null
           datos_contacto: Json
+          direccion_fiscal: string | null
           id: string
+          limite_credito: number | null
+          opinion_sat_url: string | null
+          opinion_sat_vencimiento: string | null
           razon_social: string
+          regimen_fiscal: string | null
           rfc: string
+          telefono: string | null
           tipo_persona: Database["public"]["Enums"]["tipo_persona"]
         }
         Insert: {
+          banco?: string | null
+          beneficiario?: string | null
+          clabe?: string | null
           company_id: string
+          condiciones_pago?: number | null
+          constancia_fiscal_url?: string | null
+          constancia_fiscal_vencimiento?: string | null
+          contacto_nombre?: string | null
+          contacto_telefono?: string | null
+          correo?: string | null
           created_at?: string
+          curp?: string | null
           datos_contacto?: Json
+          direccion_fiscal?: string | null
           id?: string
+          limite_credito?: number | null
+          opinion_sat_url?: string | null
+          opinion_sat_vencimiento?: string | null
           razon_social: string
+          regimen_fiscal?: string | null
           rfc: string
+          telefono?: string | null
           tipo_persona: Database["public"]["Enums"]["tipo_persona"]
         }
         Update: {
+          banco?: string | null
+          beneficiario?: string | null
+          clabe?: string | null
           company_id?: string
+          condiciones_pago?: number | null
+          constancia_fiscal_url?: string | null
+          constancia_fiscal_vencimiento?: string | null
+          contacto_nombre?: string | null
+          contacto_telefono?: string | null
+          correo?: string | null
           created_at?: string
+          curp?: string | null
           datos_contacto?: Json
+          direccion_fiscal?: string | null
           id?: string
+          limite_credito?: number | null
+          opinion_sat_url?: string | null
+          opinion_sat_vencimiento?: string | null
           razon_social?: string
+          regimen_fiscal?: string | null
           rfc?: string
+          telefono?: string | null
           tipo_persona?: Database["public"]["Enums"]["tipo_persona"]
         }
         Relationships: [
@@ -264,6 +312,7 @@ export type Database = {
           fecha_inicio: string | null
           fecha_terminacion: string | null
           id: string
+          monto_contratado: number | null
           nombre: string
           numero_contrato: string | null
           presupuesto_url: string | null
@@ -278,6 +327,7 @@ export type Database = {
           fecha_inicio?: string | null
           fecha_terminacion?: string | null
           id?: string
+          monto_contratado?: number | null
           nombre: string
           numero_contrato?: string | null
           presupuesto_url?: string | null
@@ -292,6 +342,7 @@ export type Database = {
           fecha_inicio?: string | null
           fecha_terminacion?: string | null
           id?: string
+          monto_contratado?: number | null
           nombre?: string
           numero_contrato?: string | null
           presupuesto_url?: string | null

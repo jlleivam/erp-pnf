@@ -69,6 +69,8 @@ function NuevaObra() {
   const [ubicacion, setUbicacion] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaTerm, setFechaTerm] = useState("");
+  const [montoContratado, setMontoContratado] = useState<string>("");
+
 
   // Step 2
   const [presupuestoUrl, setPresupuestoUrl] = useState<string | null>(null);
@@ -82,7 +84,8 @@ function NuevaObra() {
   const fetchUsers = useServerFn(listCompanyUsers);
   const createObraFn = useServerFn(crearObra);
 
-  const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes() });
+  const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes({ data: {} }) });
+
   const usersQ = useQuery({ queryKey: ["company-users"], queryFn: () => fetchUsers() });
 
   const createObraM = useMutation({
@@ -134,6 +137,8 @@ function NuevaObra() {
         fecha_inicio: fechaInicio || undefined,
         fecha_terminacion: fechaTerm || undefined,
         presupuesto_url: presupuestoUrl,
+        monto_contratado: montoContratado === "" ? null : Number(montoContratado),
+
         team,
         comisiones,
       },
@@ -196,8 +201,21 @@ function NuevaObra() {
               <Label htmlFor="ft">Fecha de terminación</Label>
               <Input id="ft" type="date" value={fechaTerm} onChange={(e) => setFechaTerm(e.target.value)} />
             </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="monto">Monto contratado (MXN)</Label>
+              <Input
+                id="monto"
+                type="number"
+                min={0}
+                step="0.01"
+                value={montoContratado}
+                onChange={(e) => setMontoContratado(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
           </div>
           <div className="flex justify-between">
+
             <Button variant="ghost" onClick={() => navigate({ to: "/app" })}>Cancelar</Button>
             <Button onClick={goStep1}>Continuar</Button>
           </div>
