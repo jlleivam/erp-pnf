@@ -79,7 +79,10 @@ function assertCanManage(roles: string[]) {
   }
 }
 
+// =============== LIST ===============
+export const listClientes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
+
   .inputValidator((d: unknown) =>
     z
       .object({
