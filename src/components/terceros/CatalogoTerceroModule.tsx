@@ -145,14 +145,6 @@ export function CatalogoTerceroModule() {
     [rowsWithStatus, docFiltro],
   );
 
-  const metrics = useMemo(() => {
-    const total = rows.length;
-    const proveedores = rows.filter((r) => r.categoria === "proveedor").length;
-    const contratistas = rows.filter((r) => r.categoria === "contratista").length;
-    const ambos = rows.filter((r) => r.categoria === "ambos").length;
-    const porVencer = rowsWithStatus.filter((r) => r._status === "por_vencer").length;
-    return { total, proveedores, contratistas, ambos, porVencer };
-  }, [rows, rowsWithStatus]);
 
   return (
     <div className="space-y-6">
@@ -175,47 +167,6 @@ export function CatalogoTerceroModule() {
         )}
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="p-4">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            Total
-          </div>
-          <div className="text-2xl font-semibold mt-1">{metrics.total}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            Proveedores
-          </div>
-          <div className="text-2xl font-semibold mt-1 text-blue-700">
-            {metrics.proveedores}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            Contratistas
-          </div>
-          <div className="text-2xl font-semibold mt-1 text-teal-700">
-            {metrics.contratistas}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            Ambos
-          </div>
-          <div className="text-2xl font-semibold mt-1 text-slate-700">
-            {metrics.ambos}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            Docs por vencer
-          </div>
-          <div className="text-2xl font-semibold mt-1 text-amber-700">
-            {metrics.porVencer}
-          </div>
-        </Card>
-      </div>
 
       {/* Filters */}
       <Card className="p-4 flex flex-wrap items-center gap-3">
