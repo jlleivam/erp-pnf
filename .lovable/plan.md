@@ -1,70 +1,99 @@
-# Importación masiva de Insumos por Excel
+## Catálogo de Clientes — Plan de implementación
 
-## 1. Dependencia
-- `bun add xlsx` (SheetJS) para parseo en cliente y para generar plantilla + archivo de errores.
+### 1. Migración de base de datos
 
-## 2. Server function (`src/lib/api/insumos.functions.ts`)
+Extender `public.clientes` con los campos faltantes (todos nullable salvo los existentes):
 
-Añadir `importarInsumos`:
+```
+regimen_fiscal text, direccion_fiscal text,
+telefono text, correo text,
+contacto_nombre text, contacto_telefono text,
+curp text,
+condiciones_pago integer, limite_credito numeric,
+banco text, clabe text, beneficiario text,
+constancia_fiscal_url text, constancia_fiscal_vencimiento date,
+opinion_sat_url text, opinion_sat_vencimiento date
+```
 
-- Input (Zod): `{ filas: [{ nombre: string (1-200), unidad: enum UNIDADES, categoria: string (1-100) }] }` con `min(1).max(500)` filas.
-- Middleware `requireSupabaseAuth` + verificación de Director (usa `getUserCompanyAndDirector`); si no es director → throw.
-- Validación servidor:
-  1. Cargar todos los insumos existentes de la company → set de nombres normalizados (lower+trim) para detectar duplicados contra BD.
-  2. Detectar duplicados internos del archivo (nombre repetido entre filas).
-  3. Si hay errores → throw con detalle (`{ row, error }[]`) para que el cliente pueda mostrarlos.
-- Si todo válido:
-  1. Cargar categorías existentes de la company. Para cada categoría única del archivo que no exista → `insert` en `insumo_categorias` y agregar al mapa.
-  2. Bulk insert en `insumos` con `estatus='autorizado'`, `autorizado_por=userId`, `autorizado_at=now()`, `solicitado_por=userId`, `categoria_id` resuelto del mapa.
-  3. Devolver `{ insertadas: n, categoriasCreadas: m }`.
+Mantener `datos_contacto jsonb` por compatibilidad pero dejar de usarlo (los nuevos campos viven como columnas).
 
-Nota: Supabase JS no expone transacciones explícitas, pero un solo `insert([...])` es atómico a nivel statement; suficiente para el alcance.
+Agregar a `public.obras`:
 
-## 3. UI
+```
+monto_contratado numeric
+```
 
-### Botón en header del módulo
-- En `CatalogoInsumosModule.tsx` agregar botón `Importar Excel` (icono `FileSpreadsheet`/`Upload`) junto a `Solicitar insumo`, solo si `director`.
+Crear bucket privado de Storage `clientes-docs` con políticas RLS:
+- SELECT/INSERT/UPDATE/DELETE permitido a usuarios `authenticated` cuyo `company_id` coincida con la primera carpeta del path (`<company_id>/<cliente_id>/<archivo>`).
 
-### Nuevo componente `ImportarInsumosDialog.tsx`
-Tres estados internos (`'upload' | 'errors' | 'preview'`):
+Reemplazar la policy `Director manages clientes` por una nueva `Director y Administrativo gestionan clientes` que también incluya el rol `administrativo` (verificar que el enum `app_role` lo contenga; si no, agregarlo en la misma migración).
 
-**Estado upload:**
-- Drop/upload zone (input file `.xlsx,.xls`).
-- Botón "Descargar plantilla" → genera con SheetJS un xlsx con encabezados exactos `nombre, unidad, categoría` + 1 fila de ejemplo.
-- Texto guía: "Encabezados requeridos: nombre, unidad, categoría. Unidades válidas: KG, M2, M3, ML, PZA, LT, TON".
+### 2. Server functions (`src/lib/api/clientes.functions.ts`)
 
-**Parseo y validación cliente (al subir):**
-- Leer con `XLSX.read` → `sheet_to_json({ header: 1, defval: "" })`.
-- Localizar fila de encabezados (primera con `nombre/unidad/categoría` normalizados — quitar acentos, lower).
-- Mapear filas siguientes a `{ row, nombre, unidad, categoria }` (row = índice real del Excel, 1-based incluyendo header para mensajes legibles).
-- Validar cada fila:
-  - nombre vacío → "Nombre vacío"
-  - nombre duplicado dentro del archivo → "Duplicado en el archivo"
-  - unidad: uppercase + trim → si no está en UNIDADES → "Unidad inválida"
-  - categoría vacía → "Categoría vacía"
-- Si hay errores → estado `errors`. Si no → enviar al server fn `importarInsumos`; si server devuelve errores de duplicados con BD → fusionar y mostrar en estado `errors`. Si OK → estado `preview` con resumen + tabla de filas (mostrar primeras 100, contador total).
+Reemplazar el archivo. Schema Zod cubre todos los campos nuevos, valida RFC formato (12 moral / 13 física), CURP solo si `fisica`, contacto solo si `moral`.
 
-**Estado errors:**
-- Mensaje rojo: "X errores encontrados — corrige el archivo y vuelve a subirlo".
-- Tabla: Fila | Nombre | Unidad | Categoría | Error.
-- Botón "Descargar archivo con errores": genera xlsx con las mismas columnas + columna extra "Error" (filas con error resaltadas en rojo via cell style si es viable, si no solo columna).
-- Botón "Subir otro archivo" → vuelve a `upload`.
+- `listClientes({ search?, tipo_persona? })` — devuelve filas con campos clave + las dos fechas de vencimiento crudas (el cliente calcula el estado).
+- `getCliente({ id })` — devuelve cliente completo + array `obras` (id, nombre, tipo_obra, numero_contrato, fecha_inicio, monto_contratado) y `monto_total_contratado` agregado.
+- `crearCliente(datos)` — valida RFC único por `company_id` antes de insertar.
+- `actualizarCliente({ id, ...datos })` — valida RFC único excluyendo el propio id.
+- `eliminarCliente({ id })` — cuenta obras con `cliente_id = id`; si > 0, lanza error claro ("No se puede eliminar: tiene N obra(s) vinculada(s)").
+- `subirDocumentoCliente({ id, tipo: 'constancia'|'opinion', path, vencimiento })` — actualiza url + fecha de vencimiento.
 
-**Estado preview:**
-- Card resumen: "X insumos listos para importar", subtítulo si hay categorías nuevas a crear: "Y categorías nuevas se crearán".
-- Tabla preview (max 100 visibles + "y N más…").
-- Botones: Cancelar / "Confirmar importación".
-- Al confirmar: ejecutar `importarInsumos` (si no se ejecutó ya en validación) — flujo recomendado: hacer dry-run de validación de duplicados localmente con los datos en memoria (no requiere segunda llamada). Implementación concreta: hacer la llamada real al server fn solo al confirmar; si server devuelve errores de duplicado contra BD → cambiar a estado `errors` con esos errores.
-- Al éxito: toast, invalidar `["insumos"]`, `["insumo-categorias"]`, `["insumos-metricas"]`, cerrar dialog.
+Todas usan `requireSupabaseAuth`; las mutaciones verifican rol (Director o Administrativo) leyendo `user_roles`.
 
-## 4. Detalles técnicos
-- Cliente solo: `xlsx` se carga estáticamente (es ESM-friendly y safe para Worker porque el dialog solo se renderiza en cliente). Si causa problemas de SSR, usar `import("xlsx")` dinámico dentro del handler de archivo.
-- Limitar tamaño de archivo en cliente (e.g. 2MB) antes de parsear.
-- No tocar `client.ts`, `types.ts` ni `config.toml`.
-- Reutilizar componentes shadcn ya existentes (Dialog, Table, Button, Alert/Card).
+### 3. UI — Vista principal (`src/routes/_authenticated/app.clientes.tsx`)
 
-## 5. Orden de ejecución
-1. `bun add xlsx`
-2. Añadir `importarInsumos` a `insumos.functions.ts`
-3. Crear `src/components/insumos/ImportarInsumosDialog.tsx`
-4. Wire botón + estado en `CatalogoInsumosModule.tsx`
+Reemplazar el archivo. Mismo estilo del Catálogo de Insumos (header con título + botón "Nuevo cliente", toolbar con buscador y filtro, tabla en `Card`).
+
+- Toolbar: `Input` de búsqueda (nombre / RFC, debounce), `Select` filtro tipo de persona (Todos / Moral / Física).
+- Tabla con columnas: Razón social, RFC, Tipo (badge), Teléfono, Correo, Alertas, Acciones.
+- Columna Alertas: badge rojo "Vencido" si cualquier documento está vencido; amarillo "Por vencer" si vence en ≤30 días; gris "—" si está al día. Tooltip indica qué documento.
+- Click en fila abre la ficha (sub-route `app.clientes.$clienteId.tsx` que renderiza un `Sheet` lateral grande encima de la lista, para deep-linking).
+- Botón "Nuevo cliente" abre `ClienteFormDialog` (sólo Director / Administrativo).
+
+### 4. UI — Ficha de cliente (componente `ClienteDetalle`)
+
+4 `Tabs` (shadcn) montadas dentro de un `Sheet` lateral ancho:
+
+- **Datos generales:** todos los campos fiscales/contacto. Campos condicionales según `tipo_persona`. Modo lectura + botón "Editar" que conmuta a formulario inline.
+- **Comercial:** condiciones de pago, límite de crédito (formateado MXN), datos bancarios.
+- **Documentos:** dos bloques (Constancia, Opinión SAT). Cada uno: estado actual (badge rojo/amarillo/verde), link al archivo si existe, fecha de vencimiento, botón upload (input file → `supabase.storage.from('clientes-docs').upload(...)` → server fn `subirDocumentoCliente`).
+- **Obras:** tabla simple con obras vinculadas. Card resumen "Monto total contratado" (sumando `monto_contratado` de obras) formateado en MXN. Saldo pendiente "—" con tooltip "Disponible cuando el módulo de cobranza esté activo".
+
+### 5. Formulario `ClienteFormDialog`
+
+Dialog grande con secciones colapsables (no tabs, para crear todo de una vez):
+- Identificación: tipo persona, razón social/nombre, RFC, CURP (si física), régimen fiscal.
+- Contacto: dirección fiscal, teléfono, correo, contacto principal (si moral).
+- Comercial: condiciones de pago, límite de crédito, banco/CLABE/beneficiario.
+
+Validaciones: razón social requerida, RFC formato correcto y único, CLABE 18 dígitos si se provee. Los documentos se suben **después** de crear, desde la ficha.
+
+### 6. Quick-create desde formulario de obra
+
+El `ClienteSelector` en `app.obras.nueva.tsx` ya existe pero usa el formato viejo. Ajustarlo para enviar los campos mínimos del nuevo schema (`tipo_persona`, `razon_social`, `rfc`); el resto se completa luego desde la ficha.
+
+Además, agregar input para `monto_contratado` en el formulario de creación de obra (ya que la columna ahora existe).
+
+### 7. Acceso
+
+`isDirector(roles) || hasRole(roles, 'administrativo')` habilita botones de crear/editar/eliminar y uploads. Lectura abierta a todos los miembros de la empresa.
+
+### Detalles técnicos
+
+- Helper `formatMXN(n)` en `src/lib/format.ts` (crear si no existe).
+- Cálculo de alertas en el cliente a partir de las dos fechas crudas.
+- Tipo `Cliente` extendido vive en `src/lib/api/clientes.functions.ts` y se importa en la UI.
+
+### Archivos a crear/editar
+
+- `supabase/migrations/<timestamp>_extend_clientes_y_obras.sql` (nueva)
+- `src/lib/api/clientes.functions.ts` (reescribir)
+- `src/lib/api/obras.functions.ts` (incluir `monto_contratado` en select/insert/update)
+- `src/lib/format.ts` (nuevo)
+- `src/routes/_authenticated/app.clientes.tsx` (reescribir como lista)
+- `src/routes/_authenticated/app.clientes.$clienteId.tsx` (nuevo, ficha en Sheet)
+- `src/components/clientes/ClienteFormDialog.tsx` (nuevo)
+- `src/components/clientes/ClienteDetalle.tsx` (nuevo, 4 tabs)
+- `src/components/clientes/DocumentoUploader.tsx` (nuevo)
+- `src/routes/_authenticated/app.obras.nueva.tsx` (ajuste menor + campo monto)
