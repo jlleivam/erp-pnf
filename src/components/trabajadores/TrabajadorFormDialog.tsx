@@ -258,10 +258,21 @@ export function TrabajadorFormDialog({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Puesto</Label>
-                <Input
+                <Select
                   value={f.puesto ?? ""}
-                  onChange={(e) => set("puesto", e.target.value)}
-                />
+                  onValueChange={(v) => set("puesto", v as TrabajadorPuesto)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona puesto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PUESTOS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Sueldo diario (MXN)</Label>
