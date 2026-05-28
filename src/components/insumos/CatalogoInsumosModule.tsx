@@ -473,7 +473,7 @@ function CategoriasDialog({
             )}
             {categorias.map((c) => (
               <div key={c.id} className="flex items-center gap-2 p-2">
-                {editing?.id === c.id ? (
+                {editing && editing.id === c.id ? (
                   <>
                     <Input
                       value={editing.nombre}
