@@ -11,8 +11,7 @@ const SECTIONS = [
   { slug: "clientes", label: "Clientes", to: "/app/catalogos/clientes" as const },
   { slug: "insumos", label: "Insumos", to: "/app/catalogos/insumos" as const },
   { slug: "trabajadores", label: "Trabajadores", to: "/app/catalogos/trabajadores" as const },
-  { slug: "proveedores", label: "Proveedores", to: "/app/catalogos/proveedores" as const },
-  { slug: "subcontratistas", label: "Subcontratistas", to: "/app/catalogos/subcontratistas" as const },
+  { slug: "proveedores", label: "Proveedores/Contratistas", to: "/app/catalogos/proveedores" as const },
 ];
 
 export const Route = createFileRoute("/_authenticated/app/catalogos")({
