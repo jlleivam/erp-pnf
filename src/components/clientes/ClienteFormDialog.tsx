@@ -47,6 +47,27 @@ const EMPTY: ClienteFormInitial = {
   rfc: "",
 };
 
+const REGIMENES_MORAL = [
+  "601 — General de Ley Personas Morales",
+  "603 — Personas Morales con Fines no Lucrativos",
+  "620 — Sociedades Cooperativas de Producción",
+  "622 — Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras",
+  "623 — Opcional para Grupos de Sociedades",
+  "626 — Régimen Simplificado de Confianza (RESICO)",
+];
+
+const REGIMENES_FISICA = [
+  "605 — Sueldos y Salarios e Ingresos Asimilados",
+  "606 — Arrendamiento",
+  "607 — Régimen de Enajenación o Adquisición de Bienes",
+  "608 — Demás Ingresos",
+  "612 — Personas Físicas con Actividades Empresariales y Profesionales",
+  "616 — Sin Obligaciones Fiscales",
+  "621 — Incorporación Fiscal",
+  "626 — Régimen Simplificado de Confianza (RESICO)",
+];
+
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
