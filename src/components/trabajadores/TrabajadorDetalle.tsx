@@ -27,7 +27,7 @@ import {
   TrabajadorFormDialog,
   type TrabajadorFormInitial,
 } from "./TrabajadorFormDialog";
-import { IMSS_BADGE, IMSS_LABEL } from "./imss";
+import { IMSS_BADGE, IMSS_LABEL, PUESTO_LABEL } from "./imss";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
