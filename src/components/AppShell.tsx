@@ -4,6 +4,7 @@ import { useAuthStore, isDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ADMIN_MODULES } from "@/lib/modules";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,21 +22,6 @@ const ROLE_LABELS: Record<AppRole, string> = {
   supervisor: "Supervisor",
 };
 
-const ADMIN_MODULES = [
-  { to: "/app/admin/requisiciones", label: "Requisiciones" },
-  { to: "/app/admin/cuentas-por-pagar", label: "Cuentas por pagar" },
-  { to: "/app/admin/tesoreria", label: "Tesorería" },
-  { to: "/app/admin/almacen-central", label: "Almacén central" },
-  { to: "/app/admin/gastos-oficina", label: "Gastos de oficina" },
-  { to: "/app/admin/nomina", label: "Nómina" },
-  { to: "/app/admin/destajos", label: "Destajos" },
-  { to: "/app/admin/subcontratos", label: "Subcontratos" },
-  { to: "/app/admin/rentas", label: "Rentas" },
-  { to: "/app/admin/gasolinas", label: "Gasolinas" },
-  { to: "/app/admin/caja-chica", label: "Caja chica" },
-  { to: "/app/admin/catalogos", label: "Catálogos" },
-  { to: "/app/admin/tareas", label: "Tareas" },
-] as const;
 
 export function AppShell() {
   const navigate = useNavigate();
