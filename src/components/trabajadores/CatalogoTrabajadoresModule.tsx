@@ -143,11 +143,6 @@ export function CatalogoTrabajadoresModule() {
 
   const rows: Row[] = (listQ.data ?? []) as Row[];
 
-  const puestos = useMemo(() => {
-    const set = new Set<string>();
-    rows.forEach((r) => r.puesto && set.add(r.puesto));
-    return Array.from(set).sort();
-  }, [rows]);
 
   const stats = useMemo(() => {
     const total = rows.length;
