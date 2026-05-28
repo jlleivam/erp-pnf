@@ -9,38 +9,208 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app.configuracion'
+import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated/app.clientes'
+import { Route as AuthenticatedAppObrasNuevaRouteImport } from './routes/_authenticated/app.obras.nueva'
+import { Route as AuthenticatedAppObrasObraIdRouteImport } from './routes/_authenticated/app.obras.$obraId'
+import { Route as AuthenticatedAppAdminSplatRouteImport } from './routes/_authenticated/app.admin.$'
+import { Route as AuthenticatedAppObrasObraIdIndexRouteImport } from './routes/_authenticated/app.obras.$obraId.index'
+import { Route as AuthenticatedAppObrasObraIdSplatRouteImport } from './routes/_authenticated/app.obras.$obraId.$'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppConfiguracionRoute =
+  AuthenticatedAppConfiguracionRouteImport.update({
+    id: '/configuracion',
+    path: '/configuracion',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppClientesRoute =
+  AuthenticatedAppClientesRouteImport.update({
+    id: '/clientes',
+    path: '/clientes',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppObrasNuevaRoute =
+  AuthenticatedAppObrasNuevaRouteImport.update({
+    id: '/obras/nueva',
+    path: '/obras/nueva',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppObrasObraIdRoute =
+  AuthenticatedAppObrasObraIdRouteImport.update({
+    id: '/obras/$obraId',
+    path: '/obras/$obraId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppAdminSplatRoute =
+  AuthenticatedAppAdminSplatRouteImport.update({
+    id: '/admin/$',
+    path: '/admin/$',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppObrasObraIdIndexRoute =
+  AuthenticatedAppObrasObraIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
+  } as any)
+const AuthenticatedAppObrasObraIdSplatRoute =
+  AuthenticatedAppObrasObraIdSplatRouteImport.update({
+    id: '/$',
+    path: '/$',
+    getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/app': typeof AuthenticatedAppRouteWithChildren
+  '/app/clientes': typeof AuthenticatedAppClientesRoute
+  '/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
+  '/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
+  '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
+  '/app/obras/$obraId/': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/app/clientes': typeof AuthenticatedAppClientesRoute
+  '/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
+  '/app': typeof AuthenticatedAppIndexRoute
+  '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
+  '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
+  '/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/app/clientes': typeof AuthenticatedAppClientesRoute
+  '/_authenticated/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
+  '/_authenticated/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
+  '/_authenticated/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/_authenticated/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
+  '/_authenticated/app/obras/$obraId/': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/onboarding'
+    | '/app'
+    | '/app/clientes'
+    | '/app/configuracion'
+    | '/app/'
+    | '/app/admin/$'
+    | '/app/obras/$obraId'
+    | '/app/obras/nueva'
+    | '/app/obras/$obraId/$'
+    | '/app/obras/$obraId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/onboarding'
+    | '/app/clientes'
+    | '/app/configuracion'
+    | '/app'
+    | '/app/admin/$'
+    | '/app/obras/nueva'
+    | '/app/obras/$obraId/$'
+    | '/app/obras/$obraId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/onboarding'
+    | '/_authenticated/app'
+    | '/_authenticated/app/clientes'
+    | '/_authenticated/app/configuracion'
+    | '/_authenticated/app/'
+    | '/_authenticated/app/admin/$'
+    | '/_authenticated/app/obras/$obraId'
+    | '/_authenticated/app/obras/nueva'
+    | '/_authenticated/app/obras/$obraId/$'
+    | '/_authenticated/app/obras/$obraId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +218,129 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/configuracion': {
+      id: '/_authenticated/app/configuracion'
+      path: '/configuracion'
+      fullPath: '/app/configuracion'
+      preLoaderRoute: typeof AuthenticatedAppConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/clientes': {
+      id: '/_authenticated/app/clientes'
+      path: '/clientes'
+      fullPath: '/app/clientes'
+      preLoaderRoute: typeof AuthenticatedAppClientesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/obras/nueva': {
+      id: '/_authenticated/app/obras/nueva'
+      path: '/obras/nueva'
+      fullPath: '/app/obras/nueva'
+      preLoaderRoute: typeof AuthenticatedAppObrasNuevaRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/obras/$obraId': {
+      id: '/_authenticated/app/obras/$obraId'
+      path: '/obras/$obraId'
+      fullPath: '/app/obras/$obraId'
+      preLoaderRoute: typeof AuthenticatedAppObrasObraIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin/$': {
+      id: '/_authenticated/app/admin/$'
+      path: '/admin/$'
+      fullPath: '/app/admin/$'
+      preLoaderRoute: typeof AuthenticatedAppAdminSplatRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/obras/$obraId/': {
+      id: '/_authenticated/app/obras/$obraId/'
+      path: '/'
+      fullPath: '/app/obras/$obraId/'
+      preLoaderRoute: typeof AuthenticatedAppObrasObraIdIndexRouteImport
+      parentRoute: typeof AuthenticatedAppObrasObraIdRoute
+    }
+    '/_authenticated/app/obras/$obraId/$': {
+      id: '/_authenticated/app/obras/$obraId/$'
+      path: '/$'
+      fullPath: '/app/obras/$obraId/$'
+      preLoaderRoute: typeof AuthenticatedAppObrasObraIdSplatRouteImport
+      parentRoute: typeof AuthenticatedAppObrasObraIdRoute
+    }
   }
 }
 
+interface AuthenticatedAppObrasObraIdRouteChildren {
+  AuthenticatedAppObrasObraIdSplatRoute: typeof AuthenticatedAppObrasObraIdSplatRoute
+  AuthenticatedAppObrasObraIdIndexRoute: typeof AuthenticatedAppObrasObraIdIndexRoute
+}
+
+const AuthenticatedAppObrasObraIdRouteChildren: AuthenticatedAppObrasObraIdRouteChildren =
+  {
+    AuthenticatedAppObrasObraIdSplatRoute:
+      AuthenticatedAppObrasObraIdSplatRoute,
+    AuthenticatedAppObrasObraIdIndexRoute:
+      AuthenticatedAppObrasObraIdIndexRoute,
+  }
+
+const AuthenticatedAppObrasObraIdRouteWithChildren =
+  AuthenticatedAppObrasObraIdRoute._addFileChildren(
+    AuthenticatedAppObrasObraIdRouteChildren,
+  )
+
+interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppClientesRoute: typeof AuthenticatedAppClientesRoute
+  AuthenticatedAppConfiguracionRoute: typeof AuthenticatedAppConfiguracionRoute
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAdminSplatRoute: typeof AuthenticatedAppAdminSplatRoute
+  AuthenticatedAppObrasObraIdRoute: typeof AuthenticatedAppObrasObraIdRouteWithChildren
+  AuthenticatedAppObrasNuevaRoute: typeof AuthenticatedAppObrasNuevaRoute
+}
+
+const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppClientesRoute: AuthenticatedAppClientesRoute,
+  AuthenticatedAppConfiguracionRoute: AuthenticatedAppConfiguracionRoute,
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAdminSplatRoute: AuthenticatedAppAdminSplatRoute,
+  AuthenticatedAppObrasObraIdRoute:
+    AuthenticatedAppObrasObraIdRouteWithChildren,
+  AuthenticatedAppObrasNuevaRoute: AuthenticatedAppObrasNuevaRoute,
+}
+
+const AuthenticatedAppRouteWithChildren =
+  AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
