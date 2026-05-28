@@ -122,7 +122,7 @@ export function TrabajadorFormDialog({
       rfc: f.rfc?.trim().toUpperCase() || null,
       fecha_nacimiento: f.fecha_nacimiento || null,
       sexo: f.sexo ?? null,
-      estado_civil: f.estado_civil?.trim() || null,
+      puesto: f.puesto ?? null,
       puesto: f.puesto?.trim() || null,
       sueldo_diario:
         f.sueldo_diario == null || isNaN(Number(f.sueldo_diario))
