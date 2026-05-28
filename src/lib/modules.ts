@@ -10,7 +10,7 @@ import {
   Truck,
   Fuel,
   Coins,
-  BookOpen,
+  
   ListTodo,
   ClipboardList,
   type LucideIcon,
@@ -35,7 +35,7 @@ export const ADMIN_MODULES: ModuleEntry[] = [
   { to: "/app/admin/rentas", label: "Rentas", icon: Truck },
   { to: "/app/admin/gasolinas", label: "Gasolinas", icon: Fuel },
   { to: "/app/admin/caja-chica", label: "Caja chica", icon: Coins },
-  { to: "/app/admin/catalogos", label: "Catálogos", icon: BookOpen },
+  
   { to: "/app/admin/tareas", label: "Tareas", icon: ListTodo },
 ];
 
