@@ -306,5 +306,5 @@ export const importarInsumos = createServerFn({ method: "POST" })
     const { error: insErr } = await supabase.from("insumos").insert(rows);
     if (insErr) throw new Error(`Error insertando insumos: ${insErr.message}`);
 
-    return { insertadas: rows.length, categoriasCreadas: nuevasCats.size };
+    return { ok: true as const, insertadas: rows.length, categoriasCreadas: nuevasCats.size };
   });
