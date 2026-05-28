@@ -1,18 +1,9 @@
-Cambiar el campo `regimen_fiscal` del formulario de clientes de texto libre a un menú desplegable (Select) con opciones oficiales del SAT filtradas según el tipo de persona seleccionado. Aplicar el mismo comportamiento en la vista de detalle.
+En `src/components/insumos/CatalogoInsumosModule.tsx`, eliminar el bloque de métricas (líneas 150–160) que contiene las 4 tarjetas:
+- Total insumos
+- Categorías
+- Con historial
+- Pendientes
 
-### Cambios en `ClienteFormDialog.tsx`
-1. Definir dos listas de regímenes fiscales:
-   - Moral: 601, 603, 620, 622, 623, 626
-   - Física: 605, 606, 607, 608, 612, 616, 621, 626
-2. Reemplazar el `<Input>` de régimen fiscal por un componente `<Select>` del shadcn.
-3. El `<Select>` se llena dinámicamente con la lista correspondiente al valor actual de `tipo_persona`.
-4. Al cambiar `tipo_persona`, si `regimen_fiscal` ya tenía un valor seleccionado, limpiarlo automáticamente (setear a `null`).
-5. Las opciones del Select muestran el texto completo (clave + descripción) y guardan el mismo texto completo en el estado.
-6. El placeholder del Select dirá "Selecciona un régimen fiscal".
+Esto implica eliminar tanto el `<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">` como su contenido (4 llamadas a `MetricCard`).
 
-### Cambios en `ClienteDetalle.tsx`
-1. En la pestaña "Generales", el campo "Régimen fiscal" ya se muestra como texto. No se requiere cambio visual adicional, ya que el valor guardado incluye clave y descripción.
-
-### Archivos afectados
-- `src/components/clientes/ClienteFormDialog.tsx`
-- `src/components/clientes/ClienteDetalle.tsx` (solo verificar que renderice correctamente el nuevo formato; no requiere modificación estructural)
+La función `MetricCard` se mantiene ya que podría usarse en otras partes, pero al verificar que no hay otras referencias, también se podría eliminar para limpieza.
