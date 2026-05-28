@@ -52,7 +52,10 @@ import {
   DOCS_LABEL,
   IMSS_BADGE,
   IMSS_LABEL,
+  PUESTOS,
+  PUESTO_LABEL,
   mascararCurp,
+  type TrabajadorPuesto,
 } from "./imss";
 import { TrabajadorFormDialog } from "./TrabajadorFormDialog";
 import { TrabajadorDetalle } from "./TrabajadorDetalle";
