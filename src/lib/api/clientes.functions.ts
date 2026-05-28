@@ -48,10 +48,6 @@ const SELECT_FULL =
 const SELECT_LIST =
   "id, tipo_persona, razon_social, rfc, telefono, correo, datos_contacto, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento";
 
-async function getMyContext(supabase: ReturnType<typeof requireGetSupabase>, userId: string) {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("company_id")
 async function getMyContext(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
