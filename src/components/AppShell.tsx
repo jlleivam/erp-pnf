@@ -82,6 +82,14 @@ export function AppShell() {
             <NavItem to="/app/clientes" label="Clientes" icon={<Users className="size-4" />} active={pathname.startsWith("/app/clientes")} />
             {director && (
               <NavItem
+                to="/app/equipo"
+                label="Equipo"
+                icon={<UserCog className="size-4" />}
+                active={pathname.startsWith("/app/equipo")}
+              />
+            )}
+            {director && (
+              <NavItem
                 to="/app/obras/nueva"
                 label="Nueva obra"
                 icon={<HardHat className="size-4" />}
