@@ -187,7 +187,7 @@ export function TrabajadorDetalle({
                 <div>
                   <h4 className="text-sm font-medium mb-3">Datos laborales</h4>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <Field label="Puesto" value={t.puesto} />
+                    <Field label="Puesto" value={t.puesto ? (PUESTO_LABEL[t.puesto as keyof typeof PUESTO_LABEL] ?? t.puesto) : null} />
                     <Field
                       label="Sueldo diario"
                       value={t.sueldo_diario != null ? formatMXN(Number(t.sueldo_diario)) : null}
