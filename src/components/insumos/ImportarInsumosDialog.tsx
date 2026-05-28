@@ -55,8 +55,8 @@ export function ImportarInsumosDialog({
     if (!b) reset();
     onOpenChange(b);
   }
-
-  function descargarPlantilla() {
+  async function descargarPlantilla() {
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.aoa_to_sheet([
       ["nombre", "unidad", "categoría"],
       ["Cemento Portland 50kg", "PZA", "Materiales"],
@@ -68,7 +68,8 @@ export function ImportarInsumosDialog({
     XLSX.writeFile(wb, "plantilla-insumos.xlsx");
   }
 
-  function descargarErrores() {
+  async function descargarErrores() {
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.aoa_to_sheet([
       ["Fila", "nombre", "unidad", "categoría", "Error"],
       ...errores.map((e) => [e.row, e.nombre, e.unidad, e.categoria, e.error]),
@@ -77,6 +78,7 @@ export function ImportarInsumosDialog({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Errores");
     XLSX.writeFile(wb, "insumos-con-errores.xlsx");
+  }
   }
 
   async function handleFile(file: File) {
