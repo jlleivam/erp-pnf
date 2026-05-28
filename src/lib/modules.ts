@@ -10,7 +10,7 @@ import {
   Truck,
   Fuel,
   Coins,
-  BookOpen,
+  
   ListTodo,
   ClipboardList,
   type LucideIcon,
