@@ -104,7 +104,7 @@ export function TrabajadorDetalle({
                 <SheetDescription>
                   {t && (
                     <span className="flex items-center gap-2 flex-wrap">
-                      {t.puesto && <Badge variant="secondary">{t.puesto}</Badge>}
+                      {t.puesto && <Badge variant="secondary">{PUESTO_LABEL[t.puesto as keyof typeof PUESTO_LABEL] ?? t.puesto}</Badge>}
                       <Badge className={IMSS_BADGE[t.imss_estatus]} variant="secondary">
                         {IMSS_LABEL[t.imss_estatus]}
                       </Badge>
