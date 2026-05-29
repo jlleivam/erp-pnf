@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkles, Plus, X, Send, CheckCircle2, XCircle, RotateCcw, Lock } from "lucide-react";
+import { Sparkles, Plus, X, Send, CheckCircle2, XCircle, RotateCcw, Lock, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

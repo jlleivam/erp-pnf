@@ -1,33 +1,31 @@
 ## Objetivo
 
-Dentro del panel de cotización (`CotizacionSheet`), agregar una nueva primera pestaña llamada **Requisición** que muestre la requisición original en modo lectura, antes de la pestaña de Cotizaciones.
+Reforzar el flujo de "Enviar a supervisor" en la pestaña Comparativa:
+
+1. Al enviar a supervisor, el botón de la tarjeta del proveedor debe cambiar a un botón **"Pendiente de autorización"** deshabilitado (no a solo un texto suelto).
+2. Las líneas asignadas a un pedido pendiente o autorizado no deben poder reasignarse a otro proveedor (ya parcialmente cubierto por `provBloqueado`).
+3. Cuando el supervisor autoriza la OC, la tarjeta del proveedor **permanece visible en Comparativa** pero solo muestra el estatus **Autorizada** (sin acciones, en modo lectura). La OC autorizada también aparece en la pestaña **OCs** para hacer los pedidos finales.
 
 ## Cambios
 
-### `src/components/requisiciones/CotizacionSheet.tsx`
+### `src/components/requisiciones/ComparativaTable.tsx`
 
-1. Extender el tipo:
-   ```ts
-   export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs";
-   ```
-   y cambiar `initialTab` por defecto a `"requisicion"`.
+1. **Botón "Pendiente de autorización"**
+   En la rama `estatus === "pendiente_autorizacion"` de las acciones de la tarjeta:
+   - Si el usuario **no es supervisor**, reemplazar el `<p>Esperando autorización del supervisor</p>` por un `<Button disabled>` con ícono `Clock` y texto "Pendiente de autorización".
+   - Si es supervisor, mantener Autorizar / Rechazar como hoy.
 
-2. En `TabsList`: pasar de `grid-cols-3` a `grid-cols-4` y agregar como primer trigger:
-   ```
-   <TabsTrigger value="requisicion">Requisición</TabsTrigger>
-   ```
+2. **Tarjeta autorizada en modo lectura**
+   La rama `estatus === "autorizada"` ya muestra el texto "Autorizada" sin acciones — mantener. Confirmar que toda la fila/insumo siga bloqueada en la matriz vía `provBloqueado` (ya cubierto: devuelve true para `autorizada`).
 
-3. Agregar un nuevo `TabsContent value="requisicion"` con:
-   - Encabezado: folio, estatus (badge), solicitante, fecha de creación / envío.
-   - Notas de la requisición (si existen).
-   - Tabla de insumos pedidos: Insumo, Unidad, Cantidad, Fecha requerida, Nota.
-   - Todo en modo lectura (sin acciones), usando los datos ya disponibles en `req` y `reqItems` que ya devuelve `getCotizacionRequisicion`.
+3. **Importar `Clock`** desde `lucide-react`.
 
-### Resto de la app
+### Sin cambios
 
-- Ningún otro componente abre el sheet con `initialTab` específico que se rompa: los call sites siguen funcionando porque los valores existentes (`solicitudes`, `comparativa`, `ocs`) permanecen válidos.
-- No hay cambios en server functions ni en la base de datos: la requisición y sus items ya vienen en el query `getCotizacionRequisicion`.
+- Server functions (`enviarOCASupervisor`, `autorizarOC`, `rechazarOC`).
+- Base de datos.
+- Pestaña OCs (`CotizacionSheet.tsx`) — ya lista todas las OCs autorizadas.
 
 ## Riesgos
 
-Bajo. Es solo UI dentro de un componente, reutilizando datos ya cargados.
+Mínimo. Cambio puntual de UI en la sección de acciones de la tarjeta del proveedor.
