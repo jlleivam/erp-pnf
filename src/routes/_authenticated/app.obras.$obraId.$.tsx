@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { CatalogoInsumosModule } from "@/components/insumos/CatalogoInsumosModule";
+import { RequisicionesModule } from "@/components/requisiciones/RequisicionesModule";
 import { useAuthStore, isDirector } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
@@ -23,10 +24,11 @@ export const Route = createFileRoute("/_authenticated/app/obras/$obraId/$")({
 });
 
 function ObraModule() {
-  const { _splat } = Route.useParams();
+  const { _splat, obraId } = Route.useParams() as { _splat?: string; obraId: string };
   const roles = useAuthStore((s) => s.roles);
   const slug = (_splat ?? "").split("/")[0];
   if (slug === "catalogos") return <CatalogoInsumosModule />;
+  if (slug === "requisiciones") return <RequisicionesModule obraId={obraId} />;
   const title = LABELS[slug] ?? "Módulo";
   const isAuxiliar = !isDirector(roles) && roles.includes("auxiliar");
 
