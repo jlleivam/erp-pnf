@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { CatalogoInsumosModule } from "@/components/insumos/CatalogoInsumosModule";
 import { RequisicionesModule } from "@/components/requisiciones/RequisicionesModule";
-import { useAuthStore, isDirector } from "@/stores/auth";
+import { useEffectiveRoles, isDirector } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
   estimaciones: "Estimaciones",
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/app/obras/$obraId/$")({
 
 function ObraModule() {
   const { _splat, obraId } = Route.useParams() as { _splat?: string; obraId: string };
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const slug = (_splat ?? "").split("/")[0];
   if (slug === "catalogos") return <CatalogoInsumosModule />;
   if (slug === "requisiciones") return <RequisicionesModule obraId={obraId} />;
