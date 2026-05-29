@@ -167,14 +167,14 @@ function FechaProximaCell({ rowId, fetchDetalle }: { rowId: string; fetchDetalle
 
 function AccionCell({ row, onAction }: {
   row: any;
-  onAction: (r: any, t: "cotizar" | "ocs") => void;
+  onAction: (r: any, t: CotizacionTab) => void;
 }) {
   const estatus = row.estatus as RequisicionEstatus;
   if (estatus === "enviada") {
-    return <Button size="sm" onClick={() => onAction(row, "cotizar")}>Cotizar</Button>;
+    return <Button size="sm" onClick={() => onAction(row, "solicitudes")}>Cotizar</Button>;
   }
   if (estatus === "en_cotizacion") {
-    return <Button size="sm" variant="outline" onClick={() => onAction(row, "cotizar")}>Continuar</Button>;
+    return <Button size="sm" variant="outline" onClick={() => onAction(row, "solicitudes")}>Continuar</Button>;
   }
   if (["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus)) {
     return <Button size="sm" variant="outline" onClick={() => onAction(row, "ocs")}>Ver OCs</Button>;
@@ -189,7 +189,7 @@ function RequisicionesTable({
   loading: boolean;
   emptyText: string;
   onRowClick: (id: string) => void;
-  onAction: (r: any, t: "cotizar" | "ocs") => void;
+  onAction: (r: any, t: CotizacionTab) => void;
   fetchDetalle: any;
 }) {
   if (loading) {
