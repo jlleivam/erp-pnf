@@ -159,6 +159,20 @@ export function ComparativaTable({
     setHydrated(false);
   }, [paquetes.length, ocs.length]);
 
+  // Limpiar marca optimista cuando el backend ya refleja un estatus posterior a borrador
+  useEffect(() => {
+    setOptimisticPendiente((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(prev);
+      for (const oc of ocs) {
+        const paq = paquetes.find((p) => p.id === oc.paquete_id);
+        const provId = paq?.proveedor_id ?? oc.proveedor?.id;
+        if (provId && oc.estatus && oc.estatus !== "borrador") next.delete(provId);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [ocs, paquetes]);
+
   if (recibidas.length === 0) {
     return (
       <Card className="p-8 text-center border-dashed">
