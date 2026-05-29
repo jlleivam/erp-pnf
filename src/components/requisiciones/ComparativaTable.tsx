@@ -135,6 +135,8 @@ export function ComparativaTable({
   // Estado de asignaciones: insumoId -> Asignacion[] (proveedorId = solicitudId del proveedor)
   const [asignaciones, setAsignaciones] = useState<Record<string, Asignacion[]>>({});
   const [hydrated, setHydrated] = useState(false);
+  const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
+  const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
 
   // Hidratar desde paquetes existentes
   useEffect(() => {
@@ -158,6 +160,20 @@ export function ComparativaTable({
   useEffect(() => {
     setHydrated(false);
   }, [paquetes.length, ocs.length]);
+
+  // Limpiar marca optimista cuando el backend ya refleja un estatus posterior a borrador
+  useEffect(() => {
+    setOptimisticPendiente((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(prev);
+      for (const oc of ocs) {
+        const paq = paquetes.find((p) => p.id === oc.paquete_id);
+        const provId = paq?.proveedor_id ?? oc.proveedor?.id;
+        if (provId && oc.estatus && oc.estatus !== "borrador") next.delete(provId);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [ocs, paquetes]);
 
   if (recibidas.length === 0) {
     return (
@@ -291,6 +307,7 @@ export function ComparativaTable({
     qc.invalidateQueries({ queryKey: ["requisiciones"] });
   };
 
+
   const enviarMut = useMutation({
     mutationFn: async (proveedorId: string) => {
       const entry = resumenPorProveedor.get(proveedorId);
@@ -301,7 +318,6 @@ export function ComparativaTable({
         cantidad: l.cantidad,
         precio_unitario: l.precio,
       }));
-      // 1. Guardar paquete
       const r = await guardarFn({
         data: {
           requisicionId,
@@ -311,13 +327,24 @@ export function ComparativaTable({
         },
       });
       const paqueteId = (r as any).id;
-      // 2. Generar/regenerar OC
       const ocRes = await generarFn({ data: { paqueteId } });
-      // 3. Enviar al supervisor
       await enviarFn({ data: { ocId: (ocRes as any).id } });
+      return proveedorId;
     },
-    onSuccess: () => { toast.success("OC enviada al supervisor"); invalidate(); },
-    onError: (e: any) => toast.error(e?.message ?? "Error"),
+    onSuccess: (proveedorId) => {
+      toast.success("OC enviada al supervisor");
+      setOptimisticPendiente((s) => {
+        const n = new Set(s);
+        n.add(proveedorId);
+        return n;
+      });
+      setEnviandoProv(null);
+      invalidate();
+    },
+    onError: (e: any) => {
+      toast.error(e?.message ?? "Error");
+      setEnviandoProv(null);
+    },
   });
 
   const autorizarMut = useMutation({
@@ -641,10 +668,12 @@ export function ComparativaTable({
           {Array.from(resumenPorProveedor.entries()).map(([provId, info]) => {
             const oc = ocByProveedor.get(provId);
             const paquete = paqueteByProveedor.get(provId);
-            const estatus = oc?.estatus as string | undefined;
+            const isOptimisticPendiente = optimisticPendiente.has(provId);
+            const estatus = (isOptimisticPendiente ? "pendiente_autorizacion" : oc?.estatus) as string | undefined;
             const badge = estatus ? OC_BADGE[estatus] : null;
-            const bloqueado = provBloqueado(provId);
-            const puedeEnviar = isAdmin && !bloqueado && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
+            const bloqueado = provBloqueado(provId) || isOptimisticPendiente;
+            const enviandoEsta = enviandoProv === provId;
+            const puedeEnviar = isAdmin && !bloqueado && !enviandoEsta && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
             // Detectar si el pedido en pantalla difiere del paquete guardado
             const dirty = (() => {
               if (!paquete) return true;
@@ -721,11 +750,11 @@ export function ComparativaTable({
                       )}
                       <Button
                         size="sm"
-                        onClick={() => enviarMut.mutate(provId)}
-                        disabled={!puedeEnviar || enviarMut.isPending}
+                        onClick={() => { setEnviandoProv(provId); enviarMut.mutate(provId); }}
+                        disabled={!puedeEnviar}
                       >
                         <Send className="size-4 mr-1" />
-                        {estatus === "rechazada" ? "Reenviar a supervisor" : "Enviar a supervisor"}
+                        {enviandoEsta ? "Enviando…" : estatus === "rechazada" ? "Reenviar a supervisor" : "Enviar a supervisor"}
                       </Button>
                     </>
                   )}
