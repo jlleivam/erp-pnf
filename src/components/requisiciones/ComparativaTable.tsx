@@ -668,10 +668,12 @@ export function ComparativaTable({
           {Array.from(resumenPorProveedor.entries()).map(([provId, info]) => {
             const oc = ocByProveedor.get(provId);
             const paquete = paqueteByProveedor.get(provId);
-            const estatus = oc?.estatus as string | undefined;
+            const isOptimisticPendiente = optimisticPendiente.has(provId);
+            const estatus = (isOptimisticPendiente ? "pendiente_autorizacion" : oc?.estatus) as string | undefined;
             const badge = estatus ? OC_BADGE[estatus] : null;
-            const bloqueado = provBloqueado(provId);
-            const puedeEnviar = isAdmin && !bloqueado && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
+            const bloqueado = provBloqueado(provId) || isOptimisticPendiente;
+            const enviandoEsta = enviandoProv === provId;
+            const puedeEnviar = isAdmin && !bloqueado && !enviandoEsta && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
             // Detectar si el pedido en pantalla difiere del paquete guardado
             const dirty = (() => {
               if (!paquete) return true;
