@@ -1,51 +1,36 @@
-# Asignación de un insumo a múltiples proveedores
+## Compactar el recuadro "Asignar a"
 
-## Problema
+Reducir el ancho y la altura de cada fila de asignación en la columna "Asignar a" de `ComparativaTable.tsx`, sin cambiar la lógica de asignación.
 
-Hoy la comparativa permite asignar **un solo proveedor por insumo**. Si la requisición pide 150 kg de acero y Aceros Alcalde solo tiene 120 kg disponibles, no hay forma de cubrir los 30 kg restantes con otro proveedor desde la misma pantalla.
+### Cambios en `ComparativaTable.tsx` (líneas ~344–410)
 
-## Solución (solo UI / cliente)
+1. **Contenedor de la columna**
+   - Limitar el ancho de la columna agregando `w-[260px] min-w-[240px]` al `<TableCell>` de "Asignar a" (y al `<TableHead>` correspondiente) para que el espacio asignado no se infle según el dropdown.
 
-Cambiar el estado de asignación de `Record<insumoId, Asignacion>` a `Record<insumoId, Asignacion[]>`, de modo que cada insumo pueda repartirse entre varios proveedores y la suma se compare contra la cantidad requerida.
+2. **Caja por asignación** (`<div … border rounded p-1.5>`)
+   - Reducir padding a `p-1` y separación a `gap-0.5`.
 
-### Cambios en `ComparativaTable.tsx`
+3. **Fila del Select de proveedor**
+   - El `SelectTrigger` muestra hoy `"Macrobodega de materiales · $14.00 · 50 KG"` lo que obliga al trigger a ser ancho. Reemplazar el `<SelectValue />` por un render personalizado que muestre solo el **nombre del proveedor** truncado:
+     - `<SelectTrigger className="h-7 text-xs flex-1 min-w-0">` con un `<span className="truncate">{proveedor.razon_social}</span>` en vez de `<SelectValue />`.
+     - Mantener PU y cantidad disponible **solo dentro del `SelectContent`** (las opciones siguen mostrando `nombre · $PU · cant disp.`).
+   - Botón ✕: `h-7 w-7`, icono `size-3`.
 
-1. **Estado**
-   - `asignaciones: Record<string, Asignacion[]>` donde `Asignacion = { proveedorId: solicitudId, cantidad }`.
-   - Helpers: `addAsignacion`, `updateAsignacion(insumoId, idx, …)`, `removeAsignacion(insumoId, idx)`.
+4. **Fila del input de cantidad**
+   - Quitar las flechas nativas del `type=number` con clases utilitarias (`[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`) para no perder ancho con los spinners.
+   - `Input` con `className="h-7 text-xs w-20"` (ancho fijo pequeño) en vez de ocupar todo el flex.
+   - El texto auxiliar a la derecha se acorta: `"KG / 50"` en vez de `"KG / 50 disp."` y usar `text-[11px]` con `truncate`.
 
-2. **Columna "Asignar a"** (por fila de insumo)
-   - Lista vertical de filas de asignación, cada una con:
-     - `Select` de proveedor (solo opciones que cotizaron, disponibles, y **que aún no estén usadas** en otra fila del mismo insumo).
-     - `Input` numérico de cantidad (default = `min(faltante, oferta.cantidad)`).
-     - Botón ✕ para quitar esa asignación.
-   - Botón **"+ Agregar proveedor"** visible mientras queden proveedores disponibles y `asignado < cantReq`.
-   - Indicador de progreso debajo: `asignado / cantReq unidad` con color:
-     - verde si `asignado === cantReq`
-     - ámbar si `asignado < cantReq` (faltante)
-     - rojo si `asignado > cantReq` (sobreasignado)
-   - Aviso por fila si la cantidad excede `oferta.cantidad` del proveedor elegido.
+5. **Botón "Agregar proveedor"**
+   - Cambiar a `h-7 text-xs` con label corto: `"+ Proveedor"` o mantener el icono y label actual pero con `px-2`.
 
-3. **"Tomar mejor precio" / "Asignar mejor precio en todos"**
-   - Reescribir para que llene en cascada: empieza por el proveedor con menor PU disponible, toma `min(faltante, oferta.cantidad)`, y si aún falta, agrega el siguiente proveedor más barato hasta cubrir `cantReq` o agotar ofertas.
-
-4. **Resumen por proveedor** y **`generarMut`**
-   - Iterar `Object.entries(asignaciones)` y, dentro, cada `Asignacion[]`, sumando por `proveedorId` real (vía `provBySolicitud`). El resto del flujo (`guardarPaquete` por proveedor) no cambia, ya recibe `{ insumo_id, cantidad, precio_unitario }[]`.
-   - Contador "X de Y insumos asignados" cuenta insumos con **al menos una** asignación; opcionalmente un segundo contador "Z totalmente cubiertos" para los que llegan exactamente a `cantReq`.
-
-5. **Resaltado en columnas del proveedor**
-   - El `ring` de "asignado" se aplica si el `solicitudId` aparece en cualquiera de las asignaciones del insumo.
+6. **Indicador de progreso** (línea de "150 / 150 KG")
+   - Mantener tal cual; ya cabe.
 
 ### Sin cambios
 
-- No se toca el esquema, ni `cotizaciones.functions.ts`, ni `CotizacionSheet.tsx`, ni el servidor. `guardarPaquete` ya acepta múltiples insumos por proveedor; aquí solo cambia cómo el cliente arma esas listas.
+- Estado, helpers (`addAsignacion`, `updateAsignacion`, `removeAsignacion`), `tomarMejorPrecio`, `generarMut`, ni el resto de columnas. Es puramente visual.
 
-### Validaciones
-
-- No permitir cantidades ≤ 0 en una asignación (se omite al generar paquetes).
-- Permitir guardar aunque haya insumos parcialmente cubiertos (con aviso visual), igual que hoy.
-- No bloquear sobreasignación, solo marcarla en rojo.
-
-## Archivo afectado
+### Archivo afectado
 
 - `src/components/requisiciones/ComparativaTable.tsx`
