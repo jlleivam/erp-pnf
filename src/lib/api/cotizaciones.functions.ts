@@ -113,29 +113,10 @@ export const guardarPaquete = createServerFn({ method: "POST" })
       .from("requisiciones").select("id, company_id").eq("id", data.requisicionId).maybeSingle();
     if (!req || req.company_id !== companyId) throw new Error("Requisición no válida");
 
-    // Validar duplicados entre paquetes (ignora paquetes huérfanos sin items)
-    const { data: existingPaquetes } = await supabase
-      .from("cotizacion_paquetes")
-      .select("id, items:cotizacion_paquete_insumos(insumo_id)")
-      .eq("requisicion_id", data.requisicionId);
-    const usados = new Set<string>();
-    for (const p of existingPaquetes ?? []) {
-      if (data.paqueteId && p.id === data.paqueteId) continue;
-      const items = (p as any).items ?? [];
-      if (items.length === 0) continue;
-      for (const it of items) usados.add(it.insumo_id);
-    }
-    const conflictivos = data.insumos.filter((it) => usados.has(it.insumo_id));
-    if (conflictivos.length > 0) {
-      const { data: insumosInfo } = await supabase
-        .from("insumos")
-        .select("id, nombre")
-        .in("id", conflictivos.map((c) => c.insumo_id));
-      const nombres = (insumosInfo ?? []).map((i: any) => i.nombre).join(", ");
-      throw new Error(
-        `Estos insumos ya están en otro paquete de esta requisición: ${nombres || conflictivos.length + " insumo(s)"}. Quítalos del otro paquete primero.`
-      );
-    }
+    // Nota: se permite que un mismo insumo esté en varios paquetes de la misma
+    // requisición, porque la asignación puede repartirse entre varios proveedores.
+
+
 
     let paqueteId = data.paqueteId ?? null;
     if (!paqueteId) {
