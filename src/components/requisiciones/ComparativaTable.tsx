@@ -126,10 +126,11 @@ export function ComparativaTable({
     return m;
   }, [paquetes]);
 
-  // ¿La OC de este proveedor bloquea ediciones? (no es borrador ni rechazada)
+  // ¿La OC de este proveedor bloquea ediciones? (no es borrador ni rechazada, o está en envío optimista)
   const provBloqueado = (proveedorId: string) => {
     const oc = ocByProveedor.get(proveedorId);
-    return !!oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada";
+    if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") return true;
+    return optimisticPendiente.has(proveedorId);
   };
 
   // Estado de asignaciones: insumoId -> Asignacion[] (proveedorId = solicitudId del proveedor)

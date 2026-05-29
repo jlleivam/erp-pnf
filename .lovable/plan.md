@@ -1,29 +1,21 @@
 ## Objetivo
-Hacer que al enviar una tarjeta a supervisor:
-- solo se bloquee esa tarjeta,
-- cambie de inmediato a `Pendiente de autorización`,
-- y no afecte los botones de las demás tarjetas.
+Cuando una tarjeta se envía a supervisor, las filas correspondientes de la tabla comparativa (selector de proveedor y campo de cantidad) deben quedar bloqueadas de inmediato, igual que cuando la OC ya está en estatus `pendiente_autorizacion` o `autorizada`.
 
 ## Plan
-1. **Aislar el estado de envío por tarjeta**
-   - En `ComparativaTable.tsx`, reemplazar la dependencia visual de `enviarMut.isPending` global por un estado local asociado al `proveedorId`/tarjeta en envío.
-   - Así, solo la tarjeta que se está enviando deshabilitará sus acciones mientras termina la mutación.
+1. **Extender el bloqueo de proveedor**
+   - En `ComparativaTable.tsx`, hacer que `provBloqueado(proveedorId)` también considere el estado optimista `optimisticPendiente` introducido en el cambio anterior.
+   - Así, apenas el admin haga click en "Enviar a supervisor", el proveedor se trata como bloqueado en toda la UI sin esperar al refetch.
 
-2. **Reflejar el estado pendiente inmediatamente en UI**
-   - Agregar un estado local optimista por proveedor para marcar temporalmente la tarjeta como `pendiente_autorizacion` apenas se haga click en `Enviar a supervisor`.
-   - Usar ese estado optimista para mostrar el botón deshabilitado `Pendiente de autorización` incluso antes de que termine el refetch.
+2. **Aplicar el bloqueo a las filas de la matriz**
+   - Como `filaBloqueada`, el `Select` de proveedor, el botón de quitar (`X`), el `Input` de cantidad y el botón "Proveedor" ya se calculan a partir de `provBloqueado`, al ampliar esa función los controles se deshabilitarán automáticamente para todas las asignaciones de ese proveedor.
+   - Confirmar visualmente que aparece el ícono `Lock` y el fondo atenuado en las filas afectadas mientras la OC está pendiente.
 
-3. **Mantener sincronía con datos reales del backend**
-   - Cuando la mutación termine correctamente, invalidar queries como ya se hace y dejar que el estado real de `ocs` reemplace el optimista.
-   - Si falla, limpiar el estado optimista para que la tarjeta vuelva a su estado anterior y no quede bloqueada incorrectamente.
-
-4. **Ajustar condiciones de render de acciones**
-   - Hacer que el cálculo de `estatus`, `bloqueado` y `puedeEnviar` use primero el estado optimista de la tarjeta y luego el estado real de la OC.
-   - Confirmar que las otras tarjetas sigan operables mientras una sola está en proceso.
+3. **Comportamiento de las demás tarjetas**
+   - Otras tarjetas y filas no relacionadas siguen editables. Solo se bloquean los insumos asignados al proveedor enviado.
 
 ## Archivos a tocar
 - `src/components/requisiciones/ComparativaTable.tsx`
 
 ## Detalle técnico
-- El problema actual viene de que `enviarMut.isPending` es compartido por toda la instancia del componente, por eso las 3 tarjetas se deshabilitan al mismo tiempo.
-- El cambio será solo de frontend/estado de presentación; no hace falta modificar funciones del backend porque `enviarOCASupervisor` ya cambia el estatus correctamente.
+- Cambio mínimo: `provBloqueado` pasa de basarse solo en `ocByProveedor` a también revisar `optimisticPendiente.has(proveedorId)`.
+- No se tocan funciones del backend; ya validan que un paquete con OC enviada no pueda editarse.
