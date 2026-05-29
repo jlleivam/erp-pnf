@@ -1,0 +1,1 @@
+ALTER TYPE public.insumo_unidad ADD VALUE 'BTO';

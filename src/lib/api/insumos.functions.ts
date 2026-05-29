@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON"] as const;
+const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"] as const;
 
 async function getUserCompanyAndDirector(supabase: any, userId: string) {
   const { data: profile } = await supabase

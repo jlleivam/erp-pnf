@@ -822,7 +822,7 @@ export type Database = {
         | "administrativo"
         | "supervisor"
       insumo_estatus: "autorizado" | "pendiente"
-      insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON"
+      insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON" | "BTO"
       requisicion_estatus:
         | "borrador"
         | "enviada"
@@ -1001,7 +1001,7 @@ export const Constants = {
         "supervisor",
       ],
       insumo_estatus: ["autorizado", "pendiente"],
-      insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON"],
+      insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"],
       requisicion_estatus: [
         "borrador",
         "enviada",
