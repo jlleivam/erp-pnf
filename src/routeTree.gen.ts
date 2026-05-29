@@ -29,6 +29,7 @@ import { Route as AuthenticatedAppCatalogosInsumosRouteImport } from './routes/_
 import { Route as AuthenticatedAppCatalogosClientesRouteImport } from './routes/_authenticated/app.catalogos.clientes'
 import { Route as AuthenticatedAppAdminSplatRouteImport } from './routes/_authenticated/app.admin.$'
 import { Route as AuthenticatedAppObrasObraIdIndexRouteImport } from './routes/_authenticated/app.obras.$obraId.index'
+import { Route as AuthenticatedAppObrasObraIdRequisicionesRouteImport } from './routes/_authenticated/app.obras.$obraId.requisiciones'
 import { Route as AuthenticatedAppObrasObraIdSplatRouteImport } from './routes/_authenticated/app.obras.$obraId.$'
 import { Route as AuthenticatedAppCatalogosClientesClienteIdRouteImport } from './routes/_authenticated/app.catalogos.clientes.$clienteId'
 
@@ -144,6 +145,12 @@ const AuthenticatedAppObrasObraIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
   } as any)
+const AuthenticatedAppObrasObraIdRequisicionesRoute =
+  AuthenticatedAppObrasObraIdRequisicionesRouteImport.update({
+    id: '/requisiciones',
+    path: '/requisiciones',
+    getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
+  } as any)
 const AuthenticatedAppObrasObraIdSplatRoute =
   AuthenticatedAppObrasObraIdSplatRouteImport.update({
     id: '/$',
@@ -178,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
   '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
+  '/app/obras/$obraId/requisiciones': typeof AuthenticatedAppObrasObraIdRequisicionesRoute
   '/app/obras/$obraId/': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -198,6 +206,7 @@ export interface FileRoutesByTo {
   '/app/catalogos': typeof AuthenticatedAppCatalogosIndexRoute
   '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
+  '/app/obras/$obraId/requisiciones': typeof AuthenticatedAppObrasObraIdRequisicionesRoute
   '/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
 export interface FileRoutesById {
@@ -223,6 +232,7 @@ export interface FileRoutesById {
   '/_authenticated/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
   '/_authenticated/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/_authenticated/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
+  '/_authenticated/app/obras/$obraId/requisiciones': typeof AuthenticatedAppObrasObraIdRequisicionesRoute
   '/_authenticated/app/obras/$obraId/': typeof AuthenticatedAppObrasObraIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/app/catalogos/'
     | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
+    | '/app/obras/$obraId/requisiciones'
     | '/app/obras/$obraId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/app/catalogos'
     | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
+    | '/app/obras/$obraId/requisiciones'
     | '/app/obras/$obraId'
   id:
     | '__root__'
@@ -292,6 +304,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/catalogos/'
     | '/_authenticated/app/catalogos/clientes/$clienteId'
     | '/_authenticated/app/obras/$obraId/$'
+    | '/_authenticated/app/obras/$obraId/requisiciones'
     | '/_authenticated/app/obras/$obraId/'
   fileRoutesById: FileRoutesById
 }
@@ -444,6 +457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppObrasObraIdIndexRouteImport
       parentRoute: typeof AuthenticatedAppObrasObraIdRoute
     }
+    '/_authenticated/app/obras/$obraId/requisiciones': {
+      id: '/_authenticated/app/obras/$obraId/requisiciones'
+      path: '/requisiciones'
+      fullPath: '/app/obras/$obraId/requisiciones'
+      preLoaderRoute: typeof AuthenticatedAppObrasObraIdRequisicionesRouteImport
+      parentRoute: typeof AuthenticatedAppObrasObraIdRoute
+    }
     '/_authenticated/app/obras/$obraId/$': {
       id: '/_authenticated/app/obras/$obraId/$'
       path: '/$'
@@ -507,6 +527,7 @@ const AuthenticatedAppCatalogosRouteWithChildren =
 
 interface AuthenticatedAppObrasObraIdRouteChildren {
   AuthenticatedAppObrasObraIdSplatRoute: typeof AuthenticatedAppObrasObraIdSplatRoute
+  AuthenticatedAppObrasObraIdRequisicionesRoute: typeof AuthenticatedAppObrasObraIdRequisicionesRoute
   AuthenticatedAppObrasObraIdIndexRoute: typeof AuthenticatedAppObrasObraIdIndexRoute
 }
 
@@ -514,6 +535,8 @@ const AuthenticatedAppObrasObraIdRouteChildren: AuthenticatedAppObrasObraIdRoute
   {
     AuthenticatedAppObrasObraIdSplatRoute:
       AuthenticatedAppObrasObraIdSplatRoute,
+    AuthenticatedAppObrasObraIdRequisicionesRoute:
+      AuthenticatedAppObrasObraIdRequisicionesRoute,
     AuthenticatedAppObrasObraIdIndexRoute:
       AuthenticatedAppObrasObraIdIndexRoute,
   }
