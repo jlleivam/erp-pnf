@@ -46,6 +46,24 @@ export function effectiveRole(roles: AppRole[], assumed: AppRole | null): AppRol
   return roles[0];
 }
 
+/**
+ * Roles "efectivos" para gating de UI. Si un director está simulando otro rol,
+ * la UI se comporta como si solo tuviera ese rol (no incluye "director").
+ */
+export function effectiveRoles(roles: AppRole[], assumed: AppRole | null): AppRole[] {
+  if (isDirector(roles) && assumed) return [assumed];
+  return roles;
+}
+
+export function effectiveIsDirector(roles: AppRole[], assumed: AppRole | null): boolean {
+  return isDirector(roles) && !assumed;
+}
+
+/** Hook helper: roles efectivos suscribiéndose al store. */
+export function useEffectiveRoles(): AppRole[] {
+  return useAuthStore((s) => effectiveRoles(s.roles, s.assumedRole));
+}
+
 export function canAccess(roles: AppRole[], allowed: AppRole[]): boolean {
   if (isDirector(roles)) return true;
   return roles.some((r) => allowed.includes(r));
