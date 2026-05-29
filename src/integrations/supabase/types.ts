@@ -428,6 +428,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "requisicion_insumos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "requisicion_insumos_requisicion_id_fkey"
             columns: ["requisicion_id"]
             isOneToOne: false
@@ -503,7 +510,22 @@ export type Database = {
           rechazada_por?: string | null
           rechazo_motivo?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "requisiciones_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requisiciones_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       terceros: {
         Row: {
