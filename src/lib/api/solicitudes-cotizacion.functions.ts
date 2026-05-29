@@ -43,6 +43,7 @@ const ItemInput = z.object({
 
 const RespuestaInput = z.object({
   insumo_id: z.string().uuid(),
+  cantidad: z.number().positive().optional(),
   precio_unitario: z.number().min(0),
   disponible: z.boolean(),
   nota: z.string().max(500).optional().nullable(),
@@ -58,7 +59,7 @@ export const getSolicitudesRequisicion = createServerFn({ method: "POST" })
       .select(`
         id, folio, estatus, proveedor_id, enviada_at, recibida_at, notas, created_at,
         proveedor:terceros(id, razon_social, contacto_nombre, correo, telefono),
-        items:cotizacion_solicitud_insumos(id, insumo_id, cantidad, precio_unitario, disponible, nota, subtotal)
+        items:cotizacion_solicitud_insumos(id, insumo_id, cantidad, precio_unitario, disponible, nota, subtotal, insumo:insumos(nombre, unidad))
       `)
       .eq("requisicion_id", data.requisicionId)
       .order("created_at", { ascending: true });
@@ -213,13 +214,15 @@ export const capturarRespuesta = createServerFn({ method: "POST" })
     if (sc.estatus === "descartada") throw new Error("La solicitud está descartada");
 
     for (const it of data.items) {
+      const patch: any = {
+        precio_unitario: it.precio_unitario,
+        disponible: it.disponible,
+        nota: it.nota ?? null,
+      };
+      if (it.cantidad !== undefined) patch.cantidad = it.cantidad;
       const { error } = await supabase
         .from("cotizacion_solicitud_insumos")
-        .update({
-          precio_unitario: it.precio_unitario,
-          disponible: it.disponible,
-          nota: it.nota ?? null,
-        })
+        .update(patch)
         .eq("solicitud_id", data.solicitudId)
         .eq("insumo_id", it.insumo_id);
       if (error) throw new Error(error.message);
