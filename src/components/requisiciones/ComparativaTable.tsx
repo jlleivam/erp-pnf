@@ -74,7 +74,7 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[200px]">Insumo</TableHead>
-                <TableHead className="text-right">Cantidad</TableHead>
+                <TableHead className="text-right">Cant. requerida</TableHead>
                 {recibidas.map((sc) => (
                   <TableHead key={sc.id} className="text-right min-w-[140px]">
                     <div className="flex flex-col items-end">
@@ -92,11 +92,13 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
                   ? Array.from(ofertas.values()).filter((o) => o.disponible && o.precio > 0).map((o) => o.precio)
                   : [];
                 const minPrecio = preciosValidos.length > 0 ? Math.min(...preciosValidos) : null;
+                const cantReq = Number(ri.cantidad);
+                const unidad = ri.insumo.unidad ?? "";
                 return (
                   <TableRow key={ri.id}>
                     <TableCell className="font-medium text-sm">{ri.insumo.nombre}</TableCell>
                     <TableCell className="text-right text-sm whitespace-nowrap">
-                      {Number(ri.cantidad)} {ri.insumo.unidad}
+                      {cantReq} {unidad}
                     </TableCell>
                     {recibidas.map((sc) => {
                       const oferta = ofertas?.get(sc.id);
@@ -109,14 +111,27 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
                         );
                       }
                       const isMin = minPrecio !== null && oferta.precio === minPrecio;
+                      const cantOf = oferta.cantidad;
+                      let cantClass = "text-muted-foreground";
+                      let cantLabel = `Cotizó ${cantOf} ${unidad}`.trim();
+                      if (cantOf < cantReq) {
+                        cantClass = "text-amber-700 font-medium";
+                        cantLabel = `Cotizó ${cantOf} de ${cantReq} ${unidad}`.trim();
+                      } else if (cantOf > cantReq) {
+                        cantClass = "text-sky-700";
+                        cantLabel = `Cotizó ${cantOf} de ${cantReq} ${unidad}`.trim();
+                      }
                       return (
                         <TableCell
                           key={sc.id}
                           className={`text-right text-sm tabular-nums ${
-                            isMin ? "bg-emerald-50 text-emerald-800 font-semibold" : ""
+                            isMin ? "bg-emerald-50 text-emerald-800" : ""
                           }`}
                         >
-                          {mxn(oferta.precio)}
+                          <div className={`flex flex-col items-end ${isMin ? "font-semibold" : ""}`}>
+                            <span>{mxn(oferta.precio)}</span>
+                            <span className={`text-xs font-normal ${cantClass}`}>{cantLabel}</span>
+                          </div>
                         </TableCell>
                       );
                     })}
@@ -124,6 +139,7 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
                 );
               })}
             </TableBody>
+
             <tfoot className="border-t bg-muted/30">
               <TableRow>
                 <TableCell className="font-semibold text-sm" colSpan={2}>
