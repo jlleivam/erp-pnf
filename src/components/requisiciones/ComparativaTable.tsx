@@ -245,7 +245,7 @@ export function ComparativaTable({
                     </div>
                   </TableHead>
                 ))}
-                <TableHead rowSpan={2} className="text-center align-bottom border-l min-w-[280px]">
+                <TableHead rowSpan={2} className="text-center align-bottom border-l w-[240px] min-w-[220px]">
                   Asignar a
                 </TableHead>
               </TableRow>
