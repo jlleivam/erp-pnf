@@ -115,11 +115,11 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
                       const oferta = ofertas?.get(sc.id);
                       if (!oferta || !oferta.disponible) {
                         return (
-                          <>
-                            <TableCell key={`${sc.id}-c`} className="text-right text-muted-foreground border-l">—</TableCell>
-                            <TableCell key={`${sc.id}-p`} className="text-right text-muted-foreground">—</TableCell>
-                            <TableCell key={`${sc.id}-i`} className="text-right text-muted-foreground">—</TableCell>
-                          </>
+                          <Fragment key={sc.id}>
+                            <TableCell className="text-right text-muted-foreground border-l">—</TableCell>
+                            <TableCell className="text-right text-muted-foreground">—</TableCell>
+                            <TableCell className="text-right text-muted-foreground">—</TableCell>
+                          </Fragment>
                         );
                       }
                       const isMin = minPrecio !== null && oferta.precio === minPrecio;
@@ -129,22 +129,21 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
                       else if (cantOf > cantReq) cantClass = "text-sky-700";
                       const importe = cantOf * oferta.precio;
                       return (
-                        <>
-                          <TableCell key={`${sc.id}-c`} className={`text-right text-sm tabular-nums border-l whitespace-nowrap ${cantClass}`}>
+                        <Fragment key={sc.id}>
+                          <TableCell className={`text-right text-sm tabular-nums border-l whitespace-nowrap ${cantClass}`}>
                             {cantOf} {unidad}
                           </TableCell>
                           <TableCell
-                            key={`${sc.id}-p`}
                             className={`text-right text-sm tabular-nums ${
                               isMin ? "bg-emerald-50 text-emerald-800 font-semibold" : ""
                             }`}
                           >
                             {mxn(oferta.precio)}
                           </TableCell>
-                          <TableCell key={`${sc.id}-i`} className="text-right text-sm tabular-nums">
+                          <TableCell className="text-right text-sm tabular-nums">
                             {mxn(importe)}
                           </TableCell>
-                        </>
+                        </Fragment>
                       );
                     })}
                   </TableRow>
