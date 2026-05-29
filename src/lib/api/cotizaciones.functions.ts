@@ -231,6 +231,7 @@ export const generarOC = createServerFn({ method: "POST" })
 
     const { data: req } = await supabase
       .from("requisiciones").select("obra_id").eq("id", paquete.requisicion_id).single();
+    if (!req) throw new Error("Requisición no encontrada");
 
     const { data: folio, error: folioErr } = await supabase
       .rpc("siguiente_folio_oc", { _company_id: companyId });
