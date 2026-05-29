@@ -22,7 +22,7 @@ import { SolicitudesTab } from "./SolicitudesTab";
 import { ComparativaTable } from "./ComparativaTable";
 import { useEffectiveRoles } from "@/stores/auth";
 
-export type CotizacionTab = "solicitudes" | "comparativa" | "ocs";
+export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs";
 
 interface Props {
   requisicionId: string;
@@ -39,9 +39,20 @@ const OC_BADGE: Record<string, { label: string; className: string }> = {
   pagada: { label: "Pagada", className: "bg-blue-100 text-blue-800" },
 };
 
+const REQ_BADGE: Record<string, { label: string; className: string }> = {
+  borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
+  enviada: { label: "Enviada", className: "bg-blue-100 text-blue-800" },
+  en_cotizacion: { label: "En cotización", className: "bg-amber-100 text-amber-800" },
+  cotizada: { label: "Cotizada", className: "bg-indigo-100 text-indigo-800" },
+  autorizada: { label: "Autorizada", className: "bg-emerald-100 text-emerald-800" },
+  oc_generada: { label: "OC generada", className: "bg-emerald-100 text-emerald-800" },
+  completada: { label: "Completada", className: "bg-emerald-100 text-emerald-800" },
+  rechazada: { label: "Rechazada", className: "bg-rose-100 text-rose-800" },
+};
+
 const mxn = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "solicitudes" }: Props) {
+export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "requisicion" }: Props) {
   const qc = useQueryClient();
   const fetchCot = useServerFn(getCotizacionRequisicion);
   const fetchProv = useServerFn(listProveedores);
@@ -108,11 +119,71 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
           <p className="mt-6 text-sm text-muted-foreground">Cargando…</p>
         ) : (
           <Tabs value={tab} onValueChange={(v) => setTab(v as CotizacionTab)} className="mt-4">
-            <TabsList className="grid grid-cols-3 w-full">
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="requisicion">Requisición</TabsTrigger>
               <TabsTrigger value="solicitudes">Cotizaciones ({(solsQ.data ?? []).length})</TabsTrigger>
               <TabsTrigger value="comparativa">Comparativa</TabsTrigger>
               <TabsTrigger value="ocs">OCs ({ocs.length})</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="requisicion" className="mt-4 space-y-4">
+              <Card className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <p className="font-semibold">{req?.folio ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Solicitante: {req?.solicitante ?? "—"}
+                    </p>
+                  </div>
+                  {req?.estatus && (
+                    <Badge className={REQ_BADGE[req.estatus]?.className ?? "bg-slate-100 text-slate-700"}>
+                      {REQ_BADGE[req.estatus]?.label ?? req.estatus}
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <p>Creada: {req?.created_at ? formatDate(req.created_at) : "—"}</p>
+                  <p>Enviada: {req?.enviada_at ? formatDate(req.enviada_at) : "—"}</p>
+                </div>
+                {req?.notas && (
+                  <p className="text-sm bg-muted/40 p-2 rounded-md">
+                    <strong>Notas:</strong> {req.notas}
+                  </p>
+                )}
+              </Card>
+
+              <div className="border rounded-md overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Insumo</TableHead>
+                      <TableHead className="text-right">Cantidad</TableHead>
+                      <TableHead>Fecha requerida</TableHead>
+                      <TableHead>Nota</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reqItems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                          Sin insumos
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {reqItems.map((it: any) => (
+                      <TableRow key={it.id}>
+                        <TableCell>{it.insumo?.nombre}</TableCell>
+                        <TableCell className="text-right">
+                          {Number(it.cantidad)} {it.insumo?.unidad}
+                        </TableCell>
+                        <TableCell>{it.fecha_requerida ? formatDate(it.fecha_requerida) : "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">{it.nota ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
 
             <TabsContent value="solicitudes" className="mt-4">
               <SolicitudesTab
