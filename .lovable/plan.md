@@ -1,48 +1,61 @@
-## Objetivo
+## Problema
 
-Que el click en "Requisiciones" del sidebar abra una **vista global** que muestre únicamente las requisiciones de las **obras asignadas al usuario** (vía `obra_team`), con acceso al detalle de cada una.
+En el paso 3 de Nueva Obra, al hacer clic en "Crear obra", el server fn falla con `Invalid uuid` en `team[2].user_id` porque hay filas de equipo (y/o comisiones) cuyo select de usuario quedó vacío (`user_id === ""`) y se están enviando al backend.
 
-## Cambios
+## Cambios en `src/routes/_authenticated/app.obras.nueva.tsx`
 
-### 1. Server function `listRequisicionesAsignadas`
+### 1. Estado de error inline
 
-En `src/lib/api/requisiciones.functions.ts`, agregar:
+Agregar `const [teamError, setTeamError] = useState<string | null>(null)` para mostrar el mensaje debajo de la sección "Equipo asignado".
+
+### 2. Derivar validez del equipo
+
+Calcular en cada render:
 
 ```ts
-listRequisicionesAsignadas({ soloActivas?: boolean })
+const teamValido = team.length > 0 && team.every((t) => !!t.user_id);
+const comisionesValidas = comisiones.every((c) => !!c.user_id);
+const puedeCrear = teamValido && comisionesValidas;
 ```
 
-- Usa `requireSupabaseAuth`.
-- Si el usuario **es director**: trae todas las requisiciones de la company (acceso completo).
-- Si no: filtra por `obra_id IN (SELECT obra_id FROM obra_team WHERE user_id = auth.uid())`.
-- Devuelve: `id, folio, estatus, enviada_at, created_at, notas, obra: {id, nombre}, creador: {nombre_completo}, insumos_count`.
-- Orden: `enviada_at DESC NULLS LAST, created_at DESC`.
-- `soloActivas` excluye `completada` y `rechazada`.
+### 3. Deshabilitar "Crear obra"
 
-### 2. Ruta nueva `/app/admin/requisiciones`
+Cambiar el botón a:
 
-Crear `src/routes/_authenticated/app.admin.requisiciones.tsx`:
+```tsx
+<Button onClick={handleSubmit} disabled={createObraM.isPending || !puedeCrear}>
+```
 
-- Header: "Requisiciones" + subtítulo "De tus obras asignadas".
-- Tabs **Activas / Historial** (igual semántica que módulo por-obra).
-- Tabla mobile-first con columnas: **Folio · Obra · Solicitante · Insumos · Estatus · Fecha**.
-- Click en fila → abre `RequisicionDetalleSheet` (ya existe y sólo necesita `requisicionId`).
-- Filtro opcional por obra (`Select` con las obras del usuario, derivadas de los resultados).
-- Empty state si el usuario no tiene obras asignadas o no hay requisiciones.
+### 4. Mensaje inline
 
-Sin migraciones. Sin botón "Nueva" (esa acción vive dentro de cada obra).
+Bajo la lista de team:
 
-### 3. Splat admin sigue como está
+```tsx
+{teamError && <p className="text-xs text-destructive mt-2">{teamError}</p>}
+```
 
-`app.admin.$.tsx` permanece para los otros módulos placeholder. La ruta concreta `app.admin.requisiciones.tsx` tiene prioridad sobre el splat.
+### 5. Sanitizar en `handleSubmit`
 
-### 4. Sidebar — sin cambios necesarios
+Antes del `mutate`:
 
-El link `/app/admin/requisiciones` ya existe en `ADMIN_MODULES`. Sólo se muestra a director/administrativo (que es exactamente quien necesita la vista global). El residente accede vía el módulo de obra.
+```ts
+const teamLimpio = team.filter((t) => !!t.user_id);
+const comisionesLimpias = comisiones.filter((c) => !!c.user_id);
 
-## Archivos
+if (teamLimpio.length !== team.length || comisionesLimpias.length !== comisiones.length) {
+  setTeamError("Selecciona un usuario para cada miembro del equipo");
+  return;
+}
+setTeamError(null);
 
-- editar `src/lib/api/requisiciones.functions.ts` → añadir `listRequisicionesAsignadas`
-- crear `src/routes/_authenticated/app.admin.requisiciones.tsx`
+const rs = new Set(teamLimpio.map((t) => t.role));
+// ...validación de roles mínimos sobre teamLimpio...
 
-¿Procedo?
+createObraM.mutate({ data: { ..., team: teamLimpio, comisiones: comisionesLimpias } });
+```
+
+Esto cubre además el caso del Auxiliar opcional: si el director agrega la fila pero no selecciona usuario, la UI bloquea el envío y el mensaje le indica seleccionar o eliminar la fila (botón papelera ya existente).
+
+## Fuera de alcance
+
+No se toca la server fn `crearObra` ni el schema Zod del backend — la validación uuid sigue siendo la red de seguridad correcta. Solo se corrige el frontend para no enviar filas inválidas.

@@ -79,6 +79,11 @@ function NuevaObra() {
   // Step 3
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [comisiones, setComisiones] = useState<ComisionRow[]>([]);
+  const [teamError, setTeamError] = useState<string | null>(null);
+
+  const teamValido = team.length > 0 && team.every((t) => !!t.user_id);
+  const comisionesValidas = comisiones.every((c) => !!c.user_id);
+  const puedeCrear = teamValido && comisionesValidas;
 
   const fetchClientes = useServerFn(listClientes);
   const fetchUsers = useServerFn(listCompanyUsers);
