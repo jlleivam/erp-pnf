@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Building2, LayoutDashboard, BookOpen, Settings, LogOut, ChevronDown, HardHat, UserCog, Menu } from "lucide-react";
-import { useAuthStore, isDirector, type AppRole } from "@/stores/auth";
+import { useAuthStore, isDirector, effectiveRoles, effectiveIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -31,8 +31,15 @@ export function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const director = isDirector(roles);
-  const showAdmin = director || roles.includes("administrativo");
+  const realDirector = isDirector(roles);
+  const effRoles = effectiveRoles(roles, assumedRole);
+  const director = effectiveIsDirector(roles, assumedRole);
+  const showAdmin = director || effRoles.includes("administrativo");
+
+  const switchRole = (role: AppRole | null) => {
+    setAssumedRole(role);
+    navigate({ to: "/app" });
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -130,7 +137,7 @@ export function AppShell() {
             </Button>
 
 
-            {director && (
+            {realDirector && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
@@ -141,17 +148,20 @@ export function AppShell() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Asumir rol</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setAssumedRole(null)}>
+                  <DropdownMenuItem onClick={() => switchRole(null)}>
                     Director (mi rol)
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAssumedRole("residente")}>
+                  <DropdownMenuItem onClick={() => switchRole("residente")}>
                     Residente
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAssumedRole("administrativo")}>
+                  <DropdownMenuItem onClick={() => switchRole("administrativo")}>
                     Administrativo
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAssumedRole("supervisor")}>
+                  <DropdownMenuItem onClick={() => switchRole("supervisor")}>
                     Supervisor
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => switchRole("auxiliar")}>
+                    Auxiliar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
