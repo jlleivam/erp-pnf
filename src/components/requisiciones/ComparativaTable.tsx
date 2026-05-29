@@ -750,11 +750,11 @@ export function ComparativaTable({
                       )}
                       <Button
                         size="sm"
-                        onClick={() => enviarMut.mutate(provId)}
-                        disabled={!puedeEnviar || enviarMut.isPending}
+                        onClick={() => { setEnviandoProv(provId); enviarMut.mutate(provId); }}
+                        disabled={!puedeEnviar}
                       >
                         <Send className="size-4 mr-1" />
-                        {estatus === "rechazada" ? "Reenviar a supervisor" : "Enviar a supervisor"}
+                        {enviandoEsta ? "Enviando…" : estatus === "rechazada" ? "Reenviar a supervisor" : "Enviar a supervisor"}
                       </Button>
                     </>
                   )}
