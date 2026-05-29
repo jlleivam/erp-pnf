@@ -79,6 +79,11 @@ function NuevaObra() {
   // Step 3
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [comisiones, setComisiones] = useState<ComisionRow[]>([]);
+  const [teamError, setTeamError] = useState<string | null>(null);
+
+  const teamValido = team.length > 0 && team.every((t) => !!t.user_id);
+  const comisionesValidas = comisiones.every((c) => !!c.user_id);
+  const puedeCrear = teamValido && comisionesValidas;
 
   const fetchClientes = useServerFn(listClientes);
   const fetchUsers = useServerFn(listCompanyUsers);
@@ -123,7 +128,16 @@ function NuevaObra() {
   };
 
   const handleSubmit = () => {
-    const rs = new Set(team.map((t) => t.role));
+    const teamLimpio = team.filter((t) => !!t.user_id);
+    const comisionesLimpias = comisiones.filter((c) => !!c.user_id);
+
+    if (teamLimpio.length !== team.length || comisionesLimpias.length !== comisiones.length) {
+      setTeamError("Selecciona un usuario para cada miembro del equipo");
+      return;
+    }
+    setTeamError(null);
+
+    const rs = new Set(teamLimpio.map((t) => t.role));
     if (!rs.has("residente") || !rs.has("administrativo") || !rs.has("supervisor")) {
       return toast.error("Se requiere mínimo Residente, Administrativo y Supervisor");
     }
@@ -139,8 +153,8 @@ function NuevaObra() {
         presupuesto_url: presupuestoUrl,
         monto_contratado: montoContratado === "" ? null : Number(montoContratado),
 
-        team,
-        comisiones,
+        team: teamLimpio,
+        comisiones: comisionesLimpias,
       },
     });
   };
@@ -315,6 +329,7 @@ function NuevaObra() {
                 </div>
               ))}
             </div>
+            {teamError && <p className="text-xs text-destructive mt-2">{teamError}</p>}
           </div>
 
           <div className="border-t pt-6">
@@ -394,7 +409,7 @@ function NuevaObra() {
             <Button variant="ghost" onClick={() => navigate({ to: "/app" })} disabled={createObraM.isPending}>Cancelar</Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(2)} disabled={createObraM.isPending}>Atrás</Button>
-              <Button onClick={handleSubmit} disabled={createObraM.isPending}>
+              <Button onClick={handleSubmit} disabled={createObraM.isPending || !puedeCrear}>
                 {createObraM.isPending ? "Creando…" : "Crear obra"}
               </Button>
             </div>
