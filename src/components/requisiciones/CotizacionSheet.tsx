@@ -54,17 +54,18 @@ const OC_BADGE: Record<string, { label: string; className: string }> = {
 
 const mxn = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "cotizar" }: Props) {
+export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "solicitudes" }: Props) {
   const qc = useQueryClient();
   const fetchCot = useServerFn(getCotizacionRequisicion);
   const fetchProv = useServerFn(listProveedores);
+  const fetchSols = useServerFn(getSolicitudesRequisicion);
   const guardarFn = useServerFn(guardarPaquete);
   const eliminarFn = useServerFn(eliminarPaquete);
   const generarFn = useServerFn(generarOC);
   const enviarFn = useServerFn(enviarOCASupervisor);
   const reabrirFn = useServerFn(reabrirOC);
 
-  const [tab, setTab] = useState<"cotizar" | "ocs">(initialTab);
+  const [tab, setTab] = useState<CotizacionTab>(initialTab);
   const [drafts, setDrafts] = useState<DraftPaquete[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -76,6 +77,11 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
   const provQ = useQuery({
     queryKey: ["proveedores-list"],
     queryFn: () => fetchProv(),
+    enabled: open,
+  });
+  const solsQ = useQuery({
+    queryKey: ["solicitudes", requisicionId],
+    queryFn: () => fetchSols({ data: { requisicionId } }),
     enabled: open,
   });
 
