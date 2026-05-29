@@ -1,56 +1,30 @@
-# Cambio de vista funcional por rol
+# Fix: bucle infinito al entrar a Requisiciones como residente
 
-Hoy el selector "Vista: Director / Residente / Administrativo / Supervisor" solo cambia el texto del botón. La propuesta lo convierte en un cambio de contexto real (visual + permisos) **solo en el frontend**, manteniendo el rol real `director` en backend y RLS.
-
-## Comportamiento esperado
-
-1. Al elegir un rol en el selector:
-   - Se guarda `assumedRole` en el store (ya existe).
-   - Se navega automáticamente a `/app` (dashboard).
-2. La UI se renderiza **como si el usuario solo tuviera ese rol**:
-   - Menú lateral, botones de crear/editar/importar, módulos administrativos y de configuración, todo se oculta o se deshabilita según el rol asumido.
-3. "Director (mi rol)" restaura la vista completa de director y también redirige al dashboard.
-
-## Cambios
-
-### 1. `src/stores/auth.ts`
-Agregar un helper central que devuelve los roles "efectivos" para gating de UI:
+## Causa
+El helper `useEffectiveRoles` que se agregó en el cambio anterior hace:
 ```ts
-export function effectiveRoles(roles, assumed): AppRole[] {
-  if (isDirector(roles) && assumed) return [assumed]; // director simula ser SOLO ese rol
-  return roles;
-}
-export function effectiveIsDirector(roles, assumed) {
-  return isDirector(roles) && !assumed;
+useAuthStore((s) => effectiveRoles(s.roles, s.assumedRole))
+```
+`effectiveRoles` devuelve un **arreglo nuevo** (`[assumed]`) en cada llamada. Zustand compara con `Object.is`, ve referencia distinta cada render → re-render → llamada nueva → loop. React lo aborta con el error #185 ("Maximum update depth exceeded") y se muestra el `errorComponent` ("No se pudo cargar la página").
+
+Solo truena en las vistas migradas (Requisiciones de obra, Insumos, Clientes, Terceros, Trabajadores, módulo de obra).
+
+## Cambio
+`src/stores/auth.ts`: reescribir `useEffectiveRoles` para seleccionar primitivas estables y derivar el arreglo con `useMemo`:
+
+```ts
+import { useMemo } from "react";
+
+export function useEffectiveRoles(): AppRole[] {
+  const roles = useAuthStore((s) => s.roles);
+  const assumed = useAuthStore((s) => s.assumedRole);
+  return useMemo(() => effectiveRoles(roles, assumed), [roles, assumed]);
 }
 ```
 
-### 2. `src/components/AppShell.tsx`
-- En cada `DropdownMenuItem` del selector: `setAssumedRole(...)` + `navigate({ to: "/app" })`.
-- Reemplazar `director` / `roles.includes("administrativo")` por los helpers efectivos para condicionar:
-  - "Equipo", "Nueva obra" (solo director real sin rol asumido)
-  - Sección "Administración" (director efectivo u `administrativo` efectivo)
-- El propio selector de vista sigue mostrándose solo si el usuario es director real (`isDirector(roles)`), independiente del rol asumido, para que pueda volver.
+`s.roles` y `s.assumedRole` solo cambian en `setSession` / `setAssumedRole`, así que las suscripciones son estables y `useMemo` evita crear un arreglo nuevo en cada render.
 
-### 3. Páginas y módulos que ya leen `roles` directo
-Cambiar a `effectiveRoles(roles, assumedRole)` para que respeten la vista simulada:
-- `src/routes/_authenticated/app.index.tsx` (dashboard: botón "Nueva obra", secciones Admin/Config)
-- `src/components/requisiciones/RequisicionesModule.tsx` (`puedeCrear`)
-- `src/components/insumos/CatalogoInsumosModule.tsx`
-- `src/components/clientes/CatalogoClientesModule.tsx` (`canEdit`)
-- `src/components/terceros/CatalogoTerceroModule.tsx` (`canEdit`)
-- `src/components/trabajadores/CatalogoTrabajadoresModule.tsx` (`canManage`, `canView`)
-- `src/routes/_authenticated/app.equipo.tsx`, `app.obras.nueva.tsx`, `app.obras.$obraId.$.tsx` (gating de acceso director)
-- `src/components/requisiciones/RequisicionDetalleSheet.tsx`
+Ningún otro archivo cambia (firma del hook idéntica).
 
-Para rutas restringidas a director (Equipo, Nueva obra), si el director asume otro rol y entra a la URL, redirigir a `/app` (se sigue permitiendo porque el rol real lo autoriza, pero la simulación debe respetarse a nivel UI/navegación).
-
-## Aclaraciones importantes (no técnicas)
-
-- Esto es una **simulación visual** para que el director vea la app como la vería un Residente / Administrativo / Supervisor. El backend y las políticas de seguridad siguen tratándolo como director, así que si fuerza una URL podrá seguir entrando. Es útil para revisar la experiencia de cada perfil, no para auditar permisos reales.
-- Los usuarios que no son director no ven el selector y no se ven afectados.
-
-## Fuera de alcance
-
-- Cambios en `user_roles`, RLS, JWT o server functions.
-- Filtrar datos del backend según el rol asumido (las queries siguen viendo todo lo que ve el director).
+## Verificación
+Entrar a `/app/obras/:obraId/requisiciones` con vista "Residente" — debe cargar el módulo sin el error.
