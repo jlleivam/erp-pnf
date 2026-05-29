@@ -269,10 +269,36 @@ export const getDatosPDF = createServerFn({ method: "POST" })
       .from("companies").select("razon_social, rfc, datos_facturacion").eq("id", companyId).maybeSingle();
 
     const { data: req } = await supabase
-      .from("requisiciones").select("folio, obra:obras(nombre, ubicacion)").eq("id", sc.requisicion_id).maybeSingle();
+      .from("requisiciones")
+      .select("folio, obra:obras(id, nombre, ubicacion)")
+      .eq("id", sc.requisicion_id).maybeSingle();
+
+    const { data: reqItems } = await supabase
+      .from("requisicion_insumos")
+      .select("insumo_id, fecha_requerida")
+      .eq("requisicion_id", sc.requisicion_id);
+    const fechaMap = new Map<string, string>(
+      (reqItems ?? []).map((r: any) => [r.insumo_id, r.fecha_requerida])
+    );
+    (sc as any).items = ((sc as any).items ?? []).map((it: any) => ({
+      ...it,
+      fecha_requerida: fechaMap.get(it.insumo_id) ?? null,
+    }));
+
+    let residente: any = null;
+    const obraId = (req as any)?.obra?.id;
+    if (obraId) {
+      const { data: r } = await supabase
+        .from("obra_team")
+        .select("user_id, profile:profiles(nombre_completo, email)")
+        .eq("obra_id", obraId)
+        .eq("role", "residente")
+        .maybeSingle();
+      residente = r;
+    }
 
     const { data: profile } = await supabase
       .from("profiles").select("nombre_completo, email").eq("id", userId).maybeSingle();
 
-    return { sc, company, requisicion: req, solicitante: profile };
+    return { sc, company, requisicion: req, solicitante: profile, residente };
   });
