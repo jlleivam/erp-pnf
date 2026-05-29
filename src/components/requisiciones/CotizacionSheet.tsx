@@ -474,7 +474,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
 
                     {oc.estatus === "borrador" && (
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setTab("cotizar")}>
+                        <Button size="sm" variant="outline" onClick={() => setTab("paquetes")}>
                           <Edit className="size-4 mr-1" /> Editar
                         </Button>
                         <Button size="sm" onClick={() => enviarMut.mutate(oc.id)} disabled={enviarMut.isPending}>
