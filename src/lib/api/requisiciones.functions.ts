@@ -73,7 +73,7 @@ export const listRequisicionesAsignadas = createServerFn({ method: "POST" })
 
     let q = supabase
       .from("requisiciones")
-      .select("id, folio, estatus, notas, enviada_at, created_at, creado_por, obra:obras(id, nombre), items:requisicion_insumos(id)")
+      .select("id, folio, estatus, notas, enviada_at, created_at, creado_por, obra_id, items:requisicion_insumos(id)")
       .order("created_at", { ascending: false });
     if (obraIds) q = q.in("obra_id", obraIds);
     if (data.soloActivas) q = q.not("estatus", "in", "(completada,rechazada)");
@@ -88,6 +88,15 @@ export const listRequisicionesAsignadas = createServerFn({ method: "POST" })
         .from("profiles").select("id, nombre_completo").in("id", userIds);
       for (const p of profs ?? []) profileMap.set(p.id, p);
     }
+
+    const obraIdsRows = Array.from(new Set((rows ?? []).map((r: any) => r.obra_id).filter(Boolean)));
+    const obraMap = new Map<string, { id: string; nombre: string }>();
+    if (obraIdsRows.length > 0) {
+      const { data: obs } = await supabase
+        .from("obras").select("id, nombre").in("id", obraIdsRows);
+      for (const o of obs ?? []) obraMap.set(o.id, o);
+    }
+
     return (rows ?? []).map((r: any) => ({
       id: r.id,
       folio: r.folio,
@@ -95,7 +104,7 @@ export const listRequisicionesAsignadas = createServerFn({ method: "POST" })
       notas: r.notas,
       enviada_at: r.enviada_at,
       created_at: r.created_at,
-      obra: r.obra,
+      obra: obraMap.get(r.obra_id) ?? null,
       insumos_count: (r.items ?? []).length,
       solicitante: r.creado_por ? profileMap.get(r.creado_por)?.nombre_completo ?? null : null,
     }));
