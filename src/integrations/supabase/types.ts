@@ -192,6 +192,92 @@ export type Database = {
         }
         Relationships: []
       }
+      cotizacion_solicitud_insumos: {
+        Row: {
+          cantidad: number
+          created_at: string
+          disponible: boolean
+          id: string
+          insumo_id: string
+          nota: string | null
+          precio_unitario: number | null
+          solicitud_id: string
+          subtotal: number | null
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          disponible?: boolean
+          id?: string
+          insumo_id: string
+          nota?: string | null
+          precio_unitario?: number | null
+          solicitud_id: string
+          subtotal?: number | null
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          disponible?: boolean
+          id?: string
+          insumo_id?: string
+          nota?: string | null
+          precio_unitario?: number | null
+          solicitud_id?: string
+          subtotal?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_solicitud_insumos_solicitud_id_fkey"
+            columns: ["solicitud_id"]
+            isOneToOne: false
+            referencedRelation: "cotizacion_solicitudes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cotizacion_solicitudes: {
+        Row: {
+          company_id: string
+          creado_por: string
+          created_at: string
+          enviada_at: string | null
+          estatus: Database["public"]["Enums"]["sc_estatus"]
+          folio: string
+          id: string
+          notas: string | null
+          proveedor_id: string
+          recibida_at: string | null
+          requisicion_id: string
+        }
+        Insert: {
+          company_id: string
+          creado_por: string
+          created_at?: string
+          enviada_at?: string | null
+          estatus?: Database["public"]["Enums"]["sc_estatus"]
+          folio: string
+          id?: string
+          notas?: string | null
+          proveedor_id: string
+          recibida_at?: string | null
+          requisicion_id: string
+        }
+        Update: {
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          enviada_at?: string | null
+          estatus?: Database["public"]["Enums"]["sc_estatus"]
+          folio?: string
+          id?: string
+          notas?: string | null
+          proveedor_id?: string
+          recibida_at?: string | null
+          requisicion_id?: string
+        }
+        Relationships: []
+      }
       insumo_categorias: {
         Row: {
           company_id: string
@@ -969,6 +1055,7 @@ export type Database = {
         Args: { _company_id: string }
         Returns: string
       }
+      siguiente_folio_sc: { Args: { _company_id: string }; Returns: string }
     }
     Enums: {
       app_role:
@@ -993,6 +1080,7 @@ export type Database = {
         | "oc_generada"
         | "completada"
         | "rechazada"
+      sc_estatus: "borrador" | "enviada" | "recibida" | "descartada"
       tercero_categoria: "proveedor" | "contratista" | "ambos"
       tercero_documento_tipo:
         | "constancia_fiscal"
@@ -1180,6 +1268,7 @@ export const Constants = {
         "completada",
         "rechazada",
       ],
+      sc_estatus: ["borrador", "enviada", "recibida", "descartada"],
       tercero_categoria: ["proveedor", "contratista", "ambos"],
       tercero_documento_tipo: [
         "constancia_fiscal",

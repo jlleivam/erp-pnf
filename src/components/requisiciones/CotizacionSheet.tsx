@@ -22,12 +22,17 @@ import {
   getCotizacionRequisicion, listProveedores, guardarPaquete,
   eliminarPaquete, generarOC, enviarOCASupervisor, reabrirOC,
 } from "@/lib/api/cotizaciones.functions";
+import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
+import { SolicitudesTab } from "./SolicitudesTab";
+import { ComparativaTable } from "./ComparativaTable";
+
+export type CotizacionTab = "solicitudes" | "comparativa" | "paquetes" | "ocs";
 
 interface Props {
   requisicionId: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  initialTab?: "cotizar" | "ocs";
+  initialTab?: CotizacionTab;
 }
 
 type DraftItem = { insumo_id: string; cantidad: number; precio_unitario: number };
@@ -49,17 +54,18 @@ const OC_BADGE: Record<string, { label: string; className: string }> = {
 
 const mxn = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "cotizar" }: Props) {
+export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "solicitudes" }: Props) {
   const qc = useQueryClient();
   const fetchCot = useServerFn(getCotizacionRequisicion);
   const fetchProv = useServerFn(listProveedores);
+  const fetchSols = useServerFn(getSolicitudesRequisicion);
   const guardarFn = useServerFn(guardarPaquete);
   const eliminarFn = useServerFn(eliminarPaquete);
   const generarFn = useServerFn(generarOC);
   const enviarFn = useServerFn(enviarOCASupervisor);
   const reabrirFn = useServerFn(reabrirOC);
 
-  const [tab, setTab] = useState<"cotizar" | "ocs">(initialTab);
+  const [tab, setTab] = useState<CotizacionTab>(initialTab);
   const [drafts, setDrafts] = useState<DraftPaquete[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -71,6 +77,11 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
   const provQ = useQuery({
     queryKey: ["proveedores-list"],
     queryFn: () => fetchProv(),
+    enabled: open,
+  });
+  const solsQ = useQuery({
+    queryKey: ["solicitudes", requisicionId],
+    queryFn: () => fetchSols({ data: { requisicionId } }),
     enabled: open,
   });
 
@@ -239,13 +250,28 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
         {cotQ.isLoading ? (
           <p className="mt-6 text-sm text-muted-foreground">Cargando…</p>
         ) : (
-          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="mt-4">
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="cotizar">Cotizar</TabsTrigger>
-              <TabsTrigger value="ocs">Órdenes de compra ({ocs.length})</TabsTrigger>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as CotizacionTab)} className="mt-4">
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="solicitudes">Cotizaciones ({(solsQ.data ?? []).length})</TabsTrigger>
+              <TabsTrigger value="comparativa">Comparativa</TabsTrigger>
+              <TabsTrigger value="paquetes">Paquetes</TabsTrigger>
+              <TabsTrigger value="ocs">OCs ({ocs.length})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="cotizar" className="space-y-4 mt-4">
+            <TabsContent value="solicitudes" className="mt-4">
+              <SolicitudesTab
+                requisicionId={requisicionId}
+                reqItems={reqItems}
+                proveedores={proveedores}
+                solicitudes={solsQ.data ?? []}
+              />
+            </TabsContent>
+
+            <TabsContent value="comparativa" className="mt-4">
+              <ComparativaTable reqItems={reqItems} solicitudes={solsQ.data ?? []} />
+            </TabsContent>
+
+            <TabsContent value="paquetes" className="space-y-4 mt-4">
               <Card className="p-3 bg-muted/40 border-dashed">
                 <p className="text-sm flex items-start gap-2">
                   <AlertCircle className="size-4 mt-0.5 text-muted-foreground shrink-0" />
@@ -448,7 +474,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
 
                     {oc.estatus === "borrador" && (
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setTab("cotizar")}>
+                        <Button size="sm" variant="outline" onClick={() => setTab("paquetes")}>
                           <Edit className="size-4 mr-1" /> Editar
                         </Button>
                         <Button size="sm" onClick={() => enviarMut.mutate(oc.id)} disabled={enviarMut.isPending}>

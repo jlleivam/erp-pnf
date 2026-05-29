@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { listRequisicionesAsignadas, getRequisicion } from "@/lib/api/requisiciones.functions";
 import { RequisicionDetalleSheet } from "@/components/requisiciones/RequisicionDetalleSheet";
-import { CotizacionSheet } from "@/components/requisiciones/CotizacionSheet";
+import { CotizacionSheet, type CotizacionTab } from "@/components/requisiciones/CotizacionSheet";
 import { ESTATUS_META, type RequisicionEstatus } from "@/components/requisiciones/constants";
 import { formatDate } from "@/lib/format";
 import { useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
@@ -32,7 +32,7 @@ function AdminRequisicionesPage() {
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [obraFilter, setObraFilter] = useState<string>("todas");
   const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [cotizacion, setCotizacion] = useState<{ id: string; tab: "cotizar" | "ocs" } | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
 
   const fetchList = useServerFn(listRequisicionesAsignadas);
   const fetchOne = useServerFn(getRequisicion);
