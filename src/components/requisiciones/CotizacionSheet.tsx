@@ -22,7 +22,7 @@ import { SolicitudesTab } from "./SolicitudesTab";
 import { ComparativaTable } from "./ComparativaTable";
 import { useEffectiveRoles } from "@/stores/auth";
 
-export type CotizacionTab = "solicitudes" | "comparativa" | "ocs";
+export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs";
 
 interface Props {
   requisicionId: string;
@@ -39,9 +39,20 @@ const OC_BADGE: Record<string, { label: string; className: string }> = {
   pagada: { label: "Pagada", className: "bg-blue-100 text-blue-800" },
 };
 
+const REQ_BADGE: Record<string, { label: string; className: string }> = {
+  borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
+  enviada: { label: "Enviada", className: "bg-blue-100 text-blue-800" },
+  en_cotizacion: { label: "En cotización", className: "bg-amber-100 text-amber-800" },
+  cotizada: { label: "Cotizada", className: "bg-indigo-100 text-indigo-800" },
+  autorizada: { label: "Autorizada", className: "bg-emerald-100 text-emerald-800" },
+  oc_generada: { label: "OC generada", className: "bg-emerald-100 text-emerald-800" },
+  completada: { label: "Completada", className: "bg-emerald-100 text-emerald-800" },
+  rechazada: { label: "Rechazada", className: "bg-rose-100 text-rose-800" },
+};
+
 const mxn = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "solicitudes" }: Props) {
+export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "requisicion" }: Props) {
   const qc = useQueryClient();
   const fetchCot = useServerFn(getCotizacionRequisicion);
   const fetchProv = useServerFn(listProveedores);
