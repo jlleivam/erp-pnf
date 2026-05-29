@@ -59,6 +59,14 @@ function AdminRequisicionesPage() {
     return (rows as any[]).filter((r) => r.obra?.id === obraFilter);
   }, [rows, obraFilter]);
 
+  if (!allowed) {
+    return (
+      <p className="text-sm text-destructive">
+        No tienes permisos para ver requisiciones administrativas con la vista actual.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <header>
