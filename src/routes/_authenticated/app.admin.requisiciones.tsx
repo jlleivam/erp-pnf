@@ -32,7 +32,7 @@ function AdminRequisicionesPage() {
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [obraFilter, setObraFilter] = useState<string>("todas");
   const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [cotizacion, setCotizacion] = useState<{ id: string; tab: "cotizar" | "ocs" } | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
 
   const fetchList = useServerFn(listRequisicionesAsignadas);
   const fetchOne = useServerFn(getRequisicion);
