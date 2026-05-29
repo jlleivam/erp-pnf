@@ -13,13 +13,13 @@ import { listRequisiciones } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
 import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
-import { useAuthStore, isDirector } from "@/stores/auth";
+import { useEffectiveRoles, isDirector } from "@/stores/auth";
 import { formatDate } from "@/lib/format";
 
 interface Props { obraId: string }
 
 export function RequisicionesModule({ obraId }: Props) {
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const puedeCrear = isDirector(roles) || roles.some((r) =>
     ["pm", "auxiliar", "administrativo"].includes(r as string)
   );

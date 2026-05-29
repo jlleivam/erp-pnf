@@ -64,7 +64,7 @@ export function CatalogoClientesModule({
 }: {
   initialClienteId?: string;
 }) {
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const canEdit = roles.includes("director") || roles.includes("administrativo");
   const qc = useQueryClient();
 

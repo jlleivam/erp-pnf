@@ -88,7 +88,7 @@ const STATUS_BADGE: Record<DocStatus, { label: string; cls: string }> = {
 };
 
 export function CatalogoTerceroModule() {
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const canEdit = roles.includes("director") || roles.includes("administrativo");
   const qc = useQueryClient();
 

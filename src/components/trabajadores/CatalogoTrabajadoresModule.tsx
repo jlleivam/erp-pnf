@@ -112,7 +112,7 @@ function Avatar({ name }: { name: string }) {
 }
 
 export function CatalogoTrabajadoresModule() {
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const canManage = roles.includes("director") || roles.includes("administrativo");
   const canRequest =
     canManage || roles.includes("residente") || roles.includes("auxiliar");
