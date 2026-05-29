@@ -43,6 +43,7 @@ const ItemInput = z.object({
 
 const RespuestaInput = z.object({
   insumo_id: z.string().uuid(),
+  cantidad: z.number().positive().optional(),
   precio_unitario: z.number().min(0),
   disponible: z.boolean(),
   nota: z.string().max(500).optional().nullable(),
