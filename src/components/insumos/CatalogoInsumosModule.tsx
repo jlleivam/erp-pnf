@@ -21,7 +21,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useAuthStore, isDirector as checkDirector } from "@/stores/auth";
+import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
 import {
   listInsumos, listCategorias, getMetricasInsumos, solicitarInsumo, editarInsumo,
   autorizarInsumo, rechazarInsumo, crearCategoria, editarCategoria, eliminarCategoria,
@@ -52,7 +52,7 @@ function fmtMoney(n: number) {
 }
 
 export function CatalogoInsumosModule() {
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const director = checkDirector(roles);
   const qc = useQueryClient();
 

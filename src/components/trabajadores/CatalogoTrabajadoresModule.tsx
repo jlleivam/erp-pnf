@@ -46,7 +46,7 @@ import {
   eliminarTrabajador,
   listTrabajadores,
 } from "@/lib/api/trabajadores.functions";
-import { useAuthStore } from "@/stores/auth";
+import { useEffectiveRoles } from "@/stores/auth";
 import {
   DOCS_BADGE,
   DOCS_LABEL,
@@ -112,7 +112,7 @@ function Avatar({ name }: { name: string }) {
 }
 
 export function CatalogoTrabajadoresModule() {
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const canManage = roles.includes("director") || roles.includes("administrativo");
   const canRequest =
     canManage || roles.includes("residente") || roles.includes("auxiliar");

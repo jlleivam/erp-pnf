@@ -36,7 +36,7 @@ import {
   eliminarTercero,
   listTerceros,
 } from "@/lib/api/terceros.functions";
-import { useAuthStore } from "@/stores/auth";
+import { useEffectiveRoles } from "@/stores/auth";
 import { estadoVencimiento, type EstadoDoc } from "@/lib/format";
 import { TerceroFormDialog } from "./TerceroFormDialog";
 import { TerceroDetalle } from "./TerceroDetalle";
@@ -88,7 +88,7 @@ const STATUS_BADGE: Record<DocStatus, { label: string; cls: string }> = {
 };
 
 export function CatalogoTerceroModule() {
-  const roles = useAuthStore((s) => s.roles);
+  const roles = useEffectiveRoles();
   const canEdit = roles.includes("director") || roles.includes("administrativo");
   const qc = useQueryClient();
 

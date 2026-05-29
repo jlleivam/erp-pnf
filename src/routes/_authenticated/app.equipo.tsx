@@ -8,7 +8,7 @@ import {
   updateMemberRoles,
   removeMember,
 } from "@/lib/api/team.functions";
-import { useAuthStore, isDirector, type AppRole } from "@/stores/auth";
+import { useAuthStore, effectiveIsDirector, type AppRole } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,8 +64,8 @@ type Member = {
 };
 
 function EquipoPage() {
-  const { roles } = useAuthStore();
-  const director = isDirector(roles);
+  const { roles, assumedRole } = useAuthStore();
+  const director = effectiveIsDirector(roles, assumedRole);
 
   const qc = useQueryClient();
   const fetchList = useServerFn(listTeamMembers);
