@@ -78,10 +78,21 @@ export function generarPDFSolicitudCotizacion(data: PDFData) {
   doc.setFont("helvetica", "normal");
   doc.text(`Requisición: ${data.requisicion?.folio ?? "—"}`, M, y);
   y += 12;
+  doc.setFont("helvetica", "bold");
   doc.text(`Obra: ${data.requisicion?.obra?.nombre ?? "—"}`, M, y);
   y += 12;
+  doc.setFont("helvetica", "normal");
   if (data.requisicion?.obra?.ubicacion) {
-    doc.text(`Ubicación: ${data.requisicion.obra.ubicacion}`, M, y);
+    doc.text(`Ubicación: ${data.requisicion.obra.ubicacion}`, M, y, { maxWidth: W - M * 2 });
+    y += 12;
+  }
+  const resNombre = data.residente?.profile?.nombre_completo;
+  if (resNombre) {
+    const resCorreo = data.residente?.profile?.email;
+    doc.text(
+      `Residente de obra: ${resNombre}${resCorreo ? `  ·  ${resCorreo}` : ""}`,
+      M, y
+    );
     y += 12;
   }
   y += 8;
@@ -92,24 +103,26 @@ export function generarPDFSolicitudCotizacion(data: PDFData) {
     it.insumo?.nombre ?? "—",
     it.insumo?.unidad ?? "",
     Number(it.cantidad).toLocaleString("es-MX"),
+    fmtDate(it.fecha_requerida),
     "",
     "",
     "",
   ]);
   autoTable(doc, {
     startY: y,
-    head: [["#", "Descripción", "Unidad", "Cantidad", "P. Unitario", "Importe", "T. entrega"]],
+    head: [["#", "Descripción", "Unidad", "Cantidad", "F. requerida", "P. Unitario", "Importe", "T. entrega"]],
     body: rows,
     theme: "grid",
-    styles: { fontSize: 9, cellPadding: 5 },
+    styles: { fontSize: 9, cellPadding: 4 },
     headStyles: { fillColor: [15, 30, 61], textColor: 255, fontStyle: "bold" },
     columnStyles: {
-      0: { cellWidth: 24, halign: "center" },
-      2: { cellWidth: 50, halign: "center" },
-      3: { cellWidth: 60, halign: "right" },
-      4: { cellWidth: 70 },
-      5: { cellWidth: 70 },
-      6: { cellWidth: 70 },
+      0: { cellWidth: 22, halign: "center" },
+      2: { cellWidth: 44, halign: "center" },
+      3: { cellWidth: 52, halign: "right" },
+      4: { cellWidth: 62, halign: "center" },
+      5: { cellWidth: 60 },
+      6: { cellWidth: 60 },
+      7: { cellWidth: 60 },
     },
     margin: { left: M, right: M },
   });
