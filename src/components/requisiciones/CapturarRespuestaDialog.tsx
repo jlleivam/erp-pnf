@@ -92,33 +92,34 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
             <TableHeader>
               <TableRow>
                 <TableHead>Insumo</TableHead>
-                <TableHead className="text-right">Cant.</TableHead>
+                <TableHead className="w-28">Cantidad</TableHead>
                 <TableHead className="w-32">P. Unitario</TableHead>
-                <TableHead className="w-24 text-center">Disp.</TableHead>
                 <TableHead>Nota</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((it, idx) => (
                 <TableRow key={it.insumo_id}>
-                  <TableCell className="text-sm">{it.nombre}</TableCell>
-                  <TableCell className="text-right text-sm whitespace-nowrap">
-                    {it.cantidad} {it.unidad}
+                  <TableCell className="text-sm">
+                    {it.nombre}
+                    {it.unidad && <span className="text-muted-foreground ml-1">({it.unidad})</span>}
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
                       min="0"
                       step="0.01"
-                      disabled={!it.disponible}
-                      value={it.precio_unitario || ""}
-                      onChange={(e) => update(idx, { precio_unitario: Number(e.target.value) || 0 })}
+                      value={it.cantidad || ""}
+                      onChange={(e) => update(idx, { cantidad: Number(e.target.value) || 0 })}
                     />
                   </TableCell>
-                  <TableCell className="text-center">
-                    <Switch
-                      checked={it.disponible}
-                      onCheckedChange={(v) => update(idx, { disponible: v })}
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={it.precio_unitario || ""}
+                      onChange={(e) => update(idx, { precio_unitario: Number(e.target.value) || 0 })}
                     />
                   </TableCell>
                   <TableCell>
