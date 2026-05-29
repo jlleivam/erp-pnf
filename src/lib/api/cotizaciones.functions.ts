@@ -285,6 +285,59 @@ export const reabrirOC = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function assertSupervisor(roles: string[]) {
+  if (!roles.includes("director") && !roles.includes("supervisor")) {
+    throw new Error("Solo Director o Supervisor pueden autorizar OCs");
+  }
+}
+
+export const autorizarOC = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { roles } = await getCtx(supabase, userId);
+    assertSupervisor(roles);
+    const { data: oc } = await supabase
+      .from("ordenes_compra").select("id, requisicion_id, estatus").eq("id", data.ocId).maybeSingle();
+    if (!oc) throw new Error("OC no encontrada");
+    if (oc.estatus !== "pendiente_autorizacion") throw new Error("La OC no está pendiente de autorización");
+    const { error } = await supabase
+      .from("ordenes_compra")
+      .update({ estatus: "autorizada", autorizada_at: new Date().toISOString(), autorizada_por: userId })
+      .eq("id", data.ocId);
+    if (error) throw new Error(error.message);
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    return { ok: true };
+  });
+
+export const rechazarOC = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ ocId: z.string().uuid(), motivo: z.string().trim().min(1).max(1000) }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { roles } = await getCtx(supabase, userId);
+    assertSupervisor(roles);
+    const { data: oc } = await supabase
+      .from("ordenes_compra").select("id, requisicion_id, estatus").eq("id", data.ocId).maybeSingle();
+    if (!oc) throw new Error("OC no encontrada");
+    if (oc.estatus !== "pendiente_autorizacion") throw new Error("La OC no está pendiente de autorización");
+    const { error } = await supabase
+      .from("ordenes_compra")
+      .update({
+        estatus: "rechazada",
+        rechazada_at: new Date().toISOString(),
+        rechazada_por: userId,
+        notas_supervisor: data.motivo,
+      })
+      .eq("id", data.ocId);
+    if (error) throw new Error(error.message);
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    return { ok: true };
+  });
+
 export const listOCsRequisicion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ requisicionId: z.string().uuid() }).parse(d))
