@@ -128,7 +128,16 @@ function NuevaObra() {
   };
 
   const handleSubmit = () => {
-    const rs = new Set(team.map((t) => t.role));
+    const teamLimpio = team.filter((t) => !!t.user_id);
+    const comisionesLimpias = comisiones.filter((c) => !!c.user_id);
+
+    if (teamLimpio.length !== team.length || comisionesLimpias.length !== comisiones.length) {
+      setTeamError("Selecciona un usuario para cada miembro del equipo");
+      return;
+    }
+    setTeamError(null);
+
+    const rs = new Set(teamLimpio.map((t) => t.role));
     if (!rs.has("residente") || !rs.has("administrativo") || !rs.has("supervisor")) {
       return toast.error("Se requiere mínimo Residente, Administrativo y Supervisor");
     }
@@ -144,8 +153,8 @@ function NuevaObra() {
         presupuesto_url: presupuestoUrl,
         monto_contratado: montoContratado === "" ? null : Number(montoContratado),
 
-        team,
-        comisiones,
+        team: teamLimpio,
+        comisiones: comisionesLimpias,
       },
     });
   };
