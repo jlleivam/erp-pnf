@@ -1,23 +1,65 @@
+## Contexto
+
+Ya existe el flujo: **Solicitudes → Comparativa → Paquetes → OCs**. Hoy la Comparativa es solo lectura; el administrativo tiene que ir a la pestaña Paquetes y recapturar manualmente qué insumo va con qué proveedor y a qué precio. Eso duplica trabajo y desperdicia la información ya cotizada.
+
 ## Objetivo
 
-Reestructurar la tabla comparativa para que cada proveedor ocupe **3 columnas** en lugar de una sola: Cant. cotizada, P.U. e Importe.
+Permitir que desde la **Comparativa** el administrativo asigne, por insumo, **qué proveedor lo va a surtir y con qué cantidad**, y que de un solo clic se generen/actualicen los paquetes por proveedor con los precios ya cotizados. Luego sigue el flujo normal en la pestaña Paquetes → Generar OC → enviar al supervisor.
 
 ## Cambios
 
-**`src/components/requisiciones/ComparativaTable.tsx`**
+### 1. `ComparativaTable.tsx` — agregar columna de asignación
 
-1. Encabezado en dos filas:
-   - Fila 1: `Insumo` (rowSpan 2), `Cant. requerida` (rowSpan 2), y un `TableHead` por proveedor con `colSpan={3}` mostrando razón social + folio, con borde izquierdo para separar grupos.
-   - Fila 2: por cada proveedor, 3 `TableHead` pequeños: `Cant.`, `P.U.`, `Importe`.
+En la fila de cada insumo, sumar al final una columna **"Asignar a"** con:
+- Un `Select` con los proveedores que cotizaron ese insumo (label: `Proveedor — $PU`), opción "— Sin asignar".
+- Un `Input` de **cantidad a comprar**, que por defecto toma la cantidad cotizada del proveedor seleccionado (acotada a la requerida). El admin puede editarla — útil cuando un proveedor solo cubre parcial y el resto se asigna a otro.
+- Resaltar visualmente el proveedor sugerido = el de menor PU disponible (botón rápido "Tomar mejor precio").
 
-2. Cuerpo: por cada insumo y por cada proveedor renderizar 3 celdas:
-   - **Cant.**: cantidad cotizada. Si `< requerida` → texto ámbar; si `> requerida` → texto azul; igual → normal. Si el proveedor no ofertó ese insumo o lo marcó no disponible → "—".
-   - **P.U.**: precio unitario formateado en MXN. Resaltar con fondo esmeralda si es el mínimo entre los disponibles para ese insumo.
-   - **Importe**: `cantidad * precio_unitario` en MXN.
-   - Borde izquierdo en la primera columna de cada grupo de proveedor para separación visual.
+Estado local: `Map<insumoId, { proveedorId: string; cantidad: number }>` en el componente. Se inicializa vacío.
 
-3. Footer: mantener "Total ofertado" por proveedor; ahora el total ocupa `colSpan={3}` bajo cada grupo de proveedor (alineado a la derecha en la columna de Importe).
+Footer adicional con resumen por proveedor:
+- Para cada proveedor con asignaciones: `N insumos · Total $X`.
+- Indicador global: `X de Y insumos asignados`.
 
-4. Quitar el `Badge` "No disponible" — con celdas vacías y "—" en las 3 columnas queda claro.
+### 2. Botón **"Generar paquetes con esta asignación"** al pie de la comparativa
 
-5. Sin cambios de backend ni de otros componentes.
+Habilitado cuando hay al menos un insumo asignado. Al hacer clic:
+- Agrupa las asignaciones por `proveedorId`.
+- Por cada grupo llama a `guardarPaquete` (ya existe) con:
+  - `requisicionId`
+  - `proveedorId`
+  - `insumos`: `[{ insumo_id, cantidad: <asignada>, precio_unitario: <cotizado por ese proveedor> }]`
+  - `paqueteId`: si ya existe un paquete para ese proveedor en esta requisición sin OC enviada, se reusa; si no, se crea.
+- Muestra toast con el resumen y cambia a la pestaña **Paquetes** (`setTab("paquetes")` vía prop).
+- Invalida `["cotizacion", requisicionId]` para que los paquetes aparezcan hidratados.
+
+### 3. Nueva prop opcional en `ComparativaTable`
+
+```ts
+interface Props {
+  reqItems: any[];
+  solicitudes: any[];
+  requisicionId: string;
+  onAsignacionGenerada?: () => void; // para que CotizacionSheet salte a "paquetes"
+}
+```
+
+`CotizacionSheet` pasa `requisicionId` y `onAsignacionGenerada={() => setTab("paquetes")}`.
+
+### 4. Validaciones
+
+- No permitir asignar a un proveedor que marcó el insumo como no disponible.
+- No permitir cantidad ≤ 0.
+- Si la cantidad asignada > requerida o > cotizada por el proveedor, mostrar warning ámbar pero permitir guardar.
+- Si un paquete del proveedor ya tiene una OC `pendiente_autorizacion`/`autorizada`/`pagada`, esa asignación se omite y se avisa al usuario por toast.
+
+### 5. Sin cambios de schema ni de server functions
+
+`guardarPaquete` ya acepta exactamente la forma necesaria. Toda la lógica nueva es de UI + orquestación cliente.
+
+### Resultado para el usuario
+
+1. Captura respuestas → ve Comparativa.
+2. En Comparativa elige por insumo el proveedor y la cantidad (con sugerencia de mejor precio).
+3. Un clic → se generan los paquetes por proveedor ya con precios.
+4. Va a pestaña Paquetes solo para revisar y darle "Generar OC" por cada uno → envía al supervisor.

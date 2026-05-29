@@ -268,8 +268,14 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
             </TabsContent>
 
             <TabsContent value="comparativa" className="mt-4">
-              <ComparativaTable reqItems={reqItems} solicitudes={solsQ.data ?? []} />
+              <ComparativaTable
+                reqItems={reqItems}
+                solicitudes={solsQ.data ?? []}
+                requisicionId={requisicionId}
+                onAsignacionGenerada={() => setTab("paquetes")}
+              />
             </TabsContent>
+
 
             <TabsContent value="paquetes" className="space-y-4 mt-4">
               <Card className="p-3 bg-muted/40 border-dashed">
