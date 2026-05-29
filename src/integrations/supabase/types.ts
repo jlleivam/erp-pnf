@@ -127,6 +127,71 @@ export type Database = {
         }
         Relationships: []
       }
+      cotizacion_paquete_insumos: {
+        Row: {
+          cantidad: number
+          created_at: string
+          id: string
+          insumo_id: string
+          paquete_id: string
+          precio_unitario: number
+          subtotal: number | null
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          id?: string
+          insumo_id: string
+          paquete_id: string
+          precio_unitario?: number
+          subtotal?: number | null
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          id?: string
+          insumo_id?: string
+          paquete_id?: string
+          precio_unitario?: number
+          subtotal?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_paquete_insumos_paquete_id_fkey"
+            columns: ["paquete_id"]
+            isOneToOne: false
+            referencedRelation: "cotizacion_paquetes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cotizacion_paquetes: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          numero: number
+          proveedor_id: string | null
+          requisicion_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          numero: number
+          proveedor_id?: string | null
+          requisicion_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          numero?: number
+          proveedor_id?: string | null
+          requisicion_id?: string
+        }
+        Relationships: []
+      }
       insumo_categorias: {
         Row: {
           company_id: string
@@ -362,6 +427,74 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordenes_compra: {
+        Row: {
+          autorizada_at: string | null
+          autorizada_por: string | null
+          company_id: string
+          creado_por: string
+          created_at: string
+          enviada_at: string | null
+          estatus: Database["public"]["Enums"]["oc_estatus"]
+          folio: string
+          id: string
+          notas_supervisor: string | null
+          obra_id: string
+          paquete_id: string
+          proveedor_id: string
+          rechazada_at: string | null
+          rechazada_por: string | null
+          requisicion_id: string
+          total: number
+        }
+        Insert: {
+          autorizada_at?: string | null
+          autorizada_por?: string | null
+          company_id: string
+          creado_por: string
+          created_at?: string
+          enviada_at?: string | null
+          estatus?: Database["public"]["Enums"]["oc_estatus"]
+          folio: string
+          id?: string
+          notas_supervisor?: string | null
+          obra_id: string
+          paquete_id: string
+          proveedor_id: string
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          requisicion_id: string
+          total?: number
+        }
+        Update: {
+          autorizada_at?: string | null
+          autorizada_por?: string | null
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          enviada_at?: string | null
+          estatus?: Database["public"]["Enums"]["oc_estatus"]
+          folio?: string
+          id?: string
+          notas_supervisor?: string | null
+          obra_id?: string
+          paquete_id?: string
+          proveedor_id?: string
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          requisicion_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordenes_compra_paquete_id_fkey"
+            columns: ["paquete_id"]
+            isOneToOne: false
+            referencedRelation: "cotizacion_paquetes"
             referencedColumns: ["id"]
           },
         ]
@@ -831,6 +964,7 @@ export type Database = {
       }
       is_director_of: { Args: { _company_id: string }; Returns: boolean }
       is_member_of_obra: { Args: { _obra_id: string }; Returns: boolean }
+      siguiente_folio_oc: { Args: { _company_id: string }; Returns: string }
       siguiente_folio_requisicion: {
         Args: { _company_id: string }
         Returns: string
@@ -845,6 +979,12 @@ export type Database = {
         | "supervisor"
       insumo_estatus: "autorizado" | "pendiente"
       insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON" | "BTO"
+      oc_estatus:
+        | "borrador"
+        | "pendiente_autorizacion"
+        | "autorizada"
+        | "rechazada"
+        | "pagada"
       requisicion_estatus:
         | "borrador"
         | "enviada"
@@ -1024,6 +1164,13 @@ export const Constants = {
       ],
       insumo_estatus: ["autorizado", "pendiente"],
       insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"],
+      oc_estatus: [
+        "borrador",
+        "pendiente_autorizacion",
+        "autorizada",
+        "rechazada",
+        "pagada",
+      ],
       requisicion_estatus: [
         "borrador",
         "enviada",

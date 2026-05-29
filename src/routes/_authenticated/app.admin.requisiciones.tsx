@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -12,8 +13,9 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { listRequisicionesAsignadas } from "@/lib/api/requisiciones.functions";
+import { listRequisicionesAsignadas, getRequisicion } from "@/lib/api/requisiciones.functions";
 import { RequisicionDetalleSheet } from "@/components/requisiciones/RequisicionDetalleSheet";
+import { CotizacionSheet } from "@/components/requisiciones/CotizacionSheet";
 import { ESTATUS_META, type RequisicionEstatus } from "@/components/requisiciones/constants";
 import { formatDate } from "@/lib/format";
 import { useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
@@ -30,8 +32,10 @@ function AdminRequisicionesPage() {
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [obraFilter, setObraFilter] = useState<string>("todas");
   const [detalleId, setDetalleId] = useState<string | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: "cotizar" | "ocs" } | null>(null);
 
   const fetchList = useServerFn(listRequisicionesAsignadas);
+  const fetchOne = useServerFn(getRequisicion);
   const activasQ = useQuery({
     queryKey: ["requisiciones", "asignadas", "activas"],
     queryFn: () => fetchList({ data: { soloActivas: true } }),
@@ -102,6 +106,8 @@ function AdminRequisicionesPage() {
             loading={loading}
             emptyText="Sin requisiciones activas en tus obras."
             onRowClick={setDetalleId}
+            onAction={(r, t) => setCotizacion({ id: r.id, tab: t })}
+            fetchDetalle={fetchOne}
           />
         </TabsContent>
 
@@ -111,6 +117,8 @@ function AdminRequisicionesPage() {
             loading={loading}
             emptyText="Sin historial de requisiciones."
             onRowClick={setDetalleId}
+            onAction={(r, t) => setCotizacion({ id: r.id, tab: t })}
+            fetchDetalle={fetchOne}
           />
         </TabsContent>
       </Tabs>
@@ -122,17 +130,67 @@ function AdminRequisicionesPage() {
           onOpenChange={(o) => !o && setDetalleId(null)}
         />
       )}
+      {cotizacion && (
+        <CotizacionSheet
+          requisicionId={cotizacion.id}
+          initialTab={cotizacion.tab}
+          open={!!cotizacion}
+          onOpenChange={(o) => !o && setCotizacion(null)}
+        />
+      )}
     </div>
   );
 }
 
+function FechaProximaCell({ rowId, fetchDetalle }: { rowId: string; fetchDetalle: any }) {
+  const q = useQuery({
+    queryKey: ["requisicion-fechas", rowId],
+    queryFn: () => fetchDetalle({ data: { id: rowId } }),
+    staleTime: 60_000,
+  });
+  const items = (q.data as any)?.items ?? [];
+  const fechas = items
+    .map((it: any) => it.fecha_requerida)
+    .filter(Boolean)
+    .map((d: string) => new Date(d).getTime());
+  if (fechas.length === 0) return <span className="text-muted-foreground">—</span>;
+  const min = Math.min(...fechas);
+  const diff = Math.ceil((min - Date.now()) / (1000 * 60 * 60 * 24));
+  const urgent = diff <= 3;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-sm whitespace-nowrap">{formatDate(new Date(min).toISOString())}</span>
+      {urgent && <Badge className="bg-rose-100 text-rose-800 w-fit">Urgente</Badge>}
+    </div>
+  );
+}
+
+function AccionCell({ row, onAction }: {
+  row: any;
+  onAction: (r: any, t: "cotizar" | "ocs") => void;
+}) {
+  const estatus = row.estatus as RequisicionEstatus;
+  if (estatus === "enviada") {
+    return <Button size="sm" onClick={() => onAction(row, "cotizar")}>Cotizar</Button>;
+  }
+  if (estatus === "en_cotizacion") {
+    return <Button size="sm" variant="outline" onClick={() => onAction(row, "cotizar")}>Continuar</Button>;
+  }
+  if (["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus)) {
+    return <Button size="sm" variant="outline" onClick={() => onAction(row, "ocs")}>Ver OCs</Button>;
+  }
+  return null;
+}
+
 function RequisicionesTable({
-  rows, loading, emptyText, onRowClick,
+  rows, loading, emptyText, onRowClick, onAction, fetchDetalle,
 }: {
   rows: any[];
   loading: boolean;
   emptyText: string;
   onRowClick: (id: string) => void;
+  onAction: (r: any, t: "cotizar" | "ocs") => void;
+  fetchDetalle: any;
 }) {
   if (loading) {
     return <p className="text-sm text-muted-foreground">Cargando…</p>;
@@ -155,32 +213,34 @@ function RequisicionesTable({
               <TableHead>Obra</TableHead>
               <TableHead className="hidden sm:table-cell">Solicitante</TableHead>
               <TableHead className="hidden md:table-cell text-right">Insumos</TableHead>
+              <TableHead>Fecha más próxima</TableHead>
               <TableHead>Estatus</TableHead>
-              <TableHead className="hidden sm:table-cell">Enviada</TableHead>
+              <TableHead className="text-right">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((r) => {
               const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
               return (
-                <TableRow
-                  key={r.id}
-                  onClick={() => onRowClick(r.id)}
-                  className="cursor-pointer hover:bg-muted/50"
-                >
-                  <TableCell className="font-medium">{r.folio}</TableCell>
+                <TableRow key={r.id} className="hover:bg-muted/50">
+                  <TableCell className="font-medium cursor-pointer" onClick={() => onRowClick(r.id)}>
+                    {r.folio}
+                  </TableCell>
                   <TableCell className="max-w-[160px] truncate">{r.obra?.nombre ?? "—"}</TableCell>
                   <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                     {r.solicitante ?? "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-right">{r.insumos_count}</TableCell>
                   <TableCell>
+                    <FechaProximaCell rowId={r.id} fetchDetalle={fetchDetalle} />
+                  </TableCell>
+                  <TableCell>
                     <Badge className={meta?.badge ?? ""} variant="secondary">
                       {meta?.label ?? r.estatus}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground whitespace-nowrap">
-                    {r.enviada_at ? formatDate(r.enviada_at) : "—"}
+                  <TableCell className="text-right">
+                    <AccionCell row={r} onAction={onAction} />
                   </TableCell>
                 </TableRow>
               );
