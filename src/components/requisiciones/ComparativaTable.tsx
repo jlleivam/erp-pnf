@@ -135,6 +135,8 @@ export function ComparativaTable({
   // Estado de asignaciones: insumoId -> Asignacion[] (proveedorId = solicitudId del proveedor)
   const [asignaciones, setAsignaciones] = useState<Record<string, Asignacion[]>>({});
   const [hydrated, setHydrated] = useState(false);
+  const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
+  const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
 
   // Hidratar desde paquetes existentes
   useEffect(() => {
