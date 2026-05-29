@@ -22,12 +22,17 @@ import {
   getCotizacionRequisicion, listProveedores, guardarPaquete,
   eliminarPaquete, generarOC, enviarOCASupervisor, reabrirOC,
 } from "@/lib/api/cotizaciones.functions";
+import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
+import { SolicitudesTab } from "./SolicitudesTab";
+import { ComparativaTable } from "./ComparativaTable";
+
+export type CotizacionTab = "solicitudes" | "comparativa" | "paquetes" | "ocs";
 
 interface Props {
   requisicionId: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  initialTab?: "cotizar" | "ocs";
+  initialTab?: CotizacionTab;
 }
 
 type DraftItem = { insumo_id: string; cantidad: number; precio_unitario: number };
