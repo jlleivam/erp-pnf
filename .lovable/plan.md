@@ -1,31 +1,29 @@
 ## Objetivo
+Hacer que al enviar una tarjeta a supervisor:
+- solo se bloquee esa tarjeta,
+- cambie de inmediato a `Pendiente de autorización`,
+- y no afecte los botones de las demás tarjetas.
 
-Reforzar el flujo de "Enviar a supervisor" en la pestaña Comparativa:
+## Plan
+1. **Aislar el estado de envío por tarjeta**
+   - En `ComparativaTable.tsx`, reemplazar la dependencia visual de `enviarMut.isPending` global por un estado local asociado al `proveedorId`/tarjeta en envío.
+   - Así, solo la tarjeta que se está enviando deshabilitará sus acciones mientras termina la mutación.
 
-1. Al enviar a supervisor, el botón de la tarjeta del proveedor debe cambiar a un botón **"Pendiente de autorización"** deshabilitado (no a solo un texto suelto).
-2. Las líneas asignadas a un pedido pendiente o autorizado no deben poder reasignarse a otro proveedor (ya parcialmente cubierto por `provBloqueado`).
-3. Cuando el supervisor autoriza la OC, la tarjeta del proveedor **permanece visible en Comparativa** pero solo muestra el estatus **Autorizada** (sin acciones, en modo lectura). La OC autorizada también aparece en la pestaña **OCs** para hacer los pedidos finales.
+2. **Reflejar el estado pendiente inmediatamente en UI**
+   - Agregar un estado local optimista por proveedor para marcar temporalmente la tarjeta como `pendiente_autorizacion` apenas se haga click en `Enviar a supervisor`.
+   - Usar ese estado optimista para mostrar el botón deshabilitado `Pendiente de autorización` incluso antes de que termine el refetch.
 
-## Cambios
+3. **Mantener sincronía con datos reales del backend**
+   - Cuando la mutación termine correctamente, invalidar queries como ya se hace y dejar que el estado real de `ocs` reemplace el optimista.
+   - Si falla, limpiar el estado optimista para que la tarjeta vuelva a su estado anterior y no quede bloqueada incorrectamente.
 
-### `src/components/requisiciones/ComparativaTable.tsx`
+4. **Ajustar condiciones de render de acciones**
+   - Hacer que el cálculo de `estatus`, `bloqueado` y `puedeEnviar` use primero el estado optimista de la tarjeta y luego el estado real de la OC.
+   - Confirmar que las otras tarjetas sigan operables mientras una sola está en proceso.
 
-1. **Botón "Pendiente de autorización"**
-   En la rama `estatus === "pendiente_autorizacion"` de las acciones de la tarjeta:
-   - Si el usuario **no es supervisor**, reemplazar el `<p>Esperando autorización del supervisor</p>` por un `<Button disabled>` con ícono `Clock` y texto "Pendiente de autorización".
-   - Si es supervisor, mantener Autorizar / Rechazar como hoy.
+## Archivos a tocar
+- `src/components/requisiciones/ComparativaTable.tsx`
 
-2. **Tarjeta autorizada en modo lectura**
-   La rama `estatus === "autorizada"` ya muestra el texto "Autorizada" sin acciones — mantener. Confirmar que toda la fila/insumo siga bloqueada en la matriz vía `provBloqueado` (ya cubierto: devuelve true para `autorizada`).
-
-3. **Importar `Clock`** desde `lucide-react`.
-
-### Sin cambios
-
-- Server functions (`enviarOCASupervisor`, `autorizarOC`, `rechazarOC`).
-- Base de datos.
-- Pestaña OCs (`CotizacionSheet.tsx`) — ya lista todas las OCs autorizadas.
-
-## Riesgos
-
-Mínimo. Cambio puntual de UI en la sección de acciones de la tarjeta del proveedor.
+## Detalle técnico
+- El problema actual viene de que `enviarMut.isPending` es compartido por toda la instancia del componente, por eso las 3 tarjetas se deshabilitan al mismo tiempo.
+- El cambio será solo de frontend/estado de presentación; no hace falta modificar funciones del backend porque `enviarOCASupervisor` ya cambia el estatus correctamente.
