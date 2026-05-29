@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { create } from "zustand";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -61,7 +62,9 @@ export function effectiveIsDirector(roles: AppRole[], assumed: AppRole | null): 
 
 /** Hook helper: roles efectivos suscribiéndose al store. */
 export function useEffectiveRoles(): AppRole[] {
-  return useAuthStore((s) => effectiveRoles(s.roles, s.assumedRole));
+  const roles = useAuthStore((s) => s.roles);
+  const assumed = useAuthStore((s) => s.assumedRole);
+  return useMemo(() => effectiveRoles(roles, assumed), [roles, assumed]);
 }
 
 export function canAccess(roles: AppRole[], allowed: AppRole[]): boolean {
