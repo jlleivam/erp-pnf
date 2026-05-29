@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 
 interface Props {
   reqItems: any[]; // items de la requisición con insumo {id, nombre, unidad}
@@ -47,7 +46,6 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
     return t;
   }, [recibidas]);
 
-
   if (recibidas.length === 0) {
     return (
       <Card className="p-8 text-center border-dashed">
@@ -73,15 +71,28 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[200px]">Insumo</TableHead>
-                <TableHead className="text-right">Cant. requerida</TableHead>
+                <TableHead rowSpan={2} className="min-w-[200px] align-bottom">Insumo</TableHead>
+                <TableHead rowSpan={2} className="text-right align-bottom">Cant. requerida</TableHead>
                 {recibidas.map((sc) => (
-                  <TableHead key={sc.id} className="text-right min-w-[140px]">
-                    <div className="flex flex-col items-end">
+                  <TableHead
+                    key={sc.id}
+                    colSpan={3}
+                    className="text-center border-l min-w-[280px]"
+                  >
+                    <div className="flex flex-col items-center">
                       <span className="font-semibold">{sc.proveedor?.razon_social ?? "—"}</span>
                       <span className="text-xs text-muted-foreground font-normal">{sc.folio}</span>
                     </div>
                   </TableHead>
+                ))}
+              </TableRow>
+              <TableRow>
+                {recibidas.map((sc) => (
+                  <>
+                    <TableHead key={`${sc.id}-c`} className="text-right text-xs border-l">Cant.</TableHead>
+                    <TableHead key={`${sc.id}-p`} className="text-right text-xs">P.U.</TableHead>
+                    <TableHead key={`${sc.id}-i`} className="text-right text-xs">Importe</TableHead>
+                  </>
                 ))}
               </TableRow>
             </TableHeader>
@@ -102,51 +113,55 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
                     </TableCell>
                     {recibidas.map((sc) => {
                       const oferta = ofertas?.get(sc.id);
-                      if (!oferta) return <TableCell key={sc.id} className="text-right text-muted-foreground">—</TableCell>;
-                      if (!oferta.disponible) {
+                      if (!oferta || !oferta.disponible) {
                         return (
-                          <TableCell key={sc.id} className="text-right">
-                            <Badge variant="secondary" className="bg-slate-100 text-slate-600">No disponible</Badge>
-                          </TableCell>
+                          <>
+                            <TableCell key={`${sc.id}-c`} className="text-right text-muted-foreground border-l">—</TableCell>
+                            <TableCell key={`${sc.id}-p`} className="text-right text-muted-foreground">—</TableCell>
+                            <TableCell key={`${sc.id}-i`} className="text-right text-muted-foreground">—</TableCell>
+                          </>
                         );
                       }
                       const isMin = minPrecio !== null && oferta.precio === minPrecio;
                       const cantOf = oferta.cantidad;
-                      let cantClass = "text-muted-foreground";
-                      let cantLabel = `Cotizó ${cantOf} ${unidad}`.trim();
-                      if (cantOf < cantReq) {
-                        cantClass = "text-amber-700 font-medium";
-                        cantLabel = `Cotizó ${cantOf} de ${cantReq} ${unidad}`.trim();
-                      } else if (cantOf > cantReq) {
-                        cantClass = "text-sky-700";
-                        cantLabel = `Cotizó ${cantOf} de ${cantReq} ${unidad}`.trim();
-                      }
+                      let cantClass = "";
+                      if (cantOf < cantReq) cantClass = "text-amber-700 font-medium";
+                      else if (cantOf > cantReq) cantClass = "text-sky-700";
+                      const importe = cantOf * oferta.precio;
                       return (
-                        <TableCell
-                          key={sc.id}
-                          className={`text-right text-sm tabular-nums ${
-                            isMin ? "bg-emerald-50 text-emerald-800" : ""
-                          }`}
-                        >
-                          <div className={`flex flex-col items-end ${isMin ? "font-semibold" : ""}`}>
-                            <span>{mxn(oferta.precio)}</span>
-                            <span className={`text-xs font-normal ${cantClass}`}>{cantLabel}</span>
-                          </div>
-                        </TableCell>
+                        <>
+                          <TableCell key={`${sc.id}-c`} className={`text-right text-sm tabular-nums border-l whitespace-nowrap ${cantClass}`}>
+                            {cantOf} {unidad}
+                          </TableCell>
+                          <TableCell
+                            key={`${sc.id}-p`}
+                            className={`text-right text-sm tabular-nums ${
+                              isMin ? "bg-emerald-50 text-emerald-800 font-semibold" : ""
+                            }`}
+                          >
+                            {mxn(oferta.precio)}
+                          </TableCell>
+                          <TableCell key={`${sc.id}-i`} className="text-right text-sm tabular-nums">
+                            {mxn(importe)}
+                          </TableCell>
+                        </>
                       );
                     })}
                   </TableRow>
                 );
               })}
             </TableBody>
-
             <tfoot className="border-t bg-muted/30">
               <TableRow>
                 <TableCell className="font-semibold text-sm" colSpan={2}>
                   Total ofertado
                 </TableCell>
                 {recibidas.map((sc) => (
-                  <TableCell key={sc.id} className="text-right font-semibold tabular-nums">
+                  <TableCell
+                    key={sc.id}
+                    colSpan={3}
+                    className="text-right font-semibold tabular-nums border-l"
+                  >
                     {mxn(totales.get(sc.id) ?? 0)}
                   </TableCell>
                 ))}
