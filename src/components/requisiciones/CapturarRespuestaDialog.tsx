@@ -57,8 +57,9 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
           solicitudId: solicitud.id,
           items: items.map((it) => ({
             insumo_id: it.insumo_id,
+            cantidad: it.cantidad,
             precio_unitario: it.precio_unitario,
-            disponible: it.disponible,
+            disponible: it.precio_unitario > 0,
             nota: it.nota || null,
           })),
         },
