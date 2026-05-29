@@ -16,15 +16,16 @@ const mxn = (n: number) =>
 export function ComparativaTable({ reqItems, solicitudes }: Props) {
   const recibidas = solicitudes.filter((s) => s.estatus === "recibida");
 
-  // Map<insumoId, Map<solicitudId, {precio, disponible}>>
+  // Map<insumoId, Map<solicitudId, {precio, disponible, cantidad}>>
   const matrix = useMemo(() => {
-    const m = new Map<string, Map<string, { precio: number; disponible: boolean }>>();
+    const m = new Map<string, Map<string, { precio: number; disponible: boolean; cantidad: number }>>();
     for (const sc of recibidas) {
       for (const it of sc.items ?? []) {
         if (!m.has(it.insumo_id)) m.set(it.insumo_id, new Map());
         m.get(it.insumo_id)!.set(sc.id, {
           precio: Number(it.precio_unitario ?? 0),
           disponible: it.disponible !== false,
+          cantidad: Number(it.cantidad ?? 0),
         });
       }
     }
@@ -45,6 +46,7 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
     }
     return t;
   }, [recibidas]);
+
 
   if (recibidas.length === 0) {
     return (
