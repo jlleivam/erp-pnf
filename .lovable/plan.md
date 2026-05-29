@@ -1,109 +1,119 @@
-# Plan: Vista Administrativa de Requisiciones (Cotización + OCs)
 
-Extender `/app/admin/requisiciones` para que el Administrativo arme paquetes por proveedor, cotice insumos y genere Órdenes de Compra que el Supervisor autorizará después.
+# Solicitudes de cotización (RFQ) antes de las OCs
 
-## 1. Migración de base de datos
+Hoy el administrativo arma paquetes y genera OCs directo. Vamos a intercalar un paso de **Solicitud de Cotización (SC)**: el admin elige proveedores, marca qué insumos pedirle a cada uno, descarga el PDF para enviárselo por su cuenta, captura los precios cuando responden y compara antes de armar los paquetes/OCs.
 
-Nuevos enums:
-- `oc_estatus`: `borrador | pendiente_autorizacion | autorizada | rechazada | pagada`
+## 1. Base de datos (migración nueva)
 
-Extender enum `requisicion_estatus` (si no existen ya): `en_cotizacion`, `pendiente_autorizacion`, `oc_generada`.
+Nuevas tablas (todas con `company_id` + RLS por company y políticas director/administrativo):
 
-Nuevas tablas (todas con `company_id` + RLS por `company_id` y políticas usando `is_director_of` / `has_role(..., 'administrativo')` / `'supervisor'` solo lectura para OCs):
+**`cotizacion_solicitudes`**
+- `id`, `requisicion_id`, `company_id`, `proveedor_id → terceros(id)`, `folio text` (`SC-YYYY-NNN`, único por company), `estatus enum` (`borrador | enviada | recibida | descartada`), `enviada_at`, `recibida_at`, `notas text`, `creado_por`, `created_at`
+- Función `siguiente_folio_sc(_company_id)` análoga a la de OCs.
 
-**`cotizacion_paquetes`**
-- `id`, `requisicion_id`, `company_id`, `proveedor_id → terceros(id)`, `numero int`, `created_at`
-- Unique(`requisicion_id`, `numero`)
+**`cotizacion_solicitud_insumos`**
+- `id`, `solicitud_id → cotizacion_solicitudes(id) ON DELETE CASCADE`, `insumo_id`, `cantidad numeric`, `precio_unitario numeric NULL` (se llena al capturar respuesta), `disponible boolean DEFAULT true` (proveedor podría no tenerlo), `nota text`, `subtotal GENERATED ALWAYS AS (cantidad * coalesce(precio_unitario,0)) STORED`, `created_at`
 
-**`cotizacion_paquete_insumos`**
-- `id`, `paquete_id → cotizacion_paquetes(id) ON DELETE CASCADE`, `insumo_id`, `cantidad numeric`, `precio_unitario numeric`, `subtotal numeric GENERATED ALWAYS AS (cantidad * precio_unitario) STORED`, `created_at`
+Tablas existentes que NO se tocan: `cotizacion_paquetes`, `cotizacion_paquete_insumos`, `ordenes_compra`. El flujo de paquetes/OCs sigue igual; lo único nuevo es que ahora se alimenta de las cotizaciones recibidas.
 
-**`ordenes_compra`**
-- `id`, `paquete_id`, `requisicion_id`, `company_id`, `obra_id`, `proveedor_id`, `folio text` (único por empresa, formato `OC-YYYY-NNN`), `estatus oc_estatus DEFAULT 'borrador'`, `total numeric`, `creado_por`, `enviada_at`, `autorizada_at`, `autorizada_por`, `rechazada_at`, `rechazada_por`, `notas_supervisor text`, `created_at`
-- Unique(`company_id`, `folio`)
+GRANTs estándar a `authenticated` y `service_role`.
 
-Función `siguiente_folio_oc(_company_id)` análoga a `siguiente_folio_requisicion`.
+## 2. Server functions (`src/lib/api/solicitudes-cotizacion.functions.ts`, nuevo)
 
-GRANTs explícitos: `SELECT, INSERT, UPDATE, DELETE` a `authenticated`, `ALL` a `service_role` (sin `anon`).
+Todas con `requireSupabaseAuth` + check director/administrativo:
 
-RLS:
-- `cotizacion_paquetes` y `cotizacion_paquete_insumos`: SELECT por `company_id = current_company_id()`; INSERT/UPDATE/DELETE para director o administrativo de la company.
-- `ordenes_compra`: SELECT por company; INSERT/UPDATE para director o administrativo; supervisor solo SELECT (manejado por la política de company); transiciones de estatus se validarán en server fns.
+- `getSolicitudesRequisicion({ requisicionId })` → lista de SCs con proveedor, insumos, totales.
+- `crearSolicitud({ requisicionId, proveedorId, insumos: [{ insumo_id, cantidad }] })` → crea SC en `borrador` con folio nuevo.
+- `actualizarSolicitud({ solicitudId, proveedorId?, insumos?, notas? })` → edita mientras esté en `borrador`.
+- `eliminarSolicitud({ solicitudId })` → solo si `borrador` o `descartada`.
+- `marcarEnviada({ solicitudId })` → pasa a `enviada`, set `enviada_at`. (Es el botón después de descargar el PDF.)
+- `capturarRespuesta({ solicitudId, items: [{ insumo_id, precio_unitario, disponible, nota? }] })` → pasa a `recibida`, set `recibida_at`, llena precios.
+- `descartarSolicitud({ solicitudId })` → marca `descartada` (no entra en comparativa).
+- `getComparativa({ requisicionId })` → server fn que devuelve por insumo: `{ insumo, cantidad_requerida, ofertas: [{ solicitud_id, proveedor, precio, disponible, subtotal }] }`. Solo considera SCs `recibida`.
 
-Regla única (validación en server fn, no en DB): un mismo `insumo_id` no puede aparecer en >1 paquete dentro de la misma requisición mientras existan paquetes activos.
+Validación: un mismo insumo SÍ puede aparecer en varias SCs (esa es la idea — comparar precios). La regla de "un insumo no puede estar en más de un paquete" sigue aplicando solo en `cotizacion_paquetes`.
 
-## 2. Server functions (`src/lib/api/cotizaciones.functions.ts`)
+## 3. UI
 
-Todas con `requireSupabaseAuth` y validación Zod. Permiten ejecutar solo a director/administrativo (revisión de rol vía `user_roles`).
+### 3.1. Nueva pestaña en `CotizacionSheet.tsx`
 
-- `getCotizacionRequisicion({ requisicionId })` → paquetes (con insumos + proveedor) + OCs + insumos de la requisición con flag "ya en paquete".
-- `guardarPaquete({ requisicionId, paqueteId?, proveedorId, insumos: [{ insumo_id, cantidad, precio_unitario }] })` → upsert paquete + reemplazo de items; valida no-duplicado de insumo entre paquetes; asigna `numero` consecutivo si es nuevo. Tras guardar, actualiza estatus de requisición a `en_cotizacion` si aplica.
-- `eliminarPaquete({ paqueteId })` → borra paquete (cascade items) si no tiene OC asociada distinta de `borrador`.
-- `generarOC({ paqueteId })` → crea OC en `borrador` con folio vía `siguiente_folio_oc`, total = SUM(subtotal). Valida: paquete con proveedor + ≥1 insumo con precio>0.
-- `enviarOCASupervisor({ ocId })` → cambia `borrador → pendiente_autorizacion`, set `enviada_at`. Recalcula estatus de requisición.
-- `listOCsRequisicion({ requisicionId })` → OCs con proveedor, insumos, totales, estatus.
-- `actualizarEstatusRequisicion(requisicionId)` helper interno con la regla:
-  - ≥1 paquete y ninguna OC → `en_cotizacion`
-  - ≥1 OC `pendiente_autorizacion` → `pendiente_autorizacion`
-  - todas las OCs `autorizada`/`pagada` y al menos una autorizada → `oc_generada`
-  - todas las OCs `pagada` → `completada`
+Pasa de 2 a 3 pestañas:
+1. **Solicitudes de cotización** (nuevo, default cuando estatus = `enviada`/`en_cotizacion`)
+2. **Comparativa** (nuevo)
+3. **Paquetes** (lo que hoy se llama "Cotizar")
+4. **Órdenes de compra** (igual)
 
-Placeholder (sin endpoint todavía): "Registrar pago" en UI no llama server fn (botón disabled con tooltip "Próximamente").
+### 3.2. Tab "Solicitudes de cotización"
 
-## 3. UI — extender `src/routes/_authenticated/app.admin.requisiciones.tsx`
+- Lista de cards de SCs con folio, proveedor, badge de estatus, total estimado (si ya hay precios), botón **Descargar PDF**, **Capturar respuesta**, **Editar**, **Descartar**.
+- Botón **+ Nueva solicitud** abre un sub-form:
+  - Select de proveedor (terceros categoría `proveedor`/`ambos`).
+  - Tabla con TODOS los insumos de la requisición; checkbox para incluir + cantidad (prellenada con la cantidad de la requisición, editable a la baja).
+  - Notas opcionales.
+  - Botón **Guardar borrador** o **Guardar y descargar PDF**.
+- Al hacer clic en **Descargar PDF**: genera localmente un PDF con `jspdf` + `jspdf-autotable` con encabezado de la empresa, datos del proveedor, lista de insumos (nombre, unidad, cantidad), espacio para precio unitario / disponibilidad / fecha de entrega / vigencia, folio SC y firma. Tras descargar, llama `marcarEnviada` para registrar la fecha.
+- Botón **Capturar respuesta** abre un modal con la misma tabla pero editable: `precio_unitario`, `disponible`, `nota`. Al guardar → `capturarRespuesta` → SC pasa a `recibida`.
 
-Tabla existente:
-- Nueva columna **Fecha más próxima** (mín de `items.fecha_requerida`) con badge rojo "Urgente" si ≤3 días.
-- Columna acción dinámica según `estatus`:
-  - `enviada` → botón **Cotizar**
-  - `en_cotizacion` → **Continuar**
-  - `pendiente_autorizacion`/`oc_generada`/`completada` → **Ver OCs**
-- Abre un `Sheet` ancho con 2 pestañas (`Tabs`).
+### 3.3. Tab "Comparativa"
 
-Nuevo componente `src/components/requisiciones/CotizacionSheet.tsx`:
+- Tabla pivote: filas = insumos de la requisición, columnas = proveedores con SC recibida.
+- Cada celda muestra `precio_unitario` (o "—" / "No disponible"). Resalta en verde el menor precio por fila.
+- Footer: total estimado por proveedor si se le compraran TODOS los insumos que ofertó.
+- Indicador visual de cobertura: "X insumos sin cotización".
+- Botón **Pasar a paquetes** que lleva al tab de Paquetes (no automatiza la asignación; el admin sigue armando los paquetes a mano usando esta info como referencia, según lo elegido).
 
-**Tab "Cotizar"**:
-- Header instructivo.
-- Lista de paquetes (`PaqueteCard`):
-  - Título "Paquete N", select proveedor (terceros con `categoria in ('proveedor','ambos')`).
-  - Tabla de insumos: select de insumos disponibles (no usados en otros paquetes), cantidad readonly, precio_unitario input numérico, subtotal.
-  - Botones: **Agregar insumo al paquete**, **Eliminar paquete**.
-  - Total paquete.
-  - **Generar OC** (habilitado solo si: proveedor + ≥1 insumo con precio > 0 + paquete guardado).
-- Botón global **Agregar paquete con otro proveedor**.
-- Footer: total requisición + contador `X de Y insumos cubiertos`.
+### 3.4. Tab "Paquetes" (refinamiento mínimo)
 
-**Tab "Órdenes de compra"**:
-- Lista de OCs (`OCCard`) con folio, proveedor, items+montos, total, badge de estatus, fecha envío.
-- Acciones según estatus:
-  - `borrador`: **Editar** (regresa a tab Cotizar con paquete) + **Enviar a supervisor**.
-  - `pendiente_autorizacion`: solo lectura + "Enviada al supervisor · {fecha}".
-  - `autorizada`: badge verde + botón **Registrar pago** (disabled).
-  - `rechazada`: badge rojo + `notas_supervisor` + **Revisar y reenviar** (vuelve a borrador via server fn — incluida en `enviarOCASupervisor` flujo o nueva `reabrirOC`).
+- Cuando el admin selecciona un proveedor en un paquete, los `precio_unitario` se prellenan automáticamente con lo capturado en su SC recibida (si existe). Sigue siendo editable.
+- Pequeño badge "Precio de SC-YYYY-NNN" junto al input cuando viene de una cotización.
 
-Gating: si rol efectivo no es director/administrativo, mostrar mensaje "Sin permisos" (ya existe el patrón).
+### 3.5. Cambios menores en la tabla principal `app.admin.requisiciones.tsx`
 
-UI: paleta azul oscuro `#0f1e3d` como primario en este módulo (ajuste local de tokens o variant de botón si no rompe el theme global). Desktop-first.
+- Renombrar acción `enviada → Cotizar` por `enviada → Solicitar cotizaciones`.
+- Mismo Sheet, abre en tab "Solicitudes de cotización" por default.
+- Nueva columna pequeña: contador `SCs: 2/3 recibidas`.
 
-## 4. Permisos / acceso
+## 4. Estatus de requisición
 
-- Server fns rechazan a quien no sea director o administrativo (excepto reads que ya filtran por company).
-- Supervisor: las OCs ya son SELECT-able por company; su vista de autorización se hará en otro paso.
+Extender el helper `recalcEstatusRequisicion`:
+- Si hay ≥1 SC y todas en `borrador`/`enviada` → estatus `en_cotizacion` (ya existe).
+- Resto de transiciones siguen igual (en cuanto haya paquetes/OCs avanza por el camino actual).
 
-## 5. Validación final
+No se agrega ningún estatus nuevo; el ciclo de vida visible sigue siendo `enviada → en_cotizacion → pendiente_autorizacion → oc_generada → completada`.
 
-1. Login como administrativo → abrir admin requisiciones → Cotizar req. enviada → armar 2 paquetes con distintos proveedores → generar OCs → enviar a supervisor.
-2. Verificar estatus de requisición transiciona `enviada → en_cotizacion → pendiente_autorizacion`.
-3. Verificar que un insumo no puede repetirse entre paquetes.
-4. Verificar columna fecha próxima + badge urgente.
-5. Login como residente: no ve `/app/admin/requisiciones` (gating ya existente sigue intacto).
+## 5. PDF de la solicitud
 
-## Archivos a tocar
+Generado 100% en el cliente con `jspdf` + `jspdf-autotable` (ya livianos, sin server). Contenido:
+- Encabezado: razón social de la company, RFC, dirección fiscal (de `companies`).
+- Dirigido a: razón social del proveedor + contacto + correo.
+- Folio SC, fecha, obra, folio de requisición.
+- Tabla de insumos: # | Descripción | Unidad | Cantidad | **P. Unitario** (en blanco) | **Importe** (en blanco) | **Tiempo entrega** (en blanco).
+- Pie: vigencia de la cotización, condiciones de pago, datos de contacto del admin, espacio para firma.
 
-- Migración nueva (tablas, enums, función folio, RLS, grants).
-- `src/lib/api/cotizaciones.functions.ts` (nuevo).
-- `src/routes/_authenticated/app.admin.requisiciones.tsx` (extender tabla + columnas + sheet).
-- `src/components/requisiciones/CotizacionSheet.tsx` (nuevo) + subcomponentes `PaqueteCard.tsx`, `OCCard.tsx`.
-- `src/components/requisiciones/constants.ts` (labels/colores de estatus OC).
+## 6. Permisos
 
-No se modifican: rutas existentes de obra, otros módulos, ni `src/stores/auth.ts`.
+- Director y Administrativo: full CRUD sobre SCs.
+- Supervisor/Residente: solo lectura (heredan SELECT por company).
+- Residente NO ve nada nuevo en su vista.
+
+## 7. Archivos a tocar
+
+- Migración nueva (2 tablas, función folio, RLS, grants).
+- `src/lib/api/solicitudes-cotizacion.functions.ts` (nuevo).
+- `src/components/requisiciones/CotizacionSheet.tsx` (extender con 2 tabs + restructurar TabsList).
+- `src/components/requisiciones/SolicitudCard.tsx` (nuevo).
+- `src/components/requisiciones/CapturarRespuestaDialog.tsx` (nuevo).
+- `src/components/requisiciones/ComparativaTable.tsx` (nuevo).
+- `src/lib/pdf/solicitud-cotizacion-pdf.ts` (nuevo, usa `jspdf` + `jspdf-autotable`).
+- `src/routes/_authenticated/app.admin.requisiciones.tsx` (renombrar label de acción + columna SCs).
+- `src/lib/api/cotizaciones.functions.ts` (pequeño cambio: `guardarPaquete` prellena precios desde SC recibida si están en blanco; opcional).
+- Dependencias nuevas: `jspdf`, `jspdf-autotable`.
+
+## 8. Validación
+
+1. Login admin → abrir requisición `enviada` → crear 2 SCs (proveedor A y B), elegir distintos subconjuntos de insumos → descargar ambos PDFs.
+2. Verificar que la requisición pasa a `en_cotizacion`.
+3. Capturar respuesta de cada SC con precios distintos por insumo.
+4. Abrir tab Comparativa → verificar resaltado del menor precio y totales.
+5. Ir a tab Paquetes → seleccionar proveedor A → ver que los precios se prellenan → generar OC → enviar a supervisor.
+6. Confirmar que el residente sigue sin ver nada del módulo administrativo.
