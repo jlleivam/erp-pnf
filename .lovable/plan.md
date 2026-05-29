@@ -1,65 +1,51 @@
-## Contexto
+# Asignación de un insumo a múltiples proveedores
 
-Ya existe el flujo: **Solicitudes → Comparativa → Paquetes → OCs**. Hoy la Comparativa es solo lectura; el administrativo tiene que ir a la pestaña Paquetes y recapturar manualmente qué insumo va con qué proveedor y a qué precio. Eso duplica trabajo y desperdicia la información ya cotizada.
+## Problema
 
-## Objetivo
+Hoy la comparativa permite asignar **un solo proveedor por insumo**. Si la requisición pide 150 kg de acero y Aceros Alcalde solo tiene 120 kg disponibles, no hay forma de cubrir los 30 kg restantes con otro proveedor desde la misma pantalla.
 
-Permitir que desde la **Comparativa** el administrativo asigne, por insumo, **qué proveedor lo va a surtir y con qué cantidad**, y que de un solo clic se generen/actualicen los paquetes por proveedor con los precios ya cotizados. Luego sigue el flujo normal en la pestaña Paquetes → Generar OC → enviar al supervisor.
+## Solución (solo UI / cliente)
 
-## Cambios
+Cambiar el estado de asignación de `Record<insumoId, Asignacion>` a `Record<insumoId, Asignacion[]>`, de modo que cada insumo pueda repartirse entre varios proveedores y la suma se compare contra la cantidad requerida.
 
-### 1. `ComparativaTable.tsx` — agregar columna de asignación
+### Cambios en `ComparativaTable.tsx`
 
-En la fila de cada insumo, sumar al final una columna **"Asignar a"** con:
-- Un `Select` con los proveedores que cotizaron ese insumo (label: `Proveedor — $PU`), opción "— Sin asignar".
-- Un `Input` de **cantidad a comprar**, que por defecto toma la cantidad cotizada del proveedor seleccionado (acotada a la requerida). El admin puede editarla — útil cuando un proveedor solo cubre parcial y el resto se asigna a otro.
-- Resaltar visualmente el proveedor sugerido = el de menor PU disponible (botón rápido "Tomar mejor precio").
+1. **Estado**
+   - `asignaciones: Record<string, Asignacion[]>` donde `Asignacion = { proveedorId: solicitudId, cantidad }`.
+   - Helpers: `addAsignacion`, `updateAsignacion(insumoId, idx, …)`, `removeAsignacion(insumoId, idx)`.
 
-Estado local: `Map<insumoId, { proveedorId: string; cantidad: number }>` en el componente. Se inicializa vacío.
+2. **Columna "Asignar a"** (por fila de insumo)
+   - Lista vertical de filas de asignación, cada una con:
+     - `Select` de proveedor (solo opciones que cotizaron, disponibles, y **que aún no estén usadas** en otra fila del mismo insumo).
+     - `Input` numérico de cantidad (default = `min(faltante, oferta.cantidad)`).
+     - Botón ✕ para quitar esa asignación.
+   - Botón **"+ Agregar proveedor"** visible mientras queden proveedores disponibles y `asignado < cantReq`.
+   - Indicador de progreso debajo: `asignado / cantReq unidad` con color:
+     - verde si `asignado === cantReq`
+     - ámbar si `asignado < cantReq` (faltante)
+     - rojo si `asignado > cantReq` (sobreasignado)
+   - Aviso por fila si la cantidad excede `oferta.cantidad` del proveedor elegido.
 
-Footer adicional con resumen por proveedor:
-- Para cada proveedor con asignaciones: `N insumos · Total $X`.
-- Indicador global: `X de Y insumos asignados`.
+3. **"Tomar mejor precio" / "Asignar mejor precio en todos"**
+   - Reescribir para que llene en cascada: empieza por el proveedor con menor PU disponible, toma `min(faltante, oferta.cantidad)`, y si aún falta, agrega el siguiente proveedor más barato hasta cubrir `cantReq` o agotar ofertas.
 
-### 2. Botón **"Generar paquetes con esta asignación"** al pie de la comparativa
+4. **Resumen por proveedor** y **`generarMut`**
+   - Iterar `Object.entries(asignaciones)` y, dentro, cada `Asignacion[]`, sumando por `proveedorId` real (vía `provBySolicitud`). El resto del flujo (`guardarPaquete` por proveedor) no cambia, ya recibe `{ insumo_id, cantidad, precio_unitario }[]`.
+   - Contador "X de Y insumos asignados" cuenta insumos con **al menos una** asignación; opcionalmente un segundo contador "Z totalmente cubiertos" para los que llegan exactamente a `cantReq`.
 
-Habilitado cuando hay al menos un insumo asignado. Al hacer clic:
-- Agrupa las asignaciones por `proveedorId`.
-- Por cada grupo llama a `guardarPaquete` (ya existe) con:
-  - `requisicionId`
-  - `proveedorId`
-  - `insumos`: `[{ insumo_id, cantidad: <asignada>, precio_unitario: <cotizado por ese proveedor> }]`
-  - `paqueteId`: si ya existe un paquete para ese proveedor en esta requisición sin OC enviada, se reusa; si no, se crea.
-- Muestra toast con el resumen y cambia a la pestaña **Paquetes** (`setTab("paquetes")` vía prop).
-- Invalida `["cotizacion", requisicionId]` para que los paquetes aparezcan hidratados.
+5. **Resaltado en columnas del proveedor**
+   - El `ring` de "asignado" se aplica si el `solicitudId` aparece en cualquiera de las asignaciones del insumo.
 
-### 3. Nueva prop opcional en `ComparativaTable`
+### Sin cambios
 
-```ts
-interface Props {
-  reqItems: any[];
-  solicitudes: any[];
-  requisicionId: string;
-  onAsignacionGenerada?: () => void; // para que CotizacionSheet salte a "paquetes"
-}
-```
+- No se toca el esquema, ni `cotizaciones.functions.ts`, ni `CotizacionSheet.tsx`, ni el servidor. `guardarPaquete` ya acepta múltiples insumos por proveedor; aquí solo cambia cómo el cliente arma esas listas.
 
-`CotizacionSheet` pasa `requisicionId` y `onAsignacionGenerada={() => setTab("paquetes")}`.
+### Validaciones
 
-### 4. Validaciones
+- No permitir cantidades ≤ 0 en una asignación (se omite al generar paquetes).
+- Permitir guardar aunque haya insumos parcialmente cubiertos (con aviso visual), igual que hoy.
+- No bloquear sobreasignación, solo marcarla en rojo.
 
-- No permitir asignar a un proveedor que marcó el insumo como no disponible.
-- No permitir cantidad ≤ 0.
-- Si la cantidad asignada > requerida o > cotizada por el proveedor, mostrar warning ámbar pero permitir guardar.
-- Si un paquete del proveedor ya tiene una OC `pendiente_autorizacion`/`autorizada`/`pagada`, esa asignación se omite y se avisa al usuario por toast.
+## Archivo afectado
 
-### 5. Sin cambios de schema ni de server functions
-
-`guardarPaquete` ya acepta exactamente la forma necesaria. Toda la lógica nueva es de UI + orquestación cliente.
-
-### Resultado para el usuario
-
-1. Captura respuestas → ve Comparativa.
-2. En Comparativa elige por insumo el proveedor y la cantidad (con sugerencia de mejor precio).
-3. Un clic → se generan los paquetes por proveedor ya con precios.
-4. Va a pestaña Paquetes solo para revisar y darle "Generar OC" por cada uno → envía al supervisor.
+- `src/components/requisiciones/ComparativaTable.tsx`
