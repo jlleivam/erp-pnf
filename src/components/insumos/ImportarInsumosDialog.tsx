@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { importarInsumos } from "@/lib/api/insumos.functions";
 
-const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON"] as const;
+const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"] as const;
 type Unidad = (typeof UNIDADES)[number];
 
 type FilaError = { row: number; nombre: string; unidad: string; categoria: string; error: string };
