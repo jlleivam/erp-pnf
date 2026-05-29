@@ -1,61 +1,40 @@
+# Arreglar el módulo global de Requisiciones
+
 ## Problema
 
-En el paso 3 de Nueva Obra, al hacer clic en "Crear obra", el server fn falla con `Invalid uuid` en `team[2].user_id` porque hay filas de equipo (y/o comisiones) cuyo select de usuario quedó vacío (`user_id === ""`) y se están enviando al backend.
+La requisición `REQ-2026-001` existe y pertenece a una obra del usuario, pero la vista `/app/admin/requisiciones` no la muestra.
 
-## Cambios en `src/routes/_authenticated/app.obras.nueva.tsx`
-
-### 1. Estado de error inline
-
-Agregar `const [teamError, setTeamError] = useState<string | null>(null)` para mostrar el mensaje debajo de la sección "Equipo asignado".
-
-### 2. Derivar validez del equipo
-
-Calcular en cada render:
+`listRequisicionesAsignadas` en `src/lib/api/requisiciones.functions.ts` hace:
 
 ```ts
-const teamValido = team.length > 0 && team.every((t) => !!t.user_id);
-const comisionesValidas = comisiones.every((c) => !!c.user_id);
-const puedeCrear = teamValido && comisionesValidas;
+.select("..., obra:obras(id, nombre), items:requisicion_insumos(id)")
 ```
 
-### 3. Deshabilitar "Crear obra"
+La tabla `requisiciones` **no tiene foreign key** hacia `obras` (ninguna tabla del proyecto declara FKs), así que PostgREST no puede resolver el embed `obra:obras(...)` y el query devuelve error. La query falla y la UI termina sin filas.
 
-Cambiar el botón a:
+## Fix (solo frontend / server fn, sin migración)
 
-```tsx
-<Button onClick={handleSubmit} disabled={createObraM.isPending || !puedeCrear}>
-```
+Editar `src/lib/api/requisiciones.functions.ts` → `listRequisicionesAsignadas`:
 
-### 4. Mensaje inline
+1. Quitar el embed `obra:obras(id, nombre)` del `select`. Dejarlo como:
+   ```ts
+   .select("id, folio, estatus, notas, enviada_at, created_at, creado_por, obra_id, items:requisicion_insumos(id)")
+   ```
+2. Después de traer `rows`, hacer una segunda consulta para resolver las obras:
+   ```ts
+   const obraIdsRows = Array.from(new Set((rows ?? []).map((r:any) => r.obra_id).filter(Boolean)));
+   const obraMap = new Map<string,{id:string;nombre:string}>();
+   if (obraIdsRows.length) {
+     const { data: obs } = await supabase
+       .from("obras").select("id, nombre").in("id", obraIdsRows);
+     for (const o of obs ?? []) obraMap.set(o.id, o);
+   }
+   ```
+3. En el `return`, sustituir `obra: r.obra` por `obra: obraMap.get(r.obra_id) ?? null`.
 
-Bajo la lista de team:
+No cambia el contrato hacia el componente `AdminRequisicionesPage` (sigue recibiendo `obra: { id, nombre } | null`), así que el resto del archivo no se toca.
 
-```tsx
-{teamError && <p className="text-xs text-destructive mt-2">{teamError}</p>}
-```
+## Verificación
 
-### 5. Sanitizar en `handleSubmit`
-
-Antes del `mutate`:
-
-```ts
-const teamLimpio = team.filter((t) => !!t.user_id);
-const comisionesLimpias = comisiones.filter((c) => !!c.user_id);
-
-if (teamLimpio.length !== team.length || comisionesLimpias.length !== comisiones.length) {
-  setTeamError("Selecciona un usuario para cada miembro del equipo");
-  return;
-}
-setTeamError(null);
-
-const rs = new Set(teamLimpio.map((t) => t.role));
-// ...validación de roles mínimos sobre teamLimpio...
-
-createObraM.mutate({ data: { ..., team: teamLimpio, comisiones: comisionesLimpias } });
-```
-
-Esto cubre además el caso del Auxiliar opcional: si el director agrega la fila pero no selecciona usuario, la UI bloquea el envío y el mensaje le indica seleccionar o eliminar la fila (botón papelera ya existente).
-
-## Fuera de alcance
-
-No se toca la server fn `crearObra` ni el schema Zod del backend — la validación uuid sigue siendo la red de seguridad correcta. Solo se corrige el frontend para no enviar filas inválidas.
+- Recargar `/app/admin/requisiciones` → debe aparecer `REQ-2026-001` con su obra y solicitante.
+- Filtro por obra y tab Historial siguen funcionando porque dependen del mismo shape.
