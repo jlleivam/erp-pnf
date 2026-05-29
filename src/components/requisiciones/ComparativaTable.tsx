@@ -291,6 +291,9 @@ export function ComparativaTable({
     qc.invalidateQueries({ queryKey: ["requisiciones"] });
   };
 
+  const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
+  const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
+
   const enviarMut = useMutation({
     mutationFn: async (proveedorId: string) => {
       const entry = resumenPorProveedor.get(proveedorId);
@@ -301,7 +304,6 @@ export function ComparativaTable({
         cantidad: l.cantidad,
         precio_unitario: l.precio,
       }));
-      // 1. Guardar paquete
       const r = await guardarFn({
         data: {
           requisicionId,
@@ -311,13 +313,24 @@ export function ComparativaTable({
         },
       });
       const paqueteId = (r as any).id;
-      // 2. Generar/regenerar OC
       const ocRes = await generarFn({ data: { paqueteId } });
-      // 3. Enviar al supervisor
       await enviarFn({ data: { ocId: (ocRes as any).id } });
+      return proveedorId;
     },
-    onSuccess: () => { toast.success("OC enviada al supervisor"); invalidate(); },
-    onError: (e: any) => toast.error(e?.message ?? "Error"),
+    onSuccess: (proveedorId) => {
+      toast.success("OC enviada al supervisor");
+      setOptimisticPendiente((s) => {
+        const n = new Set(s);
+        n.add(proveedorId);
+        return n;
+      });
+      setEnviandoProv(null);
+      invalidate();
+    },
+    onError: (e: any) => {
+      toast.error(e?.message ?? "Error");
+      setEnviandoProv(null);
+    },
   });
 
   const autorizarMut = useMutation({
