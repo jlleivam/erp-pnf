@@ -245,7 +245,7 @@ export function ComparativaTable({
                     </div>
                   </TableHead>
                 ))}
-                <TableHead rowSpan={2} className="text-center align-bottom border-l min-w-[280px]">
+                <TableHead rowSpan={2} className="text-center align-bottom border-l w-[240px] min-w-[220px]">
                   Asignar a
                 </TableHead>
               </TableRow>
@@ -341,7 +341,7 @@ export function ComparativaTable({
                         </Fragment>
                       );
                     })}
-                    <TableCell className="border-l align-top">
+                    <TableCell className="border-l align-top w-[240px] min-w-[220px]">
                       {opcionesDisponibles.length === 0 ? (
                         <span className="text-xs text-muted-foreground">Sin ofertas</span>
                       ) : (
@@ -349,12 +349,13 @@ export function ComparativaTable({
                           {lista.map((a, idx) => {
                             const ofertaA = ofertas?.get(a.proveedorId);
                             const excede = ofertaA ? a.cantidad > ofertaA.cantidad : false;
+                            const provActual = opcionesDisponibles.find((sc) => sc.id === a.proveedorId);
                             // opciones para este select: las disponibles que no estén en otras filas
                             const opcionesSelect = opcionesDisponibles.filter(
                               (sc) => sc.id === a.proveedorId || !asignadosSc.has(sc.id),
                             );
                             return (
-                              <div key={idx} className="flex flex-col gap-1 border rounded p-1.5">
+                              <div key={idx} className="flex flex-col gap-1 border rounded p-1">
                                 <div className="flex items-center gap-1">
                                   <Select
                                     value={a.proveedorId}
@@ -365,8 +366,10 @@ export function ComparativaTable({
                                       updateAsignacion(ri.insumo.id, idx, { proveedorId: v, cantidad: nuevaCant });
                                     }}
                                   >
-                                    <SelectTrigger className="h-8 text-xs flex-1">
-                                      <SelectValue />
+                                    <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
+                                      <span className="truncate">
+                                        {provActual?.proveedor?.razon_social ?? "—"}
+                                      </span>
                                     </SelectTrigger>
                                     <SelectContent>
                                       {opcionesSelect.map((sc) => {
@@ -382,10 +385,10 @@ export function ComparativaTable({
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-8 w-8 shrink-0"
+                                    className="h-7 w-7 shrink-0"
                                     onClick={() => removeAsignacion(ri.insumo.id, idx)}
                                   >
-                                    <X className="size-3.5" />
+                                    <X className="size-3" />
                                   </Button>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -393,7 +396,7 @@ export function ComparativaTable({
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    className={`h-8 text-xs ${excede ? "border-amber-400" : ""}`}
+                                    className={`h-7 text-xs w-20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${excede ? "border-amber-400" : ""}`}
                                     value={a.cantidad || ""}
                                     onChange={(e) =>
                                       updateAsignacion(ri.insumo.id, idx, {
@@ -401,9 +404,9 @@ export function ComparativaTable({
                                       })
                                     }
                                   />
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  <span className="text-[11px] text-muted-foreground whitespace-nowrap truncate">
                                     {unidad}
-                                    {ofertaA ? ` / ${ofertaA.cantidad} disp.` : ""}
+                                    {ofertaA ? ` / ${ofertaA.cantidad}` : ""}
                                   </span>
                                 </div>
                               </div>
@@ -414,11 +417,11 @@ export function ComparativaTable({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs"
+                              className="h-7 text-xs px-2"
                               onClick={handleAdd}
                             >
                               <Plus className="size-3 mr-1" />
-                              Agregar proveedor
+                              Proveedor
                             </Button>
                           )}
 
