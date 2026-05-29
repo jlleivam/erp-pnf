@@ -255,7 +255,7 @@ export const getDatosPDF = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { companyId } = await getCtx(supabase, userId);
 
-    const { data: sc } = await supabase
+    const { data: sc, error: scErr } = await supabase
       .from("cotizacion_solicitudes")
       .select(`
         id, folio, notas, created_at, requisicion_id, company_id,
@@ -263,7 +263,9 @@ export const getDatosPDF = createServerFn({ method: "POST" })
         items:cotizacion_solicitud_insumos(insumo_id, cantidad, insumo:insumos(nombre, unidad))
       `)
       .eq("id", data.solicitudId).maybeSingle();
-    if (!sc || sc.company_id !== companyId) throw new Error("Solicitud no válida");
+    if (scErr) throw new Error(`SC query: ${scErr.message}`);
+    if (!sc) throw new Error("Solicitud no encontrada");
+    if (sc.company_id !== companyId) throw new Error("Solicitud de otra empresa");
 
     const { data: company } = await supabase
       .from("companies").select("razon_social, rfc, datos_facturacion").eq("id", companyId).maybeSingle();
