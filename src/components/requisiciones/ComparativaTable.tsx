@@ -734,9 +734,10 @@ export function ComparativaTable({
                   {estatus === "pendiente_autorizacion" && (
                     <>
                       {!isSupervisor && (
-                        <p className="text-xs text-muted-foreground mr-auto">
-                          Esperando autorización del supervisor
-                        </p>
+                        <Button size="sm" variant="outline" disabled>
+                          <Clock className="size-4 mr-1" />
+                          Pendiente de autorización
+                        </Button>
                       )}
                       {isSupervisor && (
                         <>
