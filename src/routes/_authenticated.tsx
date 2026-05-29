@@ -17,7 +17,9 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const navigate = useNavigate();
-  const { loading, userId, profile } = useAuthStore();
+  const loading = useAuthStore((s) => s.loading);
+  const userId = useAuthStore((s) => s.userId);
+  const profile = useAuthStore((s) => s.profile);
 
   useEffect(() => {
     if (!loading && !userId) {

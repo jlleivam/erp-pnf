@@ -60,11 +60,24 @@ export function effectiveIsDirector(roles: AppRole[], assumed: AppRole | null): 
   return isDirector(roles) && !assumed;
 }
 
-/** Hook helper: roles efectivos suscribiéndose al store. */
+/** Hook helper: roles efectivos suscribiéndose al store con referencias estables. */
 export function useEffectiveRoles(): AppRole[] {
   const roles = useAuthStore((s) => s.roles);
   const assumed = useAuthStore((s) => s.assumedRole);
   return useMemo(() => effectiveRoles(roles, assumed), [roles, assumed]);
+}
+
+/** ¿El usuario actúa como director (rol real y sin simulación)? */
+export function useEffectiveIsDirector(): boolean {
+  const roles = useAuthStore((s) => s.roles);
+  const assumed = useAuthStore((s) => s.assumedRole);
+  return useMemo(() => effectiveIsDirector(roles, assumed), [roles, assumed]);
+}
+
+/** ¿El usuario es director real, independientemente del rol asumido? */
+export function useRealIsDirector(): boolean {
+  const roles = useAuthStore((s) => s.roles);
+  return useMemo(() => isDirector(roles), [roles]);
 }
 
 export function canAccess(roles: AppRole[], allowed: AppRole[]): boolean {

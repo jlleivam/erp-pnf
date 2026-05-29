@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crearObra, listCompanyUsers } from "@/lib/api/obras.functions";
 import { listClientes, crearCliente } from "@/lib/api/clientes.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuthStore, effectiveIsDirector } from "@/stores/auth";
+import { useAuthStore, useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,8 +56,8 @@ type ComisionRow = { user_id: string; porcentaje: number; base_calculo: "monto_c
 function NuevaObra() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { roles, profile, assumedRole } = useAuthStore();
-  const director = effectiveIsDirector(roles, assumedRole);
+  const profile = useAuthStore((s) => s.profile);
+  const director = useEffectiveIsDirector();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
 

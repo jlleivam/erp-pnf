@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Building2, LayoutDashboard, BookOpen, Settings, LogOut, ChevronDown, HardHat, UserCog, Menu } from "lucide-react";
-import { useAuthStore, isDirector, effectiveRoles, effectiveIsDirector, type AppRole } from "@/stores/auth";
+import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -27,13 +27,16 @@ const ROLE_LABELS: Record<AppRole, string> = {
 
 export function AppShell() {
   const navigate = useNavigate();
-  const { profile, roles, assumedRole, setAssumedRole, reset } = useAuthStore();
+  const profile = useAuthStore((s) => s.profile);
+  const assumedRole = useAuthStore((s) => s.assumedRole);
+  const setAssumedRole = useAuthStore((s) => s.setAssumedRole);
+  const reset = useAuthStore((s) => s.reset);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const realDirector = isDirector(roles);
-  const effRoles = effectiveRoles(roles, assumedRole);
-  const director = effectiveIsDirector(roles, assumedRole);
+  const realDirector = useRealIsDirector();
+  const effRoles = useEffectiveRoles();
+  const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
 
   const switchRole = (role: AppRole | null) => {
