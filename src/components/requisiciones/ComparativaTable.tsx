@@ -307,8 +307,6 @@ export function ComparativaTable({
     qc.invalidateQueries({ queryKey: ["requisiciones"] });
   };
 
-  const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
-  const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
 
   const enviarMut = useMutation({
     mutationFn: async (proveedorId: string) => {
