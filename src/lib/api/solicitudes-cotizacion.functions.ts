@@ -214,13 +214,15 @@ export const capturarRespuesta = createServerFn({ method: "POST" })
     if (sc.estatus === "descartada") throw new Error("La solicitud está descartada");
 
     for (const it of data.items) {
+      const patch: any = {
+        precio_unitario: it.precio_unitario,
+        disponible: it.disponible,
+        nota: it.nota ?? null,
+      };
+      if (it.cantidad !== undefined) patch.cantidad = it.cantidad;
       const { error } = await supabase
         .from("cotizacion_solicitud_insumos")
-        .update({
-          precio_unitario: it.precio_unitario,
-          disponible: it.disponible,
-          nota: it.nota ?? null,
-        })
+        .update(patch)
         .eq("solicitud_id", data.solicitudId)
         .eq("insumo_id", it.insumo_id);
       if (error) throw new Error(error.message);
