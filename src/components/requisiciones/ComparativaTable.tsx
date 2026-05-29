@@ -88,11 +88,11 @@ export function ComparativaTable({ reqItems, solicitudes }: Props) {
               </TableRow>
               <TableRow>
                 {recibidas.map((sc) => (
-                  <>
-                    <TableHead key={`${sc.id}-c`} className="text-right text-xs border-l">Cant.</TableHead>
-                    <TableHead key={`${sc.id}-p`} className="text-right text-xs">P.U.</TableHead>
-                    <TableHead key={`${sc.id}-i`} className="text-right text-xs">Importe</TableHead>
-                  </>
+                  <Fragment key={sc.id}>
+                    <TableHead className="text-right text-xs border-l">Cant.</TableHead>
+                    <TableHead className="text-right text-xs">P.U.</TableHead>
+                    <TableHead className="text-right text-xs">Importe</TableHead>
+                  </Fragment>
                 ))}
               </TableRow>
             </TableHeader>
