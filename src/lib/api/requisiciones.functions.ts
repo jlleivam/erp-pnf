@@ -43,6 +43,64 @@ export const listRequisiciones = createServerFn({ method: "POST" })
     }));
   });
 
+export const listRequisicionesAsignadas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ soloActivas: z.boolean().optional() }).parse(d ?? {})
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: profile } = await supabase
+      .from("profiles").select("company_id").eq("id", userId).maybeSingle();
+    if (!profile?.company_id) return [];
+
+    const { data: dirRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("company_id", profile.company_id)
+      .eq("role", "director")
+      .maybeSingle();
+    const isDirector = !!dirRow;
+
+    let obraIds: string[] | null = null;
+    if (!isDirector) {
+      const { data: teamRows } = await supabase
+        .from("obra_team").select("obra_id").eq("user_id", userId);
+      obraIds = Array.from(new Set((teamRows ?? []).map((t: any) => t.obra_id)));
+      if (obraIds.length === 0) return [];
+    }
+
+    let q = supabase
+      .from("requisiciones")
+      .select("id, folio, estatus, notas, enviada_at, created_at, creado_por, obra:obras(id, nombre), items:requisicion_insumos(id)")
+      .order("created_at", { ascending: false });
+    if (obraIds) q = q.in("obra_id", obraIds);
+    if (data.soloActivas) q = q.not("estatus", "in", "(completada,rechazada)");
+
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.creado_por).filter(Boolean)));
+    const profileMap = new Map<string, { nombre_completo: string }>();
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles").select("id, nombre_completo").in("id", userIds);
+      for (const p of profs ?? []) profileMap.set(p.id, p);
+    }
+    return (rows ?? []).map((r: any) => ({
+      id: r.id,
+      folio: r.folio,
+      estatus: r.estatus,
+      notas: r.notas,
+      enviada_at: r.enviada_at,
+      created_at: r.created_at,
+      obra: r.obra,
+      insumos_count: (r.items ?? []).length,
+      solicitante: r.creado_por ? profileMap.get(r.creado_por)?.nombre_completo ?? null : null,
+    }));
+  });
+
 export const getRequisicion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
