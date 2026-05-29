@@ -46,7 +46,7 @@ import {
   eliminarTrabajador,
   listTrabajadores,
 } from "@/lib/api/trabajadores.functions";
-import { useAuthStore } from "@/stores/auth";
+import { useEffectiveRoles } from "@/stores/auth";
 import {
   DOCS_BADGE,
   DOCS_LABEL,

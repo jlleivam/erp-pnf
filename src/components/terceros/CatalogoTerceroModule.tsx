@@ -36,7 +36,7 @@ import {
   eliminarTercero,
   listTerceros,
 } from "@/lib/api/terceros.functions";
-import { useAuthStore } from "@/stores/auth";
+import { useEffectiveRoles } from "@/stores/auth";
 import { estadoVencimiento, type EstadoDoc } from "@/lib/format";
 import { TerceroFormDialog } from "./TerceroFormDialog";
 import { TerceroDetalle } from "./TerceroDetalle";

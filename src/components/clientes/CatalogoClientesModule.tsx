@@ -39,7 +39,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { listClientes, eliminarCliente } from "@/lib/api/clientes.functions";
-import { useAuthStore } from "@/stores/auth";
+import { useEffectiveRoles } from "@/stores/auth";
 import { estadoVencimiento } from "@/lib/format";
 import { ClienteFormDialog } from "@/components/clientes/ClienteFormDialog";
 import { ClienteDetalle } from "@/components/clientes/ClienteDetalle";
