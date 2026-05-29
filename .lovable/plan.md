@@ -1,30 +1,40 @@
-# Fix: bucle infinito al entrar a Requisiciones como residente
+## Objetivo
+Corregir el error al abrir requisiciones desde perfiles asumidos (administrativo/residente) y dejar el cambio de vista estable en toda la app.
 
-## Causa
-El helper `useEffectiveRoles` que se agregó en el cambio anterior hace:
-```ts
-useAuthStore((s) => effectiveRoles(s.roles, s.assumedRole))
-```
-`effectiveRoles` devuelve un **arreglo nuevo** (`[assumed]`) en cada llamada. Zustand compara con `Object.is`, ve referencia distinta cada render → re-render → llamada nueva → loop. React lo aborta con el error #185 ("Maximum update depth exceeded") y se muestra el `errorComponent` ("No se pudo cargar la página").
+## Qué voy a implementar
+1. Centralizar el cálculo del rol/permisos efectivos en el store de auth para que no genere referencias nuevas en cada render.
+2. Reemplazar los usos todavía inconsistentes de `roles`, `assumedRole`, `isDirector` y `effectiveRoles` por helpers estables en todas las rutas y módulos afectados.
+3. Revisar específicamente las dos rutas de requisiciones:
+   - `/app/obras/:obraId/requisiciones`
+   - `/app/admin/requisiciones`
+4. Unificar el gating de navegación y permisos para que cada vista asumida solo vea y ejecute lo permitido por ese perfil.
+5. Validar que al cambiar de vista siempre puedas entrar al dashboard y luego navegar sin disparar el loop de render.
 
-Solo truena en las vistas migradas (Requisiciones de obra, Insumos, Clientes, Terceros, Trabajadores, módulo de obra).
+## Archivos a tocar
+- `src/stores/auth.ts`
+- `src/components/AppShell.tsx`
+- `src/routes/_authenticated/app.index.tsx`
+- `src/routes/_authenticated/app.equipo.tsx`
+- `src/routes/_authenticated/app.obras.nueva.tsx`
+- `src/routes/_authenticated/app.obras.$obraId.$.tsx`
+- `src/routes/_authenticated/app.admin.requisiciones.tsx`
+- módulos que consumen permisos efectivos (`requisiciones`, `insumos`, `clientes`, `terceros`, `trabajadores`)
 
-## Cambio
-`src/stores/auth.ts`: reescribir `useEffectiveRoles` para seleccionar primitivas estables y derivar el arreglo con `useMemo`:
+## Enfoque técnico
+- Crear/usar selectores estables para:
+  - `effectiveRoles`
+  - `effectiveRole`
+  - `effectiveIsDirector`
+- Evitar derivaciones inline que devuelvan arrays/objetos nuevos desde Zustand.
+- Donde hoy se mezclan `roles reales` y `roles asumidos`, dejar una sola fuente de verdad para el gating.
+- Mantener visible el selector de vista solo para director real, pero hacer que el resto de la UI se comporte únicamente con el perfil asumido.
 
-```ts
-import { useMemo } from "react";
+## Validación
+- Cambiar entre Director / Administrativo / Residente.
+- Confirmar redirección al dashboard al cambiar vista.
+- Abrir requisiciones desde obra y desde administración sin error.
+- Verificar que menú, acciones y botones coincidan con el perfil asumido.
+- Confirmar que no reaparece `Maximum update depth exceeded`.
 
-export function useEffectiveRoles(): AppRole[] {
-  const roles = useAuthStore((s) => s.roles);
-  const assumed = useAuthStore((s) => s.assumedRole);
-  return useMemo(() => effectiveRoles(roles, assumed), [roles, assumed]);
-}
-```
-
-`s.roles` y `s.assumedRole` solo cambian en `setSession` / `setAssumedRole`, así que las suscripciones son estables y `useMemo` evita crear un arreglo nuevo en cada render.
-
-Ningún otro archivo cambia (firma del hook idéntica).
-
-## Verificación
-Entrar a `/app/obras/:obraId/requisiciones` con vista "Residente" — debe cargar el módulo sin el error.
+## Resultado esperado
+La app dejará de romperse al abrir requisiciones desde cualquier vista asumida y los permisos quedarán aplicados de forma consistente en todos lados.

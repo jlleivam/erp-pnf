@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, HardHat, Construction } from "lucide-react";
-import { useAuthStore, effectiveRoles, effectiveIsDirector } from "@/stores/auth";
+import { useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
 import { ADMIN_MODULES, CONFIG_MODULES, type ModuleEntry } from "@/lib/modules";
 
 export const Route = createFileRoute("/_authenticated/app/")({
@@ -19,10 +19,8 @@ function Dashboard() {
     queryKey: ["obras"],
     queryFn: () => fetchObras(),
   });
-  const realRoles = useAuthStore((s) => s.roles);
-  const assumedRole = useAuthStore((s) => s.assumedRole);
-  const roles = effectiveRoles(realRoles, assumedRole);
-  const director = effectiveIsDirector(realRoles, assumedRole);
+  const roles = useEffectiveRoles();
+  const director = useEffectiveIsDirector();
   const showAdmin = director || roles.includes("administrativo");
 
   return (

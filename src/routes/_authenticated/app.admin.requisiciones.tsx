@@ -16,12 +16,17 @@ import { listRequisicionesAsignadas } from "@/lib/api/requisiciones.functions";
 import { RequisicionDetalleSheet } from "@/components/requisiciones/RequisicionDetalleSheet";
 import { ESTATUS_META, type RequisicionEstatus } from "@/components/requisiciones/constants";
 import { formatDate } from "@/lib/format";
+import { useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
 
 export const Route = createFileRoute("/_authenticated/app/admin/requisiciones")({
   component: AdminRequisicionesPage,
 });
 
 function AdminRequisicionesPage() {
+  const roles = useEffectiveRoles();
+  const director = useEffectiveIsDirector();
+  const allowed = director || roles.includes("administrativo");
+
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [obraFilter, setObraFilter] = useState<string>("todas");
   const [detalleId, setDetalleId] = useState<string | null>(null);
@@ -30,11 +35,12 @@ function AdminRequisicionesPage() {
   const activasQ = useQuery({
     queryKey: ["requisiciones", "asignadas", "activas"],
     queryFn: () => fetchList({ data: { soloActivas: true } }),
+    enabled: allowed,
   });
   const historialQ = useQuery({
     queryKey: ["requisiciones", "asignadas", "historial"],
     queryFn: () => fetchList({ data: { soloActivas: false } }),
-    enabled: tab === "historial",
+    enabled: allowed && tab === "historial",
   });
 
   const rows = tab === "activas" ? activasQ.data ?? [] : historialQ.data ?? [];
@@ -52,6 +58,14 @@ function AdminRequisicionesPage() {
     if (obraFilter === "todas") return rows;
     return (rows as any[]).filter((r) => r.obra?.id === obraFilter);
   }, [rows, obraFilter]);
+
+  if (!allowed) {
+    return (
+      <p className="text-sm text-destructive">
+        No tienes permisos para ver requisiciones administrativas con la vista actual.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-4">
