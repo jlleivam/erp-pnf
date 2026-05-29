@@ -228,6 +228,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cotizacion_solicitud_insumos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cotizacion_solicitud_insumos_solicitud_id_fkey"
             columns: ["solicitud_id"]
             isOneToOne: false
@@ -276,7 +283,29 @@ export type Database = {
           recibida_at?: string | null
           requisicion_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_solicitudes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_solicitudes_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_solicitudes_requisicion_id_fkey"
+            columns: ["requisicion_id"]
+            isOneToOne: false
+            referencedRelation: "requisiciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       insumo_categorias: {
         Row: {

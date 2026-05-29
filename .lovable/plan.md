@@ -1,70 +1,36 @@
-## Objetivo
+## Problema
 
-Incluir en la Solicitud de Cotización (UI + PDF) los siguientes datos que hoy no aparecen o no llegan al proveedor:
+`PGRST200`: PostgREST no encuentra relación FK entre `cotizacion_solicitudes` y `terceros`, por lo que los joins anidados (`proveedor:terceros(...)`, `items:cotizacion_solicitud_insumos(..., insumo:insumos(...))`) fallan y el server fn devuelve `SC query: Could not find a relationship...`.
 
-1. **Nombre de la obra**
-2. **Ubicación de la obra**
-3. **Fecha de entrega esperada por insumo** (la que el residente capturó en la requisición — `requisicion_insumos.fecha_requerida`)
-4. **Residente de la obra** (miembro de `obra_team` con rol `residente`)
+Las tablas `cotizacion_solicitudes` y `cotizacion_solicitud_insumos` se crearon sin `FOREIGN KEY`, así que el schema cache de Supabase no expone embeds.
 
-No se requieren cambios de esquema: todos los datos ya existen.
+## Solución
 
-## Cambios
+Migración que agrega las claves foráneas faltantes:
 
-### 1. `src/lib/api/solicitudes-cotizacion.functions.ts` — `getDatosPDF`
+```sql
+ALTER TABLE public.cotizacion_solicitudes
+  ADD CONSTRAINT cotizacion_solicitudes_requisicion_id_fkey
+    FOREIGN KEY (requisicion_id) REFERENCES public.requisiciones(id) ON DELETE CASCADE,
+  ADD CONSTRAINT cotizacion_solicitudes_company_id_fkey
+    FOREIGN KEY (company_id) REFERENCES public.companies(id) ON DELETE CASCADE,
+  ADD CONSTRAINT cotizacion_solicitudes_proveedor_id_fkey
+    FOREIGN KEY (proveedor_id) REFERENCES public.terceros(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT cotizacion_solicitudes_creado_por_fkey
+    FOREIGN KEY (creado_por) REFERENCES auth.users(id) ON DELETE SET NULL;
 
-Ampliar el `select` y los queries auxiliares:
+ALTER TABLE public.cotizacion_solicitud_insumos
+  ADD CONSTRAINT cotizacion_solicitud_insumos_solicitud_id_fkey
+    FOREIGN KEY (solicitud_id) REFERENCES public.cotizacion_solicitudes(id) ON DELETE CASCADE,
+  ADD CONSTRAINT cotizacion_solicitud_insumos_insumo_id_fkey
+    FOREIGN KEY (insumo_id) REFERENCES public.insumos(id) ON DELETE RESTRICT;
 
-- En `items:cotizacion_solicitud_insumos` añadir el join hacia `requisicion_insumos` para traer `fecha_requerida` del mismo `insumo_id` dentro de la `requisicion_id` de la SC. Como no hay FK directa, se hará una segunda consulta:
-  ```ts
-  const { data: reqItems } = await supabase
-    .from("requisicion_insumos")
-    .select("insumo_id, fecha_requerida")
-    .eq("requisicion_id", sc.requisicion_id);
-  ```
-  Luego mapear `fecha_requerida` a cada `sc.items[i]` por `insumo_id`.
-- En la query de `requisiciones` extender a `obra:obras(id, nombre, ubicacion)` (ya está nombre/ubicación; añadir `id`).
-- Nueva consulta: residente de la obra
-  ```ts
-  const { data: residenteRow } = await supabase
-    .from("obra_team")
-    .select("user_id, profile:profiles(nombre_completo, email)")
-    .eq("obra_id", req.obra.id)
-    .eq("role", "residente")
-    .maybeSingle();
-  ```
-- Devolver `{ sc (con items enriquecidos), company, requisicion, solicitante, residente }`.
+NOTIFY pgrst, 'reload schema';
+```
 
-### 2. `src/lib/pdf/solicitud-cotizacion-pdf.ts`
-
-- En la sección **REFERENCIA**: ya muestra Requisición, Obra y Ubicación → confirmar y reformatear como bloque más visible (Obra en negrita, ubicación debajo).
-- Añadir línea **Residente de obra:** `${residente?.profile?.nombre_completo ?? "—"}` con su email/teléfono si existe.
-- En la tabla de insumos: agregar columna **Fecha requerida** (después de Cantidad, antes de P. Unitario), formateada `dd/mm/yyyy`. Ajustar `head` y `columnStyles` (reducir anchos para que entre en carta).
-- Actualizar la interfaz `PDFData` para incluir `residente`.
-
-### 3. `src/components/requisiciones/SolicitudesTab.tsx` (UI)
-
-- Mostrar la fecha requerida por insumo en la vista previa/listado de cada SC (columna o subtítulo bajo cada item) para que el admin la vea antes de descargar el PDF.
-- En la cabecera de cada tarjeta de SC mostrar también nombre de residente (informativo).
-
-(Solo lectura — los datos llegan por el mismo `getDatosPDF` / `getSolicitudesRequisicion`; este último se ampliará igual para incluir `fecha_requerida` por item.)
-
-### 4. `getSolicitudesRequisicion`
-
-Igual que en `getDatosPDF`: hacer la consulta complementaria a `requisicion_insumos` y mapear `fecha_requerida` en cada item devuelto, para que la UI lo muestre sin un fetch extra.
+Sin cambios de código adicionales — una vez que las FK existen, los embeds `proveedor:terceros(...)` e `items:cotizacion_solicitud_insumos(..., insumo:insumos(...))` resuelven y `getDatosPDF` / `getSolicitudesRequisicion` funcionan.
 
 ## QA
 
-1. Login como administrativo, abrir una requisición con varios insumos con distintas `fecha_requerida`.
-2. Crear SC para un proveedor → descargar PDF → verificar:
-   - Bloque REFERENCIA con Obra, Ubicación, Residente.
-   - Tabla con columna **Fecha requerida** correctamente poblada por insumo.
-3. Verificar UI de SolicitudesTab muestra fechas y residente.
-
-## Archivos a tocar
-
-- `src/lib/api/solicitudes-cotizacion.functions.ts` (modificar 2 funciones)
-- `src/lib/pdf/solicitud-cotizacion-pdf.ts` (tabla + bloque referencia)
-- `src/components/requisiciones/SolicitudesTab.tsx` (mostrar fecha por item + residente)
-
-Sin migración de base de datos.
+1. Crear nueva SC → Guardar y descargar PDF → debe descargar sin error.
+2. Abrir tab Solicitudes → debe listar proveedor e insumos.
