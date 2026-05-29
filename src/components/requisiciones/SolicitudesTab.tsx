@@ -325,8 +325,8 @@ function NuevaSolicitudForm({
         <Button variant="outline" onClick={() => mut.mutate({ descargarPDF: false })} disabled={mut.isPending}>
           Guardar borrador
         </Button>
-        <Button onClick={() => mut.mutate({ descargarPDF: true })} disabled={mut.isPending}>
-          <Download className="size-4 mr-1" /> Guardar y descargar PDF
+        <Button onClick={() => mut.mutate({ descargarPDF: false })} disabled={mut.isPending}>
+          Guardar solicitud
         </Button>
       </div>
     </Card>
