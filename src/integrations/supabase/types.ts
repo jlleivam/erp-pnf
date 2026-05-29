@@ -398,6 +398,113 @@ export type Database = {
           },
         ]
       }
+      requisicion_insumos: {
+        Row: {
+          cantidad: number
+          created_at: string
+          fecha_requerida: string
+          id: string
+          insumo_id: string
+          nota: string | null
+          requisicion_id: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          fecha_requerida: string
+          id?: string
+          insumo_id: string
+          nota?: string | null
+          requisicion_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          fecha_requerida?: string
+          id?: string
+          insumo_id?: string
+          nota?: string | null
+          requisicion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requisicion_insumos_requisicion_id_fkey"
+            columns: ["requisicion_id"]
+            isOneToOne: false
+            referencedRelation: "requisiciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requisiciones: {
+        Row: {
+          autorizacion_at: string | null
+          autorizacion_por: string | null
+          company_id: string
+          completada_at: string | null
+          completada_por: string | null
+          cotizacion_at: string | null
+          cotizacion_por: string | null
+          creado_por: string
+          created_at: string
+          enviada_at: string | null
+          estatus: Database["public"]["Enums"]["requisicion_estatus"]
+          folio: string
+          id: string
+          notas: string | null
+          obra_id: string
+          oc_at: string | null
+          oc_por: string | null
+          rechazada_at: string | null
+          rechazada_por: string | null
+          rechazo_motivo: string | null
+        }
+        Insert: {
+          autorizacion_at?: string | null
+          autorizacion_por?: string | null
+          company_id: string
+          completada_at?: string | null
+          completada_por?: string | null
+          cotizacion_at?: string | null
+          cotizacion_por?: string | null
+          creado_por: string
+          created_at?: string
+          enviada_at?: string | null
+          estatus?: Database["public"]["Enums"]["requisicion_estatus"]
+          folio: string
+          id?: string
+          notas?: string | null
+          obra_id: string
+          oc_at?: string | null
+          oc_por?: string | null
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          rechazo_motivo?: string | null
+        }
+        Update: {
+          autorizacion_at?: string | null
+          autorizacion_por?: string | null
+          company_id?: string
+          completada_at?: string | null
+          completada_por?: string | null
+          cotizacion_at?: string | null
+          cotizacion_por?: string | null
+          creado_por?: string
+          created_at?: string
+          enviada_at?: string | null
+          estatus?: Database["public"]["Enums"]["requisicion_estatus"]
+          folio?: string
+          id?: string
+          notas?: string | null
+          obra_id?: string
+          oc_at?: string | null
+          oc_por?: string | null
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          rechazo_motivo?: string | null
+        }
+        Relationships: []
+      }
       terceros: {
         Row: {
           banco: string | null
@@ -702,6 +809,10 @@ export type Database = {
       }
       is_director_of: { Args: { _company_id: string }; Returns: boolean }
       is_member_of_obra: { Args: { _obra_id: string }; Returns: boolean }
+      siguiente_folio_requisicion: {
+        Args: { _company_id: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role:
@@ -712,6 +823,14 @@ export type Database = {
         | "supervisor"
       insumo_estatus: "autorizado" | "pendiente"
       insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON"
+      requisicion_estatus:
+        | "borrador"
+        | "enviada"
+        | "en_cotizacion"
+        | "pendiente_autorizacion"
+        | "oc_generada"
+        | "completada"
+        | "rechazada"
       tercero_categoria: "proveedor" | "contratista" | "ambos"
       tercero_documento_tipo:
         | "constancia_fiscal"
@@ -883,6 +1002,15 @@ export const Constants = {
       ],
       insumo_estatus: ["autorizado", "pendiente"],
       insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON"],
+      requisicion_estatus: [
+        "borrador",
+        "enviada",
+        "en_cotizacion",
+        "pendiente_autorizacion",
+        "oc_generada",
+        "completada",
+        "rechazada",
+      ],
       tercero_categoria: ["proveedor", "contratista", "ambos"],
       tercero_documento_tipo: [
         "constancia_fiscal",
