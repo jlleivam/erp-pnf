@@ -6,7 +6,12 @@ interface PDFData {
   company: any;
   requisicion: any;
   solicitante: any;
+  residente?: any;
 }
+
+const fmtDate = (d?: string | null) =>
+  d ? new Date(d + "T00:00:00").toLocaleDateString("es-MX") : "—";
+
 
 const mxn = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
