@@ -329,6 +329,7 @@ function NuevaObra() {
                 </div>
               ))}
             </div>
+            {teamError && <p className="text-xs text-destructive mt-2">{teamError}</p>}
           </div>
 
           <div className="border-t pt-6">
