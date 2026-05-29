@@ -250,13 +250,28 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
         {cotQ.isLoading ? (
           <p className="mt-6 text-sm text-muted-foreground">Cargando…</p>
         ) : (
-          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="mt-4">
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="cotizar">Cotizar</TabsTrigger>
-              <TabsTrigger value="ocs">Órdenes de compra ({ocs.length})</TabsTrigger>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as CotizacionTab)} className="mt-4">
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="solicitudes">Cotizaciones ({(solsQ.data ?? []).length})</TabsTrigger>
+              <TabsTrigger value="comparativa">Comparativa</TabsTrigger>
+              <TabsTrigger value="paquetes">Paquetes</TabsTrigger>
+              <TabsTrigger value="ocs">OCs ({ocs.length})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="cotizar" className="space-y-4 mt-4">
+            <TabsContent value="solicitudes" className="mt-4">
+              <SolicitudesTab
+                requisicionId={requisicionId}
+                reqItems={reqItems}
+                proveedores={proveedores}
+                solicitudes={solsQ.data ?? []}
+              />
+            </TabsContent>
+
+            <TabsContent value="comparativa" className="mt-4">
+              <ComparativaTable reqItems={reqItems} solicitudes={solsQ.data ?? []} />
+            </TabsContent>
+
+            <TabsContent value="paquetes" className="space-y-4 mt-4">
               <Card className="p-3 bg-muted/40 border-dashed">
                 <p className="text-sm flex items-start gap-2">
                   <AlertCircle className="size-4 mt-0.5 text-muted-foreground shrink-0" />
