@@ -413,26 +413,43 @@ export function ComparativaTable({
 
   return (
     <div className="space-y-3">
-      {sinCotizar > 0 && (
+      {sinRecibidas && resumenPorProveedor.size === 0 && (
+        <Card className="p-8 text-center border-dashed">
+          <p className="text-sm text-muted-foreground">
+            Aún no hay cotizaciones recibidas. Captura las respuestas de tus proveedores para comparar precios aquí.
+          </p>
+        </Card>
+      )}
+
+      {sinRecibidas && resumenPorProveedor.size > 0 && (
+        <p className="text-xs text-muted-foreground bg-muted/40 border border-dashed rounded p-2">
+          Las solicitudes de cotización originales ya no están disponibles, pero se muestran los pedidos enviados a partir de los paquetes guardados.
+        </p>
+      )}
+
+      {sinCotizar > 0 && !sinRecibidas && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
           {sinCotizar} insumo{sinCotizar === 1 ? "" : "s"} de la requisición sin cotización todavía.
         </p>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          <strong className="text-foreground">{insumosAsignados}</strong> de <strong className="text-foreground">{reqItems.length}</strong> insumos asignados
-          {" · "}
-          <strong className="text-foreground">{insumosCubiertos}</strong> totalmente cubiertos
-        </p>
-        {isAdmin && (
-          <Button size="sm" variant="outline" onClick={tomarMejorPrecioTodos}>
-            <Sparkles className="size-4 mr-1" />
-            Asignar mejor precio en todos
-          </Button>
-        )}
-      </div>
+      {!sinRecibidas && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-foreground">{insumosAsignados}</strong> de <strong className="text-foreground">{reqItems.length}</strong> insumos asignados
+            {" · "}
+            <strong className="text-foreground">{insumosCubiertos}</strong> totalmente cubiertos
+          </p>
+          {isAdmin && (
+            <Button size="sm" variant="outline" onClick={tomarMejorPrecioTodos}>
+              <Sparkles className="size-4 mr-1" />
+              Asignar mejor precio en todos
+            </Button>
+          )}
+        </div>
+      )}
 
+      {!sinRecibidas && (
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
