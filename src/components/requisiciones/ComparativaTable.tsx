@@ -444,6 +444,13 @@ export function ComparativaTable({
       try {
         if (!cancelled) setAutosaveState("saving");
         for (const op of pendingOps) {
+          // Re-chequeo defensivo: si entre programar y ejecutar el guardado el
+          // proveedor quedó bloqueado por una OC enviada/autorizada/pagada,
+          // no intentes guardar — marca como guardado para evitar reintentos.
+          if (provBloqueado(op.provId)) {
+            lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
+            continue;
+          }
           if (op.persisted.length === 0) {
             if (op.paqueteId) {
               await eliminarFn({ data: { paqueteId: op.paqueteId } });
@@ -453,17 +460,28 @@ export function ComparativaTable({
             continue;
           }
 
-          const result = await guardarFn({
-            data: {
-              requisicionId,
-              paqueteId: op.paqueteId,
-              proveedorId: op.provId,
-              insumos: op.persisted,
-            },
-          });
-
-          knownPaqueteIdByProveedorRef.current[op.provId] = (result as any).id;
-          lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
+          try {
+            const result = await guardarFn({
+              data: {
+                requisicionId,
+                paqueteId: op.paqueteId,
+                proveedorId: op.provId,
+                insumos: op.persisted,
+              },
+            });
+            knownPaqueteIdByProveedorRef.current[op.provId] = (result as any).id;
+            lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
+          } catch (innerErr: any) {
+            const msg = String(innerErr?.message ?? "");
+            // El borrador ya fue promovido a OC pendiente/autorizada: no es un
+            // error de usuario. Marca como guardado y refresca la data.
+            if (msg.includes("OC pendiente o autorizada")) {
+              lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
+              qc.invalidateQueries({ queryKey: ["cotizacion", requisicionId] });
+              continue;
+            }
+            throw innerErr;
+          }
         }
 
         if (!cancelled) setAutosaveState("saved");
