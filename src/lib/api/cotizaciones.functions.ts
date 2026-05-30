@@ -119,6 +119,29 @@ export const guardarPaquete = createServerFn({ method: "POST" })
 
 
     let paqueteId = data.paqueteId ?? null;
+    if (!paqueteId && data.proveedorId) {
+      // Buscar un paquete existente reusable para (requisicion, proveedor):
+      // sin OC, o con OC en borrador/rechazada. Evita crear duplicados.
+      const { data: existentes } = await supabase
+        .from("cotizacion_paquetes")
+        .select("id, ordenes_compra(id, estatus)")
+        .eq("requisicion_id", data.requisicionId)
+        .eq("proveedor_id", data.proveedorId);
+      const reusables = (existentes ?? []).filter((p: any) => {
+        const ocs = (p.ordenes_compra ?? []) as Array<{ estatus: string }>;
+        if (ocs.length === 0) return true;
+        return ocs.every((o) => o.estatus === "borrador" || o.estatus === "rechazada");
+      });
+      const bloqueados = (existentes ?? []).length - reusables.length;
+      if (reusables.length > 0) {
+        paqueteId = reusables[0].id;
+      } else if (bloqueados > 0) {
+        throw new Error(
+          "Ya existe una OC pendiente o autorizada para este proveedor en esta requisición",
+        );
+      }
+    }
+
     if (!paqueteId) {
       const { data: maxRow } = await supabase
         .from("cotizacion_paquetes").select("numero")
@@ -139,7 +162,7 @@ export const guardarPaquete = createServerFn({ method: "POST" })
     } else {
       // verificar que no tenga OC enviada
       const { data: ocBloqueante } = await supabase
-        .from("ordenes_compra").select("id, estatus").eq("paquete_id", paqueteId).neq("estatus", "borrador").maybeSingle();
+        .from("ordenes_compra").select("id, estatus").eq("paquete_id", paqueteId).neq("estatus", "borrador").neq("estatus", "rechazada").maybeSingle();
       if (ocBloqueante) throw new Error("El paquete tiene una OC enviada y no puede editarse");
       const { error: updErr } = await supabase
         .from("cotizacion_paquetes")
@@ -148,6 +171,7 @@ export const guardarPaquete = createServerFn({ method: "POST" })
       if (updErr) throw new Error(updErr.message);
       await supabase.from("cotizacion_paquete_insumos").delete().eq("paquete_id", paqueteId);
     }
+
 
     if (data.insumos.length > 0) {
       const rows = data.insumos.map((i) => ({
