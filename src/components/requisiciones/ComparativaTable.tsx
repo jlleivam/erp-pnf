@@ -332,21 +332,30 @@ export function ComparativaTable({
       await enviarFn({ data: { ocId: (ocRes as any).id } });
       return proveedorId;
     },
-    onSuccess: (proveedorId) => {
-      toast.success("OC enviada al supervisor");
+    onMutate: (proveedorId) => {
       setOptimisticPendiente((s) => {
         const n = new Set(s);
         n.add(proveedorId);
         return n;
       });
+    },
+    onSuccess: () => {
+      toast.success("OC enviada al supervisor");
       setEnviandoProv(null);
       invalidate();
     },
-    onError: (e: any) => {
+    onError: (e: any, proveedorId) => {
       toast.error(e?.message ?? "Error");
       setEnviandoProv(null);
+      setOptimisticPendiente((s) => {
+        if (!s.has(proveedorId)) return s;
+        const n = new Set(s);
+        n.delete(proveedorId);
+        return n;
+      });
     },
   });
+
 
   const autorizarMut = useMutation({
     mutationFn: (ocId: string) => autorizarFn({ data: { ocId } }),
