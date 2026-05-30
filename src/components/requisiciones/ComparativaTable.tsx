@@ -650,7 +650,7 @@ export function ComparativaTable({
                 const cantReq = Number(ri.cantidad);
                 const unidad = ri.insumo.unidad ?? "";
                 const lista = asignaciones[ri.insumo.id] ?? [];
-                const asignadosSc = new Set(lista.map((a) => a.proveedorId));
+                const asignadosProv = new Set(lista.map((a) => resolveProveedorId(a.proveedorId)));
                 const opcionesDisponibles = recibidas.filter((sc) => {
                   const o = ofertas?.get(sc.id);
                   return o && o.disponible && o.precio > 0;
@@ -659,12 +659,12 @@ export function ComparativaTable({
                 const restante = cantReq - sumaAsignada;
                 // ¿Esta fila tiene alguna asignación bloqueada por OC?
                 const filaBloqueada = lista.some((a) => {
-                  const pid = provBySolicitud.get(a.proveedorId);
+                  const pid = resolveProveedorId(a.proveedorId);
                   return pid ? provBloqueado(pid) : false;
                 });
                 const puedeAgregar =
                   !filaBloqueada && isAdmin &&
-                  opcionesDisponibles.some((sc) => !asignadosSc.has(sc.id)) && restante > 0.0001;
+                  opcionesDisponibles.some((sc) => !asignadosProv.has(sc.proveedor?.id ?? "")) && restante > 0.0001;
 
                 let estadoColor = "text-muted-foreground";
                 if (lista.length > 0) {
@@ -675,7 +675,7 @@ export function ComparativaTable({
 
                 const handleAdd = () => {
                   const candidatos = opcionesDisponibles
-                    .filter((sc) => !asignadosSc.has(sc.id))
+                    .filter((sc) => !asignadosProv.has(sc.proveedor?.id ?? ""))
                     .sort((a, b) => (ofertas!.get(a.id)!.precio - ofertas!.get(b.id)!.precio));
                   if (candidatos.length === 0) return;
                   const sc = candidatos[0];
@@ -702,7 +702,7 @@ export function ComparativaTable({
                         );
                       }
                       const isMin = minPrecio !== null && oferta.precio === minPrecio;
-                      const isAsignado = asignadosSc.has(sc.id);
+                      const isAsignado = asignadosProv.has(sc.proveedor?.id ?? "");
                       const cantOf = oferta.cantidad;
                       let cantClass = "";
                       if (cantOf < cantReq) cantClass = "text-amber-700 font-medium";
@@ -733,25 +733,26 @@ export function ComparativaTable({
                       ) : (
                         <div className="flex flex-col gap-1.5">
                           {lista.map((a, idx) => {
-                            const ofertaA = ofertas?.get(a.proveedorId);
+                            const ofertaA = getOfertaAsignacion(ri.insumo.id, a.proveedorId);
                             const excede = ofertaA ? a.cantidad > ofertaA.cantidad : false;
-                            const provActual = opcionesDisponibles.find((sc) => sc.id === a.proveedorId);
-                            const provReal = provBySolicitud.get(a.proveedorId);
+                            const provActual = opcionesDisponibles.find((sc) => (sc.proveedor?.id ?? "") === resolveProveedorId(a.proveedorId));
+                            const provReal = resolveProveedorId(a.proveedorId);
                             const bloqueado = provReal ? provBloqueado(provReal) : false;
                             const opcionesSelect = opcionesDisponibles.filter(
-                              (sc) => sc.id === a.proveedorId || !asignadosSc.has(sc.id),
+                              (sc) => (sc.proveedor?.id ?? "") === provReal || !asignadosProv.has(sc.proveedor?.id ?? ""),
                             );
                             return (
                               <div key={idx} className={`flex flex-col gap-1 border rounded p-1 ${bloqueado ? "opacity-60 bg-muted/40" : ""}`}>
                                 <div className="flex items-center gap-1">
                                   <Select
-                                    value={a.proveedorId}
+                                    value={provReal}
                                     disabled={bloqueado || !isAdmin}
                                     onValueChange={(v) => {
-                                      const o = ofertas?.get(v);
+                                      const sc = opcionesDisponibles.find((opt) => (opt.proveedor?.id ?? "") === v);
+                                      const o = sc ? ofertas?.get(sc.id) : undefined;
                                       if (!o) return;
                                       const nuevaCant = Math.min(a.cantidad || 0, o.cantidad) || Math.min(restante + a.cantidad, o.cantidad);
-                                      updateAsignacion(ri.insumo.id, idx, { proveedorId: v, cantidad: nuevaCant });
+                                      updateAsignacion(ri.insumo.id, idx, { proveedorId: sc?.id ?? v, cantidad: nuevaCant });
                                     }}
                                   >
                                     <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
@@ -764,7 +765,7 @@ export function ComparativaTable({
                                       {opcionesSelect.map((sc) => {
                                         const o = ofertas!.get(sc.id)!;
                                         return (
-                                          <SelectItem key={sc.id} value={sc.id}>
+                                          <SelectItem key={sc.id} value={sc.proveedor?.id ?? sc.id}>
                                             {sc.proveedor?.razon_social ?? "—"} · {mxn(o.precio)} · {o.cantidad} {unidad}
                                           </SelectItem>
                                         );
