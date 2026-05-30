@@ -581,6 +581,15 @@ export function ComparativaTable({
         </p>
       )}
 
+      {isAdmin && resumenPorProveedor.size > 0 && (
+        <p className={`text-xs ${autosaveState === "error" ? "text-rose-700" : "text-muted-foreground"}`}>
+          {autosaveState === "saving" && "Guardando borrador…"}
+          {autosaveState === "saved" && "Borrador guardado"}
+          {autosaveState === "error" && "Error al guardar el borrador"}
+          {autosaveState === "idle" && "Autoguardado activo"}
+        </p>
+      )}
+
       {!sinRecibidas && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
