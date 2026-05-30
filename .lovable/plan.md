@@ -1,50 +1,66 @@
-## Objetivo
+## Diagnóstico
 
-Que al cerrar y reabrir una requisición, la pestaña Comparativa muestre exactamente lo mismo que tenías antes:
+El error sale al pulsar **"Enviar a supervisor"** aunque la tarjeta muestra líneas y total > 0.
 
-- Las tarjetas y asignaciones de proveedores que ya enviaste a autorización (o que ya están autorizadas/pagadas).
-- El borrador editable en curso, aunque todavía no lo hayas mandado al supervisor.
+Causa raíz (carrera de estado en `ComparativaTable.tsx`):
 
-Hoy las OCs enviadas sí están en la base de datos, pero la tarjeta no se reconstruye bien cuando la solicitud de cotización original cambia; y el borrador en curso vive solo en la memoria del navegador, así que se pierde al cerrar el panel.
+1. El click ejecuta, en este orden:
+   - `setEnviandoProv(provId)` (re-render)
+   - `enviarMut.mutate(provId)` → corre `onMutate` que hace `setOptimisticPendiente(s => s.add(provId))` antes de que se ejecute `mutationFn`.
 
-## Qué cambia para el usuario
+2. `optimisticPendiente` está en las dependencias de `draftLineasByProveedor` (línea 365) y de `provBloqueado` (línea 183). En cuanto se marca optimista:
+   - `provBloqueado(provId)` pasa a `true`.
+   - Tanto el bucle A como el B de `draftLineasByProveedor` **omiten** ese proveedor → la entrada desaparece del mapa.
+   - `resumenPorProveedor` se recalcula; si todavía no se persistió un paquete (autoguardado debounced 600 ms aún sin completarse), la base de `paqueteByProveedor` tampoco lo contiene y el `entry` queda `undefined`.
 
-- Conforme asignas proveedores y cantidades en la Comparativa, el borrador se guarda solo en segundo plano (sin botón extra). Verás un pequeño indicador "Guardando…/Guardado" para confirmar.
-- Si cierras el panel o cambias de requisición, al volver a abrirla aparecen las mismas tarjetas (borrador + enviadas) con cantidades, precios y totales.
-- Lo enviado a autorización sigue bloqueado para edición y reaparece igual aunque la cotización original del proveedor se haya descartado.
-- Las acciones existentes (Enviar a supervisor, Autorizar, Rechazar, Reabrir, Quitar asignación) siguen funcionando igual.
+3. Cuando `mutationFn` por fin corre, lee de closures actualizados:
+   - `draftLineasByProveedor.get(proveedorId)` → `[]`
+   - `resumenPorProveedor.get(proveedorId)` → `undefined`
+   - `insumos.length === 0` → lanza **"Sin líneas para este proveedor"**.
 
-## Cómo se logra (detalle técnico)
+Esto explica por qué pasa siempre justo al hacer click en una tarjeta con líneas visibles.
 
-1. **Autoguardado del borrador en `cotizacion_paquetes`**
-   - En `ComparativaTable.tsx`, un `useEffect` con debounce (~600 ms) detecta cambios en `asignaciones` para cada proveedor no bloqueado y llama a `guardarPaquete` (ya existente) con las líneas actuales.
-   - `guardarPaquete` ya reusa el paquete existente del par (requisición, proveedor) cuando no tiene OC enviada, así que no se crean duplicados ni se generan OCs por accidente (la OC solo se crea al pulsar "Enviar a supervisor").
-   - Se mantiene un `Map<proveedorId, fingerprint>` local para no reenviar el mismo estado.
-   - Si una fila queda sin asignaciones para un proveedor que tenía paquete en borrador, se elimina ese paquete con `eliminarPaquete` (solo permite borrar borradores, nunca enviados).
+## Solución
 
-2. **Reconstrucción al reabrir**
-   - Se elimina la dependencia de `solicitudByProveedor` para pintar tarjetas. La fuente de verdad pasa a ser `paqueteByProveedor` + `ocByProveedor` (ya viene de `getCotizacionRequisicion`).
-   - La hidratación de `asignaciones` deja de requerir una solicitud `recibida`: para cada paquete persistido se reconstruye `{ insumoId → [{ proveedorId(scId|provId), cantidad }] }` usando primero la solicitud recibida si existe; si no, se usa el `proveedor_id` del paquete como clave sintética.
-   - Esto resuelve el caso reportado: aunque la cotización original ya no exista, la tarjeta y los números reaparecen porque vienen del paquete guardado.
+Romper la dependencia del `mutationFn` con los memos que se invalidan por `optimisticPendiente`: snapshotear las líneas al momento del click y pasarlas como argumento a la mutación.
 
-3. **Indicador "Guardando…/Guardado"**
-   - Encabezado pequeño en la sección "Pedido por proveedor" mostrando el estado del autoguardado, con manejo de errores vía `toast.error`.
+### Cambios en `src/components/requisiciones/ComparativaTable.tsx`
 
-4. **Bloqueos y permisos**
-   - El autoguardado solo dispara para proveedores cuyo OC no está en `pendiente_autorizacion`/`autorizada`/`pagada`.
-   - Sólo se ejecuta si `roles` incluye `director` o `administrativo` (mismo gate que `guardarPaquete` ya valida en el server).
+1. **Cambiar la firma de `enviarMut`** para aceptar el payload completo en lugar de sólo el `proveedorId`:
 
-## Archivos a tocar
+   ```ts
+   enviarMut.mutate({ proveedorId, insumos, paqueteId })
+   ```
 
-- `src/components/requisiciones/ComparativaTable.tsx` — autoguardado debounced, hidratación basada en paquetes, indicador de estado, limpieza de paquetes borrador vacíos.
-- (Posible) `src/lib/api/cotizaciones.functions.ts` — solo si hace falta exponer un helper para borrar paquetes vacíos en lote; en principio basta con `eliminarPaquete` existente.
+   - `proveedorId`: el id del proveedor (sigue siendo la clave para `optimisticPendiente`/`setEnviandoProv`).
+   - `insumos`: array `LineaPersistida[]` ya calculado con `toPersistedLineas(info.lineas)` (las líneas que el usuario está viendo en la tarjeta).
+   - `paqueteId`: `knownPaqueteIdByProveedorRef.current[provId] ?? paqueteByProveedor.get(provId)?.id` calculado al click.
 
-No se requieren cambios de esquema ni migraciones.
+2. **En `mutationFn`**, eliminar el lookup contra `draftLineasByProveedor` / `resumenPorProveedor` y usar directamente `insumos` recibido. Mantener la validación de seguridad (`insumos.length > 0` y todas las líneas con precio > 0).
 
-## Validación
+3. **En el botón** (línea 991) computar el snapshot al momento del click:
 
-1. Crear asignaciones en Comparativa sin enviar → cerrar el panel → reabrir: deben reaparecer iguales.
-2. Enviar una OC a supervisor → cerrar y reabrir: la tarjeta sigue como "Pendiente autorización" con sus líneas.
-3. Modificar la cotización original de un proveedor después de enviar la OC: la tarjeta enviada se mantiene intacta.
-4. Vaciar todas las líneas de un borrador: el paquete borrador desaparece tras reabrir.
-5. Verificar que no se generan OCs hasta pulsar "Enviar a supervisor".
+   ```tsx
+   onClick={() => {
+     const insumos = toPersistedLineas(info.lineas);
+     const paqueteId = knownPaqueteIdByProveedorRef.current[provId] ?? paqueteByProveedor.get(provId)?.id;
+     setEnviandoProv(provId);
+     enviarMut.mutate({ proveedorId: provId, insumos, paqueteId });
+   }}
+   ```
+
+   `info.lineas` es exactamente lo que está pintado en la tarjeta, por lo que el "Sin líneas" sólo puede ocurrir si el botón ya estaba desactivado (`puedeEnviar` lo bloquea).
+
+4. **`onMutate` y `onError`** siguen recibiendo el variable de la mutación; ajustar los tipos para leer `vars.proveedorId` en vez del string directo.
+
+### Validación
+
+- Crear requisición → asignar proveedores en la matriz → esperar a que aparezca "Borrador guardado" (o pulsar igual antes; ya no importa) → "Enviar a supervisor" → la OC debe quedar en `pendiente_autorizacion`.
+- Repetir sin esperar al autoguardado (click rápido tras asignar) — debe funcionar también, porque las líneas se toman del render, no del paquete persistido.
+- Verificar que tras el envío la tarjeta sigue mostrando el estado "Pendiente de autorización" y que al reabrir la requisición se mantiene.
+
+### Archivos a tocar
+
+- `src/components/requisiciones/ComparativaTable.tsx` (sólo).
+
+Sin cambios de esquema ni de backend.
