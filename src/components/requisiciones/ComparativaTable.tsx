@@ -165,17 +165,30 @@ export function ComparativaTable({
   const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
   const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
 
-  // Hidratar desde el paquete canónico de cada proveedor (no de TODOS los paquetes)
+  // Hidratar desde el paquete canónico de cada proveedor (no de TODOS los paquetes).
+  // Solo marcamos como hidratado cuando TODOS los proveedores con paquete tienen su
+  // solicitud resuelta — así no nos quedamos con asignaciones vacías si solsQ llega
+  // después de cotQ.
   useEffect(() => {
-    if (hydrated || paqueteByProveedor.size === 0) return;
+    if (hydrated) return;
+    if (paqueteByProveedor.size === 0) {
+      // sin paquetes que cargar: marcar hidratado para no bloquear ediciones nuevas
+      setHydrated(true);
+      return;
+    }
     const next: Record<string, Asignacion[]> = {};
+    let faltanSolicitudes = false;
     for (const [provId, p] of paqueteByProveedor) {
       const scId = solicitudByProveedor.get(provId);
-      if (!scId) continue; // proveedor sin cotización recibida → no representable en matriz
+      if (!scId) { faltanSolicitudes = true; continue; }
       for (const it of p.items ?? []) {
         if (!next[it.insumo_id]) next[it.insumo_id] = [];
         next[it.insumo_id].push({ proveedorId: scId, cantidad: Number(it.cantidad) });
       }
+    }
+    if (faltanSolicitudes && solicitudByProveedor.size === 0) {
+      // las solicitudes aún no han cargado — esperar al próximo render
+      return;
     }
     setAsignaciones(next);
     setHydrated(true);
@@ -186,7 +199,7 @@ export function ComparativaTable({
   // los queries paralelos terminan de resolverse en distinto orden)
   useEffect(() => {
     setHydrated(false);
-  }, [paquetes.length, ocs.length, recibidas.length]);
+  }, [paquetes.length, ocs.length, recibidas.length, solicitudByProveedor.size]);
 
   // Limpiar marca optimista cuando el backend ya refleja un estatus posterior a borrador
   useEffect(() => {
