@@ -1,21 +1,24 @@
-## Objetivo
-Cuando una tarjeta se envía a supervisor, las filas correspondientes de la tabla comparativa (selector de proveedor y campo de cantidad) deben quedar bloqueadas de inmediato, igual que cuando la OC ya está en estatus `pendiente_autorizacion` o `autorizada`.
+## Problema
+Al enviar la tarjeta de Macrobodega a autorización, el selector de proveedor y el input de cantidad en la columna "Asignar a" de la tabla comparativa siguen editables. Solo se bloquean cuando el refetch del backend trae la OC con estatus `pendiente_autorizacion`, lo que tarda 1–3 segundos.
+
+## Causa
+En `ComparativaTable.tsx`, `enviarMut` solo agrega el proveedor a `optimisticPendiente` dentro de `onSuccess`, no al disparar la mutación. Entre el click y el `onSuccess` no hay marca optimista, así que `provBloqueado(provId)` devuelve `false` y todos los controles siguen activos.
 
 ## Plan
-1. **Extender el bloqueo de proveedor**
-   - En `ComparativaTable.tsx`, hacer que `provBloqueado(proveedorId)` también considere el estado optimista `optimisticPendiente` introducido en el cambio anterior.
-   - Así, apenas el admin haga click en "Enviar a supervisor", el proveedor se trata como bloqueado en toda la UI sin esperar al refetch.
+1. **Mover la marca optimista a `onMutate`**
+   - En `enviarMut`, agregar `onMutate: (proveedorId) => setOptimisticPendiente(...add(proveedorId))` para que el bloqueo se aplique en el mismo render del click.
+   - Quitar el `setOptimisticPendiente` de `onSuccess` (ya no es necesario; el efecto existente lo limpia cuando la OC real llega con estatus posterior).
 
-2. **Aplicar el bloqueo a las filas de la matriz**
-   - Como `filaBloqueada`, el `Select` de proveedor, el botón de quitar (`X`), el `Input` de cantidad y el botón "Proveedor" ya se calculan a partir de `provBloqueado`, al ampliar esa función los controles se deshabilitarán automáticamente para todas las asignaciones de ese proveedor.
-   - Confirmar visualmente que aparece el ícono `Lock` y el fondo atenuado en las filas afectadas mientras la OC está pendiente.
+2. **Revertir en error**
+   - En `onError`, quitar el `proveedorId` de `optimisticPendiente` además del `setEnviandoProv(null)` actual, para que si el envío falla los controles vuelvan a ser editables.
+   - Para esto necesitamos que `onError` reciba el `proveedorId`; usar la firma `onError: (_e, proveedorId) => { ... }` que TanStack Query pasa como segundo argumento.
 
-3. **Comportamiento de las demás tarjetas**
-   - Otras tarjetas y filas no relacionadas siguen editables. Solo se bloquean los insumos asignados al proveedor enviado.
+3. **Confirmar el efecto en la tabla**
+   - Como `provBloqueado` ya consulta `optimisticPendiente`, y `filaBloqueada` / `bloqueado` de cada asignación se derivan de él, al pulsar el botón los `Select` de proveedor, el `Input` de cantidad, el botón `X` y el botón "Proveedor" de las filas que apuntan a Macrobodega quedarán deshabilitados de inmediato, con el icono `Lock` y el fondo atenuado.
 
 ## Archivos a tocar
 - `src/components/requisiciones/ComparativaTable.tsx`
 
-## Detalle técnico
-- Cambio mínimo: `provBloqueado` pasa de basarse solo en `ocByProveedor` a también revisar `optimisticPendiente.has(proveedorId)`.
-- No se tocan funciones del backend; ya validan que un paquete con OC enviada no pueda editarse.
+## Notas
+- No se cambia ningún server function ni lógica de backend.
+- El comportamiento de las demás tarjetas (Aceros Alcalde, Construalcalde) no se ve afectado: solo se bloquea el proveedor enviado.
