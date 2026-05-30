@@ -353,6 +353,17 @@ export function ComparativaTable({
     return overlay;
   }, [asignaciones, reqItems, ocByProveedor, provBySolicitud, solicitudByProveedor, matrix]);
 
+  const draftLineasByProveedor = useMemo(() => {
+    const draft = new Map<string, LineaProveedor[]>();
+    for (const provId of paqueteByProveedor.keys()) {
+      if (!provBloqueado(provId)) draft.set(provId, editableLineasByProveedor.get(provId) ?? []);
+    }
+    for (const [provId, lineas] of editableLineasByProveedor) {
+      if (!provBloqueado(provId)) draft.set(provId, lineas);
+    }
+    return draft;
+  }, [paqueteByProveedor, editableLineasByProveedor, optimisticPendiente, ocs]);
+
   // Fuente de verdad: SIEMPRE construir desde paquetes persistidos.
   // Solo si el proveedor NO está bloqueado por una OC enviada, se permite que
   // las ediciones en curso (asignaciones) sobreescriban temporalmente sus líneas.
@@ -380,7 +391,11 @@ export function ComparativaTable({
     }
 
     // 2) Overlay de ediciones en curso (solo para proveedores no bloqueados)
-    for (const [provId, lineas] of editableLineasByProveedor) {
+    for (const [provId, lineas] of draftLineasByProveedor) {
+      if (lineas.length === 0) {
+        m.delete(provId);
+        continue;
+      }
       const sc = recibidas.find((s) => provBySolicitud.get(s.id) === provId);
       const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
       const prev = m.get(provId);
@@ -391,7 +406,7 @@ export function ComparativaTable({
       });
     }
     return m;
-  }, [paqueteByProveedor, editableLineasByProveedor, provBySolicitud, recibidas, reqItems]);
+  }, [paqueteByProveedor, draftLineasByProveedor, provBySolicitud, recibidas, reqItems]);
 
 
   const insumosAsignados = Object.keys(asignaciones).length;
@@ -407,12 +422,12 @@ export function ComparativaTable({
 
     const editableProviders = new Set<string>([
       ...Array.from(paqueteByProveedor.keys()).filter((provId) => !provBloqueado(provId)),
-      ...Array.from(editableLineasByProveedor.keys()).filter((provId) => !provBloqueado(provId)),
+      ...Array.from(draftLineasByProveedor.keys()).filter((provId) => !provBloqueado(provId)),
     ]);
 
     const pendingOps = Array.from(editableProviders)
       .map((provId) => {
-        const lineas = editableLineasByProveedor.get(provId) ?? [];
+        const lineas = draftLineasByProveedor.get(provId) ?? [];
         const persisted = toPersistedLineas(lineas);
         const fingerprint = fingerprintLineas(persisted);
         const lastSaved = lastSavedFingerprintByProveedorRef.current[provId] ?? "";
@@ -463,7 +478,7 @@ export function ComparativaTable({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [isAdmin, hydrated, paqueteByProveedor, editableLineasByProveedor, requisicionId, guardarFn, eliminarFn, optimisticPendiente, ocs]);
+  }, [isAdmin, hydrated, paqueteByProveedor, draftLineasByProveedor, requisicionId, guardarFn, eliminarFn, optimisticPendiente, ocs]);
 
   // ===== Mutaciones =====
   const invalidate = () => {
@@ -474,7 +489,7 @@ export function ComparativaTable({
 
   const enviarMut = useMutation({
     mutationFn: async (proveedorId: string) => {
-      const lineasDirectas = editableLineasByProveedor.get(proveedorId) ?? [];
+      const lineasDirectas = draftLineasByProveedor.get(proveedorId) ?? [];
       // Fallback: si no hay asignaciones en curso, usar el paquete persistido
       let insumos = toPersistedLineas(lineasDirectas);
       if (insumos.length === 0) {
