@@ -1,44 +1,50 @@
 ## Objetivo
-Hacer que en **Comparativa** reaparezcan correctamente las tarjetas y líneas que **ya fueron enviadas a autorización del supervisor** al cerrar y volver a abrir la requisición.
 
-## Qué voy a corregir
-1. **Hidratación robusta de datos persistidos**
-   - Ajustar la lógica de `ComparativaTable.tsx` para que reconstruya las asignaciones desde los **paquetes/OCs guardados** aunque las solicitudes de cotización lleguen tarde o ya no estén en estado `recibida`.
-   - Evitar que el estado local vacío sobreescriba la vista persistida al volver a montar el componente.
+Que al cerrar y reabrir una requisición, la pestaña Comparativa muestre exactamente lo mismo que tenías antes:
 
-2. **Reconstrucción de tarjetas desde datos enviados**
-   - Priorizar la información ya persistida en `paquetes` + `ocs` para pintar las tarjetas de proveedores con estatus `pendiente_autorizacion`, `autorizada` o `pagada`.
-   - Asegurar que esas tarjetas no dependan de que `solicitudes` siga teniendo una coincidencia activa para ese proveedor.
+- Las tarjetas y asignaciones de proveedores que ya enviaste a autorización (o que ya están autorizadas/pagadas).
+- El borrador editable en curso, aunque todavía no lo hayas mandado al supervisor.
 
-3. **Sincronización correcta al reabrir la requisición**
-   - Revisar el criterio que reinicia `hydrated` para que vuelva a hidratar cuando cambien los datos reales del servidor, no solo por conteos parciales.
-   - Corregir el caso donde la comparativa entra a un estado “vacío” aunque sí existan paquetes y OCs asociados.
+Hoy las OCs enviadas sí están en la base de datos, pero la tarjeta no se reconstruye bien cuando la solicitud de cotización original cambia; y el borrador en curso vive solo en la memoria del navegador, así que se pierde al cerrar el panel.
+
+## Qué cambia para el usuario
+
+- Conforme asignas proveedores y cantidades en la Comparativa, el borrador se guarda solo en segundo plano (sin botón extra). Verás un pequeño indicador "Guardando…/Guardado" para confirmar.
+- Si cierras el panel o cambias de requisición, al volver a abrirla aparecen las mismas tarjetas (borrador + enviadas) con cantidades, precios y totales.
+- Lo enviado a autorización sigue bloqueado para edición y reaparece igual aunque la cotización original del proveedor se haya descartado.
+- Las acciones existentes (Enviar a supervisor, Autorizar, Rechazar, Reabrir, Quitar asignación) siguen funcionando igual.
+
+## Cómo se logra (detalle técnico)
+
+1. **Autoguardado del borrador en `cotizacion_paquetes`**
+   - En `ComparativaTable.tsx`, un `useEffect` con debounce (~600 ms) detecta cambios en `asignaciones` para cada proveedor no bloqueado y llama a `guardarPaquete` (ya existente) con las líneas actuales.
+   - `guardarPaquete` ya reusa el paquete existente del par (requisición, proveedor) cuando no tiene OC enviada, así que no se crean duplicados ni se generan OCs por accidente (la OC solo se crea al pulsar "Enviar a supervisor").
+   - Se mantiene un `Map<proveedorId, fingerprint>` local para no reenviar el mismo estado.
+   - Si una fila queda sin asignaciones para un proveedor que tenía paquete en borrador, se elimina ese paquete con `eliminarPaquete` (solo permite borrar borradores, nunca enviados).
+
+2. **Reconstrucción al reabrir**
+   - Se elimina la dependencia de `solicitudByProveedor` para pintar tarjetas. La fuente de verdad pasa a ser `paqueteByProveedor` + `ocByProveedor` (ya viene de `getCotizacionRequisicion`).
+   - La hidratación de `asignaciones` deja de requerir una solicitud `recibida`: para cada paquete persistido se reconstruye `{ insumoId → [{ proveedorId(scId|provId), cantidad }] }` usando primero la solicitud recibida si existe; si no, se usa el `proveedor_id` del paquete como clave sintética.
+   - Esto resuelve el caso reportado: aunque la cotización original ya no exista, la tarjeta y los números reaparecen porque vienen del paquete guardado.
+
+3. **Indicador "Guardando…/Guardado"**
+   - Encabezado pequeño en la sección "Pedido por proveedor" mostrando el estado del autoguardado, con manejo de errores vía `toast.error`.
+
+4. **Bloqueos y permisos**
+   - El autoguardado solo dispara para proveedores cuyo OC no está en `pendiente_autorizacion`/`autorizada`/`pagada`.
+   - Sólo se ejecuta si `roles` incluye `director` o `administrativo` (mismo gate que `guardarPaquete` ya valida en el server).
 
 ## Archivos a tocar
-- `src/components/requisiciones/ComparativaTable.tsx`
-- Si hace falta para soportar mejor la vista, un ajuste menor en:
-  - `src/lib/api/cotizaciones.functions.ts`
-  - o `src/components/requisiciones/CotizacionSheet.tsx`
 
-## Resultado esperado
-- Al salir y volver a entrar a la requisición, en **Comparativa** deben volver a verse:
-  - las tarjetas por proveedor ya enviadas,
-  - sus líneas e importes,
-  - y el badge de estatus correspondiente (por ejemplo, **Pendiente autorización**).
-- No se conservarán borradores no enviados; solo lo ya persistido/enviado.
+- `src/components/requisiciones/ComparativaTable.tsx` — autoguardado debounced, hidratación basada en paquetes, indicador de estado, limpieza de paquetes borrador vacíos.
+- (Posible) `src/lib/api/cotizaciones.functions.ts` — solo si hace falta exponer un helper para borrar paquetes vacíos en lote; en principio basta con `eliminarPaquete` existente.
 
-## Detalle técnico
-- El problema actual está en que la comparativa reconstruye parte del estado visual usando `solicitudByProveedor` derivado solo de solicitudes `recibida`, y marca la hidratación demasiado pronto o con datos incompletos.
-- La corrección será desacoplar la renderización de tarjetas persistidas respecto a ese mapeo temporal y usar como fuente principal:
-  - `cotizacion_paquetes`
-  - `cotizacion_paquete_insumos`
-  - `ordenes_compra`
-- Mantendré bloqueadas las tarjetas con OC ya enviada para que sigan siendo solo informativas hasta que cambie su estatus.
+No se requieren cambios de esquema ni migraciones.
 
 ## Validación
-Probaré este flujo:
-1. Abrir requisición con OCs en `pendiente_autorizacion`.
-2. Verificar que las tarjetas aparecen en Comparativa.
-3. Cerrar el sheet.
-4. Abrir de nuevo la misma requisición.
-5. Confirmar que las tarjetas siguen visibles con cantidades, totales y badge correctos.
+
+1. Crear asignaciones en Comparativa sin enviar → cerrar el panel → reabrir: deben reaparecer iguales.
+2. Enviar una OC a supervisor → cerrar y reabrir: la tarjeta sigue como "Pendiente autorización" con sus líneas.
+3. Modificar la cotización original de un proveedor después de enviar la OC: la tarjeta enviada se mantiene intacta.
+4. Vaciar todas las líneas de un borrador: el paquete borrador desaparece tras reabrir.
+5. Verificar que no se generan OCs hasta pulsar "Enviar a supervisor".
