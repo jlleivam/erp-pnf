@@ -260,42 +260,16 @@ export function ComparativaTable({
     });
   };
 
-  // Agrupar asignaciones por proveedor real
+  // Fuente de verdad: SIEMPRE construir desde paquetes persistidos.
+  // Solo si el proveedor NO está bloqueado por una OC enviada, se permite que
+  // las ediciones en curso (asignaciones) sobreescriban temporalmente sus líneas.
   const resumenPorProveedor = useMemo(() => {
     type Linea = { insumoId: string; nombre: string; unidad: string; cantidad: number; precio: number };
     const m = new Map<string, { proveedor: any; lineas: Linea[]; total: number }>();
-    for (const [insumoId, lista] of Object.entries(asignaciones)) {
-      const ri = reqItems.find((r) => r.insumo.id === insumoId);
-      if (!ri) continue;
-      for (const a of lista) {
-        const provId = provBySolicitud.get(a.proveedorId);
-        const oferta = matrix.get(insumoId)?.get(a.proveedorId);
-        if (!provId || !oferta || a.cantidad <= 0) continue;
-        const sc = recibidas.find((s) => s.id === a.proveedorId);
-        if (!m.has(provId)) {
-          m.set(provId, { proveedor: sc?.proveedor ?? { id: provId, razon_social: "—" }, lineas: [], total: 0 });
-        }
-        const entry = m.get(provId)!;
-        const existente = entry.lineas.find((l) => l.insumoId === insumoId);
-        if (existente) {
-          existente.cantidad += a.cantidad;
-        } else {
-          entry.lineas.push({
-            insumoId,
-            nombre: ri.insumo.nombre,
-            unidad: ri.insumo.unidad ?? "",
-            cantidad: a.cantidad,
-            precio: oferta.precio,
-          });
-        }
-        entry.total += a.cantidad * oferta.precio;
-      }
-    }
-    // Incluir paquetes ya guardados cuyo proveedor no tiene cotización recibida (read-only)
-    for (const p of paquetes) {
-      const provId = p.proveedor_id;
-      if (!provId || m.has(provId)) continue;
-      const lineas = (p.items ?? []).map((it: any) => {
+
+    // 1) Base persistida: una tarjeta por proveedor con paquete guardado
+    for (const [provId, p] of paqueteByProveedor) {
+      const lineas: Linea[] = (p.items ?? []).map((it: any) => {
         const ri = reqItems.find((r) => r.insumo.id === it.insumo_id);
         return {
           insumoId: it.insumo_id,
@@ -305,15 +279,51 @@ export function ComparativaTable({
           precio: Number(it.precio_unitario ?? 0),
         };
       });
-      const total = lineas.reduce((s: number, l: any) => s + l.cantidad * l.precio, 0);
+      const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
       m.set(provId, {
         proveedor: p.proveedor ?? { id: provId, razon_social: "—" },
         lineas,
         total,
       });
     }
+
+    // 2) Overlay de ediciones en curso (solo para proveedores no bloqueados
+    //    y siempre que existan cotizaciones recibidas para resolver precio)
+    const overlay = new Map<string, Linea[]>();
+    for (const [insumoId, lista] of Object.entries(asignaciones)) {
+      const ri = reqItems.find((r) => r.insumo.id === insumoId);
+      if (!ri) continue;
+      for (const a of lista) {
+        const provId = provBySolicitud.get(a.proveedorId);
+        const oferta = matrix.get(insumoId)?.get(a.proveedorId);
+        if (!provId || !oferta || a.cantidad <= 0) continue;
+        if (provBloqueado(provId)) continue;
+        if (!overlay.has(provId)) overlay.set(provId, []);
+        const arr = overlay.get(provId)!;
+        const ex = arr.find((l) => l.insumoId === insumoId);
+        if (ex) ex.cantidad += a.cantidad;
+        else
+          arr.push({
+            insumoId,
+            nombre: ri.insumo.nombre,
+            unidad: ri.insumo.unidad ?? "",
+            cantidad: a.cantidad,
+            precio: oferta.precio,
+          });
+      }
+    }
+    for (const [provId, lineas] of overlay) {
+      const sc = recibidas.find((s) => provBySolicitud.get(s.id) === provId);
+      const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
+      const prev = m.get(provId);
+      m.set(provId, {
+        proveedor: prev?.proveedor ?? sc?.proveedor ?? { id: provId, razon_social: "—" },
+        lineas,
+        total,
+      });
+    }
     return m;
-  }, [asignaciones, matrix, provBySolicitud, recibidas, reqItems, paquetes]);
+  }, [paqueteByProveedor, asignaciones, matrix, provBySolicitud, recibidas, reqItems, ocByProveedor, optimisticPendiente]);
 
   const insumosAsignados = Object.keys(asignaciones).length;
   const insumosCubiertos = reqItems.filter((ri) => {
