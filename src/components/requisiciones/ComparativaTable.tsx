@@ -108,23 +108,49 @@ export function ComparativaTable({
     return t;
   }, [recibidas]);
 
-  // OC por proveedor
+  // Prioridad de OCs (mayor = más "definitiva")
+  const ocRank = (estatus?: string) => {
+    switch (estatus) {
+      case "pagada": return 5;
+      case "autorizada": return 4;
+      case "pendiente_autorizacion": return 3;
+      case "rechazada": return 2;
+      case "borrador": return 1;
+      default: return 0;
+    }
+  };
+
+  // OC canónica por proveedor: la de mayor prioridad
   const ocByProveedor = useMemo(() => {
     const m = new Map<string, any>();
     for (const oc of ocs) {
       const paq = paquetes.find((p) => p.id === oc.paquete_id);
       const provId = paq?.proveedor_id ?? oc.proveedor?.id;
-      if (provId) m.set(provId, oc);
+      if (!provId) continue;
+      const cur = m.get(provId);
+      if (!cur || ocRank(oc.estatus) > ocRank(cur.estatus)) m.set(provId, oc);
     }
     return m;
   }, [ocs, paquetes]);
 
-  // Paquete por proveedor
+  // Paquete canónico por proveedor:
+  // 1) el del OC canónico si existe, 2) cualquier paquete sin OC enviada, 3) el más reciente
   const paqueteByProveedor = useMemo(() => {
     const m = new Map<string, any>();
-    for (const p of paquetes) if (p.proveedor_id) m.set(p.proveedor_id, p);
+    const ocPaqIds = new Set<string>();
+    for (const oc of ocByProveedor.values()) if (oc?.paquete_id) ocPaqIds.add(oc.paquete_id);
+    // Primero los paquetes referenciados por la OC canónica
+    for (const p of paquetes) {
+      if (!p.proveedor_id) continue;
+      if (ocPaqIds.has(p.id)) m.set(p.proveedor_id, p);
+    }
+    // Luego rellenar proveedores sin OC canónica con el primer paquete disponible
+    for (const p of paquetes) {
+      if (!p.proveedor_id) continue;
+      if (!m.has(p.proveedor_id)) m.set(p.proveedor_id, p);
+    }
     return m;
-  }, [paquetes]);
+  }, [paquetes, ocByProveedor]);
 
   // ¿La OC de este proveedor bloquea ediciones? (no es borrador ni rechazada, o está en envío optimista)
   const provBloqueado = (proveedorId: string) => {
@@ -139,13 +165,11 @@ export function ComparativaTable({
   const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
   const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
 
-  // Hidratar desde paquetes existentes
+  // Hidratar desde el paquete canónico de cada proveedor (no de TODOS los paquetes)
   useEffect(() => {
-    if (hydrated || paquetes.length === 0) return;
+    if (hydrated || paqueteByProveedor.size === 0) return;
     const next: Record<string, Asignacion[]> = {};
-    for (const p of paquetes) {
-      const provId = p.proveedor_id;
-      if (!provId) continue;
+    for (const [provId, p] of paqueteByProveedor) {
       const scId = solicitudByProveedor.get(provId);
       if (!scId) continue; // proveedor sin cotización recibida → no representable en matriz
       for (const it of p.items ?? []) {
@@ -155,7 +179,8 @@ export function ComparativaTable({
     }
     setAsignaciones(next);
     setHydrated(true);
-  }, [paquetes, solicitudByProveedor, hydrated]);
+  }, [paqueteByProveedor, solicitudByProveedor, hydrated]);
+
 
   // Re-hidratar cuando cambian los paquetes (después de mutaciones)
   useEffect(() => {
