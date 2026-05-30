@@ -165,41 +165,44 @@ export function ComparativaTable({
   const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
   const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
 
-  // Hidratar desde el paquete canónico de cada proveedor (no de TODOS los paquetes).
-  // Solo marcamos como hidratado cuando TODOS los proveedores con paquete tienen su
-  // solicitud resuelta — así no nos quedamos con asignaciones vacías si solsQ llega
-  // después de cotQ.
+  // Fingerprint estable de los datos del servidor (IDs concatenados, no solo length).
+  // Cambia cuando llegan nuevos paquetes/ocs/solicitudes o cambian sus estatus.
+  const serverFingerprint = useMemo(() => {
+    const pq = paquetes.map((p: any) => `${p.id}:${p.proveedor_id ?? ""}`).sort().join("|");
+    const oc = ocs.map((o: any) => `${o.id}:${o.estatus ?? ""}`).sort().join("|");
+    const sc = recibidas.map((s: any) => `${s.id}:${s.proveedor?.id ?? ""}`).sort().join("|");
+    return `${pq}#${oc}#${sc}`;
+  }, [paquetes, ocs, recibidas]);
+
+  // Hidratar las asignaciones editables desde los paquetes persistidos.
+  // Nota: las TARJETAS por proveedor (incluidas las ya enviadas a autorización)
+  // no dependen de este estado — se derivan directamente de `paqueteByProveedor`
+  // en `resumenPorProveedor`. Aquí solo poblamos lo necesario para edición.
   useEffect(() => {
     if (hydrated) return;
-    if (paqueteByProveedor.size === 0) {
-      // sin paquetes que cargar: marcar hidratado para no bloquear ediciones nuevas
-      setHydrated(true);
-      return;
-    }
     const next: Record<string, Asignacion[]> = {};
-    let faltanSolicitudes = false;
     for (const [provId, p] of paqueteByProveedor) {
+      // Saltar proveedores con OC bloqueada: la tarjeta se pinta desde el paquete,
+      // no necesitamos asignaciones locales para ellos.
+      const oc = ocByProveedor.get(provId);
+      if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
       const scId = solicitudByProveedor.get(provId);
-      if (!scId) { faltanSolicitudes = true; continue; }
+      if (!scId) continue; // sin solicitud recibida no podemos mapear edición
       for (const it of p.items ?? []) {
         if (!next[it.insumo_id]) next[it.insumo_id] = [];
         next[it.insumo_id].push({ proveedorId: scId, cantidad: Number(it.cantidad) });
       }
     }
-    if (faltanSolicitudes && solicitudByProveedor.size === 0) {
-      // las solicitudes aún no han cargado — esperar al próximo render
-      return;
-    }
     setAsignaciones(next);
     setHydrated(true);
-  }, [paqueteByProveedor, solicitudByProveedor, hydrated]);
+  }, [paqueteByProveedor, solicitudByProveedor, ocByProveedor, hydrated]);
 
 
-  // Re-hidratar cuando cambian los paquetes/ocs/solicitudes (después de mutaciones o cuando
-  // los queries paralelos terminan de resolverse en distinto orden)
+  // Re-hidratar cuando cambia el fingerprint real de los datos del servidor
+  // (después de mutaciones o cuando los queries paralelos resuelven en distinto orden).
   useEffect(() => {
     setHydrated(false);
-  }, [paquetes.length, ocs.length, recibidas.length, solicitudByProveedor.size]);
+  }, [serverFingerprint]);
 
   // Limpiar marca optimista cuando el backend ya refleja un estatus posterior a borrador
   useEffect(() => {
