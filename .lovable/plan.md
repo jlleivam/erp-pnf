@@ -1,32 +1,44 @@
-## Diagnóstico
+## Objetivo
+Hacer que en **Comparativa** reaparezcan correctamente las tarjetas y líneas que **ya fueron enviadas a autorización del supervisor** al cerrar y volver a abrir la requisición.
 
-Los paquetes ya enviados al supervisor SÍ están persistidos en BD (los confirmé: 2 paquetes con 4 insumos y 2 OCs en `pendiente_autorizacion` para tu requisición actual). El bug está en la **hidratación del cliente**: `ComparativaTable` marca `hydrated = true` antes de que llegue la query de solicitudes, por lo que las asignaciones quedan vacías y la matriz se ve sin nada.
+## Qué voy a corregir
+1. **Hidratación robusta de datos persistidos**
+   - Ajustar la lógica de `ComparativaTable.tsx` para que reconstruya las asignaciones desde los **paquetes/OCs guardados** aunque las solicitudes de cotización lleguen tarde o ya no estén en estado `recibida`.
+   - Evitar que el estado local vacío sobreescriba la vista persistida al volver a montar el componente.
 
-Detalle: el hook (líneas 168-182) sale temprano cuando `solicitudByProveedor` no tiene al proveedor del paquete (`if (!scId) continue`). En el primer render `solsQ` aún no ha resuelto, así que `solicitudByProveedor` está vacío y la hidratación termina sin cargar nada. El effect que invalida `hydrated` (línea 187-189) solo observa `paquetes.length`, `ocs.length` y `recibidas.length` — si por timing `recibidas.length` ya valía 0 cuando se marcó `hydrated=true`, queda atorado.
+2. **Reconstrucción de tarjetas desde datos enviados**
+   - Priorizar la información ya persistida en `paquetes` + `ocs` para pintar las tarjetas de proveedores con estatus `pendiente_autorizacion`, `autorizada` o `pagada`.
+   - Asegurar que esas tarjetas no dependan de que `solicitudes` siga teniendo una coincidencia activa para ese proveedor.
 
-Además, las tarjetas "Pedido por proveedor" sí deberían aparecer porque vienen de `paqueteByProveedor` independientemente, pero si tampoco las ves quiero confirmar el síntoma antes de tocar esa zona.
+3. **Sincronización correcta al reabrir la requisición**
+   - Revisar el criterio que reinicia `hydrated` para que vuelva a hidratar cuando cambien los datos reales del servidor, no solo por conteos parciales.
+   - Corregir el caso donde la comparativa entra a un estado “vacío” aunque sí existan paquetes y OCs asociados.
 
-## Plan
+## Archivos a tocar
+- `src/components/requisiciones/ComparativaTable.tsx`
+- Si hace falta para soportar mejor la vista, un ajuste menor en:
+  - `src/lib/api/cotizaciones.functions.ts`
+  - o `src/components/requisiciones/CotizacionSheet.tsx`
 
-### `src/components/requisiciones/ComparativaTable.tsx`
+## Resultado esperado
+- Al salir y volver a entrar a la requisición, en **Comparativa** deben volver a verse:
+  - las tarjetas por proveedor ya enviadas,
+  - sus líneas e importes,
+  - y el badge de estatus correspondiente (por ejemplo, **Pendiente autorización**).
+- No se conservarán borradores no enviados; solo lo ya persistido/enviado.
 
-1. **Rehidratación robusta**: cambiar el guard a un `useRef` que rastree la "firma" de los datos servidor (`paquetes.length + ocs.length + recibidas.length + solicitudByProveedor.size`). Mientras no coincida con la última firma hidratada, re-ejecutar la hidratación. Esto cubre el caso en que `solsQ` llega después de `cotQ`.
+## Detalle técnico
+- El problema actual está en que la comparativa reconstruye parte del estado visual usando `solicitudByProveedor` derivado solo de solicitudes `recibida`, y marca la hidratación demasiado pronto o con datos incompletos.
+- La corrección será desacoplar la renderización de tarjetas persistidas respecto a ese mapeo temporal y usar como fuente principal:
+  - `cotizacion_paquetes`
+  - `cotizacion_paquete_insumos`
+  - `ordenes_compra`
+- Mantendré bloqueadas las tarjetas con OC ya enviada para que sigan siendo solo informativas hasta que cambie su estatus.
 
-2. **Hidratación parcial tolerante**: dentro del loop, si `scId` no existe para un proveedor (solicitud aún no cargada), no marcar la hidratación como completa — esperar al próximo render con los datos completos. Solo marcar `hydrated` cuando todos los proveedores con paquete tengan su `solicitudId` resuelto.
-
-3. **Conservar ediciones locales no enviadas**: si el usuario ya tocó un proveedor cuya OC aún no está enviada, no sobrescribir sus asignaciones locales con la versión del servidor (mantener el comportamiento actual de "no pisar trabajo en curso"). Para proveedores con OC en `pendiente_autorizacion`/`autorizada`/`pagada`, siempre cargar lo de BD (no debería editarse).
-
-### Verificación
-
-- Reabrir la requisición REQ-2026-002 y confirmar que las 2 tarjetas (Aceros Alcalde y Macrobodega) reaparecen con sus cantidades.
-- Confirmar que la matriz superior muestra las cantidades verdes asignadas en cada celda.
-- Que el botón "Reenviar a supervisor" / badge "Pendiente autorización" siga visible.
-
-## Antes de implementar
-
-¿Puedes confirmar qué se ve exactamente al reabrir?
-- **A**: la pestaña Comparativa aparece totalmente vacía (ni matriz ni tarjetas "Pedido por proveedor")
-- **B**: la matriz arriba se ve, pero las cantidades asignadas (números verdes) no aparecen
-- **C**: las tarjetas "Pedido por proveedor" abajo no aparecen aunque la matriz sí
-
-Con eso afino la rama del fix.
+## Validación
+Probaré este flujo:
+1. Abrir requisición con OCs en `pendiente_autorizacion`.
+2. Verificar que las tarjetas aparecen en Comparativa.
+3. Cerrar el sheet.
+4. Abrir de nuevo la misma requisición.
+5. Confirmar que las tarjetas siguen visibles con cantidades, totales y badge correctos.
