@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -36,6 +36,30 @@ const mxn = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
 type Asignacion = { proveedorId: string; cantidad: number };
+type LineaProveedor = { insumoId: string; nombre: string; unidad: string; cantidad: number; precio: number };
+type LineaPersistida = { insumo_id: string; cantidad: number; precio_unitario: number };
+
+const roundValue = (n: number) => Number(Number(n ?? 0).toFixed(4));
+
+const toPersistedLineas = (lineas: LineaProveedor[]): LineaPersistida[] =>
+  lineas.map((l) => ({
+    insumo_id: l.insumoId,
+    cantidad: roundValue(l.cantidad),
+    precio_unitario: roundValue(l.precio),
+  }));
+
+const paqueteItemsToPersistedLineas = (items: any[] = []): LineaPersistida[] =>
+  items.map((it) => ({
+    insumo_id: it.insumo_id,
+    cantidad: roundValue(Number(it.cantidad ?? 0)),
+    precio_unitario: roundValue(Number(it.precio_unitario ?? 0)),
+  }));
+
+const fingerprintLineas = (lineas: LineaPersistida[]) =>
+  lineas
+    .map((l) => `${l.insumo_id}:${roundValue(l.cantidad)}:${roundValue(l.precio_unitario)}`)
+    .sort()
+    .join("|");
 
 const OC_BADGE: Record<string, { label: string; className: string }> = {
   borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
