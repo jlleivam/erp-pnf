@@ -297,7 +297,9 @@ export function ComparativaTable({
         const provId = provBySolicitud.get(a.proveedorId);
         const oferta = matrix.get(insumoId)?.get(a.proveedorId);
         if (!provId || !oferta || a.cantidad <= 0) continue;
-        if (provBloqueado(provId)) continue;
+        // Solo saltar si hay OC realmente bloqueada (no por estado optimista de envío)
+        const oc = ocByProveedor.get(provId);
+        if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
         if (!overlay.has(provId)) overlay.set(provId, []);
         const arr = overlay.get(provId)!;
         const ex = arr.find((l) => l.insumoId === insumoId);
@@ -323,7 +325,8 @@ export function ComparativaTable({
       });
     }
     return m;
-  }, [paqueteByProveedor, asignaciones, matrix, provBySolicitud, recibidas, reqItems, ocByProveedor, optimisticPendiente]);
+  }, [paqueteByProveedor, asignaciones, matrix, provBySolicitud, recibidas, reqItems, ocByProveedor]);
+
 
   const insumosAsignados = Object.keys(asignaciones).length;
   const insumosCubiertos = reqItems.filter((ri) => {
