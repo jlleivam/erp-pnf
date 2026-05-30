@@ -21,7 +21,7 @@ interface Props { obraId: string }
 export function RequisicionesModule({ obraId }: Props) {
   const roles = useEffectiveRoles();
   const puedeCrear = isDirector(roles) || roles.some((r) =>
-    ["pm", "auxiliar", "administrativo"].includes(r as string)
+    ["pm", "auxiliar", "administrativo", "residente"].includes(r as string)
   );
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
