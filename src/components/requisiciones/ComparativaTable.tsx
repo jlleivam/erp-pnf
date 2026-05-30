@@ -402,6 +402,69 @@ export function ComparativaTable({
     return Math.abs(suma - Number(ri.cantidad)) < 0.0001;
   }).length;
 
+  useEffect(() => {
+    if (!isAdmin || !hydrated) return;
+
+    const editableProviders = new Set<string>([
+      ...Array.from(paqueteByProveedor.keys()).filter((provId) => !provBloqueado(provId)),
+      ...Array.from(editableLineasByProveedor.keys()).filter((provId) => !provBloqueado(provId)),
+    ]);
+
+    const pendingOps = Array.from(editableProviders)
+      .map((provId) => {
+        const lineas = editableLineasByProveedor.get(provId) ?? [];
+        const persisted = toPersistedLineas(lineas);
+        const fingerprint = fingerprintLineas(persisted);
+        const lastSaved = lastSavedFingerprintByProveedorRef.current[provId] ?? "";
+        const paqueteId = knownPaqueteIdByProveedorRef.current[provId] ?? paqueteByProveedor.get(provId)?.id;
+        if (fingerprint === lastSaved) return null;
+        return { provId, persisted, paqueteId };
+      })
+      .filter(Boolean) as Array<{ provId: string; persisted: LineaPersistida[]; paqueteId?: string }>;
+
+    if (pendingOps.length === 0) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        if (!cancelled) setAutosaveState("saving");
+        for (const op of pendingOps) {
+          if (op.persisted.length === 0) {
+            if (op.paqueteId) {
+              await eliminarFn({ data: { paqueteId: op.paqueteId } });
+            }
+            delete knownPaqueteIdByProveedorRef.current[op.provId];
+            lastSavedFingerprintByProveedorRef.current[op.provId] = "";
+            continue;
+          }
+
+          const result = await guardarFn({
+            data: {
+              requisicionId,
+              paqueteId: op.paqueteId,
+              proveedorId: op.provId,
+              insumos: op.persisted,
+            },
+          });
+
+          knownPaqueteIdByProveedorRef.current[op.provId] = (result as any).id;
+          lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
+        }
+
+        if (!cancelled) setAutosaveState("saved");
+      } catch (e: any) {
+        if (cancelled) return;
+        setAutosaveState("error");
+        toast.error(e?.message ?? "No se pudo guardar el borrador de la comparativa");
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isAdmin, hydrated, paqueteByProveedor, editableLineasByProveedor, requisicionId, guardarFn, eliminarFn, optimisticPendiente, ocs]);
+
   // ===== Mutaciones =====
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["cotizacion", requisicionId] });
