@@ -980,7 +980,12 @@ export function ComparativaTable({
                       )}
                       <Button
                         size="sm"
-                        onClick={() => { setEnviandoProv(provId); enviarMut.mutate(provId); }}
+                        onClick={() => {
+                          const insumos = toPersistedLineas(info.lineas);
+                          const paqueteId = knownPaqueteIdByProveedorRef.current[provId] ?? paqueteByProveedor.get(provId)?.id;
+                          setEnviandoProv(provId);
+                          enviarMut.mutate({ proveedorId: provId, insumos, paqueteId });
+                        }}
                         disabled={!puedeEnviar}
                       >
                         <Send className="size-4 mr-1" />
