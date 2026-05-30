@@ -506,38 +506,28 @@ export function ComparativaTable({
 
 
   const enviarMut = useMutation({
-    mutationFn: async (proveedorId: string) => {
-      const lineasDirectas = draftLineasByProveedor.get(proveedorId) ?? [];
-      // Fallback: si no hay asignaciones en curso, usar el paquete persistido
-      let insumos = toPersistedLineas(lineasDirectas);
-      if (insumos.length === 0) {
-        const entry = resumenPorProveedor.get(proveedorId);
-        if (entry && entry.lineas.length > 0) {
-          insumos = toPersistedLineas(entry.lineas);
-        }
-      }
-      if (insumos.length === 0) throw new Error("Sin líneas para este proveedor");
-      const paqueteExistente = knownPaqueteIdByProveedorRef.current[proveedorId]
-        ? { id: knownPaqueteIdByProveedorRef.current[proveedorId] }
-        : paqueteByProveedor.get(proveedorId);
+    mutationFn: async (vars: { proveedorId: string; insumos: LineaPersistida[]; paqueteId?: string }) => {
+      const { proveedorId, insumos, paqueteId } = vars;
+      if (!insumos || insumos.length === 0) throw new Error("Sin líneas para este proveedor");
+      if (insumos.some((l) => !(l.precio_unitario > 0))) throw new Error("Todas las líneas requieren precio");
 
       const r = await guardarFn({
         data: {
           requisicionId,
-          paqueteId: paqueteExistente?.id ?? undefined,
+          paqueteId: paqueteId ?? undefined,
           proveedorId,
           insumos,
         },
       });
-      const paqueteId = (r as any).id;
-      const ocRes = await generarFn({ data: { paqueteId } });
+      const newPaqueteId = (r as any).id;
+      const ocRes = await generarFn({ data: { paqueteId: newPaqueteId } });
       await enviarFn({ data: { ocId: (ocRes as any).id } });
       return proveedorId;
     },
-    onMutate: (proveedorId) => {
+    onMutate: (vars) => {
       setOptimisticPendiente((s) => {
         const n = new Set(s);
-        n.add(proveedorId);
+        n.add(vars.proveedorId);
         return n;
       });
     },
@@ -546,13 +536,13 @@ export function ComparativaTable({
       setEnviandoProv(null);
       invalidate();
     },
-    onError: (e: any, proveedorId) => {
+    onError: (e: any, vars) => {
       toast.error(e?.message ?? "Error");
       setEnviandoProv(null);
       setOptimisticPendiente((s) => {
-        if (!s.has(proveedorId)) return s;
+        if (!s.has(vars.proveedorId)) return s;
         const n = new Set(s);
-        n.delete(proveedorId);
+        n.delete(vars.proveedorId);
         return n;
       });
     },
