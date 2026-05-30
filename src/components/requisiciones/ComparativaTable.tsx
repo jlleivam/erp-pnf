@@ -182,10 +182,11 @@ export function ComparativaTable({
   }, [paqueteByProveedor, solicitudByProveedor, hydrated]);
 
 
-  // Re-hidratar cuando cambian los paquetes (después de mutaciones)
+  // Re-hidratar cuando cambian los paquetes/ocs/solicitudes (después de mutaciones o cuando
+  // los queries paralelos terminan de resolverse en distinto orden)
   useEffect(() => {
     setHydrated(false);
-  }, [paquetes.length, ocs.length]);
+  }, [paquetes.length, ocs.length, recibidas.length]);
 
   // Limpiar marca optimista cuando el backend ya refleja un estatus posterior a borrador
   useEffect(() => {
@@ -201,15 +202,10 @@ export function ComparativaTable({
     });
   }, [ocs, paquetes]);
 
-  if (recibidas.length === 0) {
-    return (
-      <Card className="p-8 text-center border-dashed">
-        <p className="text-sm text-muted-foreground">
-          Aún no hay cotizaciones recibidas. Captura las respuestas de tus proveedores para comparar precios aquí.
-        </p>
-      </Card>
-    );
-  }
+  // Nota: ya no retornamos temprano cuando no hay cotizaciones recibidas — las tarjetas
+  // de pedidos por proveedor pueden venir de paquetes/OCs ya guardados, aunque las
+  // solicitudes originales se hayan descartado o aún no se hayan recibido.
+  const sinRecibidas = recibidas.length === 0;
 
   const setLista = (insumoId: string, lista: Asignacion[]) => {
     setAsignaciones((s) => {
