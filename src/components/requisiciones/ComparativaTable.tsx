@@ -316,7 +316,7 @@ export function ComparativaTable({
   const tomarMejorPrecioTodos = () => {
     reqItems.forEach((ri) => {
       const provIds = (asignaciones[ri.insumo.id] ?? [])
-        .map((a) => provBySolicitud.get(a.proveedorId))
+        .map((a) => resolveProveedorId(a.proveedorId))
         .filter(Boolean) as string[];
       // No tocar insumos que ya están en OC bloqueada
       if (provIds.some((pid) => provBloqueado(pid))) return;
@@ -324,16 +324,44 @@ export function ComparativaTable({
     });
   };
 
+  const editableLineasByProveedor = useMemo(() => {
+    const overlay = new Map<string, LineaProveedor[]>();
+    for (const [insumoId, lista] of Object.entries(asignaciones)) {
+      const ri = reqItems.find((r) => r.insumo.id === insumoId);
+      if (!ri) continue;
+      for (const a of lista) {
+        const provId = resolveProveedorId(a.proveedorId);
+        const oferta = getOfertaAsignacion(insumoId, a.proveedorId);
+        if (!provId || !oferta || a.cantidad <= 0) continue;
+        const oc = ocByProveedor.get(provId);
+        if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
+        if (!overlay.has(provId)) overlay.set(provId, []);
+        const arr = overlay.get(provId)!;
+        const ex = arr.find((l) => l.insumoId === insumoId);
+        if (ex) ex.cantidad += a.cantidad;
+        else {
+          arr.push({
+            insumoId,
+            nombre: ri.insumo.nombre,
+            unidad: ri.insumo.unidad ?? "",
+            cantidad: a.cantidad,
+            precio: oferta.precio,
+          });
+        }
+      }
+    }
+    return overlay;
+  }, [asignaciones, reqItems, ocByProveedor, provBySolicitud, solicitudByProveedor, matrix]);
+
   // Fuente de verdad: SIEMPRE construir desde paquetes persistidos.
   // Solo si el proveedor NO está bloqueado por una OC enviada, se permite que
   // las ediciones en curso (asignaciones) sobreescriban temporalmente sus líneas.
   const resumenPorProveedor = useMemo(() => {
-    type Linea = { insumoId: string; nombre: string; unidad: string; cantidad: number; precio: number };
-    const m = new Map<string, { proveedor: any; lineas: Linea[]; total: number }>();
+    const m = new Map<string, { proveedor: any; lineas: LineaProveedor[]; total: number }>();
 
     // 1) Base persistida: una tarjeta por proveedor con paquete guardado
     for (const [provId, p] of paqueteByProveedor) {
-      const lineas: Linea[] = (p.items ?? []).map((it: any) => {
+      const lineas: LineaProveedor[] = (p.items ?? []).map((it: any) => {
         const ri = reqItems.find((r) => r.insumo.id === it.insumo_id);
         return {
           insumoId: it.insumo_id,
@@ -351,34 +379,8 @@ export function ComparativaTable({
       });
     }
 
-    // 2) Overlay de ediciones en curso (solo para proveedores no bloqueados
-    //    y siempre que existan cotizaciones recibidas para resolver precio)
-    const overlay = new Map<string, Linea[]>();
-    for (const [insumoId, lista] of Object.entries(asignaciones)) {
-      const ri = reqItems.find((r) => r.insumo.id === insumoId);
-      if (!ri) continue;
-      for (const a of lista) {
-        const provId = provBySolicitud.get(a.proveedorId);
-        const oferta = matrix.get(insumoId)?.get(a.proveedorId);
-        if (!provId || !oferta || a.cantidad <= 0) continue;
-        // Solo saltar si hay OC realmente bloqueada (no por estado optimista de envío)
-        const oc = ocByProveedor.get(provId);
-        if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
-        if (!overlay.has(provId)) overlay.set(provId, []);
-        const arr = overlay.get(provId)!;
-        const ex = arr.find((l) => l.insumoId === insumoId);
-        if (ex) ex.cantidad += a.cantidad;
-        else
-          arr.push({
-            insumoId,
-            nombre: ri.insumo.nombre,
-            unidad: ri.insumo.unidad ?? "",
-            cantidad: a.cantidad,
-            precio: oferta.precio,
-          });
-      }
-    }
-    for (const [provId, lineas] of overlay) {
+    // 2) Overlay de ediciones en curso (solo para proveedores no bloqueados)
+    for (const [provId, lineas] of editableLineasByProveedor) {
       const sc = recibidas.find((s) => provBySolicitud.get(s.id) === provId);
       const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
       const prev = m.get(provId);
@@ -389,7 +391,7 @@ export function ComparativaTable({
       });
     }
     return m;
-  }, [paqueteByProveedor, asignaciones, matrix, provBySolicitud, recibidas, reqItems, ocByProveedor]);
+  }, [paqueteByProveedor, editableLineasByProveedor, provBySolicitud, recibidas, reqItems]);
 
 
   const insumosAsignados = Object.keys(asignaciones).length;
