@@ -183,11 +183,27 @@ export function ComparativaTable({
     return optimisticPendiente.has(proveedorId);
   };
 
-  // Estado de asignaciones: insumoId -> Asignacion[] (proveedorId = solicitudId del proveedor)
+  const resolveProveedorId = (assignmentProveedorId: string) =>
+    provBySolicitud.get(assignmentProveedorId) ?? assignmentProveedorId;
+
+  const getOfertaAsignacion = (insumoId: string, assignmentProveedorId: string) => {
+    const ofertas = matrix.get(insumoId);
+    if (!ofertas) return undefined;
+    const directa = ofertas.get(assignmentProveedorId);
+    if (directa) return directa;
+    const provId = resolveProveedorId(assignmentProveedorId);
+    const scId = solicitudByProveedor.get(provId);
+    return scId ? ofertas.get(scId) : undefined;
+  };
+
+  // Estado de asignaciones: insumoId -> Asignacion[]
   const [asignaciones, setAsignaciones] = useState<Record<string, Asignacion[]>>({});
   const [hydrated, setHydrated] = useState(false);
   const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
   const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
+  const [autosaveState, setAutosaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const knownPaqueteIdByProveedorRef = useRef<Record<string, string>>({});
+  const lastSavedFingerprintByProveedorRef = useRef<Record<string, string>>({});
 
   // Fingerprint estable de los datos del servidor (IDs concatenados, no solo length).
   // Cambia cuando llegan nuevos paquetes/ocs/solicitudes o cambian sus estatus.
@@ -210,11 +226,10 @@ export function ComparativaTable({
       // no necesitamos asignaciones locales para ellos.
       const oc = ocByProveedor.get(provId);
       if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
-      const scId = solicitudByProveedor.get(provId);
-      if (!scId) continue; // sin solicitud recibida no podemos mapear edición
+      const assignmentProveedorId = solicitudByProveedor.get(provId) ?? provId;
       for (const it of p.items ?? []) {
         if (!next[it.insumo_id]) next[it.insumo_id] = [];
-        next[it.insumo_id].push({ proveedorId: scId, cantidad: Number(it.cantidad) });
+        next[it.insumo_id].push({ proveedorId: assignmentProveedorId, cantidad: Number(it.cantidad) });
       }
     }
     setAsignaciones(next);
@@ -241,6 +256,15 @@ export function ComparativaTable({
       return next.size === prev.size ? prev : next;
     });
   }, [ocs, paquetes]);
+
+  useEffect(() => {
+    for (const [provId, paquete] of paqueteByProveedor) {
+      knownPaqueteIdByProveedorRef.current[provId] = paquete.id;
+      lastSavedFingerprintByProveedorRef.current[provId] = fingerprintLineas(
+        paqueteItemsToPersistedLineas(paquete.items ?? []),
+      );
+    }
+  }, [paqueteByProveedor]);
 
   // Nota: ya no retornamos temprano cuando no hay cotizaciones recibidas — las tarjetas
   // de pedidos por proveedor pueden venir de paquetes/OCs ya guardados, aunque las
