@@ -706,6 +706,7 @@ export function ComparativaTable({
           </Table>
         </div>
       </Card>
+      )}
 
       {/* Tarjetas por proveedor */}
       {resumenPorProveedor.size > 0 && (
