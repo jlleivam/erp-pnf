@@ -1,40 +1,50 @@
+# Plan para arreglarlo de otra manera
+
 ## Objetivo
-Hacer que la pestaña **Comparativa** vuelva a mostrar las tarjetas y las asignaciones guardadas aunque se cierre/reabra el modal o la consulta de solicitudes llegue vacía o tarde más en cargar.
+Dejar de depender de las solicitudes `recibida` como base de la pestaña **Comparativa** y reconstruir la vista desde los datos persistidos que ya existen en backend: **paquetes** y **OCs**.
 
-## Plan
+## Qué voy a cambiar
 
-1. **Quitar la condición que deja Comparativa en blanco**
-   - Ajustar `ComparativaTable.tsx` para que no haga `return` temprano solo porque `recibidas.length === 0`.
-   - Mostrar estados separados:
-     - sin cotizaciones recibidas,
-     - con paquetes/OCs ya guardados,
-     - cargando datos relacionados.
+1. **Cambiar la fuente de verdad de Comparativa**
+   - La vista ya no se basará primero en `solicitudes` para mostrar tarjetas y asignaciones.
+   - La base será `paquetes` + `ocs`, porque eso sí permanece cuando cierras y vuelves a abrir.
 
-2. **Reconstruir tarjetas desde los paquetes/OCs guardados**
-   - Hacer que las tarjetas por proveedor se rendericen aunque no existan `solicitudes` recibidas en ese momento.
-   - Tomar como fuente principal los `paquetes` canónicos y sus `items`, y usar `solicitudes` solo para enriquecer la matriz comparativa cuando sí existan.
+2. **Separar dos modos dentro de Comparativa**
+   - **Modo edición**: cuando sí existen cotizaciones recibidas, se mostrará la matriz editable.
+   - **Modo persistido / solo lectura**: cuando ya no existan solicitudes utilizables, se mostrarán las tarjetas y asignaciones guardadas a partir de paquetes y OCs.
 
-3. **Rehidratar asignaciones de forma robusta**
-   - Cambiar la hidratación para que no dependa exclusivamente de `solicitudByProveedor`.
-   - Si existe correspondencia con solicitud recibida, poblar la matriz editable.
-   - Si no existe, conservar al menos las líneas bloqueadas/read-only para que la asignación visible no desaparezca.
+3. **Rehacer la hidratación de asignaciones**
+   - Hoy la hidratación depende de mapear proveedor ↔ solicitud.
+   - La voy a reemplazar por una reconstrucción directa desde `cotizacion_paquetes.items`, para que las líneas sigan apareciendo aunque no haya `solicitudes` activas.
 
-4. **Evitar estados vacíos falsos por timing de queries**
-   - Revisar `CotizacionSheet.tsx` para distinguir entre:
-     - `cotQ` listo,
-     - `solsQ` cargando,
-     - `solsQ` vacío real.
-   - Pasar a Comparativa la información necesaria para no interpretar “todavía no cargó” como “no hay nada”.
+4. **Blindar la carga del sheet**
+   - `CotizacionSheet` distinguirá claramente entre:
+     - datos de cotización cargando,
+     - solicitudes cargando,
+     - solicitudes vacías.
+   - Así Comparativa no recibirá “vacío” como si fuera estado final cuando todavía no termina una consulta.
 
-5. **Validación final**
-   - Confirmar que al volver a abrir la requisición:
-     - reaparezcan las 3 tarjetas enviadas,
-     - la comparativa no quede vacía,
-     - las cantidades/proveedor sigan bloqueados cuando estén en autorización.
+5. **Mantener bloqueo y estatus desde OCs**
+   - Los badges, bloqueos de edición y acciones seguirán saliendo del estado real de la OC.
+   - Si existe OC pendiente/autorizada, la tarjeta quedará bloqueada aunque ya no exista la solicitud original.
+
+## Resultado esperado
+- Al salir y volver a la pestaña, **las tarjetas seguirán visibles**.
+- Las **asignaciones guardadas no desaparecerán**.
+- La tabla comparativa editable solo aparecerá cuando de verdad haya cotizaciones recibidas para editar.
+- Si ya solo quedan paquetes/OCs persistidos, la pestaña seguirá mostrando el trabajo guardado en modo estable.
 
 ## Archivos a tocar
 - `src/components/requisiciones/ComparativaTable.tsx`
 - `src/components/requisiciones/CotizacionSheet.tsx`
 
-## Detalle técnico
-El fallo más probable es que hoy la vista de Comparativa depende demasiado de `solicitudes` en estatus `recibida`. Si esa colección llega vacía, tarda en cargar, o ya no mapea exactamente con los paquetes existentes, el componente sale antes de renderizar y además no puede hidratar `asignaciones`, aunque los `paquetes` y `ocs` sí sigan existiendo en backend.
+## Detalles técnicos
+- El problema actual es de **doble fuente de verdad**: la UI mezcla estado derivado de `solicitudes` con datos persistidos (`paquetes`, `ocs`).
+- La corrección será dejar a `paquetes/ocs` como fuente canónica para reconstrucción visual y usar `solicitudes` solo para la parte editable de comparación de ofertas.
+- Evitaré seguir “hidratando” la vista desde un conjunto transitorio que puede llegar vacío o cambiar de orden.
+
+## Validación
+- Abrir requisición con paquetes/OCs ya creados.
+- Entrar a **Comparativa** después de cerrar/reabrir el sheet.
+- Confirmar que reaparecen tarjetas, líneas, totales y bloqueos.
+- Confirmar que no se rompe SSR ni deja pantalla en blanco.

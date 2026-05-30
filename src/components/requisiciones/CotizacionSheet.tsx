@@ -194,7 +194,11 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
               />
             </TabsContent>
 
-            <TabsContent value="comparativa" className="mt-4">
+            <TabsContent
+              value="comparativa"
+              forceMount
+              className="mt-4 data-[state=inactive]:hidden"
+            >
               <ComparativaTable
                 reqItems={reqItems}
                 solicitudes={solsQ.data ?? []}
