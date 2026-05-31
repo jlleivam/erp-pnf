@@ -214,18 +214,15 @@ export function ComparativaTable({
     return `${pq}#${oc}#${sc}`;
   }, [paquetes, ocs, recibidas]);
 
-  // Hidratar las asignaciones editables desde los paquetes persistidos.
-  // Nota: las TARJETAS por proveedor (incluidas las ya enviadas a autorización)
-  // no dependen de este estado — se derivan directamente de `paqueteByProveedor`
-  // en `resumenPorProveedor`. Aquí solo poblamos lo necesario para edición.
+  // Hidratar las asignaciones desde los paquetes persistidos.
+  // Incluimos también proveedores bloqueados (OC enviada/autorizada) para que
+  // la matriz refleje lo que ya fue analizado al reabrir la requisición.
+  // La protección contra edición se hace vía `provBloqueado` en los selects
+  // y en `draftLineasByProveedor` (que excluye bloqueados del autoguardado).
   useEffect(() => {
     if (hydrated) return;
     const next: Record<string, Asignacion[]> = {};
     for (const [provId, p] of paqueteByProveedor) {
-      // Saltar proveedores con OC bloqueada: la tarjeta se pinta desde el paquete,
-      // no necesitamos asignaciones locales para ellos.
-      const oc = ocByProveedor.get(provId);
-      if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
       const assignmentProveedorId = solicitudByProveedor.get(provId) ?? provId;
       for (const it of p.items ?? []) {
         if (!next[it.insumo_id]) next[it.insumo_id] = [];
@@ -234,7 +231,7 @@ export function ComparativaTable({
     }
     setAsignaciones(next);
     setHydrated(true);
-  }, [paqueteByProveedor, solicitudByProveedor, ocByProveedor, hydrated]);
+  }, [paqueteByProveedor, solicitudByProveedor, hydrated]);
 
 
   // Re-hidratar cuando cambia el fingerprint real de los datos del servidor
