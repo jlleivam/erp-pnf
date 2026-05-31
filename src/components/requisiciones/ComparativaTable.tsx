@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -36,30 +36,6 @@ const mxn = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
 type Asignacion = { proveedorId: string; cantidad: number };
-type LineaProveedor = { insumoId: string; nombre: string; unidad: string; cantidad: number; precio: number };
-type LineaPersistida = { insumo_id: string; cantidad: number; precio_unitario: number };
-
-const roundValue = (n: number) => Number(Number(n ?? 0).toFixed(4));
-
-const toPersistedLineas = (lineas: LineaProveedor[]): LineaPersistida[] =>
-  lineas.map((l) => ({
-    insumo_id: l.insumoId,
-    cantidad: roundValue(l.cantidad),
-    precio_unitario: roundValue(l.precio),
-  }));
-
-const paqueteItemsToPersistedLineas = (items: any[] = []): LineaPersistida[] =>
-  items.map((it) => ({
-    insumo_id: it.insumo_id,
-    cantidad: roundValue(Number(it.cantidad ?? 0)),
-    precio_unitario: roundValue(Number(it.precio_unitario ?? 0)),
-  }));
-
-const fingerprintLineas = (lineas: LineaPersistida[]) =>
-  lineas
-    .map((l) => `${l.insumo_id}:${roundValue(l.cantidad)}:${roundValue(l.precio_unitario)}`)
-    .sort()
-    .join("|");
 
 const OC_BADGE: Record<string, { label: string; className: string }> = {
   borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
@@ -183,50 +159,22 @@ export function ComparativaTable({
     return optimisticPendiente.has(proveedorId);
   };
 
-  const resolveProveedorId = (assignmentProveedorId: string) =>
-    provBySolicitud.get(assignmentProveedorId) ?? assignmentProveedorId;
-
-  const getOfertaAsignacion = (insumoId: string, assignmentProveedorId: string) => {
-    const ofertas = matrix.get(insumoId);
-    if (!ofertas) return undefined;
-    const directa = ofertas.get(assignmentProveedorId);
-    if (directa) return directa;
-    const provId = resolveProveedorId(assignmentProveedorId);
-    const scId = solicitudByProveedor.get(provId);
-    return scId ? ofertas.get(scId) : undefined;
-  };
-
-  // Estado de asignaciones: insumoId -> Asignacion[]
+  // Estado de asignaciones: insumoId -> Asignacion[] (proveedorId = solicitudId del proveedor)
   const [asignaciones, setAsignaciones] = useState<Record<string, Asignacion[]>>({});
   const [hydrated, setHydrated] = useState(false);
   const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
   const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
-  const [autosaveState, setAutosaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const knownPaqueteIdByProveedorRef = useRef<Record<string, string>>({});
-  const lastSavedFingerprintByProveedorRef = useRef<Record<string, string>>({});
 
-  // Fingerprint estable de los datos del servidor (IDs concatenados, no solo length).
-  // Cambia cuando llegan nuevos paquetes/ocs/solicitudes o cambian sus estatus.
-  const serverFingerprint = useMemo(() => {
-    const pq = paquetes.map((p: any) => `${p.id}:${p.proveedor_id ?? ""}`).sort().join("|");
-    const oc = ocs.map((o: any) => `${o.id}:${o.estatus ?? ""}`).sort().join("|");
-    const sc = recibidas.map((s: any) => `${s.id}:${s.proveedor?.id ?? ""}`).sort().join("|");
-    return `${pq}#${oc}#${sc}`;
-  }, [paquetes, ocs, recibidas]);
-
-  // Hidratar las asignaciones desde los paquetes persistidos.
-  // Incluimos también proveedores bloqueados (OC enviada/autorizada) para que
-  // la matriz refleje lo que ya fue analizado al reabrir la requisición.
-  // La protección contra edición se hace vía `provBloqueado` en los selects
-  // y en `draftLineasByProveedor` (que excluye bloqueados del autoguardado).
+  // Hidratar desde el paquete canónico de cada proveedor (no de TODOS los paquetes)
   useEffect(() => {
-    if (hydrated) return;
+    if (hydrated || paqueteByProveedor.size === 0) return;
     const next: Record<string, Asignacion[]> = {};
     for (const [provId, p] of paqueteByProveedor) {
-      const assignmentProveedorId = solicitudByProveedor.get(provId) ?? provId;
+      const scId = solicitudByProveedor.get(provId);
+      if (!scId) continue; // proveedor sin cotización recibida → no representable en matriz
       for (const it of p.items ?? []) {
         if (!next[it.insumo_id]) next[it.insumo_id] = [];
-        next[it.insumo_id].push({ proveedorId: assignmentProveedorId, cantidad: Number(it.cantidad) });
+        next[it.insumo_id].push({ proveedorId: scId, cantidad: Number(it.cantidad) });
       }
     }
     setAsignaciones(next);
@@ -234,11 +182,11 @@ export function ComparativaTable({
   }, [paqueteByProveedor, solicitudByProveedor, hydrated]);
 
 
-  // Re-hidratar cuando cambia el fingerprint real de los datos del servidor
-  // (después de mutaciones o cuando los queries paralelos resuelven en distinto orden).
+  // Re-hidratar cuando cambian los paquetes/ocs/solicitudes (después de mutaciones o cuando
+  // los queries paralelos terminan de resolverse en distinto orden)
   useEffect(() => {
     setHydrated(false);
-  }, [serverFingerprint]);
+  }, [paquetes.length, ocs.length, recibidas.length]);
 
   // Limpiar marca optimista cuando el backend ya refleja un estatus posterior a borrador
   useEffect(() => {
@@ -253,15 +201,6 @@ export function ComparativaTable({
       return next.size === prev.size ? prev : next;
     });
   }, [ocs, paquetes]);
-
-  useEffect(() => {
-    for (const [provId, paquete] of paqueteByProveedor) {
-      knownPaqueteIdByProveedorRef.current[provId] = paquete.id;
-      lastSavedFingerprintByProveedorRef.current[provId] = fingerprintLineas(
-        paqueteItemsToPersistedLineas(paquete.items ?? []),
-      );
-    }
-  }, [paqueteByProveedor]);
 
   // Nota: ya no retornamos temprano cuando no hay cotizaciones recibidas — las tarjetas
   // de pedidos por proveedor pueden venir de paquetes/OCs ya guardados, aunque las
@@ -313,7 +252,7 @@ export function ComparativaTable({
   const tomarMejorPrecioTodos = () => {
     reqItems.forEach((ri) => {
       const provIds = (asignaciones[ri.insumo.id] ?? [])
-        .map((a) => resolveProveedorId(a.proveedorId))
+        .map((a) => provBySolicitud.get(a.proveedorId))
         .filter(Boolean) as string[];
       // No tocar insumos que ya están en OC bloqueada
       if (provIds.some((pid) => provBloqueado(pid))) return;
@@ -321,55 +260,16 @@ export function ComparativaTable({
     });
   };
 
-  const editableLineasByProveedor = useMemo(() => {
-    const overlay = new Map<string, LineaProveedor[]>();
-    for (const [insumoId, lista] of Object.entries(asignaciones)) {
-      const ri = reqItems.find((r) => r.insumo.id === insumoId);
-      if (!ri) continue;
-      for (const a of lista) {
-        const provId = resolveProveedorId(a.proveedorId);
-        const oferta = getOfertaAsignacion(insumoId, a.proveedorId);
-        if (!provId || !oferta || a.cantidad <= 0) continue;
-        const oc = ocByProveedor.get(provId);
-        if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
-        if (!overlay.has(provId)) overlay.set(provId, []);
-        const arr = overlay.get(provId)!;
-        const ex = arr.find((l) => l.insumoId === insumoId);
-        if (ex) ex.cantidad += a.cantidad;
-        else {
-          arr.push({
-            insumoId,
-            nombre: ri.insumo.nombre,
-            unidad: ri.insumo.unidad ?? "",
-            cantidad: a.cantidad,
-            precio: oferta.precio,
-          });
-        }
-      }
-    }
-    return overlay;
-  }, [asignaciones, reqItems, ocByProveedor, provBySolicitud, solicitudByProveedor, matrix]);
-
-  const draftLineasByProveedor = useMemo(() => {
-    const draft = new Map<string, LineaProveedor[]>();
-    for (const provId of paqueteByProveedor.keys()) {
-      if (!provBloqueado(provId)) draft.set(provId, editableLineasByProveedor.get(provId) ?? []);
-    }
-    for (const [provId, lineas] of editableLineasByProveedor) {
-      if (!provBloqueado(provId)) draft.set(provId, lineas);
-    }
-    return draft;
-  }, [paqueteByProveedor, editableLineasByProveedor, optimisticPendiente, ocs]);
-
   // Fuente de verdad: SIEMPRE construir desde paquetes persistidos.
   // Solo si el proveedor NO está bloqueado por una OC enviada, se permite que
   // las ediciones en curso (asignaciones) sobreescriban temporalmente sus líneas.
   const resumenPorProveedor = useMemo(() => {
-    const m = new Map<string, { proveedor: any; lineas: LineaProveedor[]; total: number }>();
+    type Linea = { insumoId: string; nombre: string; unidad: string; cantidad: number; precio: number };
+    const m = new Map<string, { proveedor: any; lineas: Linea[]; total: number }>();
 
     // 1) Base persistida: una tarjeta por proveedor con paquete guardado
     for (const [provId, p] of paqueteByProveedor) {
-      const lineas: LineaProveedor[] = (p.items ?? []).map((it: any) => {
+      const lineas: Linea[] = (p.items ?? []).map((it: any) => {
         const ri = reqItems.find((r) => r.insumo.id === it.insumo_id);
         return {
           insumoId: it.insumo_id,
@@ -387,12 +287,34 @@ export function ComparativaTable({
       });
     }
 
-    // 2) Overlay de ediciones en curso (solo para proveedores no bloqueados)
-    for (const [provId, lineas] of draftLineasByProveedor) {
-      if (lineas.length === 0) {
-        m.delete(provId);
-        continue;
+    // 2) Overlay de ediciones en curso (solo para proveedores no bloqueados
+    //    y siempre que existan cotizaciones recibidas para resolver precio)
+    const overlay = new Map<string, Linea[]>();
+    for (const [insumoId, lista] of Object.entries(asignaciones)) {
+      const ri = reqItems.find((r) => r.insumo.id === insumoId);
+      if (!ri) continue;
+      for (const a of lista) {
+        const provId = provBySolicitud.get(a.proveedorId);
+        const oferta = matrix.get(insumoId)?.get(a.proveedorId);
+        if (!provId || !oferta || a.cantidad <= 0) continue;
+        // Solo saltar si hay OC realmente bloqueada (no por estado optimista de envío)
+        const oc = ocByProveedor.get(provId);
+        if (oc && oc.estatus !== "borrador" && oc.estatus !== "rechazada") continue;
+        if (!overlay.has(provId)) overlay.set(provId, []);
+        const arr = overlay.get(provId)!;
+        const ex = arr.find((l) => l.insumoId === insumoId);
+        if (ex) ex.cantidad += a.cantidad;
+        else
+          arr.push({
+            insumoId,
+            nombre: ri.insumo.nombre,
+            unidad: ri.insumo.unidad ?? "",
+            cantidad: a.cantidad,
+            precio: oferta.precio,
+          });
       }
+    }
+    for (const [provId, lineas] of overlay) {
       const sc = recibidas.find((s) => provBySolicitud.get(s.id) === provId);
       const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
       const prev = m.get(provId);
@@ -403,7 +325,7 @@ export function ComparativaTable({
       });
     }
     return m;
-  }, [paqueteByProveedor, draftLineasByProveedor, provBySolicitud, recibidas, reqItems]);
+  }, [paqueteByProveedor, asignaciones, matrix, provBySolicitud, recibidas, reqItems, ocByProveedor]);
 
 
   const insumosAsignados = Object.keys(asignaciones).length;
@@ -414,87 +336,6 @@ export function ComparativaTable({
     return Math.abs(suma - Number(ri.cantidad)) < 0.0001;
   }).length;
 
-  useEffect(() => {
-    if (!isAdmin || !hydrated) return;
-
-    const editableProviders = new Set<string>([
-      ...Array.from(paqueteByProveedor.keys()).filter((provId) => !provBloqueado(provId)),
-      ...Array.from(draftLineasByProveedor.keys()).filter((provId) => !provBloqueado(provId)),
-    ]);
-
-    const pendingOps = Array.from(editableProviders)
-      .map((provId) => {
-        const lineas = draftLineasByProveedor.get(provId) ?? [];
-        const persisted = toPersistedLineas(lineas);
-        const fingerprint = fingerprintLineas(persisted);
-        const lastSaved = lastSavedFingerprintByProveedorRef.current[provId] ?? "";
-        const paqueteId = knownPaqueteIdByProveedorRef.current[provId] ?? paqueteByProveedor.get(provId)?.id;
-        if (fingerprint === lastSaved) return null;
-        return { provId, persisted, paqueteId };
-      })
-      .filter(Boolean) as Array<{ provId: string; persisted: LineaPersistida[]; paqueteId?: string }>;
-
-    if (pendingOps.length === 0) return;
-
-    let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      try {
-        if (!cancelled) setAutosaveState("saving");
-        for (const op of pendingOps) {
-          // Re-chequeo defensivo: si entre programar y ejecutar el guardado el
-          // proveedor quedó bloqueado por una OC enviada/autorizada/pagada,
-          // no intentes guardar — marca como guardado para evitar reintentos.
-          if (provBloqueado(op.provId)) {
-            lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
-            continue;
-          }
-          if (op.persisted.length === 0) {
-            if (op.paqueteId) {
-              await eliminarFn({ data: { paqueteId: op.paqueteId } });
-            }
-            delete knownPaqueteIdByProveedorRef.current[op.provId];
-            lastSavedFingerprintByProveedorRef.current[op.provId] = "";
-            continue;
-          }
-
-          try {
-            const result = await guardarFn({
-              data: {
-                requisicionId,
-                paqueteId: op.paqueteId,
-                proveedorId: op.provId,
-                insumos: op.persisted,
-              },
-            });
-            knownPaqueteIdByProveedorRef.current[op.provId] = (result as any).id;
-            lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
-          } catch (innerErr: any) {
-            const msg = String(innerErr?.message ?? "");
-            // El borrador ya fue promovido a OC pendiente/autorizada: no es un
-            // error de usuario. Marca como guardado y refresca la data.
-            if (msg.includes("OC pendiente o autorizada")) {
-              lastSavedFingerprintByProveedorRef.current[op.provId] = fingerprintLineas(op.persisted);
-              qc.invalidateQueries({ queryKey: ["cotizacion", requisicionId] });
-              continue;
-            }
-            throw innerErr;
-          }
-        }
-
-        if (!cancelled) setAutosaveState("saved");
-      } catch (e: any) {
-        if (cancelled) return;
-        setAutosaveState("error");
-        toast.error(e?.message ?? "No se pudo guardar el borrador de la comparativa");
-      }
-    }, 600);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [isAdmin, hydrated, paqueteByProveedor, draftLineasByProveedor, requisicionId, guardarFn, eliminarFn, optimisticPendiente, ocs]);
-
   // ===== Mutaciones =====
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["cotizacion", requisicionId] });
@@ -503,28 +344,57 @@ export function ComparativaTable({
 
 
   const enviarMut = useMutation({
-    mutationFn: async (vars: { proveedorId: string; insumos: LineaPersistida[]; paqueteId?: string }) => {
-      const { proveedorId, insumos, paqueteId } = vars;
-      if (!insumos || insumos.length === 0) throw new Error("Sin líneas para este proveedor");
-      if (insumos.some((l) => !(l.precio_unitario > 0))) throw new Error("Todas las líneas requieren precio");
+    mutationFn: async (proveedorId: string) => {
+      // Construir líneas directamente desde asignaciones+matrix, sin depender
+      // del resumen derivado (que puede invalidarse por estado optimista).
+      const lineasDirectas: { insumoId: string; cantidad: number; precio: number }[] = [];
+      for (const [insumoId, lista] of Object.entries(asignaciones)) {
+        for (const a of lista) {
+          const provId = provBySolicitud.get(a.proveedorId);
+          if (provId !== proveedorId) continue;
+          const oferta = matrix.get(insumoId)?.get(a.proveedorId);
+          if (!oferta || a.cantidad <= 0) continue;
+          const ex = lineasDirectas.find((l) => l.insumoId === insumoId);
+          if (ex) ex.cantidad += a.cantidad;
+          else lineasDirectas.push({ insumoId, cantidad: a.cantidad, precio: oferta.precio });
+        }
+      }
+      // Fallback: si no hay asignaciones en curso, usar el paquete persistido
+      let insumos = lineasDirectas.map((l) => ({
+        insumo_id: l.insumoId,
+        cantidad: l.cantidad,
+        precio_unitario: l.precio,
+      }));
+      if (insumos.length === 0) {
+        const entry = resumenPorProveedor.get(proveedorId);
+        if (entry && entry.lineas.length > 0) {
+          insumos = entry.lineas.map((l) => ({
+            insumo_id: l.insumoId,
+            cantidad: l.cantidad,
+            precio_unitario: l.precio,
+          }));
+        }
+      }
+      if (insumos.length === 0) throw new Error("Sin líneas para este proveedor");
+      const paqueteExistente = paqueteByProveedor.get(proveedorId);
 
       const r = await guardarFn({
         data: {
           requisicionId,
-          paqueteId: paqueteId ?? undefined,
+          paqueteId: paqueteExistente?.id ?? undefined,
           proveedorId,
           insumos,
         },
       });
-      const newPaqueteId = (r as any).id;
-      const ocRes = await generarFn({ data: { paqueteId: newPaqueteId } });
+      const paqueteId = (r as any).id;
+      const ocRes = await generarFn({ data: { paqueteId } });
       await enviarFn({ data: { ocId: (ocRes as any).id } });
       return proveedorId;
     },
-    onMutate: (vars) => {
+    onMutate: (proveedorId) => {
       setOptimisticPendiente((s) => {
         const n = new Set(s);
-        n.add(vars.proveedorId);
+        n.add(proveedorId);
         return n;
       });
     },
@@ -533,13 +403,13 @@ export function ComparativaTable({
       setEnviandoProv(null);
       invalidate();
     },
-    onError: (e: any, vars) => {
+    onError: (e: any, proveedorId) => {
       toast.error(e?.message ?? "Error");
       setEnviandoProv(null);
       setOptimisticPendiente((s) => {
-        if (!s.has(vars.proveedorId)) return s;
+        if (!s.has(proveedorId)) return s;
         const n = new Set(s);
-        n.delete(vars.proveedorId);
+        n.delete(proveedorId);
         return n;
       });
     },
@@ -598,15 +468,6 @@ export function ComparativaTable({
       {sinCotizar > 0 && !sinRecibidas && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
           {sinCotizar} insumo{sinCotizar === 1 ? "" : "s"} de la requisición sin cotización todavía.
-        </p>
-      )}
-
-      {isAdmin && resumenPorProveedor.size > 0 && (
-        <p className={`text-xs ${autosaveState === "error" ? "text-rose-700" : "text-muted-foreground"}`}>
-          {autosaveState === "saving" && "Guardando borrador…"}
-          {autosaveState === "saved" && "Borrador guardado"}
-          {autosaveState === "error" && "Error al guardar el borrador"}
-          {autosaveState === "idle" && "Autoguardado activo"}
         </p>
       )}
 
@@ -670,7 +531,7 @@ export function ComparativaTable({
                 const cantReq = Number(ri.cantidad);
                 const unidad = ri.insumo.unidad ?? "";
                 const lista = asignaciones[ri.insumo.id] ?? [];
-                const asignadosProv = new Set(lista.map((a) => resolveProveedorId(a.proveedorId)));
+                const asignadosSc = new Set(lista.map((a) => a.proveedorId));
                 const opcionesDisponibles = recibidas.filter((sc) => {
                   const o = ofertas?.get(sc.id);
                   return o && o.disponible && o.precio > 0;
@@ -679,12 +540,12 @@ export function ComparativaTable({
                 const restante = cantReq - sumaAsignada;
                 // ¿Esta fila tiene alguna asignación bloqueada por OC?
                 const filaBloqueada = lista.some((a) => {
-                  const pid = resolveProveedorId(a.proveedorId);
+                  const pid = provBySolicitud.get(a.proveedorId);
                   return pid ? provBloqueado(pid) : false;
                 });
                 const puedeAgregar =
                   !filaBloqueada && isAdmin &&
-                  opcionesDisponibles.some((sc) => !asignadosProv.has(sc.proveedor?.id ?? "")) && restante > 0.0001;
+                  opcionesDisponibles.some((sc) => !asignadosSc.has(sc.id)) && restante > 0.0001;
 
                 let estadoColor = "text-muted-foreground";
                 if (lista.length > 0) {
@@ -695,7 +556,7 @@ export function ComparativaTable({
 
                 const handleAdd = () => {
                   const candidatos = opcionesDisponibles
-                    .filter((sc) => !asignadosProv.has(sc.proveedor?.id ?? ""))
+                    .filter((sc) => !asignadosSc.has(sc.id))
                     .sort((a, b) => (ofertas!.get(a.id)!.precio - ofertas!.get(b.id)!.precio));
                   if (candidatos.length === 0) return;
                   const sc = candidatos[0];
@@ -722,7 +583,7 @@ export function ComparativaTable({
                         );
                       }
                       const isMin = minPrecio !== null && oferta.precio === minPrecio;
-                      const isAsignado = asignadosProv.has(sc.proveedor?.id ?? "");
+                      const isAsignado = asignadosSc.has(sc.id);
                       const cantOf = oferta.cantidad;
                       let cantClass = "";
                       if (cantOf < cantReq) cantClass = "text-amber-700 font-medium";
@@ -753,26 +614,25 @@ export function ComparativaTable({
                       ) : (
                         <div className="flex flex-col gap-1.5">
                           {lista.map((a, idx) => {
-                            const ofertaA = getOfertaAsignacion(ri.insumo.id, a.proveedorId);
+                            const ofertaA = ofertas?.get(a.proveedorId);
                             const excede = ofertaA ? a.cantidad > ofertaA.cantidad : false;
-                            const provActual = opcionesDisponibles.find((sc) => (sc.proveedor?.id ?? "") === resolveProveedorId(a.proveedorId));
-                            const provReal = resolveProveedorId(a.proveedorId);
+                            const provActual = opcionesDisponibles.find((sc) => sc.id === a.proveedorId);
+                            const provReal = provBySolicitud.get(a.proveedorId);
                             const bloqueado = provReal ? provBloqueado(provReal) : false;
                             const opcionesSelect = opcionesDisponibles.filter(
-                              (sc) => (sc.proveedor?.id ?? "") === provReal || !asignadosProv.has(sc.proveedor?.id ?? ""),
+                              (sc) => sc.id === a.proveedorId || !asignadosSc.has(sc.id),
                             );
                             return (
                               <div key={idx} className={`flex flex-col gap-1 border rounded p-1 ${bloqueado ? "opacity-60 bg-muted/40" : ""}`}>
                                 <div className="flex items-center gap-1">
                                   <Select
-                                    value={provReal}
+                                    value={a.proveedorId}
                                     disabled={bloqueado || !isAdmin}
                                     onValueChange={(v) => {
-                                      const sc = opcionesDisponibles.find((opt) => (opt.proveedor?.id ?? "") === v);
-                                      const o = sc ? ofertas?.get(sc.id) : undefined;
+                                      const o = ofertas?.get(v);
                                       if (!o) return;
                                       const nuevaCant = Math.min(a.cantidad || 0, o.cantidad) || Math.min(restante + a.cantidad, o.cantidad);
-                                      updateAsignacion(ri.insumo.id, idx, { proveedorId: sc?.id ?? v, cantidad: nuevaCant });
+                                      updateAsignacion(ri.insumo.id, idx, { proveedorId: v, cantidad: nuevaCant });
                                     }}
                                   >
                                     <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
@@ -785,7 +645,7 @@ export function ComparativaTable({
                                       {opcionesSelect.map((sc) => {
                                         const o = ofertas!.get(sc.id)!;
                                         return (
-                                          <SelectItem key={sc.id} value={sc.proveedor?.id ?? sc.id}>
+                                          <SelectItem key={sc.id} value={sc.id}>
                                             {sc.proveedor?.razon_social ?? "—"} · {mxn(o.precio)} · {o.cantidad} {unidad}
                                           </SelectItem>
                                         );
@@ -977,12 +837,7 @@ export function ComparativaTable({
                       )}
                       <Button
                         size="sm"
-                        onClick={() => {
-                          const insumos = toPersistedLineas(info.lineas);
-                          const paqueteId = knownPaqueteIdByProveedorRef.current[provId] ?? paqueteByProveedor.get(provId)?.id;
-                          setEnviandoProv(provId);
-                          enviarMut.mutate({ proveedorId: provId, insumos, paqueteId });
-                        }}
+                        onClick={() => { setEnviandoProv(provId); enviarMut.mutate(provId); }}
                         disabled={!puedeEnviar}
                       >
                         <Send className="size-4 mr-1" />
