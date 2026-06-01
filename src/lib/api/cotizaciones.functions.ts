@@ -58,17 +58,19 @@ export const getCotizacionRequisicion = createServerFn({ method: "POST" })
     if (reqErr) throw new Error(reqErr.message);
     if (!req) throw new Error("Requisición no encontrada");
 
-    const { data: paquetes } = await supabase
+    const { data: paquetes, error: paqErr } = await supabase
       .from("cotizacion_paquetes")
       .select("id, numero, proveedor_id, created_at, proveedor:terceros(id, razon_social), items:cotizacion_paquete_insumos(id, insumo_id, cantidad, precio_unitario, subtotal)")
       .eq("requisicion_id", data.requisicionId)
       .order("numero", { ascending: true });
+    if (paqErr) throw new Error(paqErr.message);
 
-    const { data: ocs } = await supabase
+    const { data: ocs, error: ocsErr } = await supabase
       .from("ordenes_compra")
       .select("id, paquete_id, folio, estatus, total, enviada_at, autorizada_at, rechazada_at, notas_supervisor, created_at, proveedor:terceros(id, razon_social)")
       .eq("requisicion_id", data.requisicionId)
       .order("created_at", { ascending: true });
+    if (ocsErr) throw new Error(ocsErr.message);
 
     return { requisicion: req, paquetes: paquetes ?? [], ocs: ocs ?? [] };
   });
