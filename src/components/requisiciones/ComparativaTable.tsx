@@ -913,11 +913,6 @@ export function ComparativaTable({
                   </div>
                 )}
 
-                {dirty && estatus && estatus !== "borrador" && estatus !== "rechazada" && (
-                  <p className="text-xs text-amber-700">
-                    La asignación local difiere de la OC enviada. Las ediciones se ignorarán mientras la OC esté {badge?.label.toLowerCase()}.
-                  </p>
-                )}
               </Card>
             );
           })}
