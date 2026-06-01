@@ -25,10 +25,13 @@ export function RequisicionesModule({ obraId }: Props) {
   const puedeCrear = isDirector(roles) || roles.some((r) =>
     ["pm", "auxiliar", "administrativo", "residente"].includes(r as string)
   );
+  const isSupervisor = isDirector(roles) || roles.includes("supervisor");
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+
 
   const fetchList = useServerFn(listRequisiciones);
   const activasQ = useQuery({
