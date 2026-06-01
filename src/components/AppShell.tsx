@@ -38,6 +38,8 @@ export function AppShell() {
   const effRoles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
+  const showSupervisor = director || effRoles.includes("supervisor");
+
 
   const switchRole = (role: AppRole | null) => {
     setAssumedRole(role);
