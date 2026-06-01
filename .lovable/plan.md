@@ -1,39 +1,44 @@
-# Plan
+## Vista del Supervisor — Autorización de OCs
 
-Voy a ajustar la lógica de la pestaña **Comparativa** para que, al reabrir la requisición, el botón **Asignar mejor precio en todos** complete los faltantes de insumos parcialmente cubiertos por una OC pendiente.
+### Objetivo
+Permitir al supervisor revisar y autorizar/rechazar las OCs pendientes, ya sea entrando por obra o desde un acceso global en el menú lateral.
 
-## Qué voy a cambiar
+### 1. Acceso desde la obra
+En `RequisicionesModule.tsx`, cuando el usuario tiene rol `supervisor` y una requisición está en estatus `pendiente_autorizacion`:
+- Mostrar botón **"Revisar y autorizar"** en la fila/tarjeta de la requisición.
+- Al hacer click, abre `CotizacionSheet` con `initialTab="comparativa"` (saltando directamente a la pestaña donde están las tarjetas de pedidos por proveedor).
 
-1. **Corregir la lógica del botón masivo**
-   - Hoy el botón omite por completo un insumo si detecta cualquier asignación bloqueada en esa fila.
-   - Lo voy a cambiar para que conserve lo ya bloqueado y solo reparta el **faltante** entre los demás proveedores disponibles.
+### 2. Acceso global desde el menú lateral
+En `AppShell.tsx`:
+- Agregar grupo **"Supervisión"** en el sidebar, visible solo si `effRoles.includes('supervisor')` o `director`.
+- Item: **"Por autorizar"** → link a nueva ruta `/app/supervisor/requisiciones`.
 
-2. **Ajustar el cálculo de “mejor precio” por fila**
-   - La función que asigna por precio hoy reconstruye la fila desde cero usando la cantidad total requerida.
-   - La voy a adaptar para que:
-     - respete las líneas ya bloqueadas,
-     - calcule cuánto queda pendiente,
-     - asigne ese remanente al proveedor más barato disponible con capacidad suficiente o parcial.
+### 3. Nueva ruta `/app/supervisor/requisiciones`
+- Reusa `listRequisicionesAsignadas` (ya filtra por `obra_team` para supervisor; director ve todo).
+- Dos pestañas:
+  - **Por autorizar**: filtra `estatus === 'pendiente_autorizacion'`.
+  - **Historial**: el resto (autorizadas, rechazadas, completadas).
+- Cada fila muestra: folio, obra, fecha, # de OCs pendientes, botón **"Revisar"** → abre `CotizacionSheet` en tab `comparativa`.
 
-3. **Mantener el comportamiento correcto de bloqueo**
-   - Las líneas de la OC pendiente de autorización deben seguir viéndose bloqueadas y no editarse.
-   - El cambio solo debe afectar las cantidades no cubiertas todavía.
+### 4. Tarjetas Autorizar/Rechazar en Comparativa
+En `ComparativaTable.tsx` → sección "Pedidos por proveedor":
+- Para cada OC en estatus `pendiente_autorizacion`, si el usuario es **supervisor** (y no admin), mostrar dos botones:
+  - **Autorizar** → llama nueva server fn `autorizarOC({ ocId })` que marca `estatus='autorizada'`, `autorizada_at=now()`, `autorizada_por=auth.uid()`.
+  - **Rechazar** → abre dialog para capturar motivo (opcional), llama `rechazarOC({ ocId, motivo })` que marca `estatus='rechazada'`, `rechazada_at`, `rechazada_por`, guarda motivo en `notas_supervisor`.
+- Si la OC ya está autorizada/rechazada, mostrar badge de estado + fecha + nombre del supervisor.
+- El admin sigue viendo las tarjetas en modo lectura (sin botones de autorizar).
 
-4. **Validar el caso reportado**
-   - Caso esperado después del ajuste:
-     - Macro bodega mantiene bloqueados 5 BTO de mortero y 30 BTO de cemento.
-     - Al usar **Asignar mejor precio en todos**, se asignan además **20 BTO de mortero** y **20 BTO de cemento** a Construalcalde.
-     - Varrilla/aceros alcalde sigue comportándose como ahora.
+### 5. Pestaña OC
+- Las OCs autorizadas ya aparecen ahí (sin cambios de esquema).
+- El admin las verá listas para "enviar al proveedor" (se implementa en otro turno como acordamos).
 
-## Detalle técnico
+### Archivos a tocar
+- `src/lib/cotizaciones.functions.ts` — agregar `autorizarOC`, `rechazarOC`.
+- `src/components/requisiciones/ComparativaTable.tsx` — botones Autorizar/Rechazar en tarjetas de pedidos por proveedor según rol.
+- `src/components/requisiciones/RequisicionesModule.tsx` — botón "Revisar y autorizar" para supervisor.
+- `src/components/requisiciones/CotizacionSheet.tsx` — aceptar prop `initialTab`.
+- `src/components/layouts/AppShell.tsx` — grupo "Supervisión" en sidebar.
+- `src/routes/app/supervisor/requisiciones.tsx` — nueva ruta con lista global y tabs.
 
-- Revisaré `src/components/requisiciones/ComparativaTable.tsx`.
-- Cambiaré `tomarMejorPrecio` y/o `tomarMejorPrecioTodos` para trabajar con:
-  - asignaciones bloqueadas existentes,
-  - faltante restante por insumo,
-  - proveedores no bloqueados y con oferta válida.
-- La reasignación no debe borrar líneas persistidas ni sobrescribir paquetes ya enviados.
-
-## Resultado esperado
-
-Después del cambio, al cerrar y volver a abrir la requisición, el botón **Asignar mejor precio en todos** deberá completar automáticamente los insumos pendientes aunque la fila ya tenga una parte bloqueada por una OC enviada.
+### No incluido en este turno
+- Botón "Enviar a proveedor" para admin (queda para próxima iteración con su migración).
