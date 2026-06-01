@@ -20,6 +20,7 @@ import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_aut
 import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated/app.clientes'
 import { Route as AuthenticatedAppCatalogosRouteImport } from './routes/_authenticated/app.catalogos'
 import { Route as AuthenticatedAppCatalogosIndexRouteImport } from './routes/_authenticated/app.catalogos.index'
+import { Route as AuthenticatedAppSupervisorRequisicionesRouteImport } from './routes/_authenticated/app.supervisor.requisiciones'
 import { Route as AuthenticatedAppObrasNuevaRouteImport } from './routes/_authenticated/app.obras.nueva'
 import { Route as AuthenticatedAppObrasObraIdRouteImport } from './routes/_authenticated/app.obras.$obraId'
 import { Route as AuthenticatedAppCatalogosTrabajadoresRouteImport } from './routes/_authenticated/app.catalogos.trabajadores'
@@ -91,6 +92,12 @@ const AuthenticatedAppCatalogosIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppSupervisorRequisicionesRoute =
+  AuthenticatedAppSupervisorRequisicionesRouteImport.update({
+    id: '/supervisor/requisiciones',
+    path: '/supervisor/requisiciones',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppObrasNuevaRoute =
   AuthenticatedAppObrasNuevaRouteImport.update({
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/app/catalogos/trabajadores': typeof AuthenticatedAppCatalogosTrabajadoresRoute
   '/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
   '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/app/supervisor/requisiciones': typeof AuthenticatedAppSupervisorRequisicionesRoute
   '/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
   '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
@@ -212,6 +220,7 @@ export interface FileRoutesByTo {
   '/app/catalogos/subcontratistas': typeof AuthenticatedAppCatalogosSubcontratistasRoute
   '/app/catalogos/trabajadores': typeof AuthenticatedAppCatalogosTrabajadoresRoute
   '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/app/supervisor/requisiciones': typeof AuthenticatedAppSupervisorRequisicionesRoute
   '/app/catalogos': typeof AuthenticatedAppCatalogosIndexRoute
   '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
@@ -239,6 +248,7 @@ export interface FileRoutesById {
   '/_authenticated/app/catalogos/trabajadores': typeof AuthenticatedAppCatalogosTrabajadoresRoute
   '/_authenticated/app/obras/$obraId': typeof AuthenticatedAppObrasObraIdRouteWithChildren
   '/_authenticated/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
+  '/_authenticated/app/supervisor/requisiciones': typeof AuthenticatedAppSupervisorRequisicionesRoute
   '/_authenticated/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
   '/_authenticated/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/_authenticated/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/app/catalogos/trabajadores'
     | '/app/obras/$obraId'
     | '/app/obras/nueva'
+    | '/app/supervisor/requisiciones'
     | '/app/catalogos/'
     | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/app/catalogos/subcontratistas'
     | '/app/catalogos/trabajadores'
     | '/app/obras/nueva'
+    | '/app/supervisor/requisiciones'
     | '/app/catalogos'
     | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
@@ -314,6 +326,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/catalogos/trabajadores'
     | '/_authenticated/app/obras/$obraId'
     | '/_authenticated/app/obras/nueva'
+    | '/_authenticated/app/supervisor/requisiciones'
     | '/_authenticated/app/catalogos/'
     | '/_authenticated/app/catalogos/clientes/$clienteId'
     | '/_authenticated/app/obras/$obraId/$'
@@ -406,6 +419,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/catalogos/'
       preLoaderRoute: typeof AuthenticatedAppCatalogosIndexRouteImport
       parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/supervisor/requisiciones': {
+      id: '/_authenticated/app/supervisor/requisiciones'
+      path: '/supervisor/requisiciones'
+      fullPath: '/app/supervisor/requisiciones'
+      preLoaderRoute: typeof AuthenticatedAppSupervisorRequisicionesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/obras/nueva': {
       id: '/_authenticated/app/obras/nueva'
@@ -576,6 +596,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdminRequisicionesRoute: typeof AuthenticatedAppAdminRequisicionesRoute
   AuthenticatedAppObrasObraIdRoute: typeof AuthenticatedAppObrasObraIdRouteWithChildren
   AuthenticatedAppObrasNuevaRoute: typeof AuthenticatedAppObrasNuevaRoute
+  AuthenticatedAppSupervisorRequisicionesRoute: typeof AuthenticatedAppSupervisorRequisicionesRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -590,6 +611,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppObrasObraIdRoute:
     AuthenticatedAppObrasObraIdRouteWithChildren,
   AuthenticatedAppObrasNuevaRoute: AuthenticatedAppObrasNuevaRoute,
+  AuthenticatedAppSupervisorRequisicionesRoute:
+    AuthenticatedAppSupervisorRequisicionesRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
