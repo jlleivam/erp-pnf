@@ -257,31 +257,51 @@ export function ComparativaTable({
     const ofertas = matrix.get(ri.insumo.id);
     if (!ofertas) return;
     const cantReq = Number(ri.cantidad);
+
+    // Conservar asignaciones bloqueadas (OC enviada/autorizada/etc.) y
+    // calcular cuánto ya cubren para no duplicarlo.
+    const previas = asignaciones[ri.insumo.id] ?? [];
+    const bloqueadas: Asignacion[] = [];
+    const scIdsBloqueados = new Set<string>();
+    let yaCubierto = 0;
+    for (const a of previas) {
+      const pid = provBySolicitud.get(a.proveedorId);
+      if (pid && provBloqueado(pid)) {
+        bloqueadas.push(a);
+        scIdsBloqueados.add(a.proveedorId);
+        yaCubierto += a.cantidad || 0;
+      }
+    }
+
+    let faltante = cantReq - yaCubierto;
+    if (faltante <= 0.0001) {
+      if (bloqueadas.length > 0) setLista(ri.insumo.id, bloqueadas);
+      return;
+    }
+
+    // Candidatos: ofertas disponibles que NO sean de proveedores bloqueados.
     const candidatos = Array.from(ofertas.entries())
-      .filter(([, o]) => o.disponible && o.precio > 0 && o.cantidad > 0)
+      .filter(([scId, o]) => o.disponible && o.precio > 0 && o.cantidad > 0 && !scIdsBloqueados.has(scId))
       .sort((a, b) => a[1].precio - b[1].precio);
-    if (candidatos.length === 0) return;
-    const lista: Asignacion[] = [];
-    let faltante = cantReq;
+    if (candidatos.length === 0) {
+      if (bloqueadas.length > 0) setLista(ri.insumo.id, bloqueadas);
+      return;
+    }
+
+    const nuevas: Asignacion[] = [];
     for (const [scId, o] of candidatos) {
       if (faltante <= 0) break;
       const toma = Math.min(faltante, o.cantidad);
       if (toma <= 0) continue;
-      lista.push({ proveedorId: scId, cantidad: toma });
+      nuevas.push({ proveedorId: scId, cantidad: toma });
       faltante -= toma;
     }
-    if (lista.length > 0) setLista(ri.insumo.id, lista);
+    const final = [...bloqueadas, ...nuevas];
+    if (final.length > 0) setLista(ri.insumo.id, final);
   };
 
   const tomarMejorPrecioTodos = () => {
-    reqItems.forEach((ri) => {
-      const provIds = (asignaciones[ri.insumo.id] ?? [])
-        .map((a) => provBySolicitud.get(a.proveedorId))
-        .filter(Boolean) as string[];
-      // No tocar insumos que ya están en OC bloqueada
-      if (provIds.some((pid) => provBloqueado(pid))) return;
-      tomarMejorPrecio(ri);
-    });
+    reqItems.forEach((ri) => tomarMejorPrecio(ri));
   };
 
   // Fuente de verdad: SIEMPRE construir desde paquetes persistidos.
