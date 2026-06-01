@@ -1,23 +1,21 @@
 ## Problema
 
-En la pestaña Requisiciones no aparece el botón "Nueva" cuando el usuario tiene el rol **Residente**. En `RequisicionesModule.tsx` (línea 23‑25) el cálculo de `puedeCrear` solo incluye `director`, `pm`, `auxiliar` y `administrativo` — el rol `residente` quedó fuera, por eso el residente no puede iniciar una nueva requisición.
+El banner "La asignación local difiere de la OC enviada. Las ediciones se ignorarán…" aparece al enviar la OC al supervisor. Como al enviar la solicitud los insumos del cuadro comparativo quedan bloqueados, el usuario no puede editarlos, por lo que el aviso no tiene sentido y solo confunde.
 
 ## Cambio
 
-Agregar `"residente"` a la lista de roles autorizados a crear requisiciones:
+En `src/components/requisiciones/ComparativaTable.tsx`:
 
-```ts
-const puedeCrear = isDirector(roles) || roles.some((r) =>
-  ["pm", "auxiliar", "administrativo", "residente"].includes(r as string)
-);
-```
+- Eliminar el bloque de render del banner (líneas 916-920).
+- Eliminar el cálculo de `dirty` (líneas 765-776) que solo se usaba para ese banner.
 
-## Verificación
+## Lo que NO cambia
 
-- Revisar el servidor (`createRequisicion` en `requisiciones.functions.ts`) para confirmar que la validación de rol del backend también acepta `residente`. Si no, ampliarla del mismo modo para evitar un 403 al enviar el formulario.
-- No se tocan políticas RLS ni otros componentes.
+- Lógica de bloqueo de insumos al enviar al supervisor.
+- Envío, autorización, rechazo o reapertura de OC.
+- Resto de avisos y badges de la tarjeta por proveedor.
 
-## Archivos
+## Validación
 
-- `src/components/requisiciones/RequisicionesModule.tsx` (UI del botón)
-- Posible ajuste en `src/lib/api/requisiciones.functions.ts` si la validación server-side excluye a residente.
+- Enviar una OC al supervisor → no debe aparecer ningún banner amarillo.
+- El resto del flujo (badges de estatus, botones de acción) sigue funcionando igual.

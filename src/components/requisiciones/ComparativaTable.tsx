@@ -761,19 +761,8 @@ export function ComparativaTable({
             const bloqueado = provBloqueado(provId) || isOptimisticPendiente;
             const enviandoEsta = enviandoProv === provId;
             const puedeEnviar = isAdmin && !bloqueado && !enviandoEsta && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
-            // Detectar si el pedido en pantalla difiere del paquete guardado
-            const dirty = (() => {
-              if (!paquete) return true;
-              const items = paquete.items ?? [];
-              if (items.length !== info.lineas.length) return true;
-              for (const l of info.lineas) {
-                const m = items.find((it: any) => it.insumo_id === l.insumoId);
-                if (!m) return true;
-                if (Math.abs(Number(m.cantidad) - l.cantidad) > 0.0001) return true;
-                if (Math.abs(Number(m.precio_unitario) - l.precio) > 0.0001) return true;
-              }
-              return false;
-            })();
+
+
 
             return (
               <Card key={provId} className="p-4 space-y-3">
@@ -913,11 +902,6 @@ export function ComparativaTable({
                   </div>
                 )}
 
-                {dirty && estatus && estatus !== "borrador" && estatus !== "rechazada" && (
-                  <p className="text-xs text-amber-700">
-                    La asignación local difiere de la OC enviada. Las ediciones se ignorarán mientras la OC esté {badge?.label.toLowerCase()}.
-                  </p>
-                )}
               </Card>
             );
           })}
