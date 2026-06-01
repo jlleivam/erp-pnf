@@ -193,6 +193,15 @@ export function RequisicionesModule({ obraId }: Props) {
           onOpenChange={(o) => !o && setDetalleId(null)}
         />
       )}
+      {cotizacion && (
+        <CotizacionSheet
+          requisicionId={cotizacion.id}
+          initialTab={cotizacion.tab}
+          open={!!cotizacion}
+          onOpenChange={(o) => !o && setCotizacion(null)}
+        />
+      )}
+
     </div>
   );
 }
