@@ -1,59 +1,35 @@
-## Diagnóstico
+## Problema
 
-Verifiqué directamente la base de datos para REQ-2026-001 y confirmo:
+Al enviar una OC al supervisor, las asignaciones del cuadro comparativo de los **otros proveedores** (con líneas seleccionadas pero no enviadas) se borran. El usuario tiene que volver a capturarlas.
 
-- Existen **2 paquetes** (Construalcalde y Macrobodega) con sus líneas.
-- Existen **2 órdenes de compra** en estatus `pendiente_autorizacion` (OC-2026-001 y OC-2026-002) ligadas a la requisición.
+## Causa
 
-Sin embargo, al reabrir el sheet la UI muestra:
+En `src/components/requisiciones/ComparativaTable.tsx`:
 
-- **OCs (0)** en la pestaña.
-- **0 de 5 insumos asignados** y "+ Proveedor" vacío en cada fila del comparativo.
-- Las tarjetas "Pedido por proveedor" no aparecen.
+- `invalidate()` después de enviar refetchea `paquetes`/`ocs`.
+- El efecto de las líneas 187-189 hace `setHydrated(false)` cada vez que cambian las longitudes de `paquetes`/`ocs`/`recibidas`.
+- El efecto de hidratación (líneas 169-182) reconstruye `asignaciones` **solo** desde `paqueteByProveedor` (paquetes persistidos). Reemplaza el estado completo con `setAsignaciones(next)`.
+- Las asignaciones en curso de otros proveedores (que aún no tienen paquete guardado) no están en `paqueteByProveedor`, así que se pierden.
 
-Causa raíz: en `src/lib/api/cotizaciones.functions.ts` el loader `getCotizacionRequisicion` usa embeds tipo `proveedor:terceros(id, razon_social)` sobre `ordenes_compra` y `cotizacion_paquetes`. Revisé `pg_constraint` y **NO existen llaves foráneas** desde `ordenes_compra.proveedor_id → terceros.id` ni desde `cotizacion_paquetes.proveedor_id → terceros.id`. Cuando PostgREST no encuentra la relación, devuelve error; el código actual ignora el error (`const { data: ocs } = await ...` sin chequear `error`) y termina sirviendo arreglos vacíos. Al venir vacíos:
+## Cambio
 
-- La pestaña OCs cuenta 0.
-- `paqueteByProveedor` queda vacío en `ComparativaTable`, por lo que la hidratación inicial no carga ninguna asignación y no se dibujan las tarjetas inferiores.
-- `provBloqueado` no encuentra ninguna OC, así que nada queda candado.
+Reescribir la lógica de hidratación en `ComparativaTable.tsx` para que sea un **merge**, no un reemplazo:
 
-Antes del cierre todo se veía bien (imagen 2) porque el estado local (`asignaciones` + `optimisticPendiente`) se mantenía en memoria desde la acción "Enviar a supervisor"; al desmontar el sheet ese estado se pierde y la rehidratación falla.
+1. Eliminar el efecto que hace `setHydrated(false)` al cambiar longitudes (líneas 187-189) y la bandera `hydrated` asociada.
+2. Sustituir el efecto de hidratación por uno que se ejecute cada vez que cambien `paqueteByProveedor` o `solicitudByProveedor`, con esta lógica:
+   - Construir un set de `solicitudId`s que pertenecen a proveedores con paquete persistido.
+   - Para cada insumo:
+     - Conservar las asignaciones del estado actual cuyo `proveedorId` (solicitudId) **NO** corresponda a un proveedor con paquete persistido (estas son ediciones en curso de otros proveedores).
+     - Agregar las asignaciones derivadas de los paquetes persistidos (fuente de verdad para proveedores ya guardados/bloqueados).
+   - Hacer `setAsignaciones` solo si el resultado difiere del actual (comparación superficial) para no causar loops.
 
-## Cambios
-
-### 1. Migración SQL: agregar llaves foráneas faltantes
-
-Agregar FKs para que los embeds de PostgREST funcionen y para integridad referencial. Ninguna borra datos.
-
-```text
-ordenes_compra:
-  - requisicion_id  → requisiciones(id)        ON DELETE CASCADE
-  - company_id      → companies(id)            ON DELETE CASCADE
-  - obra_id         → obras(id)                ON DELETE RESTRICT
-  - proveedor_id    → terceros(id)             ON DELETE RESTRICT
-  - creado_por      → auth.users(id)           ON DELETE SET NULL
-  - autorizada_por  → auth.users(id)           ON DELETE SET NULL
-  - rechazada_por   → auth.users(id)           ON DELETE SET NULL
-
-cotizacion_paquetes:
-  - requisicion_id  → requisiciones(id)        ON DELETE CASCADE
-  - company_id      → companies(id)            ON DELETE CASCADE
-  - proveedor_id    → terceros(id)             ON DELETE RESTRICT
-```
-
-`paquete_id` en `ordenes_compra` ya tiene su FK; se respeta.
-
-### 2. `src/lib/api/cotizaciones.functions.ts`
-
-En `getCotizacionRequisicion`, agregar verificación de `error` para las dos consultas (`paquetes` y `ocs`) y lanzar `new Error(...)` si vienen con error. Así, si en el futuro un embed vuelve a romperse, el `errorComponent` lo muestra en vez de devolver datos en blanco silenciosamente.
+Esto mantiene intactas las selecciones en curso de proveedores que aún no se han enviado, mientras sigue rehidratando correctamente al reabrir el sheet (cuando el estado local arranca vacío y todo viene de paquetes persistidos) y al recibir confirmación del paquete recién enviado.
 
 ## Resultado esperado
 
-Al cerrar y reabrir el sheet sobre REQ-2026-001 (sin nuevas acciones):
+- Selecciono insumos para Proveedor A y Proveedor B en la comparativa.
+- Envío la OC de Proveedor A al supervisor → las líneas de A quedan bloqueadas con su tarjeta "Pendiente autorización".
+- Las líneas de Proveedor B **siguen marcadas** en la comparativa y su tarjeta "Pedido por proveedor" sigue visible, lista para enviar.
+- Al cerrar y reabrir el sheet, sigue funcionando la rehidratación desde paquetes persistidos (comportamiento ya corregido en el cambio anterior).
 
-- La pestaña muestra **OCs (2)**.
-- En el comparativo, el renglón de Mortero aparece con la asignación a Construalcalde candada (icono de lock) y los renglones cubiertos por OCs de Macrobodega también candados.
-- Las tarjetas "Pedido por proveedor" reaparecen con sus líneas y badge "Pendiente autorización".
-- Solo quedan editables las filas de insumos que aún no se enviaron a autorización.
-
-No se toca la lógica de UI ni los flujos de envío/autorización/rechazo/reapertura.
+No se toca backend, esquema, ni otras pestañas.
