@@ -161,32 +161,56 @@ export function ComparativaTable({
 
   // Estado de asignaciones: insumoId -> Asignacion[] (proveedorId = solicitudId del proveedor)
   const [asignaciones, setAsignaciones] = useState<Record<string, Asignacion[]>>({});
-  const [hydrated, setHydrated] = useState(false);
   const [enviandoProv, setEnviandoProv] = useState<string | null>(null);
   const [optimisticPendiente, setOptimisticPendiente] = useState<Set<string>>(new Set());
 
-  // Hidratar desde el paquete canónico de cada proveedor (no de TODOS los paquetes)
+  // Merge: combina asignaciones derivadas de paquetes persistidos con las
+  // ediciones en curso de proveedores que aún NO tienen paquete guardado.
+  // Esto evita que al enviar la OC de un proveedor se borren las selecciones
+  // en curso de los demás.
   useEffect(() => {
-    if (hydrated || paqueteByProveedor.size === 0) return;
-    const next: Record<string, Asignacion[]> = {};
-    for (const [provId, p] of paqueteByProveedor) {
+    const scIdsPersistidos = new Set<string>();
+    for (const provId of paqueteByProveedor.keys()) {
       const scId = solicitudByProveedor.get(provId);
-      if (!scId) continue; // proveedor sin cotización recibida → no representable en matriz
-      for (const it of p.items ?? []) {
-        if (!next[it.insumo_id]) next[it.insumo_id] = [];
-        next[it.insumo_id].push({ proveedorId: scId, cantidad: Number(it.cantidad) });
-      }
+      if (scId) scIdsPersistidos.add(scId);
     }
-    setAsignaciones(next);
-    setHydrated(true);
-  }, [paqueteByProveedor, solicitudByProveedor, hydrated]);
 
+    setAsignaciones((prev) => {
+      const next: Record<string, Asignacion[]> = {};
 
-  // Re-hidratar cuando cambian los paquetes/ocs/solicitudes (después de mutaciones o cuando
-  // los queries paralelos terminan de resolverse en distinto orden)
-  useEffect(() => {
-    setHydrated(false);
-  }, [paquetes.length, ocs.length, recibidas.length]);
+      // 1) Conservar ediciones en curso de proveedores SIN paquete persistido
+      for (const [insumoId, lista] of Object.entries(prev)) {
+        const filtradas = lista.filter((a) => !scIdsPersistidos.has(a.proveedorId));
+        if (filtradas.length > 0) next[insumoId] = filtradas;
+      }
+
+      // 2) Agregar líneas desde paquetes persistidos (fuente de verdad)
+      for (const [provId, p] of paqueteByProveedor) {
+        const scId = solicitudByProveedor.get(provId);
+        if (!scId) continue;
+        for (const it of p.items ?? []) {
+          if (!next[it.insumo_id]) next[it.insumo_id] = [];
+          next[it.insumo_id].push({ proveedorId: scId, cantidad: Number(it.cantidad) });
+        }
+      }
+
+      // Evitar re-renders si el resultado es equivalente
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      if (prevKeys.length === nextKeys.length) {
+        const igual = prevKeys.every((k) => {
+          const a = prev[k];
+          const b = next[k];
+          if (!b || a.length !== b.length) return false;
+          return a.every(
+            (x, i) => x.proveedorId === b[i].proveedorId && x.cantidad === b[i].cantidad,
+          );
+        });
+        if (igual) return prev;
+      }
+      return next;
+    });
+  }, [paqueteByProveedor, solicitudByProveedor]);
 
   // Limpiar marca optimista cuando el backend ya refleja un estatus posterior a borrador
   useEffect(() => {
