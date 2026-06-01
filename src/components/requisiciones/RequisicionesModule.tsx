@@ -77,6 +77,7 @@ export function RequisicionesModule({ obraId }: Props) {
           )}
           {activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+            const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
             return (
               <Card
                 key={r.id}
@@ -95,7 +96,21 @@ export function RequisicionesModule({ obraId }: Props) {
                       </p>
                     )}
                   </div>
-                  <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
+                    {mostrarRevisar && (
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCotizacion({ id: r.id, tab: "comparativa" });
+                        }}
+                      >
+                        <ShieldCheck className="size-4 mr-1" />
+                        Revisar y autorizar
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {(r.items ?? []).slice(0, 6).map((it: any) => (
@@ -117,6 +132,7 @@ export function RequisicionesModule({ obraId }: Props) {
               </Card>
             );
           })}
+
         </TabsContent>
 
         <TabsContent value="historial" className="mt-4">
