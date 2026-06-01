@@ -190,7 +190,29 @@ export type Database = {
           proveedor_id?: string | null
           requisicion_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_paquetes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_paquetes_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_paquetes_requisicion_id_fkey"
+            columns: ["requisicion_id"]
+            isOneToOne: false
+            referencedRelation: "requisiciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cotizacion_solicitud_insumos: {
         Row: {
@@ -606,10 +628,38 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "ordenes_compra_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ordenes_compra_paquete_id_fkey"
             columns: ["paquete_id"]
             isOneToOne: false
             referencedRelation: "cotizacion_paquetes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_requisicion_id_fkey"
+            columns: ["requisicion_id"]
+            isOneToOne: false
+            referencedRelation: "requisiciones"
             referencedColumns: ["id"]
           },
         ]
