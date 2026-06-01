@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus, FileText } from "lucide-react";
+import { Eye, Plus, FileText, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,10 @@ import { listRequisiciones } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
 import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
+import { CotizacionSheet, type CotizacionTab } from "./CotizacionSheet";
 import { useEffectiveRoles, isDirector } from "@/stores/auth";
 import { formatDate } from "@/lib/format";
+
 
 interface Props { obraId: string }
 
@@ -23,10 +25,13 @@ export function RequisicionesModule({ obraId }: Props) {
   const puedeCrear = isDirector(roles) || roles.some((r) =>
     ["pm", "auxiliar", "administrativo", "residente"].includes(r as string)
   );
+  const isSupervisor = isDirector(roles) || roles.includes("supervisor");
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+
 
   const fetchList = useServerFn(listRequisiciones);
   const activasQ = useQuery({
@@ -72,6 +77,7 @@ export function RequisicionesModule({ obraId }: Props) {
           )}
           {activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+            const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
             return (
               <Card
                 key={r.id}
@@ -90,7 +96,21 @@ export function RequisicionesModule({ obraId }: Props) {
                       </p>
                     )}
                   </div>
-                  <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
+                    {mostrarRevisar && (
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCotizacion({ id: r.id, tab: "comparativa" });
+                        }}
+                      >
+                        <ShieldCheck className="size-4 mr-1" />
+                        Revisar y autorizar
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {(r.items ?? []).slice(0, 6).map((it: any) => (
@@ -112,6 +132,7 @@ export function RequisicionesModule({ obraId }: Props) {
               </Card>
             );
           })}
+
         </TabsContent>
 
         <TabsContent value="historial" className="mt-4">
@@ -172,6 +193,15 @@ export function RequisicionesModule({ obraId }: Props) {
           onOpenChange={(o) => !o && setDetalleId(null)}
         />
       )}
+      {cotizacion && (
+        <CotizacionSheet
+          requisicionId={cotizacion.id}
+          initialTab={cotizacion.tab}
+          open={!!cotizacion}
+          onOpenChange={(o) => !o && setCotizacion(null)}
+        />
+      )}
+
     </div>
   );
 }

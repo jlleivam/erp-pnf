@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Building2, LayoutDashboard, BookOpen, Settings, LogOut, ChevronDown, HardHat, UserCog, Menu } from "lucide-react";
+import { Building2, LayoutDashboard, BookOpen, Settings, LogOut, ChevronDown, HardHat, UserCog, Menu, ShieldCheck } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,8 @@ export function AppShell() {
   const effRoles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
+  const showSupervisor = director || effRoles.includes("supervisor");
+
 
   const switchRole = (role: AppRole | null) => {
     setAssumedRole(role);
@@ -87,6 +89,21 @@ export function AppShell() {
         <NavItem to="/app/configuracion" label="Configuración" icon={<Settings className="size-4" />} active={pathname.startsWith("/app/configuracion")} onNavigate={onNavigate} />
       </div>
 
+      {showSupervisor && (
+        <div>
+          <p className="px-3 mb-2 text-xs uppercase tracking-wider text-sidebar-foreground/50">
+            Supervisión
+          </p>
+          <NavItem
+            to="/app/supervisor/requisiciones"
+            label="Por autorizar"
+            icon={<ShieldCheck className="size-4" />}
+            active={pathname.startsWith("/app/supervisor/requisiciones")}
+            onNavigate={onNavigate}
+          />
+        </div>
+      )}
+
       {showAdmin && (
         <div>
           <p className="px-3 mb-2 text-xs uppercase tracking-wider text-sidebar-foreground/50">
@@ -97,6 +114,7 @@ export function AppShell() {
           ))}
         </div>
       )}
+
     </nav>
   );
 
