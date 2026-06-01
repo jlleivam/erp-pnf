@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus, FileText } from "lucide-react";
+import { Eye, Plus, FileText, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,10 @@ import { listRequisiciones } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
 import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
+import { CotizacionSheet, type CotizacionTab } from "./CotizacionSheet";
 import { useEffectiveRoles, isDirector } from "@/stores/auth";
 import { formatDate } from "@/lib/format";
+
 
 interface Props { obraId: string }
 
