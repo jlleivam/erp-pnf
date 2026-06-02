@@ -553,8 +553,11 @@ function EditarInsumoDialog({
 }: { insumo: any; categorias: any[]; onClose: () => void }) {
   const qc = useQueryClient();
   const [nombre, setNombre] = useState(insumo.nombre);
+  const [codigo, setCodigo] = useState<string>(insumo.codigo ?? "");
   const [unidad, setUnidad] = useState<Unidad>(insumo.unidad);
   const [categoriaId, setCategoriaId] = useState<string>(insumo.categoria_id ?? "none");
+
+  const codigoValido = !codigo || /^[A-Z0-9]{2,5}-\d{3,6}$/.test(codigo);
 
   const mut = useMutation({
     mutationFn: useServerFn(editarInsumo),
@@ -571,9 +574,24 @@ function EditarInsumoDialog({
       <DialogContent>
         <DialogHeader><DialogTitle>Editar insumo</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Nombre</Label>
-            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} />
+          <div className="grid grid-cols-[140px_1fr] gap-3">
+            <div>
+              <Label>Código</Label>
+              <Input
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
+                placeholder="CEM-0001"
+                maxLength={12}
+                className="font-mono uppercase"
+              />
+              {!codigoValido && (
+                <p className="text-[11px] text-destructive mt-1">Formato: PREFIJO-NÚMERO (ej. CEM-0001)</p>
+              )}
+            </div>
+            <div>
+              <Label>Nombre</Label>
+              <Input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -596,14 +614,18 @@ function EditarInsumoDialog({
               </Select>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            El código se asigna automáticamente al crear el insumo. Solo se edita si necesitas corregirlo manualmente.
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
-            disabled={!nombre.trim() || mut.isPending}
+            disabled={!nombre.trim() || !codigoValido || mut.isPending}
             onClick={() => mut.mutate({ data: {
               id: insumo.id, nombre: nombre.trim(), unidad,
               categoriaId: categoriaId === "none" ? null : categoriaId,
+              codigo: codigo || undefined,
             } })}
           >
             Guardar
