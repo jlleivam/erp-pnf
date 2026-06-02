@@ -735,7 +735,15 @@ export type Database = {
           renglon_clave?: string
           unidad?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_destajo_estimacion_renglones_estimacion_id_fkey"
+            columns: ["estimacion_id"]
+            isOneToOne: false
+            referencedRelation: "obra_destajo_estimaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_destajo_estimaciones: {
         Row: {
@@ -783,7 +791,22 @@ export type Database = {
           semana_inicio?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_destajo_estimaciones_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_destajo_estimaciones_destajo_id_fkey"
+            columns: ["destajo_id"]
+            isOneToOne: false
+            referencedRelation: "obra_destajos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_destajo_presupuestos: {
         Row: {
@@ -846,7 +869,15 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_destajo_presupuestos_destajo_id_fkey"
+            columns: ["destajo_id"]
+            isOneToOne: false
+            referencedRelation: "obra_destajos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_destajo_renglones: {
         Row: {
@@ -900,7 +931,15 @@ export type Database = {
           tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
           unidad?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_destajo_renglones_presupuesto_destajo_id_fkey"
+            columns: ["presupuesto_destajo_id"]
+            isOneToOne: false
+            referencedRelation: "obra_destajo_presupuestos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_destajo_trabajadores: {
         Row: {
@@ -930,7 +969,22 @@ export type Database = {
           id?: string
           trabajador_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_destajo_trabajadores_destajo_id_fkey"
+            columns: ["destajo_id"]
+            isOneToOne: false
+            referencedRelation: "obra_destajos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_destajo_trabajadores_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_destajos: {
         Row: {
@@ -975,7 +1029,29 @@ export type Database = {
           obra_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_destajos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_destajos_destajista_id_fkey"
+            columns: ["destajista_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_destajos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_estimacion_renglones: {
         Row: {
