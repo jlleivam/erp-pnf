@@ -331,6 +331,20 @@ export const importarInsumos = createServerFn({ method: "POST" })
     const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede importar insumos");
 
+    // Validar que todas las unidades existan en el catálogo
+    const { data: existingUnits } = await supabase
+      .from("insumo_unidades").select("codigo").eq("company_id", companyId);
+    const validUnits = new Set((existingUnits ?? []).map((u: any) => String(u.codigo).toUpperCase()));
+    const unidadesFaltantes = Array.from(new Set(
+      data.filas.map((f) => f.unidad).filter((u) => !validUnits.has(u))
+    ));
+    if (unidadesFaltantes.length > 0) {
+      throw new Error(
+        `Las siguientes unidades no existen en el catálogo: ${unidadesFaltantes.join(", ")}. Créalas primero desde el catálogo de Unidades.`
+      );
+    }
+
+
     // Cargar insumos existentes de la compañía para detectar duplicados
     const { data: existingInsumos, error: exErr } = await supabase
       .from("insumos").select("nombre").eq("company_id", companyId);
