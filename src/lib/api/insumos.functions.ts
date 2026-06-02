@@ -416,3 +416,103 @@ export const importarInsumos = createServerFn({ method: "POST" })
 
     return { ok: true as const, insertadas: rows.length, categoriasCreadas: nuevasCats.size };
   });
+
+// ============= UNIDADES =============
+
+export const listUnidades = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("insumo_unidades")
+      .select("id, codigo, nombre")
+      .order("codigo");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const crearUnidad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      codigo: unidadSchema,
+      nombre: z.string().trim().max(100).optional().nullable(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede crear unidades");
+    const { error } = await supabase.from("insumo_unidades").insert({
+      company_id: companyId,
+      codigo: data.codigo,
+      nombre: data.nombre || null,
+    });
+    if (error) {
+      if (error.code === "23505") throw new Error(`La unidad "${data.codigo}" ya existe`);
+      throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const editarUnidad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      codigo: unidadSchema,
+      nombre: z.string().trim().max(100).optional().nullable(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede editar unidades");
+
+    // Si cambia el código, actualizar los insumos asociados
+    const { data: actual } = await supabase
+      .from("insumo_unidades").select("codigo").eq("id", data.id).maybeSingle();
+    const codigoAnterior = actual?.codigo as string | undefined;
+
+    const { error } = await supabase
+      .from("insumo_unidades")
+      .update({ codigo: data.codigo, nombre: data.nombre || null })
+      .eq("id", data.id);
+    if (error) {
+      if (error.code === "23505") throw new Error(`La unidad "${data.codigo}" ya existe`);
+      throw new Error(error.message);
+    }
+
+    if (codigoAnterior && codigoAnterior !== data.codigo) {
+      await supabase
+        .from("insumos")
+        .update({ unidad: data.codigo })
+        .eq("company_id", companyId)
+        .eq("unidad", codigoAnterior);
+    }
+    return { ok: true };
+  });
+
+export const eliminarUnidad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede eliminar unidades");
+
+    const { data: u } = await supabase
+      .from("insumo_unidades").select("codigo").eq("id", data.id).maybeSingle();
+    if (!u) throw new Error("Unidad no encontrada");
+
+    const { count } = await supabase
+      .from("insumos")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("unidad", u.codigo);
+    if ((count ?? 0) > 0) {
+      throw new Error(`No se puede eliminar: la unidad "${u.codigo}" está en uso por ${count} insumo(s)`);
+    }
+    const { error } = await supabase.from("insumo_unidades").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
