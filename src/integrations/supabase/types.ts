@@ -1449,7 +1449,15 @@ export type Database = {
           renglon_clave?: string
           unidad?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_subcontrato_estimacion_renglones_estimacion_fkey"
+            columns: ["estimacion_id"]
+            isOneToOne: false
+            referencedRelation: "obra_subcontrato_estimaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_subcontrato_estimaciones: {
         Row: {
@@ -1497,7 +1505,15 @@ export type Database = {
           subcontrato_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_subcontrato_estimaciones_subcontrato_id_fkey"
+            columns: ["subcontrato_id"]
+            isOneToOne: false
+            referencedRelation: "obra_subcontratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_subcontrato_presupuestos: {
         Row: {
@@ -1560,7 +1576,15 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_subcontrato_presupuestos_subcontrato_id_fkey"
+            columns: ["subcontrato_id"]
+            isOneToOne: false
+            referencedRelation: "obra_subcontratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_subcontrato_renglones: {
         Row: {
@@ -1614,7 +1638,15 @@ export type Database = {
           tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
           unidad?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_subcontrato_renglones_presupuesto_fkey"
+            columns: ["presupuesto_subcontrato_id"]
+            isOneToOne: false
+            referencedRelation: "obra_subcontrato_presupuestos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_subcontratos: {
         Row: {
@@ -1659,7 +1691,29 @@ export type Database = {
           obra_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obra_subcontratos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_subcontratos_contratista_id_fkey"
+            columns: ["contratista_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_subcontratos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obra_team: {
         Row: {
