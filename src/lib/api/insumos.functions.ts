@@ -2,7 +2,18 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"] as const;
+const UNIDAD_REGEX = /^[A-Z0-9]{1,10}$/;
+const unidadSchema = z.string().trim().toUpperCase().regex(UNIDAD_REGEX, "Unidad: 1-10 caracteres (letras o números)");
+
+async function validateUnidad(supabase: any, companyId: string, unidad: string) {
+  const { count, error } = await supabase
+    .from("insumo_unidades")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .eq("codigo", unidad);
+  if (error) throw new Error(error.message);
+  if (!count) throw new Error(`Unidad "${unidad}" no existe. Créala desde el catálogo de unidades.`);
+}
 
 async function getUserCompanyAndDirector(supabase: any, userId: string) {
   const { data: profile } = await supabase
