@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  AlertTriangle, BarChart3, Boxes, Check, FileSpreadsheet, FolderTree, Pencil, Plus, Search,
+  AlertTriangle, BarChart3, Boxes, Check, FileSpreadsheet, FolderTree, Pencil, Plus, Ruler, Search,
   Tag, Trash2, TrendingUp, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,11 @@ import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
 import {
   listInsumos, listCategorias, getMetricasInsumos, solicitarInsumo, editarInsumo,
   autorizarInsumo, rechazarInsumo, crearCategoria, editarCategoria, eliminarCategoria,
-  getHistorialPrecios,
+  getHistorialPrecios, listUnidades, crearUnidad, editarUnidad, eliminarUnidad,
 } from "@/lib/api/insumos.functions";
 import { ImportarInsumosDialog } from "./ImportarInsumosDialog";
 
-const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"] as const;
-type Unidad = (typeof UNIDADES)[number];
+type Unidad = string;
 
 const BADGE_TONES = [
   "bg-blue-100 text-blue-800",
