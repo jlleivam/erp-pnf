@@ -156,7 +156,7 @@ export function CatalogoInsumosModule() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Nombre del insumo..."
+                placeholder="Nombre o código..."
                 className="pl-8"
               />
             </div>
@@ -204,6 +204,7 @@ export function CatalogoInsumosModule() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[120px]">Código</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead>Categoría</TableHead>
@@ -214,12 +215,13 @@ export function CatalogoInsumosModule() {
               </TableHeader>
               <TableBody>
                 {(insumosQ.data ?? []).length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No hay insumos autorizados con esos filtros.
                   </TableCell></TableRow>
                 )}
                 {(insumosQ.data ?? []).map((i: any) => (
                   <TableRow key={i.id}>
+                    <TableCell className="font-mono text-xs">{i.codigo ?? "—"}</TableCell>
                     <TableCell className="font-medium">{i.nombre}</TableCell>
                     <TableCell><Badge variant="outline">{i.unidad}</Badge></TableCell>
                     <TableCell>
@@ -416,21 +418,28 @@ function SolicitarDialog({
   );
 }
 
+function derivarPrefijoUI(nombre: string): string {
+  const clean = nombre.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return (clean + "XXX").slice(0, 3);
+}
+
 function CategoriasDialog({
   open, onOpenChange, categorias,
 }: { open: boolean; onOpenChange: (b: boolean) => void; categorias: any[] }) {
   const qc = useQueryClient();
   const [nueva, setNueva] = useState("");
-  const [editing, setEditing] = useState<{ id: string; nombre: string } | null>(null);
+  const [nuevoPrefijo, setNuevoPrefijo] = useState("");
+  const [editing, setEditing] = useState<{ id: string; nombre: string; prefijo: string } | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["insumo-categorias"] });
     qc.invalidateQueries({ queryKey: ["insumos-metricas"] });
+    qc.invalidateQueries({ queryKey: ["insumos"] });
   };
 
   const crearMut = useMutation({
     mutationFn: useServerFn(crearCategoria),
-    onSuccess: () => { toast.success("Categoría creada"); setNueva(""); invalidate(); },
+    onSuccess: () => { toast.success("Categoría creada"); setNueva(""); setNuevoPrefijo(""); invalidate(); },
     onError: (e: any) => toast.error(e.message),
   });
   const editMut = useMutation({
@@ -444,23 +453,44 @@ function CategoriasDialog({
     onError: (e: any) => toast.error(e.message),
   });
 
+  const prefijoAuto = nueva.trim() ? derivarPrefijoUI(nueva.trim()) : "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Categorías de insumos</DialogTitle>
+          <DialogDescription>
+            El prefijo (3 caracteres) se usa para generar el código de los insumos, ej. <span className="font-mono">CEM-0001</span>.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={nueva}
-              onChange={(e) => setNueva(e.target.value)}
-              placeholder="Nueva categoría..."
-              maxLength={100}
-            />
+          <div className="grid grid-cols-[1fr_100px_auto] gap-2 items-end">
+            <div>
+              <Label className="text-xs">Nombre</Label>
+              <Input
+                value={nueva}
+                onChange={(e) => setNueva(e.target.value)}
+                placeholder="Nueva categoría..."
+                maxLength={100}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Prefijo</Label>
+              <Input
+                value={nuevoPrefijo}
+                onChange={(e) => setNuevoPrefijo(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3))}
+                placeholder={prefijoAuto || "AUTO"}
+                maxLength={3}
+                className="font-mono uppercase"
+              />
+            </div>
             <Button
               disabled={!nueva.trim() || crearMut.isPending}
-              onClick={() => crearMut.mutate({ data: { nombre: nueva.trim() } })}
+              onClick={() => crearMut.mutate({ data: {
+                nombre: nueva.trim(),
+                prefijo: nuevoPrefijo.length === 3 ? nuevoPrefijo : undefined,
+              } })}
             >
               <Plus /> Agregar
             </Button>
@@ -477,14 +507,26 @@ function CategoriasDialog({
                       value={editing.nombre}
                       onChange={(e) => setEditing((prev) => prev ? { ...prev, nombre: e.target.value } : prev)}
                       maxLength={100}
+                      className="flex-1"
                     />
-                    <Button size="sm" onClick={() => editing && editMut.mutate({ data: editing })}>Guardar</Button>
+                    <Input
+                      value={editing.prefijo}
+                      onChange={(e) => setEditing((prev) => prev ? { ...prev, prefijo: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) } : prev)}
+                      maxLength={3}
+                      className="w-20 font-mono uppercase"
+                    />
+                    <Button size="sm" onClick={() => editing && editMut.mutate({ data: {
+                      id: editing.id,
+                      nombre: editing.nombre.trim(),
+                      prefijo: editing.prefijo.length === 3 ? editing.prefijo : undefined,
+                    } })}>Guardar</Button>
                     <Button size="sm" variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
                   </>
                 ) : (
                   <>
                     <span className="flex-1 text-sm">{c.nombre}</span>
-                    <Button size="icon" variant="ghost" onClick={() => setEditing({ id: c.id, nombre: c.nombre })}>
+                    <Badge variant="outline" className="font-mono">{c.prefijo ?? "—"}</Badge>
+                    <Button size="icon" variant="ghost" onClick={() => setEditing({ id: c.id, nombre: c.nombre, prefijo: c.prefijo ?? "" })}>
                       <Pencil />
                     </Button>
                     <Button
@@ -511,8 +553,11 @@ function EditarInsumoDialog({
 }: { insumo: any; categorias: any[]; onClose: () => void }) {
   const qc = useQueryClient();
   const [nombre, setNombre] = useState(insumo.nombre);
+  const [codigo, setCodigo] = useState<string>(insumo.codigo ?? "");
   const [unidad, setUnidad] = useState<Unidad>(insumo.unidad);
   const [categoriaId, setCategoriaId] = useState<string>(insumo.categoria_id ?? "none");
+
+  const codigoValido = !codigo || /^[A-Z0-9]{2,5}-\d{3,6}$/.test(codigo);
 
   const mut = useMutation({
     mutationFn: useServerFn(editarInsumo),
@@ -529,9 +574,24 @@ function EditarInsumoDialog({
       <DialogContent>
         <DialogHeader><DialogTitle>Editar insumo</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Nombre</Label>
-            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} />
+          <div className="grid grid-cols-[140px_1fr] gap-3">
+            <div>
+              <Label>Código</Label>
+              <Input
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
+                placeholder="CEM-0001"
+                maxLength={12}
+                className="font-mono uppercase"
+              />
+              {!codigoValido && (
+                <p className="text-[11px] text-destructive mt-1">Formato: PREFIJO-NÚMERO (ej. CEM-0001)</p>
+              )}
+            </div>
+            <div>
+              <Label>Nombre</Label>
+              <Input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -554,14 +614,18 @@ function EditarInsumoDialog({
               </Select>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            El código se asigna automáticamente al crear el insumo. Solo se edita si necesitas corregirlo manualmente.
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
-            disabled={!nombre.trim() || mut.isPending}
+            disabled={!nombre.trim() || !codigoValido || mut.isPending}
             onClick={() => mut.mutate({ data: {
               id: insumo.id, nombre: nombre.trim(), unidad,
               categoriaId: categoriaId === "none" ? null : categoriaId,
+              codigo: codigo || undefined,
             } })}
           >
             Guardar

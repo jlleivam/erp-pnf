@@ -515,18 +515,21 @@ export type Database = {
           created_at: string
           id: string
           nombre: string
+          prefijo: string
         }
         Insert: {
           company_id: string
           created_at?: string
           id?: string
           nombre: string
+          prefijo: string
         }
         Update: {
           company_id?: string
           created_at?: string
           id?: string
           nombre?: string
+          prefijo?: string
         }
         Relationships: []
       }
@@ -535,6 +538,7 @@ export type Database = {
           autorizado_at: string | null
           autorizado_por: string | null
           categoria_id: string | null
+          codigo: string | null
           company_id: string
           created_at: string
           estatus: Database["public"]["Enums"]["insumo_estatus"]
@@ -547,6 +551,7 @@ export type Database = {
           autorizado_at?: string | null
           autorizado_por?: string | null
           categoria_id?: string | null
+          codigo?: string | null
           company_id: string
           created_at?: string
           estatus?: Database["public"]["Enums"]["insumo_estatus"]
@@ -559,6 +564,7 @@ export type Database = {
           autorizado_at?: string | null
           autorizado_por?: string | null
           categoria_id?: string | null
+          codigo?: string | null
           company_id?: string
           created_at?: string
           estatus?: Database["public"]["Enums"]["insumo_estatus"]
@@ -2649,6 +2655,10 @@ export type Database = {
       }
       is_director_of: { Args: { _company_id: string }; Returns: boolean }
       is_member_of_obra: { Args: { _obra_id: string }; Returns: boolean }
+      siguiente_codigo_insumo: {
+        Args: { _categoria_id: string; _company_id: string }
+        Returns: string
+      }
       siguiente_folio_oc: { Args: { _company_id: string }; Returns: string }
       siguiente_folio_requisicion: {
         Args: { _company_id: string }

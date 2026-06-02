@@ -1,82 +1,44 @@
-# Módulo de Rentas
 
-Replica el patrón de Destajos/Subcontratos (a nivel obra) pero orientado a equipos rentados con cobro periódico prorrateado y control de vencimiento.
+## Plan: Campo `código` en catálogo de insumos
 
-## Flujo
+### Formato
+`[PREFIJO_CATEGORÍA]-[CONSECUTIVO 4 dígitos]` — ej. `CEM-0001`, `ACE-0023`, `GEN-0007` (sin categoría).
 
-1. **Residente** crea solicitud: equipo, cantidad, periodicidad sugerida, fecha estimada de inicio, notas.
-2. **Administrativo** cotiza: selecciona **proveedor** del catálogo de terceros (categoría `proveedor` o `ambos`), captura tarifa, periodicidad (diaria / semanal / quincenal / mensual), depósito, condiciones.
-3. **Supervisor** autoriza o rechaza la cotización.
-4. **Residente** marca **fecha de llegada real** — desde ese día corre el contador de renta.
-5. Durante la vigencia el residente puede:
-   - Registrar eventos de **avería / inactividad** (bitácora con fecha inicio, fecha fin, motivo, foto opcional). No descuenta el cobro pero queda como soporte para reclamar al proveedor.
-   - **Renovar** (extender fecha fin) → requiere autorización del supervisor de nuevo.
-   - **Devolver** (cerrar la renta) → captura fecha de devolución real, congela cobro acumulado.
-6. Sistema dispara **alertas** N días antes del vencimiento al residente y supervisor.
+### Cambios en base de datos (migración)
 
-## Estatus de la renta
+1. **`insumo_categorias`**: agregar columna `prefijo TEXT NOT NULL` (3 letras mayúsculas, validado con CHECK `^[A-Z]{3}$`). Default = primeras 3 letras del nombre. Único por `company_id`.
+2. **`insumos`**: agregar columna `codigo TEXT` (único por `company_id`, índice).
+3. **Función `siguiente_codigo_insumo(_company_id uuid, _categoria_id uuid)`**:
+   - Lee el prefijo de la categoría (o `'GEN'` si null).
+   - Calcula `MAX(consecutivo) + 1` por prefijo dentro de la compañía.
+   - Devuelve `'PREFIJO-0001'` con padding 4.
+4. **Backfill**: asignar prefijo a categorías existentes (3 primeras letras en mayúsculas, desambiguar duplicados con sufijo) y generar `codigo` para insumos existentes ordenados por `created_at`.
+5. **Trigger `BEFORE INSERT` en `insumos`**: si `codigo IS NULL`, autogenera con la función.
 
-`borrador → cotizada → autorizada → rechazada → activa (al marcar llegada) → por_vencer → devuelta`
+### Cambios en backend (`src/lib/api/insumos.functions.ts`)
 
-Renovaciones generan un sub-documento con su propio ciclo `pendiente → autorizada/rechazada`.
+- **`listInsumos`**: incluir `codigo` y `categoria.prefijo` en el select; ampliar `search` para buscar por código además del nombre.
+- **`solicitarInsumo`**: sin cambios (trigger asigna código al autorizar — ver siguiente).
+- **`autorizarInsumo`**: si el insumo no tiene código, generarlo en ese momento (para evitar quemar consecutivos en solicitudes rechazadas).
+- **`editarInsumo`**: aceptar `codigo` opcional; validar formato `^[A-Z]{2,5}-\d{3,6}$` y unicidad por compañía. **No** regenerar automáticamente si cambia la categoría.
+- **`crearCategoria`** y **`editarCategoria`**: aceptar `prefijo` (3 letras), validar único por compañía. Default auto desde nombre si viene vacío.
+- **`importarInsumos`**: ignorar cualquier columna de código del Excel; autogenerar todos los códigos al insertar (las categorías nuevas creadas durante la importación usan prefijo derivado del nombre).
 
-## Base de datos (nueva migración)
+### Cambios en UI (`src/components/insumos/CatalogoInsumosModule.tsx`)
 
-- `obra_rentas` — `obra_id`, `company_id`, `proveedor_id` (FK `terceros`), `numero`, `equipo` (texto), `cantidad`, `descripcion`, `periodicidad` (enum `diaria|semanal|quincenal|mensual`), `tarifa_unitaria`, `deposito`, `fecha_estimada_inicio`, `fecha_llegada_real`, `fecha_fin_programada`, `fecha_devolucion_real`, `estatus` (enum nuevo `renta_estatus`), `dias_aviso_vencimiento` (default 3), `creado_por`, `cotizado_por`, `autorizado_por`, `rechazado_por`, `rechazo_motivo`, timestamps.
-- `obra_renta_renovaciones` — `renta_id`, `numero`, `fecha_fin_nueva`, `tarifa_nueva` (opcional), `estatus` (`pendiente|autorizada|rechazada`), `solicitado_por`, `autorizado_por`, `rechazado_por`, `rechazo_motivo`, timestamps.
-- `obra_renta_eventos` — `renta_id`, `tipo` (`averia|inactividad|nota`), `fecha_inicio`, `fecha_fin`, `descripcion`, `evidencia_url` (opcional), `creado_por`, `created_at`. Bitácora, sin afectar cobro.
-- `obra_renta_pagos` — `renta_id`, `periodo_inicio`, `periodo_fin`, `monto`, `pagado_at`, `referencia`, `creado_por`. Registro de pagos efectuados (informativo; el prorrateo se calcula al vuelo desde `fecha_llegada_real` + `periodicidad` + `tarifa`).
+- **Tabla autorizados**: nueva primera columna `Código` (monospace, badge sutil).
+- **Tabla pendientes**: mostrar `— (al autorizar)` en columna código.
+- **`EditarInsumoDialog`**: input adicional `Código` (solo Director, editable, con validación de formato y mensaje de unicidad).
+- **`CategoriasDialog`**: input adicional `Prefijo (3 letras)` al crear/editar categoría, con autocompletado desde el nombre.
+- **Búsqueda**: placeholder pasa a "Nombre o código...".
+- **`SolicitarDialog`** y **`ImportarInsumosDialog`**: nota informativa "El código se genera automáticamente al autorizar".
 
-Enum nuevo: `renta_estatus` (`borrador, cotizada, autorizada, rechazada, activa, por_vencer, devuelta`).
-Enum nuevo: `renta_periodicidad` (`diaria, semanal, quincenal, mensual`).
+### Fuera de alcance
+- Regeneración masiva de códigos al cambiar prefijo de categoría (queda como acción manual futura).
+- Edición de código por Administrativo (se mantiene solo Director, como hoy).
 
-Para cada tabla: `GRANT … TO authenticated` + `service_role`, RLS habilitado y políticas equivalentes a Destajos:
-- Lectura: miembros de la compañía.
-- Residente (miembro de obra) crea solicitud y eventos, marca llegada/devolución/renovación.
-- Administrativo cotiza (rol `administrativo`).
-- Supervisor autoriza/rechaza (rol `supervisor`).
-- Director hace todo.
-
-## Backend — `src/lib/api/rentas.functions.ts`
-
-- `listRentas(obraId)` — devuelve rentas con `proveedor_nombre`, `dias_acumulados`, `monto_acumulado`, `dias_restantes`.
-- `getRenta(id)` — header + renovaciones + eventos + pagos.
-- `crearSolicitudRenta` (residente) — estatus `borrador`.
-- `cotizarRenta` (administrativo) — captura proveedor/tarifa/periodicidad → `cotizada`.
-- `autorizarRenta` / `rechazarRenta` (supervisor) → `autorizada` / `rechazada`.
-- `marcarLlegada(rentaId, fechaLlegada, fechaFinProgramada)` → `activa`.
-- `solicitarRenovacion` / `autorizarRenovacion` / `rechazarRenovacion`.
-- `marcarDevolucion(rentaId, fecha)` → `devuelta`.
-- `registrarEvento` / `listEventos`.
-- `registrarPago` / `listPagos`.
-- Helper de prorrateo: dado periodicidad + tarifa + fecha llegada + fecha actual (o devolución), regresa periodos transcurridos y monto acumulado.
-
-## Frontend — `src/components/rentas/`
-
-- `RentasModule.tsx` — tabla con columnas #, Equipo, Proveedor, Estatus, Llegada, Vence, Acumulado, Acciones. KPIs: **Rentas activas**, **Acumulado del mes**, **Próximas a vencer** (≤ días aviso).
-- `NuevaRentaDialog.tsx` — formulario simple del residente (equipo, cantidad, fecha estimada, notas).
-- `RentaDetalleSheet.tsx` — header con datos + estatus, pestañas:
-  - **Cotización** (captura del administrativo + botones autorizar/rechazar del supervisor).
-  - **Vigencia** (marcar llegada, renovar, devolver, fechas y monto acumulado).
-  - **Bitácora** (eventos de avería/inactividad).
-  - **Pagos** (registro informativo).
-- `CotizarRentaDialog.tsx`, `MarcarLlegadaDialog.tsx`, `RenovarRentaDialog.tsx`, `DevolverRentaDialog.tsx`, `RegistrarEventoDialog.tsx`, `RegistrarPagoDialog.tsx`.
-- Banner amarillo en cabecera cuando `dias_restantes <= dias_aviso_vencimiento`.
-
-## Notificaciones
-
-Al cambiar a `cotizada` → notificar al supervisor. Al `autorizada/rechazada` → notificar al residente. Al cruzar el umbral de aviso (calculado en `listRentas` y mostrado en KPI; alerta visual por ahora, sin cron job).
-
-## Routing
-
-En `src/routes/_authenticated/app.obras.$obraId.$.tsx` añadir:
-```ts
-if (slug === "rentas") return <RentasModule obraId={obraId} />;
-```
-(El slug y label ya existen en `LABELS`.)
-
-## Fuera de alcance
-
-- Cron job real para enviar notificaciones automáticas de vencimiento (por ahora solo bandera visual en UI/KPI).
-- Descuento automático del cobro por tiempo inactivo (acordamos: solo bitácora).
-- Módulo admin global de rentas (`/app/admin/rentas` queda como placeholder).
+### Archivos tocados
+- `supabase/migrations/<nuevo>.sql` (schema + función + trigger + backfill)
+- `src/lib/api/insumos.functions.ts`
+- `src/components/insumos/CatalogoInsumosModule.tsx`
+- `src/components/insumos/ImportarInsumosDialog.tsx` (solo nota informativa)

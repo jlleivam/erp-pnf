@@ -14,6 +14,38 @@ async function getUserCompanyAndDirector(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, isDirector };
 }
 
+const CODIGO_REGEX = /^[A-Z0-9]{2,5}-\d{3,6}$/;
+const PREFIJO_REGEX = /^[A-Z0-9]{3}$/;
+
+function derivarPrefijo(nombre: string): string {
+  const clean = nombre.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return (clean + "XXX").slice(0, 3);
+}
+
+async function prefijoUnico(
+  supabase: any,
+  companyId: string,
+  base: string,
+  excludeId?: string,
+): Promise<string> {
+  let candidate = base;
+  for (let suffix = 1; suffix <= 99; suffix++) {
+    let q = supabase
+      .from("insumo_categorias")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("prefijo", candidate);
+    if (excludeId) q = q.neq("id", excludeId);
+    const { count } = await q;
+    if (!count) return candidate;
+    candidate =
+      suffix < 10
+        ? base.slice(0, 2) + String(suffix + 1)
+        : base.slice(0, 1) + String(suffix + 1).padStart(2, "0");
+  }
+  throw new Error("No se pudo generar un prefijo único");
+}
+
 export const listInsumos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -28,12 +60,15 @@ export const listInsumos = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("insumos")
-      .select("id, nombre, unidad, estatus, categoria_id, solicitado_por, created_at, autorizado_at, categoria:insumo_categorias(id, nombre)")
+      .select("id, codigo, nombre, unidad, estatus, categoria_id, solicitado_por, created_at, autorizado_at, categoria:insumo_categorias(id, nombre, prefijo)")
       .order("created_at", { ascending: false });
     if (data.estatus) q = q.eq("estatus", data.estatus);
     if (data.categoriaId) q = q.eq("categoria_id", data.categoriaId);
     if (data.unidad) q = q.eq("unidad", data.unidad);
-    if (data.search) q = q.ilike("nombre", `%${data.search}%`);
+    if (data.search) {
+      const s = data.search.replace(/[%_]/g, "\\$&");
+      q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`);
+    }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
@@ -134,14 +169,28 @@ export const editarInsumo = createServerFn({ method: "POST" })
       nombre: z.string().trim().min(1).max(200),
       unidad: z.enum(UNIDADES),
       categoriaId: z.string().uuid().nullable(),
+      codigo: z.string().trim().toUpperCase().regex(CODIGO_REGEX, "Formato inválido (ej. CEM-0001)").optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("insumos")
-      .update({ nombre: data.nombre, unidad: data.unidad, categoria_id: data.categoriaId })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const { supabase, userId } = context;
+    const { isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede editar insumos");
+    const patch: {
+      nombre: string; unidad: typeof data.unidad; categoria_id: string | null; codigo?: string;
+    } = {
+      nombre: data.nombre,
+      unidad: data.unidad,
+      categoria_id: data.categoriaId,
+    };
+    if (data.codigo) patch.codigo = data.codigo;
+    const { error } = await supabase.from("insumos").update(patch).eq("id", data.id);
+    if (error) {
+      if (error.message.includes("insumos_codigo_unique")) {
+        throw new Error("Ese código ya existe en otro insumo");
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
@@ -174,26 +223,49 @@ export const rechazarInsumo = createServerFn({ method: "POST" })
 
 export const crearCategoria = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ nombre: z.string().trim().min(1).max(100) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({
+      nombre: z.string().trim().min(1).max(100),
+      prefijo: z.string().trim().toUpperCase().regex(PREFIJO_REGEX, "Prefijo debe ser 3 letras o números").optional(),
+    }).parse(d)
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede crear categorías");
+    const base = data.prefijo ?? derivarPrefijo(data.nombre);
+    const prefijo = data.prefijo ? base : await prefijoUnico(supabase, companyId, base);
     const { error } = await supabase
-      .from("insumo_categorias").insert({ company_id: companyId, nombre: data.nombre });
-    if (error) throw new Error(error.message);
+      .from("insumo_categorias").insert({ company_id: companyId, nombre: data.nombre, prefijo });
+    if (error) {
+      if (error.message.includes("insumo_categorias_prefijo_unique")) {
+        throw new Error(`El prefijo "${prefijo}" ya está en uso`);
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
 export const editarCategoria = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), nombre: z.string().trim().min(1).max(100) }).parse(d)
+    z.object({
+      id: z.string().uuid(),
+      nombre: z.string().trim().min(1).max(100),
+      prefijo: z.string().trim().toUpperCase().regex(PREFIJO_REGEX, "Prefijo debe ser 3 letras o números").optional(),
+    }).parse(d)
   )
   .handler(async ({ data, context }) => {
+    const patch: { nombre: string; prefijo?: string } = { nombre: data.nombre };
+    if (data.prefijo) patch.prefijo = data.prefijo;
     const { error } = await context.supabase
-      .from("insumo_categorias").update({ nombre: data.nombre }).eq("id", data.id);
-    if (error) throw new Error(error.message);
+      .from("insumo_categorias").update(patch).eq("id", data.id);
+    if (error) {
+      if (error.message.includes("insumo_categorias_prefijo_unique")) {
+        throw new Error(`El prefijo "${data.prefijo}" ya está en uso`);
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
@@ -284,7 +356,12 @@ export const importarInsumos = createServerFn({ method: "POST" })
       }
     }
     if (nuevasCats.size > 0) {
-      const toInsert = Array.from(nuevasCats.values()).map((nombre) => ({ company_id: companyId, nombre }));
+      const toInsert: { company_id: string; nombre: string; prefijo: string }[] = [];
+      for (const nombre of nuevasCats.values()) {
+        const base = derivarPrefijo(nombre);
+        const prefijo = await prefijoUnico(supabase, companyId, base);
+        toInsert.push({ company_id: companyId, nombre, prefijo });
+      }
       const { data: inserted, error: insCatErr } = await supabase
         .from("insumo_categorias").insert(toInsert).select("id, nombre");
       if (insCatErr) throw new Error(`Error creando categorías: ${insCatErr.message}`);
