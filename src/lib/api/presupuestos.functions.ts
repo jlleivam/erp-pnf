@@ -1,7 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { procesarRenglones, type RenglonInput } from "@/lib/presupuesto-utils";
+import {
+  procesarRenglones,
+  procesarOrdenCambio,
+  reconstruirVigente,
+  type RenglonInput,
+  type RenglonBase,
+  type RenglonOC,
+  type OCInput,
+} from "@/lib/presupuesto-utils";
 
 async function getCompanyAndIsDirector(supabase: any, userId: string) {
   const { data: profile } = await supabase
