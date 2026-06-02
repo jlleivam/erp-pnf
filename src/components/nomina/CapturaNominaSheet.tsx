@@ -426,11 +426,18 @@ function AsignarTrabajadoresDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <Input
-            placeholder="Buscar por nombre…"
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Buscar por nombre…"
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              className="flex-1"
+            />
+            <Button variant="outline" size="sm" onClick={() => setNuevoOpen(true)}>
+              <Plus className="size-4 mr-1" />
+              {canManage ? "Nuevo" : "Solicitar alta"}
+            </Button>
+          </div>
           <Card className="max-h-[400px] overflow-y-auto divide-y">
             {dispQ.isLoading ? (
               <p className="p-4 text-sm text-muted-foreground">Cargando…</p>
