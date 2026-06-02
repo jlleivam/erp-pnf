@@ -154,6 +154,23 @@ export const crearDestajo = createServerFn({ method: "POST" })
       .select("id").single();
     if (error) throw new Error(error.message);
 
+    // Asignar al destajista como trabajador del destajo (si no está activo en otro)
+    const { data: ocupado } = await supabase
+      .from("obra_destajo_trabajadores")
+      .select("id")
+      .eq("trabajador_id", data.destajistaId)
+      .is("desasignado_at", null)
+      .maybeSingle();
+    if (!ocupado) {
+      await supabase
+        .from("obra_destajo_trabajadores")
+        .insert({
+          destajo_id: created.id,
+          trabajador_id: data.destajistaId,
+          asignado_por: userId,
+        });
+    }
+
     // Crear presupuesto base en borrador
     const { data: presBase, error: pbErr } = await supabase
       .from("obra_destajo_presupuestos")
@@ -170,6 +187,7 @@ export const crearDestajo = createServerFn({ method: "POST" })
 
     return { id: created.id as string, presupuestoBaseId: presBase.id as string };
   });
+
 
 export const eliminarDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
