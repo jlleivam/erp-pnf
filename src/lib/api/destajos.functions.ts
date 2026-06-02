@@ -63,6 +63,7 @@ export const listDestajos = createServerFn({ method: "POST" })
     // Acumulado pagado y avance % (sobre base autorizada)
     const ids = dst.map((d: any) => d.id);
     let pagadosMap = new Map<string, number>();
+    let baseEstatusMap = new Map<string, string>();
     if (ids.length > 0) {
       const { data: ests } = await supabase
         .from("obra_destajo_estimaciones")
@@ -71,12 +72,20 @@ export const listDestajos = createServerFn({ method: "POST" })
       for (const e of ests ?? []) {
         pagadosMap.set(e.destajo_id, (pagadosMap.get(e.destajo_id) ?? 0) + Number(e.monto_total));
       }
+      const { data: bases } = await supabase
+        .from("obra_destajo_presupuestos")
+        .select("destajo_id, estatus")
+        .in("destajo_id", ids).eq("tipo", "base");
+      for (const b of bases ?? []) {
+        baseEstatusMap.set(b.destajo_id, b.estatus);
+      }
     }
 
     return dst.map((d: any) => ({
       ...d,
       destajista_nombre: trabMap.get(d.destajista_id) ?? "—",
       pagado_acumulado: pagadosMap.get(d.id) ?? 0,
+      estatus_base: baseEstatusMap.get(d.id) ?? "borrador",
     }));
   });
 
@@ -206,6 +215,11 @@ export const eliminarDestajo = createServerFn({ method: "POST" })
       .eq("destajo_id", data.id).eq("estatus", "cerrada").limit(1);
     if ((ests ?? []).length > 0)
       throw new Error("No se puede eliminar: hay estimaciones cerradas");
+    const { data: base } = await supabase
+      .from("obra_destajo_presupuestos")
+      .select("estatus").eq("destajo_id", data.id).eq("tipo", "base").maybeSingle();
+    if (base && base.estatus !== "borrador")
+      throw new Error("No se puede eliminar: el presupuesto ya fue enviado a autorización");
     const { error } = await supabase
       .from("obra_destajos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

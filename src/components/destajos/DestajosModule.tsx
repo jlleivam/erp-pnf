@@ -34,6 +34,7 @@ type Destajo = {
   nombre: string;
   descripcion: string | null;
   estatus: "borrador" | "enviado" | "autorizado" | "rechazado";
+  estatus_base: "borrador" | "enviado" | "autorizado" | "rechazado";
   monto_total: number;
   pagado_acumulado: number;
   created_at: string;
@@ -80,10 +81,10 @@ export function DestajosModule({ obraId }: { obraId: string }) {
 
   const destajos = (listQ.data ?? []) as Destajo[];
   const contratado = destajos
-    .filter((d) => d.estatus === "autorizado")
+    .filter((d) => d.estatus_base === "autorizado")
     .reduce((s, d) => s + Number(d.monto_total), 0);
   const pagado = destajos.reduce((s, d) => s + Number(d.pagado_acumulado), 0);
-  const activos = destajos.filter((d) => d.estatus === "autorizado").length;
+  const activos = destajos.filter((d) => d.estatus_base === "autorizado").length;
 
   return (
     <div className="space-y-6">
@@ -151,8 +152,8 @@ export function DestajosModule({ obraId }: { obraId: string }) {
                     </td>
                     <td className="p-3">{d.destajista_nombre}</td>
                     <td className="p-3">
-                      <Badge variant={ESTATUS_VARIANT[d.estatus]}>
-                        {ESTATUS_LABEL[d.estatus]}
+                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]}>
+                        {ESTATUS_LABEL[d.estatus_base]}
                       </Badge>
                     </td>
                     <td className="p-3 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
@@ -167,7 +168,7 @@ export function DestajosModule({ obraId }: { obraId: string }) {
                         <Button size="sm" variant="outline" onClick={() => setViewingId(d.id)}>
                           <Eye className="size-4 mr-1" /> Abrir
                         </Button>
-                        {director && d.estatus === "borrador" && d.pagado_acumulado === 0 && (
+                        {director && d.estatus_base === "borrador" && d.pagado_acumulado === 0 && (
                           <Button size="sm" variant="ghost" onClick={() => setToDelete(d)}>
                             <Trash2 className="size-4" />
                           </Button>
