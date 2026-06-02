@@ -1,0 +1,419 @@
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getSubcontrato,
+  crearOrdenCambioSubcontrato,
+  enviarPresupuestoSubcontrato,
+  autorizarPresupuestoSubcontrato,
+  rechazarPresupuestoSubcontrato,
+  reabrirPresupuestoSubcontrato,
+} from "@/lib/api/subcontratos.functions";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Send, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { formatMXN } from "@/lib/format";
+import { CapturaSubcontratoSheet } from "./CapturaSubcontratoSheet";
+import { CapturaOrdenCambioSubcontratoSheet } from "./CapturaOrdenCambioSubcontratoSheet";
+import { EstimacionesSubcontratoTab } from "./EstimacionesSubcontratoTab";
+
+type Presupuesto = {
+  id: string;
+  tipo: "base" | "adenda";
+  numero: number;
+  nombre: string;
+  descripcion: string | null;
+  estatus: "borrador" | "enviado" | "autorizado" | "rechazado";
+  monto_total: number;
+  rechazo_motivo: string | null;
+  autorizado_at: string | null;
+  enviado_at: string | null;
+};
+
+const ESTATUS_LABEL: Record<string, string> = {
+  borrador: "Borrador",
+  enviado: "Pendiente autorización",
+  autorizado: "Autorizado",
+  rechazado: "Rechazado",
+};
+const ESTATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  borrador: "secondary",
+  enviado: "outline",
+  autorizado: "default",
+  rechazado: "destructive",
+};
+
+export function SubcontratoDetalleSheet({
+  subcontratoId,
+  canAuthorize,
+  onClose,
+  onChanged,
+}: {
+  subcontratoId: string;
+  canAuthorize: boolean;
+  onClose: () => void;
+  onChanged?: () => void;
+}) {
+  const qc = useQueryClient();
+  const fetchDet = useServerFn(getSubcontrato);
+  const q = useQuery({
+    queryKey: ["subcontrato", subcontratoId],
+    queryFn: () => fetchDet({ data: { id: subcontratoId } }),
+  });
+
+  const [editingBaseId, setEditingBaseId] = useState<string | null>(null);
+  const [editingOcId, setEditingOcId] = useState<string | null>(null);
+  const [creatingOc, setCreatingOc] = useState(false);
+  const [rejecting, setRejecting] = useState<Presupuesto | null>(null);
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["subcontrato", subcontratoId] });
+    onChanged?.();
+  };
+
+  const enviar = useServerFn(enviarPresupuestoSubcontrato);
+  const enviarM = useMutation({
+    mutationFn: enviar,
+    onSuccess: () => { toast.success("Enviado a autorización"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const autorizar = useServerFn(autorizarPresupuestoSubcontrato);
+  const autorizarM = useMutation({
+    mutationFn: autorizar,
+    onSuccess: () => { toast.success("Autorizado"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rechazar = useServerFn(rechazarPresupuestoSubcontrato);
+  const rechazarM = useMutation({
+    mutationFn: rechazar,
+    onSuccess: () => { toast.success("Rechazado"); setRejecting(null); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reabrir = useServerFn(reabrirPresupuestoSubcontrato);
+  const reabrirM = useMutation({
+    mutationFn: reabrir,
+    onSuccess: () => { toast.success("Reabierto como borrador"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const subcontrato = q.data?.subcontrato as any;
+  const presupuestos = (q.data?.presupuestos ?? []) as Presupuesto[];
+  const base = presupuestos.find((p) => p.tipo === "base");
+  const adendas = presupuestos.filter((p) => p.tipo === "adenda");
+  const baseAutorizada = base?.estatus === "autorizado";
+
+  return (
+    <Sheet open onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full sm:max-w-5xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2 flex-wrap">
+            {subcontrato?.nombre ?? "Subcontrato"}
+            {subcontrato && (
+              <Badge variant={ESTATUS_VARIANT[subcontrato.estatus]}>
+                {ESTATUS_LABEL[subcontrato.estatus]}
+              </Badge>
+            )}
+          </SheetTitle>
+          <SheetDescription>
+            {subcontrato?.contratista?.razon_social
+              ? `Contratista: ${subcontrato.contratista.razon_social}`
+              : "Cargando contratista…"}
+          </SheetDescription>
+        </SheetHeader>
+
+        {q.isLoading ? (
+          <p className="text-sm text-muted-foreground mt-6">Cargando…</p>
+        ) : (
+          <div className="mt-6">
+            <Tabs defaultValue="presupuesto">
+              <TabsList>
+                <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>
+                <TabsTrigger value="estimaciones" disabled={!baseAutorizada}>
+                  Estimaciones
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="presupuesto" className="mt-4 space-y-3">
+                {base && (
+                  <PresupuestoCard
+                    p={base}
+                    canAuthorize={canAuthorize}
+                    onEdit={() => setEditingBaseId(base.id)}
+                    onEnviar={() => enviarM.mutate({ data: { presupuestoId: base.id } })}
+                    onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: base.id } })}
+                    onRechazar={() => setRejecting(base)}
+                    onReabrir={() => reabrirM.mutate({ data: { presupuestoId: base.id } })}
+                  />
+                )}
+                {baseAutorizada && (
+                  <div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCreatingOc(true)}
+                    >
+                      <Plus className="size-4 mr-1" /> Nueva orden de cambio
+                    </Button>
+                  </div>
+                )}
+                {adendas.map((oc) => (
+                  <PresupuestoCard
+                    key={oc.id}
+                    p={oc}
+                    canAuthorize={canAuthorize}
+                    onEdit={() => setEditingOcId(oc.id)}
+                    onEnviar={() => enviarM.mutate({ data: { presupuestoId: oc.id } })}
+                    onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: oc.id } })}
+                    onRechazar={() => setRejecting(oc)}
+                    onReabrir={() => reabrirM.mutate({ data: { presupuestoId: oc.id } })}
+                  />
+                ))}
+              </TabsContent>
+
+              <TabsContent value="estimaciones" className="mt-4">
+                <EstimacionesSubcontratoTab subcontratoId={subcontratoId} />
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
+
+        {editingBaseId && (
+          <CapturaSubcontratoSheet
+            presupuestoSubcontratoId={editingBaseId}
+            onClose={() => setEditingBaseId(null)}
+            onSaved={() => { refresh(); }}
+          />
+        )}
+
+        {editingOcId && (
+          <CapturaOrdenCambioSubcontratoSheet
+            subcontratoId={subcontratoId}
+            presupuestoSubcontratoId={editingOcId}
+            onClose={() => setEditingOcId(null)}
+            onSaved={() => { refresh(); }}
+          />
+        )}
+
+        {creatingOc && (
+          <CrearOcDialog
+            subcontratoId={subcontratoId}
+            numeroSugerido={Math.max(0, ...adendas.map((a) => a.numero)) + 1}
+            onClose={() => setCreatingOc(false)}
+            onCreated={(id) => {
+              setCreatingOc(false);
+              refresh();
+              setEditingOcId(id);
+            }}
+          />
+        )}
+
+        {rejecting && (
+          <RechazarDialog
+            presupuesto={rejecting}
+            onClose={() => setRejecting(null)}
+            onConfirm={(motivo) =>
+              rechazarM.mutate({ data: { presupuestoId: rejecting.id, motivo } })
+            }
+          />
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function PresupuestoCard({
+  p,
+  canAuthorize,
+  onEdit,
+  onEnviar,
+  onAutorizar,
+  onRechazar,
+  onReabrir,
+}: {
+  p: Presupuesto;
+  canAuthorize: boolean;
+  onEdit: () => void;
+  onEnviar: () => void;
+  onAutorizar: () => void;
+  onRechazar: () => void;
+  onReabrir: () => void;
+}) {
+  const label = p.tipo === "base" ? "Presupuesto base" : `Orden de cambio ${p.numero}`;
+  const esOC = p.tipo === "adenda";
+  return (
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium">{label}</p>
+            <Badge variant={ESTATUS_VARIANT[p.estatus]}>{ESTATUS_LABEL[p.estatus]}</Badge>
+          </div>
+          {p.descripcion && (
+            <p className="text-xs text-muted-foreground mt-1">{p.descripcion}</p>
+          )}
+          {p.estatus === "rechazado" && p.rechazo_motivo && (
+            <p className="text-xs text-destructive mt-1">Motivo: {p.rechazo_motivo}</p>
+          )}
+        </div>
+        <div className="text-right">
+          <p className={`text-lg font-semibold ${esOC && Number(p.monto_total) < 0 ? "text-destructive" : ""}`}>
+            {esOC ? "Δ " : ""}{formatMXN(p.monto_total)}
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-2 mt-4 flex-wrap">
+        {p.estatus === "borrador" && (
+          <>
+            <Button size="sm" onClick={onEdit}>Editar</Button>
+            <Button size="sm" variant="outline" onClick={onEnviar}>
+              <Send className="size-4 mr-1" /> Enviar a autorización
+            </Button>
+          </>
+        )}
+        {p.estatus === "enviado" && canAuthorize && (
+          <>
+            <Button size="sm" onClick={onAutorizar}>
+              <CheckCircle2 className="size-4 mr-1" /> Autorizar
+            </Button>
+            <Button size="sm" variant="outline" onClick={onRechazar}>
+              <XCircle className="size-4 mr-1" /> Rechazar
+            </Button>
+          </>
+        )}
+        {p.estatus === "enviado" && !canAuthorize && (
+          <p className="text-xs text-muted-foreground">
+            Esperando autorización del supervisor.
+          </p>
+        )}
+        {p.estatus === "rechazado" && (
+          <Button size="sm" variant="outline" onClick={onReabrir}>
+            <RefreshCw className="size-4 mr-1" /> Reabrir como borrador
+          </Button>
+        )}
+        {(p.estatus === "autorizado" || p.estatus === "enviado") && (
+          <Button size="sm" variant="ghost" onClick={onEdit}>
+            Ver detalle
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function RechazarDialog({
+  presupuesto,
+  onClose,
+  onConfirm,
+}: {
+  presupuesto: Presupuesto;
+  onClose: () => void;
+  onConfirm: (motivo: string) => void;
+}) {
+  const [motivo, setMotivo] = useState("");
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rechazar {presupuesto.nombre}</DialogTitle>
+        </DialogHeader>
+        <div>
+          <Label>Motivo del rechazo</Label>
+          <Textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Explica por qué se rechaza…"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            disabled={motivo.trim().length < 3}
+            onClick={() => onConfirm(motivo.trim())}
+          >
+            Rechazar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CrearOcDialog({
+  subcontratoId,
+  numeroSugerido,
+  onClose,
+  onCreated,
+}: {
+  subcontratoId: string;
+  numeroSugerido: number;
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
+  const [nombre, setNombre] = useState(`Orden de cambio ${numeroSugerido}`);
+  const [descripcion, setDescripcion] = useState("");
+  const crear = useServerFn(crearOrdenCambioSubcontrato);
+  const m = useMutation({
+    mutationFn: crear,
+    onSuccess: (res) => onCreated(res.id),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nueva orden de cambio</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Nombre</Label>
+            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </div>
+          <div>
+            <Label>Motivo / descripción</Label>
+            <Textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            disabled={m.isPending || !nombre.trim()}
+            onClick={() =>
+              m.mutate({
+                data: {
+                  subcontratoId,
+                  nombre: nombre.trim(),
+                  descripcion: descripcion.trim() || undefined,
+                },
+              })
+            }
+          >
+            {m.isPending ? "Creando…" : "Crear OC"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
