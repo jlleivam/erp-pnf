@@ -220,7 +220,7 @@ export function ImportarInsumosDialog({
                   <p className="text-sm text-muted-foreground">
                     Encabezados requeridos: <code className="text-xs">nombre</code>,{" "}
                     <code className="text-xs">unidad</code>, <code className="text-xs">categoría</code>.
-                    Unidades válidas: {UNIDADES.join(", ")}.
+                    Unidades válidas: {unidadesValidas.length > 0 ? unidadesValidas.join(", ") : "ninguna (créalas en el catálogo de Unidades)"}.
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={descargarPlantilla}>
