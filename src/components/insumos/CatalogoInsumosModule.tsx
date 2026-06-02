@@ -125,6 +125,11 @@ export function CatalogoInsumosModule() {
             </Button>
           )}
           {director && (
+            <Button variant="outline" onClick={() => setOpenUnidades(true)}>
+              <Ruler /> Unidades
+            </Button>
+          )}
+          {director && (
             <Button variant="outline" onClick={() => setOpenImportar(true)}>
               <FileSpreadsheet /> Importar Excel
             </Button>
