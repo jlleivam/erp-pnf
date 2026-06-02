@@ -223,7 +223,14 @@ export function CatalogoInsumosModule() {
                 {(insumosQ.data ?? []).map((i: any) => (
                   <TableRow key={i.id}>
                     <TableCell className="font-mono text-xs">{i.codigo ?? "—"}</TableCell>
-                    <TableCell className="font-medium">{i.nombre}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {i.nombre}
+                        {i.disponible_renta && (
+                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Renta</Badge>
+                        )}
+                      </span>
+                    </TableCell>
                     <TableCell><Badge variant="outline">{i.unidad}</Badge></TableCell>
                     <TableCell>
                       {i.categoria ? (
