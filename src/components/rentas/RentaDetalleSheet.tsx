@@ -189,6 +189,20 @@ export function RentaDetalleSheet({
             <Card className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
               <Item label="Cantidad" value={String(renta.cantidad)} />
               <Item label="Periodicidad" value={renta.periodicidad ?? "—"} />
+              <Item
+                label="Periodos estimados"
+                value={
+                  renta.periodos_estimados != null
+                    ? `${renta.periodos_estimados} ${
+                        renta.periodicidad === "diaria" ? "días"
+                        : renta.periodicidad === "semanal" ? "semanas"
+                        : renta.periodicidad === "quincenal" ? "quincenas"
+                        : renta.periodicidad === "mensual" ? "meses"
+                        : ""
+                      }`.trim()
+                    : "—"
+                }
+              />
               <Item label="Tarifa" value={formatMXN(renta.tarifa_unitaria)} />
               <Item label="Depósito" value={formatMXN(renta.deposito)} />
               <Item label="Llegada" value={formatDate(renta.fecha_llegada_real)} />

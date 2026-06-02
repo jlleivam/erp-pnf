@@ -1623,6 +1623,7 @@ export type Database = {
           numero: number
           obra_id: string
           periodicidad: Database["public"]["Enums"]["renta_periodicidad"] | null
+          periodos_estimados: number | null
           proveedor_id: string | null
           rechazado_at: string | null
           rechazado_por: string | null
@@ -1656,6 +1657,7 @@ export type Database = {
           periodicidad?:
             | Database["public"]["Enums"]["renta_periodicidad"]
             | null
+          periodos_estimados?: number | null
           proveedor_id?: string | null
           rechazado_at?: string | null
           rechazado_por?: string | null
@@ -1689,6 +1691,7 @@ export type Database = {
           periodicidad?:
             | Database["public"]["Enums"]["renta_periodicidad"]
             | null
+          periodos_estimados?: number | null
           proveedor_id?: string | null
           rechazado_at?: string | null
           rechazado_por?: string | null

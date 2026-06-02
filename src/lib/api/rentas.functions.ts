@@ -144,6 +144,7 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
       descripcion: z.string().trim().max(1000).optional(),
       fechaEstimadaInicio: z.string().optional(),
       periodicidadSugerida: z.enum(["diaria", "semanal", "quincenal", "mensual"]).optional(),
+      periodosEstimados: z.number().positive().nullable().optional(),
       diasAvisoVencimiento: z.number().int().min(0).max(60).default(3),
     }).parse(d),
   )
@@ -187,6 +188,7 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
         descripcion: data.descripcion ?? null,
         fecha_estimada_inicio: data.fechaEstimadaInicio ?? null,
         periodicidad: data.periodicidadSugerida ?? null,
+        periodos_estimados: data.periodosEstimados ?? null,
         dias_aviso_vencimiento: data.diasAvisoVencimiento,
         estatus: "borrador",
         creado_por: userId,

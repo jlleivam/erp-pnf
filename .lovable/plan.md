@@ -1,26 +1,25 @@
 ## Objetivo
 
-Agregar un flag "Disponible para rentas" en cada proveedor/tercero. Solo los proveedores con el flag activo aparecerán en el selector del diálogo de solicitud de cotización de rentas.
+En la solicitud de renta, además de la cantidad de unidades, el residente debe capturar **cuántos periodos** se piensa ocupar el equipo (ej. 3 semanas, 2 meses). Hoy solo se pide periodicidad sugerida pero no cuántos periodos.
 
 ## Cambios
 
 ### 1. Base de datos (migración)
-- Agregar columna `disponible_renta boolean NOT NULL DEFAULT false` a `public.terceros`.
-- Índice parcial `WHERE disponible_renta` para acelerar el filtro por empresa.
-- Sin cambios de RLS: la edición ya está cubierta por las políticas existentes de `terceros` (mismas que permiten editar el resto de campos del proveedor).
+- Agregar columna `periodos_estimados numeric NULL` a `public.obra_rentas` (nullable porque puede que en algunos casos sea indefinido).
 
-### 2. Backend — `src/lib/api/terceros.functions.ts`
-- Incluir `disponible_renta` en el schema Zod de `crearTercero` / `editarTercero` (opcional, default `false`).
-- Persistir el campo en insert/update.
-- Incluir `disponible_renta` en `SELECT_LIST` para que aparezca en `listTerceros`.
+### 2. Backend — `src/lib/api/rentas.functions.ts`
+- `crearSolicitudRenta`: agregar `periodosEstimados: z.number().positive().nullable().optional()` al schema y persistirlo en el insert.
+- Devolver el campo en `getRenta` / `listRentas` (si ya hace `select *` no requiere cambio; si hay listas con columnas específicas, agregarlo).
 
-### 3. UI — Catálogo de Terceros
-- `src/components/terceros/TerceroFormDialog.tsx`: agregar `Checkbox` "Disponible para rentas" con descripción ("Si se activa, este proveedor podrá seleccionarse al cotizar rentas"). Aplica a categorías `proveedor` y `ambos` (no a `contratista`).
-- `src/components/terceros/CatalogoTerceroModule.tsx` / `TerceroDetalle.tsx`: mostrar un badge "Renta" cuando esté activo (opcional, igual que el patrón usado en insumos).
+### 3. UI — `src/components/rentas/NuevaRentaDialog.tsx`
+- Reordenar el grid: la primera fila queda **Cantidad (unidades)** + **Periodicidad sugerida**.
+- Nueva segunda fila: **Cantidad de periodos a ocupar** (input numérico, sufijo dinámico "días/semanas/quincenas/meses" según la periodicidad seleccionada; deshabilitado hasta elegir periodicidad).
+- Enviar `periodosEstimados` en el `mutate`.
 
-### 4. UI — Rentas
-- `src/components/rentas/CotizarRentaDialog.tsx`: ajustar el filtro de proveedores para incluir solo los que tengan `disponible_renta = true`, además de los criterios actuales de categoría. Actualizar el mensaje "No hay proveedores…" para mencionar el flag de rentas.
+### 4. UI — Detalle / Cotización
+- `src/components/rentas/RentaDetalleSheet.tsx`: mostrar "Periodos estimados: N {unidad}" junto a la periodicidad sugerida.
+- `src/components/rentas/CotizarRentaDialog.tsx`: mostrar el dato como referencia para el administrativo al cotizar (solo lectura, no se edita aquí).
 
 ### Fuera de alcance
-- Insumos, almacén, cotizaciones de compras: sin cambios.
-- Permisos RLS: sin cambios; cualquiera con permiso de editar terceros puede activar el flag.
+- Cálculo automático de fecha fin programada a partir de periodos estimados.
+- Lógica de renovación; los periodos estimados son solo referencia inicial.
