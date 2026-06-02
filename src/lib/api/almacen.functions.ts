@@ -365,9 +365,11 @@ export const getSemanaActual = createServerFn({ method: "POST" })
       ...m,
       proveedor: proveedorPorInsumo[m.insumo_id] ?? "",
     }));
-    items.sort((a: any, b: any) =>
-      (a.insumo?.nombre ?? "").localeCompare(b.insumo?.nombre ?? ""),
-    );
+    items.sort((a: any, b: any) => {
+      const byName = (a.insumo?.nombre ?? "").localeCompare(b.insumo?.nombre ?? "");
+      if (byName !== 0) return byName;
+      return Number(a.precio_unitario) - Number(b.precio_unitario);
+    });
 
     return { semana, items };
   });
