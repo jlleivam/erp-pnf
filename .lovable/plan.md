@@ -1,49 +1,28 @@
-# Fix: el destajo no permite capturar conceptos
+## Objetivo
+En la pestaña "Trabajadores" del detalle de destajo, el destajista debe aparecer asignado por defecto.
 
-## Diagnóstico
+## Cambios
 
-El sheet **"Presupuesto de destajo"** se abre sin permitir edición (sin botones "Agregar renglón" ni "Guardar borrador" y con los inputs deshabilitados) porque `getDestajoPresupuesto` falla en silencio.
+### 1. `src/lib/api/destajos.functions.ts` — `crearDestajo`
+Después de insertar el destajo y antes de devolver, insertar automáticamente al `destajistaId` en `obra_destajo_trabajadores` (con `asignado_por = userId`). Si la inserción falla por unique-violation se ignora.
 
-La query usa un *embed* de PostgREST:
-
-```ts
-.from("obra_destajo_presupuestos")
-.select("*, obra_destajos!inner(...)")
+### 2. Migración: backfill destajos existentes
+```sql
+INSERT INTO public.obra_destajo_trabajadores (destajo_id, trabajador_id, asignado_por)
+SELECT d.id, d.destajista_id, d.creado_por
+FROM public.obra_destajos d
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.obra_destajo_trabajadores t
+  WHERE t.destajo_id = d.id AND t.trabajador_id = d.destajista_id
+);
 ```
+(Opcional: añadir índice único `(destajo_id, trabajador_id) WHERE desasignado_at IS NULL` para evitar duplicados — lo dejo fuera del alcance salvo que lo pidas.)
 
-Pero la migración del módulo de destajos creó **todas** las tablas sin **ningún** `FOREIGN KEY`:
+### 3. `src/components/destajos/DestajoDetalleSheet.tsx` — UI
+En la lista de trabajadores asignados, marcar al destajista con un badge "Destajista" (comparando `a.trabajador_id === destajo.destajista_id`). Sin otro cambio funcional.
 
-- `obra_destajos.obra_id`, `company_id`, `destajista_id`, `creado_por`
-- `obra_destajo_presupuestos.destajo_id` (+ creado_por/enviado_por/autorizado_por/rechazado_por)
-- `obra_destajo_renglones.presupuesto_destajo_id`
-- `obra_destajo_trabajadores.destajo_id`, `trabajador_id` (+ asignado_por/desasignado_por)
-- `obra_destajo_estimaciones.destajo_id`, `company_id` (+ creado_por/cerrada_por)
-- `obra_destajo_estimacion_renglones.estimacion_id`
+### 4. `AsignarTrabajadoresDialog.tsx`
+Bloquear (checkbox deshabilitado y marcado) la fila correspondiente al destajista para que no se pueda desasignar.
 
-Sin FKs, PostgREST no puede resolver los embeds (`obra_destajos!inner(...)` se usa en varios server functions: `getDestajoPresupuesto`, asignación de trabajadores, payroll lock, etc.), la consulta lanza error, `data` queda `undefined` y el sheet renderiza el título placeholder con `editable = false`.
-
-Como confirmación: el screenshot muestra "Presupuesto de destajo" (fallback) en lugar de "Presupuesto base" (nombre real en BD), lo que confirma que `presupuesto` no se cargó.
-
-## Solución
-
-Migración que agrega los `FOREIGN KEY` faltantes a las 6 tablas del módulo de destajos, con `ON DELETE` apropiado:
-
-- `CASCADE` para relaciones padre→hijo internas del módulo (destajo→presupuestos→renglones; destajo→estimaciones→renglones; destajo→trabajadores).
-- `CASCADE` desde `obras` y `companies` (consistente con el resto del esquema).
-- `RESTRICT` para `destajista_id → trabajadores` y `trabajador_id → trabajadores` (no borrar un trabajador con destajos asignados).
-- `SET NULL` para columnas opcionales de auditoría (`enviado_por`, `autorizado_por`, `rechazado_por`, `desasignado_por`, `cerrada_por`).
-- Auditoría obligatoria (`creado_por`, `asignado_por`) → `REFERENCES auth.users(id)` sin `ON DELETE` especial.
-- Para `obra_destajo_estimacion_renglones` se mantiene `renglon_clave` como texto (no FK) ya que apunta a una clave WBS reconstruida, no a un renglón concreto.
-
-Adicionalmente, ejecutar `NOTIFY pgrst, 'reload schema'` al final para que PostgREST detecte de inmediato las nuevas relaciones.
-
-## Resultado esperado
-
-- Embed `obra_destajos!inner(...)` y demás se resuelven.
-- `getDestajoPresupuesto` regresa `{ presupuesto, renglones }`.
-- El sheet muestra el título correcto, habilita los inputs y muestra los botones "Agregar renglón" / "Guardar borrador".
-- También se arreglan implícitamente la asignación de trabajadores y el lock en nómina, que dependen del mismo embed.
-
-## Sin cambios de código de aplicación
-
-No se tocan los server functions ni los componentes; basta con la migración de FKs.
+## Resultado
+Al crear un destajo, el destajista queda automáticamente en la pestaña Trabajadores; los destajos existentes se rellenan vía migración; el destajista no puede desasignarse desde el diálogo.
