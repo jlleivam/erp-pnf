@@ -698,6 +698,285 @@ export type Database = {
           },
         ]
       }
+      obra_destajo_estimacion_renglones: {
+        Row: {
+          cantidad_ejecutada: number
+          cantidad_vigente: number
+          concepto: string
+          created_at: string
+          estimacion_id: string
+          id: string
+          importe_ejecutado: number
+          pu_vigente: number
+          renglon_clave: string
+          unidad: string | null
+        }
+        Insert: {
+          cantidad_ejecutada?: number
+          cantidad_vigente?: number
+          concepto: string
+          created_at?: string
+          estimacion_id: string
+          id?: string
+          importe_ejecutado?: number
+          pu_vigente?: number
+          renglon_clave: string
+          unidad?: string | null
+        }
+        Update: {
+          cantidad_ejecutada?: number
+          cantidad_vigente?: number
+          concepto?: string
+          created_at?: string
+          estimacion_id?: string
+          id?: string
+          importe_ejecutado?: number
+          pu_vigente?: number
+          renglon_clave?: string
+          unidad?: string | null
+        }
+        Relationships: []
+      }
+      obra_destajo_estimaciones: {
+        Row: {
+          cerrada_at: string | null
+          cerrada_por: string | null
+          company_id: string
+          creado_por: string
+          created_at: string
+          destajo_id: string
+          estatus: Database["public"]["Enums"]["destajo_estimacion_estatus"]
+          id: string
+          monto_total: number
+          numero: number
+          semana_fin: string
+          semana_inicio: string
+          updated_at: string
+        }
+        Insert: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id: string
+          creado_por: string
+          created_at?: string
+          destajo_id: string
+          estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          semana_fin: string
+          semana_inicio: string
+          updated_at?: string
+        }
+        Update: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          destajo_id?: string
+          estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          semana_fin?: string
+          semana_inicio?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      obra_destajo_presupuestos: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          creado_por: string
+          created_at: string
+          descripcion: string | null
+          destajo_id: string
+          enviado_at: string | null
+          enviado_por: string | null
+          estatus: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id: string
+          monto_total: number
+          nombre: string
+          numero: number
+          rechazado_at: string | null
+          rechazado_por: string | null
+          rechazo_motivo: string | null
+          tipo: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          creado_por: string
+          created_at?: string
+          descripcion?: string | null
+          destajo_id: string
+          enviado_at?: string | null
+          enviado_por?: string | null
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre: string
+          numero?: number
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          tipo: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          creado_por?: string
+          created_at?: string
+          descripcion?: string | null
+          destajo_id?: string
+          enviado_at?: string | null
+          enviado_por?: string | null
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre?: string
+          numero?: number
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          tipo?: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      obra_destajo_renglones: {
+        Row: {
+          cantidad: number | null
+          clave: string
+          concepto: string
+          created_at: string
+          es_grupo: boolean
+          id: string
+          importe: number
+          importe_delta: number
+          nivel: number
+          orden: number
+          parent_clave: string | null
+          precio_unitario: number | null
+          presupuesto_destajo_id: string
+          tipo_movimiento: Database["public"]["Enums"]["presupuesto_movimiento"]
+          unidad: string | null
+        }
+        Insert: {
+          cantidad?: number | null
+          clave: string
+          concepto: string
+          created_at?: string
+          es_grupo?: boolean
+          id?: string
+          importe?: number
+          importe_delta?: number
+          nivel: number
+          orden?: number
+          parent_clave?: string | null
+          precio_unitario?: number | null
+          presupuesto_destajo_id: string
+          tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
+          unidad?: string | null
+        }
+        Update: {
+          cantidad?: number | null
+          clave?: string
+          concepto?: string
+          created_at?: string
+          es_grupo?: boolean
+          id?: string
+          importe?: number
+          importe_delta?: number
+          nivel?: number
+          orden?: number
+          parent_clave?: string | null
+          precio_unitario?: number | null
+          presupuesto_destajo_id?: string
+          tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
+          unidad?: string | null
+        }
+        Relationships: []
+      }
+      obra_destajo_trabajadores: {
+        Row: {
+          asignado_at: string
+          asignado_por: string
+          desasignado_at: string | null
+          desasignado_por: string | null
+          destajo_id: string
+          id: string
+          trabajador_id: string
+        }
+        Insert: {
+          asignado_at?: string
+          asignado_por: string
+          desasignado_at?: string | null
+          desasignado_por?: string | null
+          destajo_id: string
+          id?: string
+          trabajador_id: string
+        }
+        Update: {
+          asignado_at?: string
+          asignado_por?: string
+          desasignado_at?: string | null
+          desasignado_por?: string | null
+          destajo_id?: string
+          id?: string
+          trabajador_id?: string
+        }
+        Relationships: []
+      }
+      obra_destajos: {
+        Row: {
+          company_id: string
+          creado_por: string
+          created_at: string
+          descripcion: string | null
+          destajista_id: string
+          estatus: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id: string
+          monto_total: number
+          nombre: string
+          numero: number
+          obra_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          creado_por: string
+          created_at?: string
+          descripcion?: string | null
+          destajista_id: string
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre: string
+          numero?: number
+          obra_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          descripcion?: string | null
+          destajista_id?: string
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre?: string
+          numero?: number
+          obra_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       obra_estimacion_renglones: {
         Row: {
           cantidad_ejecutada: number
@@ -1734,6 +2013,9 @@ export type Database = {
         | "auxiliar"
         | "administrativo"
         | "supervisor"
+      destajo_doc_estatus: "borrador" | "enviado" | "autorizado" | "rechazado"
+      destajo_estimacion_estatus: "borrador" | "cerrada"
+      destajo_presupuesto_tipo: "base" | "adenda"
       estimacion_estatus: "borrador" | "cerrada"
       insumo_estatus: "autorizado" | "pendiente"
       insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON" | "BTO"
@@ -1933,6 +2215,9 @@ export const Constants = {
         "administrativo",
         "supervisor",
       ],
+      destajo_doc_estatus: ["borrador", "enviado", "autorizado", "rechazado"],
+      destajo_estimacion_estatus: ["borrador", "cerrada"],
+      destajo_presupuesto_tipo: ["base", "adenda"],
       estimacion_estatus: ["borrador", "cerrada"],
       insumo_estatus: ["autorizado", "pendiente"],
       insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"],
