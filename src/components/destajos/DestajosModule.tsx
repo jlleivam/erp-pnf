@@ -81,10 +81,10 @@ export function DestajosModule({ obraId }: { obraId: string }) {
 
   const destajos = (listQ.data ?? []) as Destajo[];
   const contratado = destajos
-    .filter((d) => d.estatus === "autorizado")
+    .filter((d) => d.estatus_base === "autorizado")
     .reduce((s, d) => s + Number(d.monto_total), 0);
   const pagado = destajos.reduce((s, d) => s + Number(d.pagado_acumulado), 0);
-  const activos = destajos.filter((d) => d.estatus === "autorizado").length;
+  const activos = destajos.filter((d) => d.estatus_base === "autorizado").length;
 
   return (
     <div className="space-y-6">
