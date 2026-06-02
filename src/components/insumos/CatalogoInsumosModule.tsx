@@ -182,8 +182,8 @@ export function CatalogoInsumosModule() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {UNIDADES.map((u) => (
-                  <SelectItem key={u} value={u}>{u}</SelectItem>
+                {(unidadesQ.data ?? []).map((u: any) => (
+                  <SelectItem key={u.id} value={u.codigo}>{u.codigo}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
