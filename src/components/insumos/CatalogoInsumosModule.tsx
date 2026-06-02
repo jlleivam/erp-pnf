@@ -320,6 +320,7 @@ export function CatalogoInsumosModule() {
         onOpenChange={setOpenSolicitar}
         categorias={categoriasQ.data ?? []}
         unidades={unidadesQ.data ?? []}
+        isDirector={director}
       />
       {director && (
         <ImportarInsumosDialog open={openImportar} onOpenChange={setOpenImportar} />
