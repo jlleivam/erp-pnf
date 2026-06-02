@@ -1,29 +1,26 @@
-## Causa del error
+## Objetivo
 
-El mensaje "new row violates row-level security policy for table insumos" viene de Postgres: la única política `INSERT` existente en `insumos` exige `estatus = 'pendiente'`. Cuando ahora el Director crea un insumo desde "Nuevo insumo", el backend lo inserta como `estatus = 'autorizado'` (con `autorizado_por`, `autorizado_at` y `disponible_renta`), y RLS lo rechaza porque ninguna política autoriza ese caso.
+Agregar un flag "Disponible para rentas" en cada proveedor/tercero. Solo los proveedores con el flag activo aparecerán en el selector del diálogo de solicitud de cotización de rentas.
 
-```text
-Política actual (INSERT):
-  company_id = current_company_id()
-  AND estatus = 'pendiente'
-  AND solicitado_por = auth.uid()
-```
+## Cambios
 
-## Solución
+### 1. Base de datos (migración)
+- Agregar columna `disponible_renta boolean NOT NULL DEFAULT false` a `public.terceros`.
+- Índice parcial `WHERE disponible_renta` para acelerar el filtro por empresa.
+- Sin cambios de RLS: la edición ya está cubierta por las políticas existentes de `terceros` (mismas que permiten editar el resto de campos del proveedor).
 
-Agregar una segunda política `INSERT` que permita al Director crear insumos en su empresa con cualquier `estatus` (incluyendo `autorizado`). La política existente se conserva para que el resto de usuarios siga creando solicitudes pendientes.
+### 2. Backend — `src/lib/api/terceros.functions.ts`
+- Incluir `disponible_renta` en el schema Zod de `crearTercero` / `editarTercero` (opcional, default `false`).
+- Persistir el campo en insert/update.
+- Incluir `disponible_renta` en `SELECT_LIST` para que aparezca en `listTerceros`.
 
-### Migración
+### 3. UI — Catálogo de Terceros
+- `src/components/terceros/TerceroFormDialog.tsx`: agregar `Checkbox` "Disponible para rentas" con descripción ("Si se activa, este proveedor podrá seleccionarse al cotizar rentas"). Aplica a categorías `proveedor` y `ambos` (no a `contratista`).
+- `src/components/terceros/CatalogoTerceroModule.tsx` / `TerceroDetalle.tsx`: mostrar un badge "Renta" cuando esté activo (opcional, igual que el patrón usado en insumos).
 
-```sql
-CREATE POLICY "Director inserts insumos"
-ON public.insumos
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  company_id = public.current_company_id()
-  AND public.is_director_of(company_id)
-);
-```
+### 4. UI — Rentas
+- `src/components/rentas/CotizarRentaDialog.tsx`: ajustar el filtro de proveedores para incluir solo los que tengan `disponible_renta = true`, además de los criterios actuales de categoría. Actualizar el mensaje "No hay proveedores…" para mencionar el flag de rentas.
 
-No hay cambios de UI ni de server functions — el código ya envía los campos correctos; solo faltaba el permiso a nivel base de datos.
+### Fuera de alcance
+- Insumos, almacén, cotizaciones de compras: sin cambios.
+- Permisos RLS: sin cambios; cualquiera con permiso de editar terceros puede activar el flag.

@@ -2405,6 +2405,7 @@ export type Database = {
           curp: string | null
           dias_credito: number | null
           direccion_fiscal: string | null
+          disponible_renta: boolean
           fondo_garantia: boolean
           fondo_garantia_pct: number | null
           id: string
@@ -2436,6 +2437,7 @@ export type Database = {
           curp?: string | null
           dias_credito?: number | null
           direccion_fiscal?: string | null
+          disponible_renta?: boolean
           fondo_garantia?: boolean
           fondo_garantia_pct?: number | null
           id?: string
@@ -2467,6 +2469,7 @@ export type Database = {
           curp?: string | null
           dias_credito?: number | null
           direccion_fiscal?: string | null
+          disponible_renta?: boolean
           fondo_garantia?: boolean
           fondo_garantia_pct?: number | null
           id?: string
