@@ -50,6 +50,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "almacen_movimientos_semana_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "almacen_movimientos_semana_semana_id_fkey"
             columns: ["semana_id"]
             isOneToOne: false
@@ -84,6 +91,13 @@ export type Database = {
           recepcion_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "almacen_recepcion_partidas_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "almacen_recepcion_partidas_recepcion_id_fkey"
             columns: ["recepcion_id"]
@@ -315,6 +329,13 @@ export type Database = {
           subtotal?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "cotizacion_paquete_insumos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cotizacion_paquete_insumos_paquete_id_fkey"
             columns: ["paquete_id"]
