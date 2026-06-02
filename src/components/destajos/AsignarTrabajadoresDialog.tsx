@@ -24,11 +24,13 @@ import { Search } from "lucide-react";
 
 export function AsignarTrabajadoresDialog({
   destajoId,
+  destajistaId,
   asignadosActuales,
   onClose,
   onSaved,
 }: {
   destajoId: string;
+  destajistaId?: string;
   asignadosActuales: string[];
   onClose: () => void;
   onSaved: () => void;
@@ -44,7 +46,10 @@ export function AsignarTrabajadoresDialog({
     queryFn: () => fetchAsign({ data: {} }),
   });
 
-  const [selected, setSelected] = useState<Set<string>>(new Set(asignadosActuales));
+  const initialSet = new Set(asignadosActuales);
+  if (destajistaId) initialSet.add(destajistaId);
+  const [selected, setSelected] = useState<Set<string>>(initialSet);
+
   const [filter, setFilter] = useState("");
 
   const trabajadores = (trabsQ.data ?? []) as Array<{
