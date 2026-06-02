@@ -1,94 +1,92 @@
-# Órdenes de cambio al presupuesto autorizado
+
+# Estimaciones semanales (producción)
 
 ## Concepto
 
-Hoy tenemos "Adendas aditivas" que son presupuestos sueltos que se suman al base. Eso no permite **modificar** ni **eliminar** conceptos existentes — solo agregar.
+Cada **semana fija Lun–Dom**, el **residente** captura por concepto la **cantidad ejecutada en esa semana** contra el **presupuesto vigente** (base + OC-P autorizadas). El sistema calcula importe, acumulado histórico, % avance y producción global. Se guarda como **borrador** editable cualquier día; al **cerrar la semana** queda inmutable y disponible para comparativos contra gastos (módulo futuro).
 
-Propongo evolucionar `adenda` → **Orden de Cambio (OC-P)** que actúe como un **delta** contra el presupuesto base. El base nunca se toca; el "vigente" se calcula como base + suma de órdenes autorizadas.
+## Reglas clave
 
-## Tipos de movimiento dentro de una orden de cambio
+- **Semana**: Lun 00:00 → Dom 23:59 (ISO). Una sola estimación por obra+semana.
+- **Captura**: cantidad **de la semana** (no acumulada). El sistema calcula:
+  - `acumulado = Σ cantidades de semanas cerradas anteriores + cantidad semana actual`
+  - `importe_semana = cantidad × PU_vigente`
+  - `% avance concepto = acumulado / cantidad_vigente`
+- **Bloqueo de sobre-ejecución**: si `acumulado > cantidad_vigente` el sistema **impide guardar**, con mensaje claro indicando cuánto sobra y sugiriendo levantar una OC-P primero.
+- **Solo conceptos hoja** del vigente son capturables (los grupos suman automáticamente).
+- **Estatus**: `borrador` (editable por residente) → `cerrada` (inmutable).
+- **Quién**: el **residente miembro del obra_team** captura y cierra. Director puede ver/auditar. Una vez cerrada, ni el residente la modifica (solo el Director podría reabrir vía función especial — fuera de alcance ahora).
+- **PU congelado al cierre**: al cerrar la semana, se persiste el snapshot del PU vigente usado para el cálculo, de modo que OCs futuras no alteren el histórico.
 
-Cada renglón de una OC-P es uno de tres tipos:
+## Estructura de datos
 
-| Tipo | Acción | Clave WBS | Importe |
-|------|--------|-----------|---------|
-| `modificacion` | Cambia cantidad y/o PU de un concepto existente | Misma clave del vigente | `(cant_nueva × PU_nuevo) − importe_vigente` (puede ser ±) |
-| `adicion` | Agrega un concepto nuevo | Clave nueva | `cantidad × PU` (positivo) |
-| `eliminacion` | Elimina un concepto existente | Misma clave del vigente | `−importe_vigente` (negativo) |
+### Tabla `obra_estimaciones`
+- `id`, `obra_id`, `company_id`
+- `numero` (autoincremental por obra)
+- `semana_inicio` (date, lunes), `semana_fin` (date, domingo)
+- `estatus`: enum `borrador | cerrada`
+- `monto_total` (suma de renglones, recalculado en cada guardado)
+- `creado_por`, `cerrada_por`, `cerrada_at`, `created_at`, `updated_at`
+- Único: `(obra_id, semana_inicio)`
 
-Reglas:
-- Solo se puede modificar/eliminar renglones **hoja** (no grupos).
-- No se puede modificar/eliminar dos veces la misma clave dentro de la misma OC.
-- Una OC sobre una clave ya eliminada por una OC previa autorizada se rechaza.
-- Adiciones deben respetar la jerarquía WBS (el padre debe existir en el vigente o agregarse en la misma OC).
+### Tabla `obra_estimacion_renglones`
+- `id`, `estimacion_id`
+- `renglon_clave` (WBS, ej `1.1.2`), `concepto`, `unidad`
+- `cantidad_vigente`, `pu_vigente` (snapshot al momento del cierre / referencia para cálculo)
+- `cantidad_ejecutada` (esta semana)
+- `importe_ejecutado` (cantidad × pu, calculado)
+- Único: `(estimacion_id, renglon_clave)`
 
-## Cálculo del "vigente"
+Solo se guardan renglones con cantidad > 0 para mantener la tabla ligera.
 
-```text
-vigente[clave] = base[clave]
-            + Σ modificaciones_autorizadas[clave].delta
-            + adiciones_autorizadas[clave]
-            − eliminaciones_autorizadas[clave]   (la clave desaparece)
-```
+### RLS
+- SELECT: miembros de la company.
+- INSERT/UPDATE/DELETE en borrador: Director o miembro de `obra_team`.
+- UPDATE de `estatus=cerrada`: bloqueado vía policy (no se permite editar renglones de estimación cerrada).
 
-Los grupos se recalculan sumando sus hijos vigentes.
+## Server functions (`src/lib/api/estimaciones.functions.ts`)
 
-## Cambios de esquema (migración)
+- `listEstimaciones({ obraId })` — lista semanas con monto, estatus y % acumulado.
+- `getOrCreateBorrador({ obraId, semanaInicio })` — devuelve borrador existente o crea uno nuevo para esa semana; incluye **árbol del vigente** con cantidades ya capturadas y acumulado de semanas cerradas previas.
+- `guardarRenglonesEstimacion({ estimacionId, renglones })` — valida bloqueo de sobre-ejecución contra `acumulado_previo + cantidad_nueva ≤ cantidad_vigente`, recalcula importes y monto_total. Devuelve `{ errores[], monto_total }`.
+- `cerrarEstimacion({ estimacionId })` — valida que esté en borrador, congela snapshot de PU vigente, cambia estatus a `cerrada`.
+- `getEstimacion({ id })` — detalle para vista de solo lectura.
 
-`obra_presupuesto_renglones`:
-- Nuevo enum `tipo_movimiento ('renglon','modificacion','adicion','eliminacion')`.
-  - Base → todos `renglon`.
-  - OC → `modificacion | adicion | eliminacion`.
-- Nueva columna `importe_delta numeric` (firmado), calculada en servidor para OCs.
-
-(El enum `tipo` de `obra_presupuestos` se mantiene `base|adenda` para no romper datos; en UI se muestra como "Orden de cambio #N".)
-
-## Lógica servidor
-
-En `presupuesto-utils.ts`:
-- `reconstruirVigente(baseRenglones, ocsAutorizadas)` → árbol vigente.
-- `procesarOrdenCambio({ vigentePrevio, ocInputRenglones })`:
-  1. Valida cada renglón según su `tipo_movimiento`.
-  2. Calcula `importe_delta` por renglón.
-  3. Devuelve `{ renglones, errores, montoDelta }` (el total de la OC puede ser negativo).
-
-En `presupuestos.functions.ts`:
-- `getVigente(obraId)` → devuelve el presupuesto vigente reconstruido, marcando renglones modificados/agregados.
-- `guardarRenglonesOC(presupuestoId, renglones[])` → reemplaza a `guardarRenglones` cuando el presupuesto es OC.
-- Se mantiene `guardarRenglones` solo para presupuesto base.
-- **No hay parseo de Excel para OCs.** La función `parsearExcelPresupuesto` actual sigue existiendo solo para el base.
+Lógica auxiliar en `src/lib/estimacion-utils.ts`:
+- `calcularSemana(date) → { inicio, fin }` (lunes/domingo ISO).
+- `getAcumuladoPrevio(obraId, semanaInicio, supabase)` → mapa `clave → cantidad acumulada` de semanas cerradas anteriores.
 
 ## UI
 
-**`PresupuestoModule`:**
-- Renombrar tab "Adendas" → "Órdenes de cambio (N)".
-- Tarjetas resumen: Base autorizada · Σ Órdenes autorizadas (puede ser negativo) · Total vigente.
-- Botón "Nueva orden de cambio" (solo Director, requiere base autorizado).
-- Nuevo botón "Ver presupuesto vigente" en el header del módulo.
+### Pestaña nueva "Estimaciones" en el módulo de obra
+- Lista de semanas (Lun–Dom, monto, % acumulado de obra, estatus) + botón **"Nueva estimación"** que abre la semana actual (o la última no cerrada).
 
-**Nuevo `CapturaOrdenCambioSheet`** (solo manual, sin Excel):
-- 3 secciones tabuladas dentro del sheet:
-  1. **Modificar** – buscador sobre el vigente actual; al elegir un concepto se agrega una fila con `clave · concepto · cant_actual · PU_actual` y campos editables `cant_nueva / PU_nuevo`; muestra delta en vivo.
-  2. **Agregar** – tabla manual estilo captura actual (clave WBS, concepto, unidad, cantidad, PU). Validación de claves WBS y jerarquía.
-  3. **Eliminar** – picker múltiple sobre el vigente; muestra el importe que se restará por cada uno.
-- Footer fijo con `Δ Total: ±$X` y acciones Guardar borrador / Autorizar.
+### `CapturaEstimacionSheet`
+- Encabezado: rango Lun–Dom, estatus (badge), monto semana, % avance global.
+- **Selector de semana** (calendario que sugiere la actual; permite semanas pasadas sin estimación).
+- **Árbol del vigente** (mismo layout que VerVigente) con columnas:
+  - Concepto / Unidad / Cant. vigente / **Cant. acumulada previa** / **Cant. esta semana (editable)** / Importe semana / % acumulado
+- Filas grupo: solo lectura, suman hijos.
+- Filas hoja: input numérico para cantidad de la semana.
+- **Validación inline**: si acumulado_previo + cantidad > cantidad_vigente, marca el input en rojo con tooltip "Excede vigente por X. Levante una OC-P".
+- Botones: **Guardar borrador** (autosave cada N seg también), **Cerrar semana** (confirm dialog que recalcula y bloquea si hay errores).
+- Filtro/búsqueda por clave o concepto y opción "solo con avance".
 
-**`VerPresupuestoSheet`:**
-- Para una OC: muestra sus renglones agrupados por tipo de movimiento con su delta.
-- Para el base: sin cambios.
+### `VerEstimacionSheet` (solo lectura para semanas cerradas)
+- Mismo árbol con valores congelados, sin inputs.
 
-**Nuevo `VerVigenteSheet`:**
-- Árbol consolidado base + OCs autorizadas, con badges en renglones modificados/agregados.
+## Detalles técnicos
 
-## Permisos
+- Reutilizar `reconstruirVigente()` para obtener el árbol vigente al abrir el sheet.
+- El acumulado previo se calcula sumando renglones de `obra_estimaciones` con estatus `cerrada` y `semana_inicio < semana_actual` para esa obra.
+- Snapshot al cierre: copiar `cantidad_vigente` y `pu_vigente` actuales en cada renglón antes de marcar `cerrada`, para evitar drift si después se autoriza una OC-P.
+- Solo Director puede ver estimaciones de obras donde no es residente (vía RLS por company).
 
-Solo **Director** crea, edita y autoriza OCs. Una vez autorizada queda inmutable. Para revertir → otra OC con movimientos opuestos.
+## Fuera de alcance (siguiente iteración)
 
----
+- Importación desde Excel de estimaciones.
+- Comparativo estimación vs gastos semanales.
+- Reabrir estimaciones cerradas.
+- Workflow de aprobación por Director.
 
-### Entregable
-
-1. Migración: enum `tipo_movimiento` + columnas `tipo_movimiento` e `importe_delta` en `obra_presupuesto_renglones`.
-2. `presupuesto-utils.ts`: `reconstruirVigente` + `procesarOrdenCambio`.
-3. `presupuestos.functions.ts`: `getVigente`, `guardarRenglonesOC`.
-4. UI: `CapturaOrdenCambioSheet` (manual), `VerVigenteSheet`, ajustes en `PresupuestoModule` y `VerPresupuestoSheet`.
+¿Procedo con este diseño?
