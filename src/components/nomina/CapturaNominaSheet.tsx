@@ -8,6 +8,7 @@ import {
   guardarAsistencia,
   cerrarNomina,
 } from "@/lib/api/nominas.functions";
+import { getTrabajadoresBloqueadosPorDestajo } from "@/lib/api/destajos.functions";
 import { formatRangoSemana } from "@/lib/estimacion-utils";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -86,6 +87,22 @@ export function CapturaNominaSheet({
     queryKey: ["nomina", obraId, semanaInicio],
     queryFn: () => fetchNomina({ data: { obraId, semanaInicio } }),
   });
+  const fetchBloqueados = useServerFn(getTrabajadoresBloqueadosPorDestajo);
+  const bloqueadosQ = useQuery({
+    queryKey: ["nomina-bloqueados-destajo", obraId],
+    queryFn: () => fetchBloqueados({ data: { obraId } }),
+  });
+  const bloqueadosMap = useMemo(() => {
+    const m = new Map<string, { destajo_id: string; destajo_nombre: string }>();
+    for (const b of (bloqueadosQ.data ?? []) as Array<{
+      trabajador_id: string;
+      destajo_id: string;
+      destajo_nombre: string;
+    }>) {
+      m.set(b.trabajador_id, { destajo_id: b.destajo_id, destajo_nombre: b.destajo_nombre });
+    }
+    return m;
+  }, [bloqueadosQ.data]);
 
   const [asignarOpen, setAsignarOpen] = useState(false);
   const [confirmCerrar, setConfirmCerrar] = useState(false);
@@ -198,10 +215,24 @@ export function CapturaNominaSheet({
                     </tr>
                   </thead>
                   <tbody>
-                    {renglones.map((r) => (
-                      <tr key={r.id} className="border-t border-border">
+                    {renglones.map((r) => {
+                      const bloq = bloqueadosMap.get(r.trabajador_id);
+                      const filaBloqueada = !!bloq;
+                      return (
+                      <tr key={r.id} className={cn("border-t border-border", filaBloqueada && "bg-muted/30")}>
                         <td className="p-2">
-                          <div className="font-medium">{r.trabajador?.nombre_completo ?? "—"}</div>
+                          <div className="font-medium flex items-center gap-2 flex-wrap">
+                            {r.trabajador?.nombre_completo ?? "—"}
+                            {bloq && (
+                              <Badge
+                                variant="outline"
+                                className="gap-1"
+                                title={`Pago por destajo: ${bloq.destajo_nombre}`}
+                              >
+                                <Lock className="size-3" /> Destajo: {bloq.destajo_nombre}
+                              </Badge>
+                            )}
+                          </div>
                           {r.trabajador?.puesto && (
                             <div className="text-xs text-muted-foreground">
                               {r.trabajador.puesto}
@@ -221,7 +252,7 @@ export function CapturaNominaSheet({
                                 jornada={Number(a?.jornada ?? 0)}
                                 horasExtras={Number(a?.horas_extras ?? 0)}
                                 notaExtras={a?.nota_extras ?? null}
-                                disabled={!!isClosed}
+                                disabled={!!isClosed || filaBloqueada}
                                 onSaved={() => {
                                   qc.invalidateQueries({
                                     queryKey: ["nomina", obraId, semanaInicio],
@@ -233,16 +264,21 @@ export function CapturaNominaSheet({
                           );
                         })}
                         <td className="p-2 text-right tabular-nums">
-                          {Number(r.dias_trabajados).toFixed(1)}
+                          {filaBloqueada ? "—" : Number(r.dias_trabajados).toFixed(1)}
                         </td>
                         <td className="p-2 text-right tabular-nums">
-                          {Number(r.horas_extras_total).toFixed(1)}
+                          {filaBloqueada ? "—" : Number(r.horas_extras_total).toFixed(1)}
                         </td>
                         <td className="p-2 text-right tabular-nums font-medium">
-                          {formatMXN(Number(r.importe_total))}
+                          {filaBloqueada ? (
+                            <span className="text-muted-foreground">vía destajo</span>
+                          ) : (
+                            formatMXN(Number(r.importe_total))
+                          )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </Card>
