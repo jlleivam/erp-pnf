@@ -30,7 +30,7 @@ async function getAccess(supabase: any, userId: string, obraId: string) {
   };
 }
 
-function recalcRenglon(asistencias: { jornada: number; horas_extras: number }[], sueldo: number, mult: number) {
+function recalcRenglon(asistencias: { jornada: number; horas_extras: number }[], sueldo: number) {
   let dias = 0;
   let horas = 0;
   for (const a of asistencias) {
@@ -38,7 +38,7 @@ function recalcRenglon(asistencias: { jornada: number; horas_extras: number }[],
     horas += Number(a.horas_extras ?? 0);
   }
   const importeJornadas = dias * sueldo;
-  const importeExtras = horas * (sueldo / 8) * mult;
+  const importeExtras = horas * (sueldo / 8);
   return {
     dias_trabajados: dias,
     horas_extras_total: horas,
