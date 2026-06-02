@@ -40,8 +40,9 @@ export function NotificacionesBell() {
 
   const handleOpen = (n: any) => {
     if (!n.leida_at) markOne.mutate(n.id);
-    if (n.link) navigate({ to: n.link });
+    if (n.link) navigate({ to: n.link as any });
   };
+
 
   return (
     <Popover>
