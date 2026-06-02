@@ -162,6 +162,7 @@ export const solicitarInsumo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId } = await getUserCompanyAndDirector(supabase, userId);
+    await validateUnidad(supabase, companyId, data.unidad);
     const { error } = await supabase.from("insumos").insert({
       company_id: companyId,
       categoria_id: data.categoriaId,
