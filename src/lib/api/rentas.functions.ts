@@ -139,7 +139,7 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       obraId: z.string().uuid(),
-      equipo: z.string().trim().min(1).max(255),
+      insumoId: z.string().uuid(),
       cantidad: z.number().positive().default(1),
       descripcion: z.string().trim().max(1000).optional(),
       fechaEstimadaInicio: z.string().optional(),
@@ -155,10 +155,25 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
       throw new Error("No tienes permisos en esta obra");
     }
 
+    // Validar que el insumo pertenezca a la compañía, esté autorizado y disponible para renta
+    const { data: insumo, error: insErr } = await supabase
+      .from("insumos")
+      .select("id, nombre, codigo, unidad, estatus, disponible_renta, company_id")
+      .eq("id", data.insumoId)
+      .maybeSingle();
+    if (insErr) throw new Error(insErr.message);
+    if (!insumo || insumo.company_id !== companyId) throw new Error("Insumo no encontrado");
+    if (insumo.estatus !== "autorizado") throw new Error("El insumo no está autorizado");
+    if (!insumo.disponible_renta) throw new Error("Ese insumo no está marcado como disponible para renta");
+
     const { data: existing } = await supabase
       .from("obra_rentas").select("numero")
       .eq("obra_id", data.obraId).order("numero", { ascending: false }).limit(1);
     const siguiente = (existing?.[0]?.numero ?? 0) + 1;
+
+    const equipoLabel = insumo.codigo
+      ? `${insumo.codigo} — ${insumo.nombre}`
+      : insumo.nombre;
 
     const { data: ins, error } = await supabase
       .from("obra_rentas")
@@ -166,7 +181,8 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
         company_id: companyId,
         obra_id: data.obraId,
         numero: siguiente,
-        equipo: data.equipo,
+        insumo_id: insumo.id,
+        equipo: equipoLabel,
         cantidad: data.cantidad,
         descripcion: data.descripcion ?? null,
         fecha_estimada_inicio: data.fechaEstimadaInicio ?? null,
