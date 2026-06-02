@@ -1,54 +1,48 @@
 ## Objetivo
 
-Que el estatus del destajo en la lista refleje el del presupuesto base (Borrador → Pendiente autorización → Autorizado / Rechazado), y que **solo se pueda eliminar un destajo cuando el presupuesto base está en borrador** (no enviado todavía).
+Crear el módulo **Subcontratos** dentro de cada obra, replicando el flujo del módulo de destajos (presupuesto base + órdenes de cambio + estimaciones semanales con autorización del supervisor), con dos diferencias:
 
-## Contexto
+1. El subcontrato se asigna a un **tercero** (categoría `contratista` o `ambos`) en lugar de a un trabajador.
+2. **No hay pestaña Trabajadores** — el contratista responde por sus propias altas ante el IMSS.
 
-Hoy `obra_destajos.estatus` se queda en `'borrador'` para siempre — nunca se actualiza al enviar/autorizar el presupuesto base. Por eso en la tabla siempre aparece "Borrador" y siempre aparece el botón eliminar (mientras no haya pagos), aun cuando el residente ya envió el presupuesto al supervisor.
+## Base de datos (nueva migración)
 
-El flujo real de estatus vive en `obra_destajo_presupuestos` (tipo `base`): `borrador → enviado → autorizado | rechazado`.
+Espejo de las tablas de destajos, prefijo `obra_subcontrato_`:
 
-## Cambios
+- `obra_subcontratos` — `obra_id`, `company_id`, `contratista_id` (FK a `terceros`), `numero`, `nombre`, `descripcion`, `estatus` (enum existente `destajo_doc_estatus`), `monto_total`, `creado_por`, timestamps.
+- `obra_subcontrato_presupuestos` — igual a `obra_destajo_presupuestos` (tipo `base | adenda`, mismo flujo `borrador → enviado → autorizado | rechazado`).
+- `obra_subcontrato_renglones` — igual a `obra_destajo_renglones`.
+- `obra_subcontrato_estimaciones` — igual a `obra_destajo_estimaciones`.
+- `obra_subcontrato_estimacion_renglones` — igual a `obra_destajo_estimacion_renglones`.
 
-### 1. `src/lib/api/destajos.functions.ts` — `listDestajos`
-Cargar también el estatus del presupuesto **base** de cada destajo y devolverlo como `estatus_base` en cada fila:
+Para cada tabla en la misma migración: `GRANT SELECT/INSERT/UPDATE/DELETE … TO authenticated`, `GRANT ALL … TO service_role`, `ENABLE ROW LEVEL SECURITY` y políticas equivalentes a las de destajos (director / supervisor / miembro de obra leen y gestionan; sólo `borrador` editable en renglones y estimaciones). Reutilizamos los enums `destajo_doc_estatus`, `destajo_estimacion_estatus` y `presupuesto_movimiento` que ya existen.
 
-```ts
-const { data: bases } = await supabase
-  .from("obra_destajo_presupuestos")
-  .select("destajo_id, estatus")
-  .in("destajo_id", ids)
-  .eq("tipo", "base");
-const baseMap = new Map(bases?.map(b => [b.destajo_id, b.estatus]));
-// ...
-return dst.map(d => ({
-  ...d,
-  estatus_base: baseMap.get(d.id) ?? "borrador",
-  ...
-}));
-```
+No se crea tabla de trabajadores asignados (no aplica).
 
-### 2. `src/lib/api/destajos.functions.ts` — `eliminarDestajo`
-Endurecer la regla: además de no permitir eliminar con estimaciones cerradas, **rechazar si el presupuesto base ya no está en `borrador`** (`enviado | autorizado | rechazado`):
+## Backend
 
-```ts
-const { data: base } = await supabase
-  .from("obra_destajo_presupuestos")
-  .select("estatus").eq("destajo_id", data.id).eq("tipo", "base").maybeSingle();
-if (base && base.estatus !== "borrador") {
-  throw new Error("No se puede eliminar: el presupuesto ya fue enviado a autorización");
-}
-```
+Nuevo archivo `src/lib/api/subcontratos.functions.ts`, copia 1-a-1 de `destajos.functions.ts`:
 
-### 3. `src/components/destajos/DestajosModule.tsx`
-- Extender el tipo `Destajo` con `estatus_base: "borrador" | "enviado" | "autorizado" | "rechazado"`.
-- Usar `d.estatus_base` (en lugar de `d.estatus`) para el `Badge` de la columna **Estatus**, reutilizando `ESTATUS_LABEL` / `ESTATUS_VARIANT` que ya mapean `enviado → "Pendiente autorización"`.
-- Mostrar el botón Eliminar solo cuando `director && d.estatus_base === "borrador" && d.pagado_acumulado === 0`.
-- Para el cálculo de "Contratado vigente" y "Destajos activos", seguir usando `d.estatus_base === "autorizado"` (más consistente con el flujo real).
+- `listSubcontratos`, `getSubcontrato` — devuelven `contratista_nombre` (de `terceros.razon_social`) en lugar de `destajista_nombre`; sin bloque de `obra_destajo_trabajadores`.
+- `crearSubcontrato` — valida que `contratistaId` exista en `terceros` con `categoria in ('contratista','ambos')`. Crea el subcontrato + presupuesto base en borrador. Sin lógica de asignación de trabajadores.
+- `eliminarSubcontrato` — mismas reglas que `eliminarDestajo` (sin estimaciones cerradas y base aún en `borrador`).
+- Presupuesto base + OCs (`guardarRenglonesSubcontrato`, `crearOrdenCambio…`, `guardarRenglonesOC…`, `getVigente…`, `enviar/autorizar/rechazar/reabrirPresupuestoSubcontrato`).
+- Estimaciones semanales (`listEstimacionesSubcontrato`, `crearEstimacion…`, `guardarRenglones…`, `cerrar/reabrirEstimacion…`).
+
+## Frontend
+
+Nueva carpeta `src/components/subcontratos/`, espejo de `destajos/`:
+
+- `SubcontratosModule.tsx` — tabla con columnas #, Subcontrato, **Contratista**, Estatus (basado en `estatus_base`), Contratado, Pagado, Acciones; mismas tarjetas de KPI (Contratado vigente, Pagado acumulado, Subcontratos activos); botón Eliminar visible sólo cuando `director && estatus_base === "borrador" && pagado_acumulado === 0`.
+- `NuevoSubcontratoDialog.tsx` — selector de **Contratista** alimentado por `listTerceros` filtrado a `categoria ∈ {contratista, ambos}`.
+- `SubcontratoDetalleSheet.tsx` — copia del de destajos pero **sin pestaña Trabajadores**; sólo dos tabs: **Presupuesto** y **Estimaciones**. Encabezado muestra "Contratista: {razón social}".
+- `CapturaSubcontratoSheet.tsx`, `CapturaOrdenCambioSubcontratoSheet.tsx`, `CapturaEstimacionSubcontratoSheet.tsx`, `EstimacionesSubcontratoTab.tsx` — copias directas de las versiones de destajos apuntando a los endpoints nuevos.
+
+## Routing y navegación
+
+- En `src/routes/_authenticated/app.obras.$obraId.$.tsx` añadir el caso `if (slug === "subcontratos") return <SubcontratosModule obraId={obraId} />;` (el slug y el label ya existen en `LABELS`).
+- `src/lib/modules.ts` ya tiene el módulo admin de subcontratos como placeholder; lo dejamos igual por ahora (módulo a nivel obra es lo solicitado).
 
 ## Resultado
 
-- En la lista: un destajo nuevo aparece como **Borrador** y puede eliminarse.
-- Al hacer click en "Enviar a autorización" del presupuesto base, su badge cambia a **Pendiente autorización** y el botón eliminar desaparece.
-- Si el supervisor lo autoriza/rechaza, el badge sigue al estado del presupuesto base.
-- Sin cambios de esquema; solo lectura derivada del presupuesto base.
+El residente abre **Subcontratos** dentro de una obra, crea un subcontrato eligiendo un contratista del catálogo de terceros, captura el presupuesto base, lo envía al supervisor para autorización, registra órdenes de cambio y estimaciones semanales — exactamente igual que destajos, pero sin gestión de trabajadores.
