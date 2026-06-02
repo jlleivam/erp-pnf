@@ -420,7 +420,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
       dias: number;
       horas_extras: number;
       importe: number;
-      asistencias: { fecha: string; jornada: number; horas_extras: number }[];
+      asistencias: { fecha: string; jornada: number; horas_extras: number; nota_extras: string | null }[];
     };
     type Resumen = {
       trabajador_id: string;
