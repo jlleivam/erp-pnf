@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
+import { EquipoModule } from "@/components/equipo/EquipoModule";
 
 export const Route = createFileRoute("/_authenticated/app/configuracion")({
   component: Configuracion,
@@ -32,7 +33,7 @@ function Configuracion() {
           <Card>
             <CardHeader><CardTitle>Equipo de la empresa</CardTitle></CardHeader>
             <CardContent>
-              <ModulePlaceholder title="Alta de usuarios y asignación de perfiles" />
+              <EquipoModule />
             </CardContent>
           </Card>
         </TabsContent>
