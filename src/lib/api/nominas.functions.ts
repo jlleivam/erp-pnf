@@ -230,6 +230,7 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
       fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       jornada: z.number().refine((v) => v === 0 || v === 0.5 || v === 1),
       horasExtras: z.number().min(0).max(24),
+      notaExtras: z.string().trim().max(500).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -253,6 +254,11 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
     if (data.fecha < nominaFull.semana_inicio || data.fecha > nominaFull.semana_fin)
       throw new Error("Fecha fuera de la semana de la nómina");
 
+    // Nota obligatoria cuando hay horas extras
+    const notaLimpia = (data.notaExtras ?? "").trim();
+    if (data.horasExtras > 0 && notaLimpia.length < 3) {
+      throw new Error("Las horas extras requieren una nota que explique el motivo (mínimo 3 caracteres).");
+    }
 
     if (data.jornada === 0 && data.horasExtras === 0) {
       await supabase.from("obra_nomina_asistencias")
@@ -266,6 +272,7 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
           fecha: data.fecha,
           jornada: data.jornada,
           horas_extras: data.horasExtras,
+          nota_extras: data.horasExtras > 0 ? notaLimpia : null,
         },
         { onConflict: "renglon_id,fecha" },
       );
@@ -280,7 +287,6 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
     const totals = recalcRenglon(
       asistencias ?? [],
       Number(renglon.sueldo_diario_snapshot),
-      Number(renglon.multiplicador_extras),
     );
     await supabase.from("obra_nomina_renglones").update(totals).eq("id", data.renglonId);
 
