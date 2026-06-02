@@ -14,6 +14,165 @@ export type Database = {
   }
   public: {
     Tables: {
+      almacen_movimientos_semana: {
+        Row: {
+          created_at: string
+          id: string
+          insumo_id: string
+          inv_inicial: number
+          precio_unitario: number
+          recibido: number
+          semana_id: string
+          updated_at: string
+          utilizado: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insumo_id: string
+          inv_inicial?: number
+          precio_unitario?: number
+          recibido?: number
+          semana_id: string
+          updated_at?: string
+          utilizado?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insumo_id?: string
+          inv_inicial?: number
+          precio_unitario?: number
+          recibido?: number
+          semana_id?: string
+          updated_at?: string
+          utilizado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "almacen_movimientos_semana_semana_id_fkey"
+            columns: ["semana_id"]
+            isOneToOne: false
+            referencedRelation: "almacen_semanas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      almacen_recepcion_partidas: {
+        Row: {
+          cantidad: number
+          created_at: string
+          id: string
+          insumo_id: string
+          precio_unitario: number
+          recepcion_id: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          id?: string
+          insumo_id: string
+          precio_unitario?: number
+          recepcion_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          id?: string
+          insumo_id?: string
+          precio_unitario?: number
+          recepcion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "almacen_recepcion_partidas_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "almacen_recepciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      almacen_recepciones: {
+        Row: {
+          company_id: string
+          created_at: string
+          fecha: string
+          folio_remision: string | null
+          id: string
+          notas: string | null
+          obra_id: string
+          oc_id: string
+          recibido_por: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          fecha?: string
+          folio_remision?: string | null
+          id?: string
+          notas?: string | null
+          obra_id: string
+          oc_id: string
+          recibido_por: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          fecha?: string
+          folio_remision?: string | null
+          id?: string
+          notas?: string | null
+          obra_id?: string
+          oc_id?: string
+          recibido_por?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "almacen_recepciones_oc_id_fkey"
+            columns: ["oc_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      almacen_semanas: {
+        Row: {
+          cerrada_at: string | null
+          cerrada_por: string | null
+          company_id: string
+          created_at: string
+          estatus: Database["public"]["Enums"]["almacen_semana_estatus"]
+          id: string
+          obra_id: string
+          semana_fin: string
+          semana_inicio: string
+        }
+        Insert: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["almacen_semana_estatus"]
+          id?: string
+          obra_id: string
+          semana_fin: string
+          semana_inicio: string
+        }
+        Update: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id?: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["almacen_semana_estatus"]
+          id?: string
+          obra_id?: string
+          semana_fin?: string
+          semana_inicio?: string
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           banco: string | null
@@ -1188,6 +1347,7 @@ export type Database = {
       siguiente_folio_sc: { Args: { _company_id: string }; Returns: string }
     }
     Enums: {
+      almacen_semana_estatus: "abierta" | "cerrada"
       app_role:
         | "director"
         | "residente"
@@ -1203,6 +1363,8 @@ export type Database = {
         | "enviada"
         | "rechazada"
         | "pagada"
+        | "recibida_parcial"
+        | "recibida"
       requisicion_estatus:
         | "borrador"
         | "enviada"
@@ -1374,6 +1536,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      almacen_semana_estatus: ["abierta", "cerrada"],
       app_role: [
         "director",
         "residente",
@@ -1390,6 +1553,8 @@ export const Constants = {
         "enviada",
         "rechazada",
         "pagada",
+        "recibida_parcial",
+        "recibida",
       ],
       requisicion_estatus: [
         "borrador",
