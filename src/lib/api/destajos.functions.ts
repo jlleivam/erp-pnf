@@ -215,6 +215,11 @@ export const eliminarDestajo = createServerFn({ method: "POST" })
       .eq("destajo_id", data.id).eq("estatus", "cerrada").limit(1);
     if ((ests ?? []).length > 0)
       throw new Error("No se puede eliminar: hay estimaciones cerradas");
+    const { data: base } = await supabase
+      .from("obra_destajo_presupuestos")
+      .select("estatus").eq("destajo_id", data.id).eq("tipo", "base").maybeSingle();
+    if (base && base.estatus !== "borrador")
+      throw new Error("No se puede eliminar: el presupuesto ya fue enviado a autorización");
     const { error } = await supabase
       .from("obra_destajos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
