@@ -1,33 +1,49 @@
-# Persistir "Vista asumida" del Director
+# Fix: el destajo no permite capturar conceptos
 
-## Problema
+## Diagnóstico
 
-Cuando un Director cambia su vista a "Residente" en el Dashboard y entra a una obra, la vista vuelve a "Director". Causa: `assumedRole` vive en un store Zustand sin persistencia. Al entrar a la obra (especialmente si hay rehidratación de sesión o recarga del shell), el estado se reinicia a `null`, lo que equivale a Director.
+El sheet **"Presupuesto de destajo"** se abre sin permitir edición (sin botones "Agregar renglón" ni "Guardar borrador" y con los inputs deshabilitados) porque `getDestajoPresupuesto` falla en silencio.
 
-## Objetivo
+La query usa un *embed* de PostgREST:
 
-Mantener el rol asumido por el Director de forma consistente en toda la app (dashboard, obras, catálogos, etc.) hasta que el propio Director lo cambie manualmente o cierre sesión.
+```ts
+.from("obra_destajo_presupuestos")
+.select("*, obra_destajos!inner(...)")
+```
 
-## Cambios
+Pero la migración del módulo de destajos creó **todas** las tablas sin **ningún** `FOREIGN KEY`:
 
-### 1. `src/stores/auth.ts` — persistir `assumedRole`
+- `obra_destajos.obra_id`, `company_id`, `destajista_id`, `creado_por`
+- `obra_destajo_presupuestos.destajo_id` (+ creado_por/enviado_por/autorizado_por/rechazado_por)
+- `obra_destajo_renglones.presupuesto_destajo_id`
+- `obra_destajo_trabajadores.destajo_id`, `trabajador_id` (+ asignado_por/desasignado_por)
+- `obra_destajo_estimaciones.destajo_id`, `company_id` (+ creado_por/cerrada_por)
+- `obra_destajo_estimacion_renglones.estimacion_id`
 
-- Envolver el store con el middleware `persist` de Zustand.
-- Persistir **solo** `assumedRole` en `localStorage` bajo la clave `erp-pnf:assumed-role` (no persistir `userId`, `profile`, `roles` ni `loading`, que deben revalidarse contra el backend).
-- Mantener el reset explícito de `assumedRole` dentro de `reset()` (logout) para que cerrar sesión limpie la preferencia.
+Sin FKs, PostgREST no puede resolver los embeds (`obra_destajos!inner(...)` se usa en varios server functions: `getDestajoPresupuesto`, asignación de trabajadores, payroll lock, etc.), la consulta lanza error, `data` queda `undefined` y el sheet renderiza el título placeholder con `editable = false`.
 
-### 2. Validación al hidratar la sesión
+Como confirmación: el screenshot muestra "Presupuesto de destajo" (fallback) en lugar de "Presupuesto base" (nombre real en BD), lo que confirma que `presupuesto` no se cargó.
 
-En `src/routes/__root.tsx` (`AuthSync`), tras obtener `ctx.roles`:
-- Si el usuario rehidratado **no** es director, forzar `setAssumedRole(null)` para evitar que un rol asumido obsoleto afecte a un usuario que ya no es director (cambio de cuenta en el mismo navegador, revocación de rol, etc.).
+## Solución
 
-### 3. Sin cambios de UI
+Migración que agrega los `FOREIGN KEY` faltantes a las 6 tablas del módulo de destajos, con `ON DELETE` apropiado:
 
-No se toca `AppShell`, `ObraShell` ni los módulos. La selección sigue siendo el mismo dropdown de "Vista" en el header del shell corporativo; ahora simplemente se respeta de forma consistente.
+- `CASCADE` para relaciones padre→hijo internas del módulo (destajo→presupuestos→renglones; destajo→estimaciones→renglones; destajo→trabajadores).
+- `CASCADE` desde `obras` y `companies` (consistente con el resto del esquema).
+- `RESTRICT` para `destajista_id → trabajadores` y `trabajador_id → trabajadores` (no borrar un trabajador con destajos asignados).
+- `SET NULL` para columnas opcionales de auditoría (`enviado_por`, `autorizado_por`, `rechazado_por`, `desasignado_por`, `cerrada_por`).
+- Auditoría obligatoria (`creado_por`, `asignado_por`) → `REFERENCES auth.users(id)` sin `ON DELETE` especial.
+- Para `obra_destajo_estimacion_renglones` se mantiene `renglon_clave` como texto (no FK) ya que apunta a una clave WBS reconstruida, no a un renglón concreto.
+
+Adicionalmente, ejecutar `NOTIFY pgrst, 'reload schema'` al final para que PostgREST detecte de inmediato las nuevas relaciones.
 
 ## Resultado esperado
 
-- Director elige "Vista: Residente" → entra a una obra → sigue viendo la app como Residente.
-- Recarga la página → sigue como Residente.
-- Cambia manualmente a "Director (mi rol)" → vuelve a Director.
-- Cierra sesión → la preferencia se limpia.
+- Embed `obra_destajos!inner(...)` y demás se resuelven.
+- `getDestajoPresupuesto` regresa `{ presupuesto, renglones }`.
+- El sheet muestra el título correcto, habilita los inputs y muestra los botones "Agregar renglón" / "Guardar borrador".
+- También se arreglan implícitamente la asignación de trabajadores y el lock en nómina, que dependen del mismo embed.
+
+## Sin cambios de código de aplicación
+
+No se tocan los server functions ni los componentes; basta con la migración de FKs.
