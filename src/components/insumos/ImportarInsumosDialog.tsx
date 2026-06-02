@@ -134,7 +134,7 @@ export function ImportarInsumosDialog({
         const errMsgs: string[] = [];
         if (!nombre) errMsgs.push("Nombre vacío");
         if (!unidadRaw) errMsgs.push("Unidad vacía");
-        else if (!UNIDADES.includes(unidadRaw as Unidad)) {
+        else if (!unidadesValidas.includes(unidadRaw)) {
           errMsgs.push(`Unidad inválida (${unidadRaw})`);
         }
         if (!categoria) errMsgs.push("Categoría vacía");
