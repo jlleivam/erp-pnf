@@ -149,7 +149,7 @@ export function ImportarInsumosDialog({
         if (errMsgs.length > 0) {
           errs.push({ row: excelRow, nombre, unidad: unidadRaw, categoria, error: errMsgs.join("; ") });
         } else {
-          vals.push({ row: excelRow, nombre, unidad: unidadRaw as Unidad, categoria });
+          vals.push({ row: excelRow, nombre, unidad: unidadRaw, categoria });
         }
       }
 
