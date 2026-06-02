@@ -164,20 +164,28 @@ export const solicitarInsumo = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     await validateUnidad(supabase, companyId, data.unidad);
-    const row: Record<string, unknown> = {
+    const row: {
+      company_id: string;
+      categoria_id: string | null;
+      nombre: string;
+      unidad: string;
+      solicitado_por: string;
+      estatus: "autorizado" | "pendiente";
+      autorizado_por?: string;
+      autorizado_at?: string;
+      disponible_renta?: boolean;
+    } = {
       company_id: companyId,
       categoria_id: data.categoriaId,
       nombre: data.nombre,
       unidad: data.unidad,
       solicitado_por: userId,
+      estatus: isDirector ? "autorizado" : "pendiente",
     };
     if (isDirector) {
-      row.estatus = "autorizado";
       row.autorizado_por = userId;
       row.autorizado_at = new Date().toISOString();
       row.disponible_renta = data.disponibleRenta ?? false;
-    } else {
-      row.estatus = "pendiente";
     }
     const { error } = await supabase.from("insumos").insert(row);
     if (error) throw new Error(error.message);
