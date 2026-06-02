@@ -169,14 +169,26 @@ export const editarInsumo = createServerFn({ method: "POST" })
       nombre: z.string().trim().min(1).max(200),
       unidad: z.enum(UNIDADES),
       categoriaId: z.string().uuid().nullable(),
+      codigo: z.string().trim().toUpperCase().regex(CODIGO_REGEX, "Formato inválido (ej. CEM-0001)").optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("insumos")
-      .update({ nombre: data.nombre, unidad: data.unidad, categoria_id: data.categoriaId })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const { supabase, userId } = context;
+    const { isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede editar insumos");
+    const patch: Record<string, unknown> = {
+      nombre: data.nombre,
+      unidad: data.unidad,
+      categoria_id: data.categoriaId,
+    };
+    if (data.codigo) patch.codigo = data.codigo;
+    const { error } = await supabase.from("insumos").update(patch).eq("id", data.id);
+    if (error) {
+      if (error.message.includes("insumos_codigo_unique")) {
+        throw new Error("Ese código ya existe en otro insumo");
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
