@@ -180,7 +180,7 @@ export const editarInsumo = createServerFn({ method: "POST" })
     z.object({
       id: z.string().uuid(),
       nombre: z.string().trim().min(1).max(200),
-      unidad: z.enum(UNIDADES),
+      unidad: unidadSchema,
       categoriaId: z.string().uuid().nullable(),
       codigo: z.string().trim().toUpperCase().regex(CODIGO_REGEX, "Formato inválido (ej. CEM-0001)").optional(),
       disponibleRenta: z.boolean().optional(),
