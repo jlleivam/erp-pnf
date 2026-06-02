@@ -49,7 +49,7 @@ type TrabajadorPanel = {
     dias: number;
     horas_extras: number;
     importe: number;
-    asistencias: { fecha: string; jornada: number; horas_extras: number }[];
+    asistencias: { fecha: string; jornada: number; horas_extras: number; nota_extras: string | null }[];
   }[];
   duplicados: { fecha: string; suma: number }[];
 };
