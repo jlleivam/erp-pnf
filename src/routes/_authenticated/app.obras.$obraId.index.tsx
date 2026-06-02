@@ -24,6 +24,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const MODULES = [
+  { to: "presupuesto", label: "Presupuesto" },
   { to: "estimaciones", label: "Estimaciones" },
   { to: "ordenes-cambio", label: "Órdenes de cambio" },
   { to: "requisiciones", label: "Requisiciones" },
