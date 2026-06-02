@@ -80,6 +80,7 @@ export function AsignarTrabajadoresDialog({
   }, [trabajadores, filter]);
 
   const toggle = (id: string) => {
+    if (id === destajistaId) return; // destajista no se puede desasignar
     setSelected((s) => {
       const n = new Set(s);
       if (n.has(id)) n.delete(id);
@@ -87,6 +88,7 @@ export function AsignarTrabajadoresDialog({
       return n;
     });
   };
+
 
   const save = useServerFn(asignarTrabajadores);
   const m = useMutation({
