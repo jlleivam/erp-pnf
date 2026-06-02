@@ -40,7 +40,7 @@ export function NuevoSubcontratoDialog({
   });
 
   const contratistas = useMemo(() => {
-    const arr = (tercQ.data ?? []) as Array<{
+    const arr = (tercQ.data ?? []) as unknown as Array<{
       id: string;
       razon_social: string;
       rfc: string;
