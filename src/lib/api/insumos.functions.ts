@@ -155,7 +155,7 @@ export const solicitarInsumo = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       nombre: z.string().trim().min(1).max(200),
-      unidad: z.enum(UNIDADES),
+      unidad: unidadSchema,
       categoriaId: z.string().uuid().nullable(),
     }).parse(d)
   )
