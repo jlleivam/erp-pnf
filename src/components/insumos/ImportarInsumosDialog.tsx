@@ -17,8 +17,6 @@ import { importarInsumos, listUnidades } from "@/lib/api/insumos.functions";
 type FilaError = { row: number; nombre: string; unidad: string; categoria: string; error: string };
 type FilaValida = { row: number; nombre: string; unidad: string; categoria: string };
 
-type FilaError = { row: number; nombre: string; unidad: string; categoria: string; error: string };
-type FilaValida = { row: number; nombre: string; unidad: Unidad; categoria: string };
 
 function normHeader(s: string) {
   return String(s ?? "")
