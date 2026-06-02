@@ -1412,6 +1412,278 @@ export type Database = {
           },
         ]
       }
+      obra_renta_eventos: {
+        Row: {
+          creado_por: string
+          created_at: string
+          descripcion: string
+          evidencia_url: string | null
+          fecha_fin: string | null
+          fecha_inicio: string
+          id: string
+          renta_id: string
+          tipo: Database["public"]["Enums"]["renta_evento_tipo"]
+        }
+        Insert: {
+          creado_por: string
+          created_at?: string
+          descripcion: string
+          evidencia_url?: string | null
+          fecha_fin?: string | null
+          fecha_inicio: string
+          id?: string
+          renta_id: string
+          tipo: Database["public"]["Enums"]["renta_evento_tipo"]
+        }
+        Update: {
+          creado_por?: string
+          created_at?: string
+          descripcion?: string
+          evidencia_url?: string | null
+          fecha_fin?: string | null
+          fecha_inicio?: string
+          id?: string
+          renta_id?: string
+          tipo?: Database["public"]["Enums"]["renta_evento_tipo"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_renta_eventos_renta_id_fkey"
+            columns: ["renta_id"]
+            isOneToOne: false
+            referencedRelation: "obra_rentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_renta_pagos: {
+        Row: {
+          creado_por: string
+          created_at: string
+          id: string
+          monto: number
+          notas: string | null
+          pagado_at: string
+          periodo_fin: string
+          periodo_inicio: string
+          referencia: string | null
+          renta_id: string
+        }
+        Insert: {
+          creado_por: string
+          created_at?: string
+          id?: string
+          monto?: number
+          notas?: string | null
+          pagado_at?: string
+          periodo_fin: string
+          periodo_inicio: string
+          referencia?: string | null
+          renta_id: string
+        }
+        Update: {
+          creado_por?: string
+          created_at?: string
+          id?: string
+          monto?: number
+          notas?: string | null
+          pagado_at?: string
+          periodo_fin?: string
+          periodo_inicio?: string
+          referencia?: string | null
+          renta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_renta_pagos_renta_id_fkey"
+            columns: ["renta_id"]
+            isOneToOne: false
+            referencedRelation: "obra_rentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_renta_renovaciones: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          created_at: string
+          estatus: Database["public"]["Enums"]["renta_renovacion_estatus"]
+          fecha_fin_anterior: string
+          fecha_fin_nueva: string
+          id: string
+          motivo: string | null
+          numero: number
+          rechazado_at: string | null
+          rechazado_por: string | null
+          rechazo_motivo: string | null
+          renta_id: string
+          solicitado_por: string
+          tarifa_nueva: number | null
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["renta_renovacion_estatus"]
+          fecha_fin_anterior: string
+          fecha_fin_nueva: string
+          id?: string
+          motivo?: string | null
+          numero?: number
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          renta_id: string
+          solicitado_por: string
+          tarifa_nueva?: number | null
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["renta_renovacion_estatus"]
+          fecha_fin_anterior?: string
+          fecha_fin_nueva?: string
+          id?: string
+          motivo?: string | null
+          numero?: number
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          renta_id?: string
+          solicitado_por?: string
+          tarifa_nueva?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_renta_renovaciones_renta_id_fkey"
+            columns: ["renta_id"]
+            isOneToOne: false
+            referencedRelation: "obra_rentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_rentas: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          cantidad: number
+          company_id: string
+          condiciones: string | null
+          cotizado_at: string | null
+          cotizado_por: string | null
+          creado_por: string
+          created_at: string
+          deposito: number
+          descripcion: string | null
+          dias_aviso_vencimiento: number
+          equipo: string
+          estatus: Database["public"]["Enums"]["renta_estatus"]
+          fecha_devolucion_real: string | null
+          fecha_estimada_inicio: string | null
+          fecha_fin_programada: string | null
+          fecha_llegada_real: string | null
+          id: string
+          numero: number
+          obra_id: string
+          periodicidad: Database["public"]["Enums"]["renta_periodicidad"] | null
+          proveedor_id: string | null
+          rechazado_at: string | null
+          rechazado_por: string | null
+          rechazo_motivo: string | null
+          tarifa_unitaria: number
+          updated_at: string
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          cantidad?: number
+          company_id: string
+          condiciones?: string | null
+          cotizado_at?: string | null
+          cotizado_por?: string | null
+          creado_por: string
+          created_at?: string
+          deposito?: number
+          descripcion?: string | null
+          dias_aviso_vencimiento?: number
+          equipo: string
+          estatus?: Database["public"]["Enums"]["renta_estatus"]
+          fecha_devolucion_real?: string | null
+          fecha_estimada_inicio?: string | null
+          fecha_fin_programada?: string | null
+          fecha_llegada_real?: string | null
+          id?: string
+          numero?: number
+          obra_id: string
+          periodicidad?:
+            | Database["public"]["Enums"]["renta_periodicidad"]
+            | null
+          proveedor_id?: string | null
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          tarifa_unitaria?: number
+          updated_at?: string
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          cantidad?: number
+          company_id?: string
+          condiciones?: string | null
+          cotizado_at?: string | null
+          cotizado_por?: string | null
+          creado_por?: string
+          created_at?: string
+          deposito?: number
+          descripcion?: string | null
+          dias_aviso_vencimiento?: number
+          equipo?: string
+          estatus?: Database["public"]["Enums"]["renta_estatus"]
+          fecha_devolucion_real?: string | null
+          fecha_estimada_inicio?: string | null
+          fecha_fin_programada?: string | null
+          fecha_llegada_real?: string | null
+          id?: string
+          numero?: number
+          obra_id?: string
+          periodicidad?:
+            | Database["public"]["Enums"]["renta_periodicidad"]
+            | null
+          proveedor_id?: string | null
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          tarifa_unitaria?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_rentas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_rentas_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_rentas_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_subcontrato_estimacion_renglones: {
         Row: {
           cantidad_ejecutada: number
@@ -2415,6 +2687,16 @@ export type Database = {
         | "adicion"
         | "eliminacion"
       presupuesto_tipo: "base" | "adenda"
+      renta_estatus:
+        | "borrador"
+        | "cotizada"
+        | "autorizada"
+        | "rechazada"
+        | "activa"
+        | "devuelta"
+      renta_evento_tipo: "averia" | "inactividad" | "nota"
+      renta_periodicidad: "diaria" | "semanal" | "quincenal" | "mensual"
+      renta_renovacion_estatus: "pendiente" | "autorizada" | "rechazada"
       requisicion_estatus:
         | "borrador"
         | "enviada"
@@ -2619,6 +2901,17 @@ export const Constants = {
         "eliminacion",
       ],
       presupuesto_tipo: ["base", "adenda"],
+      renta_estatus: [
+        "borrador",
+        "cotizada",
+        "autorizada",
+        "rechazada",
+        "activa",
+        "devuelta",
+      ],
+      renta_evento_tipo: ["averia", "inactividad", "nota"],
+      renta_periodicidad: ["diaria", "semanal", "quincenal", "mensual"],
+      renta_renovacion_estatus: ["pendiente", "autorizada", "rechazada"],
       requisicion_estatus: [
         "borrador",
         "enviada",
