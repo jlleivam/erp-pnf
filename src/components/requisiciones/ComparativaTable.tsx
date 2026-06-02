@@ -42,9 +42,12 @@ const OC_BADGE: Record<string, { label: string; className: string }> = {
   pendiente_autorizacion: { label: "Pendiente autorización", className: "bg-amber-100 text-amber-800" },
   autorizada: { label: "Autorizada", className: "bg-emerald-100 text-emerald-800" },
   enviada: { label: "Enviada al proveedor", className: "bg-blue-100 text-blue-800" },
+  recibida_parcial: { label: "Recibida parcial", className: "bg-cyan-100 text-cyan-800" },
+  recibida: { label: "Recibida", className: "bg-teal-100 text-teal-800" },
   rechazada: { label: "Rechazada", className: "bg-rose-100 text-rose-800" },
   pagada: { label: "Pagada", className: "bg-violet-100 text-violet-800" },
 };
+
 
 
 export function ComparativaTable({
