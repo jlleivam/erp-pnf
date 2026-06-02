@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Download, FileSpreadsheet, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 import {
@@ -12,10 +12,10 @@ import { Card } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { importarInsumos } from "@/lib/api/insumos.functions";
+import { importarInsumos, listUnidades } from "@/lib/api/insumos.functions";
 
-const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"] as const;
-type Unidad = (typeof UNIDADES)[number];
+type FilaError = { row: number; nombre: string; unidad: string; categoria: string; error: string };
+type FilaValida = { row: number; nombre: string; unidad: string; categoria: string };
 
 type FilaError = { row: number; nombre: string; unidad: string; categoria: string; error: string };
 type FilaValida = { row: number; nombre: string; unidad: Unidad; categoria: string };
