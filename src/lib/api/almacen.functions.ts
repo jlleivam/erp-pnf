@@ -94,10 +94,15 @@ async function getOrCreateSemanaAbierta(
       .from("almacen_movimientos_semana")
       .select("insumo_id, inv_inicial, recibido, utilizado, precio_unitario")
       .eq("semana_id", prevCerrada.id);
+    // Trasladar un renglón por lote (insumo_id + precio_unitario) con saldo final ≠ 0
     const rows = (prevMov ?? [])
       .map((m: any) => {
         const final = Number(m.inv_inicial) + Number(m.recibido) - Number(m.utilizado);
-        return { insumo_id: m.insumo_id, inv_inicial: final, precio_unitario: m.precio_unitario };
+        return {
+          insumo_id: m.insumo_id,
+          inv_inicial: final,
+          precio_unitario: Number(m.precio_unitario),
+        };
       })
       .filter((m: any) => Number(m.inv_inicial) !== 0);
     if (rows.length > 0) {
@@ -224,20 +229,20 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
       .from("almacen_recepcion_partidas").insert(partidasRows);
     if (partidasErr) throw new Error(partidasErr.message);
 
-    // Actualizar movimientos de la semana abierta
+    // Actualizar movimientos de la semana abierta — un renglón por (insumo, precio)
     for (const p of data.partidas) {
       const { data: existente } = await supabase
         .from("almacen_movimientos_semana")
         .select("id, recibido")
         .eq("semana_id", semana.id)
         .eq("insumo_id", p.insumo_id)
+        .eq("precio_unitario", p.precio_unitario)
         .maybeSingle();
       if (existente) {
         await supabase
           .from("almacen_movimientos_semana")
           .update({
             recibido: Number(existente.recibido) + p.cantidad,
-            precio_unitario: p.precio_unitario,
           })
           .eq("id", existente.id);
       } else {
@@ -360,9 +365,11 @@ export const getSemanaActual = createServerFn({ method: "POST" })
       ...m,
       proveedor: proveedorPorInsumo[m.insumo_id] ?? "",
     }));
-    items.sort((a: any, b: any) =>
-      (a.insumo?.nombre ?? "").localeCompare(b.insumo?.nombre ?? ""),
-    );
+    items.sort((a: any, b: any) => {
+      const byName = (a.insumo?.nombre ?? "").localeCompare(b.insumo?.nombre ?? "");
+      if (byName !== 0) return byName;
+      return Number(a.precio_unitario) - Number(b.precio_unitario);
+    });
 
     return { semana, items };
   });
