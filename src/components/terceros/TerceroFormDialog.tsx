@@ -60,6 +60,7 @@ export type TerceroFormInitial = {
   tipo_trabajos?: string | null;
   fondo_garantia?: boolean;
   fondo_garantia_pct?: number | null;
+  disponible_renta?: boolean;
 };
 
 const EMPTY: TerceroFormInitial = {
@@ -71,6 +72,7 @@ const EMPTY: TerceroFormInitial = {
   retencion_iva: false,
   retencion_isr: false,
   fondo_garantia: false,
+  disponible_renta: false,
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -172,6 +174,7 @@ export function TerceroFormDialog({
       tipo_trabajos: f.tipo_trabajos?.trim() || null,
       fondo_garantia: !!f.fondo_garantia,
       fondo_garantia_pct: numOrNull(f.fondo_garantia_pct),
+      disponible_renta: !!f.disponible_renta,
     };
 
     if (isEdit && initial?.id) {
@@ -243,14 +246,28 @@ export function TerceroFormDialog({
               </div>
             </div>
             {showProveedor && (
-              <div>
-                <Label>Categoría de productos / servicios</Label>
-                <Input
-                  value={f.categoria_productos ?? ""}
-                  onChange={(e) => set("categoria_productos", e.target.value)}
-                  placeholder="Ej. Materiales eléctricos, herramienta…"
-                />
-              </div>
+              <>
+                <div>
+                  <Label>Categoría de productos / servicios</Label>
+                  <Input
+                    value={f.categoria_productos ?? ""}
+                    onChange={(e) => set("categoria_productos", e.target.value)}
+                    placeholder="Ej. Materiales eléctricos, herramienta…"
+                  />
+                </div>
+                <div className="flex items-start gap-3">
+                  <Switch
+                    checked={!!f.disponible_renta}
+                    onCheckedChange={(v) => set("disponible_renta", v)}
+                  />
+                  <div>
+                    <Label>Disponible para rentas</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Si se activa, este proveedor podrá seleccionarse al cotizar rentas.
+                    </p>
+                  </div>
+                </div>
+              </>
             )}
           </Section>
 

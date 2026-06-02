@@ -41,9 +41,13 @@ export function CotizarRentaDialog({
   });
   const proveedores = useMemo(() => {
     const arr = (tercQ.data ?? []) as unknown as Array<{
-      id: string; razon_social: string; rfc: string; categoria: string;
+      id: string; razon_social: string; rfc: string; categoria: string; disponible_renta?: boolean;
     }>;
-    return arr.filter((t) => t.categoria === "proveedor" || t.categoria === "ambos");
+    return arr.filter(
+      (t) =>
+        (t.categoria === "proveedor" || t.categoria === "ambos") &&
+        !!t.disponible_renta,
+    );
   }, [tercQ.data]);
 
   const [proveedorId, setProveedorId] = useState(initialProveedorId ?? "");
@@ -82,7 +86,7 @@ export function CotizarRentaDialog({
             </Select>
             {proveedores.length === 0 && !tercQ.isLoading && (
               <p className="text-xs text-muted-foreground mt-1">
-                No hay proveedores en el catálogo. Agrega uno con categoría "proveedor" o "ambos".
+                No hay proveedores disponibles para rentas. Activa "Disponible para rentas" en la ficha de un proveedor del catálogo.
               </p>
             )}
           </div>
