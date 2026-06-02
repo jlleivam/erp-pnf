@@ -372,12 +372,18 @@ function MetricCard({
 }
 
 function SolicitarDialog({
-  open, onOpenChange, categorias,
-}: { open: boolean; onOpenChange: (b: boolean) => void; categorias: any[] }) {
+  open, onOpenChange, categorias, unidades,
+}: { open: boolean; onOpenChange: (b: boolean) => void; categorias: any[]; unidades: any[] }) {
   const qc = useQueryClient();
+  const defaultUnidad = unidades[0]?.codigo ?? "";
   const [nombre, setNombre] = useState("");
-  const [unidad, setUnidad] = useState<Unidad>("PZA");
+  const [unidad, setUnidad] = useState<Unidad>(defaultUnidad);
   const [categoriaId, setCategoriaId] = useState<string>("none");
+
+  // Ensure unidad has a valid default when unidades load
+  if (!unidad && defaultUnidad) {
+    setUnidad(defaultUnidad);
+  }
 
   const mut = useMutation({
     mutationFn: useServerFn(solicitarInsumo),
@@ -385,7 +391,7 @@ function SolicitarDialog({
       toast.success("Insumo solicitado. Pendiente de autorización.");
       qc.invalidateQueries({ queryKey: ["insumos"] });
       qc.invalidateQueries({ queryKey: ["insumos-metricas"] });
-      setNombre(""); setUnidad("PZA"); setCategoriaId("none");
+      setNombre(""); setUnidad(defaultUnidad); setCategoriaId("none");
       onOpenChange(false);
     },
     onError: (e: any) => toast.error(e.message),
@@ -406,10 +412,19 @@ function SolicitarDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Unidad</Label>
-              <Select value={unidad} onValueChange={(v) => setUnidad(v as Unidad)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={unidad} onValueChange={(v) => setUnidad(v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                 <SelectContent>
-                  {UNIDADES.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  {unidades.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      Sin unidades. Pide al Director crearlas.
+                    </div>
+                  )}
+                  {unidades.map((u: any) => (
+                    <SelectItem key={u.id} value={u.codigo}>
+                      {u.codigo}{u.nombre ? ` — ${u.nombre}` : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -428,7 +443,7 @@ function SolicitarDialog({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
-            disabled={!nombre.trim() || mut.isPending}
+            disabled={!nombre.trim() || !unidad || mut.isPending}
             onClick={() => mut.mutate({ data: {
               nombre: nombre.trim(), unidad,
               categoriaId: categoriaId === "none" ? null : categoriaId,
