@@ -27,10 +27,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
-import { UserPlus, Lock, Plus } from "lucide-react";
+import { UserPlus, Lock, Plus, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrabajadorFormDialog } from "@/components/trabajadores/TrabajadorFormDialog";
 import { useEffectiveRoles } from "@/stores/auth";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 
 const DOW = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
