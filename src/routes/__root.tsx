@@ -126,6 +126,10 @@ function AuthSync() {
           profile: ctx.profile,
           roles: ctx.roles,
         });
+        // Si el usuario ya no es director, limpiar cualquier rol asumido persistido.
+        if (!ctx.roles.includes("director")) {
+          useAuthStore.getState().setAssumedRole(null);
+        }
       } catch (e) {
         console.error("session sync failed", e);
         reset();
