@@ -156,7 +156,7 @@ export function CatalogoInsumosModule() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Nombre del insumo..."
+                placeholder="Nombre o código..."
                 className="pl-8"
               />
             </div>
