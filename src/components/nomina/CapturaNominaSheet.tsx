@@ -364,6 +364,8 @@ function AsignarTrabajadoresDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const roles = useEffectiveRoles();
+  const canManage = roles.includes("director") || roles.includes("administrativo");
   const fetchDisp = useServerFn(listTrabajadoresDisponibles);
   const dispQ = useQuery({
     queryKey: ["trabajadores-disponibles", obraId, semanaInicio],
@@ -371,6 +373,8 @@ function AsignarTrabajadoresDialog({
   });
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set(asignadosActuales));
   const [filtro, setFiltro] = useState("");
+  const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [idsPrevios, setIdsPrevios] = useState<Set<string> | null>(null);
 
   const asignar = useServerFn(asignarTrabajadores);
   const asignarM = useMutation({
@@ -383,6 +387,30 @@ function AsignarTrabajadoresDialog({
   });
 
   const lista = (dispQ.data ?? []) as any[];
+
+  // Detecta trabajadores recién creados y los pre-selecciona (sólo si el usuario puede autorizar).
+  useEffect(() => {
+    const idsActuales = new Set<string>(lista.map((t) => t.id));
+    if (idsPrevios === null) {
+      setIdsPrevios(idsActuales);
+      return;
+    }
+    if (!canManage) return;
+    const nuevos: string[] = [];
+    idsActuales.forEach((id) => {
+      if (!idsPrevios.has(id)) nuevos.push(id);
+    });
+    if (nuevos.length > 0) {
+      setSeleccionados((prev) => {
+        const next = new Set(prev);
+        nuevos.forEach((id) => next.add(id));
+        return next;
+      });
+      setIdsPrevios(idsActuales);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lista.length]);
+
   const filtered = lista.filter((t) =>
     t.nombre_completo.toLowerCase().includes(filtro.toLowerCase()),
   );
