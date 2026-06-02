@@ -378,3 +378,65 @@ export const listOCsRequisicion = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return ocs ?? [];
   });
+
+export const enviarOCAProveedor = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { roles } = await getCtx(supabase, userId);
+    assertAdmin(roles);
+
+    const { data: oc } = await supabase
+      .from("ordenes_compra")
+      .select("id, folio, requisicion_id, obra_id, company_id, estatus, enviada_proveedor_at, proveedor:terceros(razon_social)")
+      .eq("id", data.ocId).maybeSingle();
+    if (!oc) throw new Error("OC no encontrada");
+    if (oc.estatus !== "autorizada") throw new Error("Solo se pueden enviar al proveedor OCs autorizadas");
+    if (oc.enviada_proveedor_at) throw new Error("La OC ya fue marcada como enviada al proveedor");
+
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from("ordenes_compra")
+      .update({
+        estatus: "enviada",
+        enviada_proveedor_at: nowIso,
+        enviada_proveedor_por: userId,
+      })
+      .eq("id", data.ocId);
+    if (error) throw new Error(error.message);
+
+    // Datos para la notificación
+    const { data: req } = await supabase
+      .from("requisiciones").select("folio").eq("id", oc.requisicion_id).maybeSingle();
+    const proveedorNombre = (oc as any).proveedor?.razon_social ?? "Proveedor";
+
+    // Destinatarios: residentes asignados a la obra
+    const { data: team } = await supabase
+      .from("obra_team")
+      .select("user_id, role")
+      .eq("obra_id", oc.obra_id)
+      .eq("role", "residente");
+    const destinatarios = (team ?? []).map((t: any) => t.user_id as string);
+
+    if (destinatarios.length > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const rows = destinatarios.map((uid) => ({
+        user_id: uid,
+        company_id: oc.company_id,
+        obra_id: oc.obra_id,
+        tipo: "oc_enviada_proveedor",
+        titulo: `OC ${oc.folio} enviada al proveedor`,
+        mensaje: `${proveedorNombre} fue notificado. Prepara la recepción del material${req?.folio ? ` (req. ${req.folio})` : ""}.`,
+        link: `/app/obras/${oc.obra_id}/requisiciones`,
+        requisicion_id: oc.requisicion_id,
+        oc_id: oc.id,
+      }));
+      const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(rows);
+      if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
+    }
+
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    return { ok: true };
+  });
+
