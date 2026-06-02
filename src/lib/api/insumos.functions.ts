@@ -223,26 +223,49 @@ export const rechazarInsumo = createServerFn({ method: "POST" })
 
 export const crearCategoria = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ nombre: z.string().trim().min(1).max(100) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({
+      nombre: z.string().trim().min(1).max(100),
+      prefijo: z.string().trim().toUpperCase().regex(PREFIJO_REGEX, "Prefijo debe ser 3 letras o números").optional(),
+    }).parse(d)
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede crear categorías");
+    const base = data.prefijo ?? derivarPrefijo(data.nombre);
+    const prefijo = data.prefijo ? base : await prefijoUnico(supabase, companyId, base);
     const { error } = await supabase
-      .from("insumo_categorias").insert({ company_id: companyId, nombre: data.nombre });
-    if (error) throw new Error(error.message);
+      .from("insumo_categorias").insert({ company_id: companyId, nombre: data.nombre, prefijo });
+    if (error) {
+      if (error.message.includes("insumo_categorias_prefijo_unique")) {
+        throw new Error(`El prefijo "${prefijo}" ya está en uso`);
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
 export const editarCategoria = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), nombre: z.string().trim().min(1).max(100) }).parse(d)
+    z.object({
+      id: z.string().uuid(),
+      nombre: z.string().trim().min(1).max(100),
+      prefijo: z.string().trim().toUpperCase().regex(PREFIJO_REGEX, "Prefijo debe ser 3 letras o números").optional(),
+    }).parse(d)
   )
   .handler(async ({ data, context }) => {
+    const patch: { nombre: string; prefijo?: string } = { nombre: data.nombre };
+    if (data.prefijo) patch.prefijo = data.prefijo;
     const { error } = await context.supabase
-      .from("insumo_categorias").update({ nombre: data.nombre }).eq("id", data.id);
-    if (error) throw new Error(error.message);
+      .from("insumo_categorias").update(patch).eq("id", data.id);
+    if (error) {
+      if (error.message.includes("insumo_categorias_prefijo_unique")) {
+        throw new Error(`El prefijo "${data.prefijo}" ya está en uso`);
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
