@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { Database } from "@/integrations/supabase/types";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
@@ -23,19 +24,28 @@ interface AuthState {
   reset: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  userId: null,
-  profile: null,
-  roles: [],
-  assumedRole: null,
-  loading: true,
-  setSession: ({ userId, profile, roles }) =>
-    set({ userId, profile, roles, loading: false }),
-  setAssumedRole: (assumedRole) => set({ assumedRole }),
-  setLoading: (loading) => set({ loading }),
-  reset: () =>
-    set({ userId: null, profile: null, roles: [], assumedRole: null, loading: false }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      userId: null,
+      profile: null,
+      roles: [],
+      assumedRole: null,
+      loading: true,
+      setSession: ({ userId, profile, roles }) =>
+        set({ userId, profile, roles, loading: false }),
+      setAssumedRole: (assumedRole) => set({ assumedRole }),
+      setLoading: (loading) => set({ loading }),
+      reset: () =>
+        set({ userId: null, profile: null, roles: [], assumedRole: null, loading: false }),
+    }),
+    {
+      name: "erp-pnf:assumed-role",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ assumedRole: state.assumedRole }),
+    },
+  ),
+);
 
 export function isDirector(roles: AppRole[]): boolean {
   return roles.includes("director");
