@@ -48,10 +48,11 @@ const fieldsSchema = z.object({
   tipo_trabajos: z.string().trim().max(1000).nullable().optional(),
   fondo_garantia: z.boolean().optional().default(false),
   fondo_garantia_pct: z.number().min(0).max(100).nullable().optional(),
+  disponible_renta: z.boolean().optional().default(false),
 });
 
 const SELECT_FULL = "*";
-const SELECT_LIST = "id, razon_social, rfc, tipo_persona, categoria, dias_credito";
+const SELECT_LIST = "id, razon_social, rfc, tipo_persona, categoria, dias_credito, disponible_renta";
 
 async function getCtx(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -198,6 +199,8 @@ function buildPayload(data: z.infer<typeof fieldsSchema>) {
         : data.fondo_garantia
           ? (data.fondo_garantia_pct ?? null)
           : null,
+    disponible_renta:
+      data.categoria === "contratista" ? false : !!data.disponible_renta,
   };
 }
 
