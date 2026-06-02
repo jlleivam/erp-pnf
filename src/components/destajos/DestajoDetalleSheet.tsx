@@ -215,19 +215,26 @@ export function DestajoDetalleSheet({
                   </Card>
                 ) : (
                   <Card className="divide-y">
-                    {trabajadores.map((a) => (
-                      <div key={a.id} className="p-3 flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{a.trabajador?.nombre_completo ?? "—"}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {a.trabajador?.puesto ?? "—"}
-                          </p>
+                    {trabajadores.map((a) => {
+                      const esDestajista = a.trabajador_id === destajo?.destajista_id;
+                      return (
+                        <div key={a.id} className="p-3 flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{a.trabajador?.nombre_completo ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {a.trabajador?.puesto ?? "—"}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            {esDestajista && <Badge>Destajista</Badge>}
+                            <Badge variant="secondary">Activo</Badge>
+                          </div>
                         </div>
-                        <Badge variant="secondary">Activo</Badge>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </Card>
                 )}
+
               </TabsContent>
 
               <TabsContent value="estimaciones" className="mt-4">
