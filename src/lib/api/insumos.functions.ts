@@ -2,7 +2,18 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"] as const;
+const UNIDAD_REGEX = /^[A-Z0-9]{1,10}$/;
+const unidadSchema = z.string().trim().toUpperCase().regex(UNIDAD_REGEX, "Unidad: 1-10 caracteres (letras o números)");
+
+async function validateUnidad(supabase: any, companyId: string, unidad: string) {
+  const { count, error } = await supabase
+    .from("insumo_unidades")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .eq("codigo", unidad);
+  if (error) throw new Error(error.message);
+  if (!count) throw new Error(`Unidad "${unidad}" no existe. Créala desde el catálogo de unidades.`);
+}
 
 async function getUserCompanyAndDirector(supabase: any, userId: string) {
   const { data: profile } = await supabase
@@ -52,7 +63,7 @@ export const listInsumos = createServerFn({ method: "POST" })
     z.object({
       estatus: z.enum(["autorizado", "pendiente"]).optional(),
       categoriaId: z.string().uuid().nullable().optional(),
-      unidad: z.enum(UNIDADES).optional(),
+      unidad: unidadSchema.optional(),
       search: z.string().trim().max(200).optional(),
       soloRenta: z.boolean().optional(),
     }).parse(d ?? {})
@@ -144,13 +155,14 @@ export const solicitarInsumo = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       nombre: z.string().trim().min(1).max(200),
-      unidad: z.enum(UNIDADES),
+      unidad: unidadSchema,
       categoriaId: z.string().uuid().nullable(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId } = await getUserCompanyAndDirector(supabase, userId);
+    await validateUnidad(supabase, companyId, data.unidad);
     const { error } = await supabase.from("insumos").insert({
       company_id: companyId,
       categoria_id: data.categoriaId,
@@ -169,7 +181,7 @@ export const editarInsumo = createServerFn({ method: "POST" })
     z.object({
       id: z.string().uuid(),
       nombre: z.string().trim().min(1).max(200),
-      unidad: z.enum(UNIDADES),
+      unidad: unidadSchema,
       categoriaId: z.string().uuid().nullable(),
       codigo: z.string().trim().toUpperCase().regex(CODIGO_REGEX, "Formato inválido (ej. CEM-0001)").optional(),
       disponibleRenta: z.boolean().optional(),
@@ -177,8 +189,9 @@ export const editarInsumo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede editar insumos");
+    await validateUnidad(supabase, companyId, data.unidad);
     const patch: {
       nombre: string; unidad: typeof data.unidad; categoria_id: string | null; codigo?: string; disponible_renta?: boolean;
     } = {
@@ -306,7 +319,7 @@ export const importarInsumos = createServerFn({ method: "POST" })
       filas: z.array(
         z.object({
           nombre: z.string().trim().min(1).max(200),
-          unidad: z.enum(UNIDADES),
+          unidad: unidadSchema,
           categoria: z.string().trim().min(1).max(100),
           row: z.number().int().positive(),
         })
@@ -317,6 +330,20 @@ export const importarInsumos = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede importar insumos");
+
+    // Validar que todas las unidades existan en el catálogo
+    const { data: existingUnits } = await supabase
+      .from("insumo_unidades").select("codigo").eq("company_id", companyId);
+    const validUnits = new Set((existingUnits ?? []).map((u: any) => String(u.codigo).toUpperCase()));
+    const unidadesFaltantes = Array.from(new Set(
+      data.filas.map((f) => f.unidad).filter((u) => !validUnits.has(u))
+    ));
+    if (unidadesFaltantes.length > 0) {
+      throw new Error(
+        `Las siguientes unidades no existen en el catálogo: ${unidadesFaltantes.join(", ")}. Créalas primero desde el catálogo de Unidades.`
+      );
+    }
+
 
     // Cargar insumos existentes de la compañía para detectar duplicados
     const { data: existingInsumos, error: exErr } = await supabase
@@ -388,4 +415,104 @@ export const importarInsumos = createServerFn({ method: "POST" })
     if (insErr) throw new Error(`Error insertando insumos: ${insErr.message}`);
 
     return { ok: true as const, insertadas: rows.length, categoriasCreadas: nuevasCats.size };
+  });
+
+// ============= UNIDADES =============
+
+export const listUnidades = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("insumo_unidades")
+      .select("id, codigo, nombre")
+      .order("codigo");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const crearUnidad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      codigo: unidadSchema,
+      nombre: z.string().trim().max(100).optional().nullable(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede crear unidades");
+    const { error } = await supabase.from("insumo_unidades").insert({
+      company_id: companyId,
+      codigo: data.codigo,
+      nombre: data.nombre || null,
+    });
+    if (error) {
+      if (error.code === "23505") throw new Error(`La unidad "${data.codigo}" ya existe`);
+      throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const editarUnidad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      codigo: unidadSchema,
+      nombre: z.string().trim().max(100).optional().nullable(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede editar unidades");
+
+    // Si cambia el código, actualizar los insumos asociados
+    const { data: actual } = await supabase
+      .from("insumo_unidades").select("codigo").eq("id", data.id).maybeSingle();
+    const codigoAnterior = actual?.codigo as string | undefined;
+
+    const { error } = await supabase
+      .from("insumo_unidades")
+      .update({ codigo: data.codigo, nombre: data.nombre || null })
+      .eq("id", data.id);
+    if (error) {
+      if (error.code === "23505") throw new Error(`La unidad "${data.codigo}" ya existe`);
+      throw new Error(error.message);
+    }
+
+    if (codigoAnterior && codigoAnterior !== data.codigo) {
+      await supabase
+        .from("insumos")
+        .update({ unidad: data.codigo })
+        .eq("company_id", companyId)
+        .eq("unidad", codigoAnterior);
+    }
+    return { ok: true };
+  });
+
+export const eliminarUnidad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede eliminar unidades");
+
+    const { data: u } = await supabase
+      .from("insumo_unidades").select("codigo").eq("id", data.id).maybeSingle();
+    if (!u) throw new Error("Unidad no encontrada");
+
+    const { count } = await supabase
+      .from("insumos")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("unidad", u.codigo);
+    if ((count ?? 0) > 0) {
+      throw new Error(`No se puede eliminar: la unidad "${u.codigo}" está en uso por ${count} insumo(s)`);
+    }
+    const { error } = await supabase.from("insumo_unidades").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

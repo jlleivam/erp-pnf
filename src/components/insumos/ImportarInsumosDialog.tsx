@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Download, FileSpreadsheet, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 import {
@@ -12,13 +12,11 @@ import { Card } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { importarInsumos } from "@/lib/api/insumos.functions";
-
-const UNIDADES = ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"] as const;
-type Unidad = (typeof UNIDADES)[number];
+import { importarInsumos, listUnidades } from "@/lib/api/insumos.functions";
 
 type FilaError = { row: number; nombre: string; unidad: string; categoria: string; error: string };
-type FilaValida = { row: number; nombre: string; unidad: Unidad; categoria: string };
+type FilaValida = { row: number; nombre: string; unidad: string; categoria: string };
+
 
 function normHeader(s: string) {
   return String(s ?? "")
@@ -37,6 +35,9 @@ export function ImportarInsumosDialog({
 }) {
   const qc = useQueryClient();
   const importarFn = useServerFn(importarInsumos);
+  const unitsFn = useServerFn(listUnidades);
+  const unidadesQ = useQuery({ queryKey: ["insumo-unidades"], queryFn: () => unitsFn() });
+  const unidadesValidas = (unidadesQ.data ?? []).map((u: any) => String(u.codigo).toUpperCase());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<"upload" | "errors" | "preview">("upload");
@@ -133,7 +134,7 @@ export function ImportarInsumosDialog({
         const errMsgs: string[] = [];
         if (!nombre) errMsgs.push("Nombre vacío");
         if (!unidadRaw) errMsgs.push("Unidad vacía");
-        else if (!UNIDADES.includes(unidadRaw as Unidad)) {
+        else if (!unidadesValidas.includes(unidadRaw)) {
           errMsgs.push(`Unidad inválida (${unidadRaw})`);
         }
         if (!categoria) errMsgs.push("Categoría vacía");
@@ -148,7 +149,7 @@ export function ImportarInsumosDialog({
         if (errMsgs.length > 0) {
           errs.push({ row: excelRow, nombre, unidad: unidadRaw, categoria, error: errMsgs.join("; ") });
         } else {
-          vals.push({ row: excelRow, nombre, unidad: unidadRaw as Unidad, categoria });
+          vals.push({ row: excelRow, nombre, unidad: unidadRaw, categoria });
         }
       }
 
@@ -219,7 +220,7 @@ export function ImportarInsumosDialog({
                   <p className="text-sm text-muted-foreground">
                     Encabezados requeridos: <code className="text-xs">nombre</code>,{" "}
                     <code className="text-xs">unidad</code>, <code className="text-xs">categoría</code>.
-                    Unidades válidas: {UNIDADES.join(", ")}.
+                    Unidades válidas: {unidadesValidas.length > 0 ? unidadesValidas.join(", ") : "ninguna (créalas en el catálogo de Unidades)"}.
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={descargarPlantilla}>

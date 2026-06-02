@@ -533,6 +533,30 @@ export type Database = {
         }
         Relationships: []
       }
+      insumo_unidades: {
+        Row: {
+          codigo: string
+          company_id: string
+          created_at: string
+          id: string
+          nombre: string | null
+        }
+        Insert: {
+          codigo: string
+          company_id: string
+          created_at?: string
+          id?: string
+          nombre?: string | null
+        }
+        Update: {
+          codigo?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          nombre?: string | null
+        }
+        Relationships: []
+      }
       insumos: {
         Row: {
           autorizado_at: string | null
@@ -546,7 +570,7 @@ export type Database = {
           id: string
           nombre: string
           solicitado_por: string | null
-          unidad: Database["public"]["Enums"]["insumo_unidad"]
+          unidad: string
         }
         Insert: {
           autorizado_at?: string | null
@@ -560,7 +584,7 @@ export type Database = {
           id?: string
           nombre: string
           solicitado_por?: string | null
-          unidad: Database["public"]["Enums"]["insumo_unidad"]
+          unidad: string
         }
         Update: {
           autorizado_at?: string | null
@@ -574,7 +598,7 @@ export type Database = {
           id?: string
           nombre?: string
           solicitado_por?: string | null
-          unidad?: Database["public"]["Enums"]["insumo_unidad"]
+          unidad?: string
         }
         Relationships: [
           {
@@ -2692,7 +2716,6 @@ export type Database = {
       destajo_presupuesto_tipo: "base" | "adenda"
       estimacion_estatus: "borrador" | "cerrada"
       insumo_estatus: "autorizado" | "pendiente"
-      insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON" | "BTO"
       nomina_estatus: "borrador" | "cerrada"
       oc_estatus:
         | "borrador"
@@ -2904,7 +2927,6 @@ export const Constants = {
       destajo_presupuesto_tipo: ["base", "adenda"],
       estimacion_estatus: ["borrador", "cerrada"],
       insumo_estatus: ["autorizado", "pendiente"],
-      insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"],
       nomina_estatus: ["borrador", "cerrada"],
       oc_estatus: [
         "borrador",
