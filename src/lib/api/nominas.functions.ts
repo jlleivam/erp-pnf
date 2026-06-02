@@ -429,9 +429,10 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
     };
     const porTrabajador = new Map<string, Resumen>();
 
-    for (const r of renglonesArr) {
-      const trab = r.trabajadores;
+    for (const r of renglonesArr as any[]) {
+      const trab = trabsMap.get(r.trabajador_id);
       if (!trab) continue;
+
       if (!porTrabajador.has(trab.id)) {
         porTrabajador.set(trab.id, {
           trabajador_id: trab.id,
