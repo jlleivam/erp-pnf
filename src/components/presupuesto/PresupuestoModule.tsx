@@ -276,7 +276,8 @@ function PresupuestoCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const label = p.tipo === "base" ? "Presupuesto base" : `Adenda ${p.numero}`;
+  const label = p.tipo === "base" ? "Presupuesto base" : `Orden de cambio ${p.numero}`;
+  const esOC = p.tipo === "adenda";
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -293,7 +294,9 @@ function PresupuestoCard({
           )}
         </div>
         <div className="text-right">
-          <p className="text-lg font-semibold">{formatCurrency(p.monto_total)}</p>
+          <p className={`text-lg font-semibold ${esOC && Number(p.monto_total) < 0 ? "text-destructive" : ""}`}>
+            {esOC ? "Δ " : ""}{formatCurrency(p.monto_total)}
+          </p>
           {p.autorizado_at && (
             <p className="text-xs text-muted-foreground mt-1">
               Autorizado: {new Date(p.autorizado_at).toLocaleDateString("es-MX")}
@@ -334,7 +337,7 @@ function CrearPresupuestoDialog({
   onCreated: (id: string) => void;
 }) {
   const [nombre, setNombre] = useState(
-    tipo === "base" ? "Presupuesto base" : `Adenda ${numeroSugerido}`,
+    tipo === "base" ? "Presupuesto base" : `Orden de cambio ${numeroSugerido}`,
   );
   const [descripcion, setDescripcion] = useState("");
   const crear = useServerFn(crearPresupuesto);
@@ -351,9 +354,9 @@ function CrearPresupuestoDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{tipo === "base" ? "Crear presupuesto base" : "Agregar adenda"}</DialogTitle>
+          <DialogTitle>{tipo === "base" ? "Crear presupuesto base" : "Nueva orden de cambio"}</DialogTitle>
           <DialogDescription>
-            Se creará en estado borrador. Después podrás capturar o importar los renglones.
+            Se creará en estado borrador. Después podrás capturar los movimientos.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -366,7 +369,7 @@ function CrearPresupuestoDialog({
             <Textarea
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              placeholder={tipo === "adenda" ? "Motivo de la adenda…" : ""}
+              placeholder={tipo === "adenda" ? "Motivo de la orden de cambio…" : ""}
             />
           </div>
         </div>
