@@ -588,8 +588,8 @@ function CategoriasDialog({
 }
 
 function EditarInsumoDialog({
-  insumo, categorias, onClose,
-}: { insumo: any; categorias: any[]; onClose: () => void }) {
+  insumo, categorias, unidades, onClose,
+}: { insumo: any; categorias: any[]; unidades: any[]; onClose: () => void }) {
   const qc = useQueryClient();
   const [nombre, setNombre] = useState(insumo.nombre);
   const [codigo, setCodigo] = useState<string>(insumo.codigo ?? "");
@@ -637,10 +637,14 @@ function EditarInsumoDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Unidad</Label>
-              <Select value={unidad} onValueChange={(v) => setUnidad(v as Unidad)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={unidad} onValueChange={(v) => setUnidad(v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                 <SelectContent>
-                  {UNIDADES.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  {unidades.map((u: any) => (
+                    <SelectItem key={u.id} value={u.codigo}>
+                      {u.codigo}{u.nombre ? ` — ${u.nombre}` : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
