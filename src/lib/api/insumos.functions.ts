@@ -172,6 +172,7 @@ export const editarInsumo = createServerFn({ method: "POST" })
       unidad: z.enum(UNIDADES),
       categoriaId: z.string().uuid().nullable(),
       codigo: z.string().trim().toUpperCase().regex(CODIGO_REGEX, "Formato inválido (ej. CEM-0001)").optional(),
+      disponibleRenta: z.boolean().optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
@@ -179,13 +180,14 @@ export const editarInsumo = createServerFn({ method: "POST" })
     const { isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede editar insumos");
     const patch: {
-      nombre: string; unidad: typeof data.unidad; categoria_id: string | null; codigo?: string;
+      nombre: string; unidad: typeof data.unidad; categoria_id: string | null; codigo?: string; disponible_renta?: boolean;
     } = {
       nombre: data.nombre,
       unidad: data.unidad,
       categoria_id: data.categoriaId,
     };
     if (data.codigo) patch.codigo = data.codigo;
+    if (typeof data.disponibleRenta === "boolean") patch.disponible_renta = data.disponibleRenta;
     const { error } = await supabase.from("insumos").update(patch).eq("id", data.id);
     if (error) {
       if (error.message.includes("insumos_codigo_unique")) {
