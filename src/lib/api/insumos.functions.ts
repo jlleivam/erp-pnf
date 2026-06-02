@@ -176,7 +176,9 @@ export const editarInsumo = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede editar insumos");
-    const patch: Record<string, unknown> = {
+    const patch: {
+      nombre: string; unidad: typeof data.unidad; categoria_id: string | null; codigo?: string;
+    } = {
       nombre: data.nombre,
       unidad: data.unidad,
       categoria_id: data.categoriaId,
