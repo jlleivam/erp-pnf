@@ -15,8 +15,9 @@ import {
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
 import {
-  getCotizacionRequisicion, listProveedores, enviarOCASupervisor, reabrirOC,
+  getCotizacionRequisicion, listProveedores, enviarOCASupervisor, reabrirOC, enviarOCAProveedor,
 } from "@/lib/api/cotizaciones.functions";
+
 import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
 import { SolicitudesTab } from "./SolicitudesTab";
 import { ComparativaTable } from "./ComparativaTable";
@@ -35,9 +36,11 @@ const OC_BADGE: Record<string, { label: string; className: string }> = {
   borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
   pendiente_autorizacion: { label: "Pendiente autorización", className: "bg-amber-100 text-amber-800" },
   autorizada: { label: "Autorizada", className: "bg-emerald-100 text-emerald-800" },
+  enviada: { label: "Enviada al proveedor", className: "bg-blue-100 text-blue-800" },
   rechazada: { label: "Rechazada", className: "bg-rose-100 text-rose-800" },
-  pagada: { label: "Pagada", className: "bg-blue-100 text-blue-800" },
+  pagada: { label: "Pagada", className: "bg-violet-100 text-violet-800" },
 };
+
 
 const REQ_BADGE: Record<string, { label: string; className: string }> = {
   borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
@@ -59,6 +62,8 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
   const fetchSols = useServerFn(getSolicitudesRequisicion);
   const enviarFn = useServerFn(enviarOCASupervisor);
   const reabrirFn = useServerFn(reabrirOC);
+  const enviarProvFn = useServerFn(enviarOCAProveedor);
+
 
   const roles = useEffectiveRoles();
 
@@ -96,6 +101,15 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
     onSuccess: () => { toast.success("OC reabierta"); invalidate(); },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
+
+  const enviarProvMut = useMutation({
+    mutationFn: (ocId: string) => enviarProvFn({ data: { ocId } }),
+    onSuccess: () => { toast.success("OC marcada como enviada al proveedor"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
+  const isAdmin = roles.includes("director") || roles.includes("administrativo");
+
 
   if (!open) return null;
 
@@ -270,15 +284,31 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                     )}
                     {oc.estatus === "pendiente_autorizacion" && (
                       <p className="text-sm text-muted-foreground">
-                        Enviada al supervisor · {oc.enviada_at ? formatDate(oc.enviada_at) : "—"}
+                        Enviada al supervisor · {oc.enviada_supervisor_at ? formatDate(oc.enviada_supervisor_at) : "—"}
                       </p>
                     )}
                     {oc.estatus === "autorizada" && (
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <p className="text-sm flex items-center gap-1 text-emerald-700">
                           <CheckCircle2 className="size-4" /> Autorizada {oc.autorizada_at ? `· ${formatDate(oc.autorizada_at)}` : ""}
                         </p>
-                        <Button size="sm" disabled title="Próximamente">Registrar pago</Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            onClick={() => enviarProvMut.mutate(oc.id)}
+                            disabled={enviarProvMut.isPending}
+                          >
+                            <Send className="size-4 mr-1" /> Marcar como enviada al proveedor
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {oc.estatus === "enviada" && (
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-sm flex items-center gap-1 text-blue-700">
+                          <Send className="size-4" /> Enviada al proveedor {oc.enviada_proveedor_at ? `· ${formatDate(oc.enviada_proveedor_at)}` : ""}
+                        </p>
+                        <Button size="sm" variant="outline" disabled title="Próximamente">Registrar recepción</Button>
                       </div>
                     )}
                     {oc.estatus === "rechazada" && (
@@ -288,6 +318,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                             <strong>Motivo:</strong> {oc.notas_supervisor}
                           </p>
                         )}
+
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="outline" onClick={() => setTab("comparativa")}>
                             Revisar en Comparativa

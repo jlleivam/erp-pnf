@@ -438,6 +438,51 @@ export type Database = {
           },
         ]
       }
+      notificaciones: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          leida_at: string | null
+          link: string | null
+          mensaje: string
+          obra_id: string | null
+          oc_id: string | null
+          requisicion_id: string | null
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          leida_at?: string | null
+          link?: string | null
+          mensaje: string
+          obra_id?: string | null
+          oc_id?: string | null
+          requisicion_id?: string | null
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          leida_at?: string | null
+          link?: string | null
+          mensaje?: string
+          obra_id?: string | null
+          oc_id?: string | null
+          requisicion_id?: string | null
+          tipo?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       obra_comisiones: {
         Row: {
           base_calculo: string
@@ -575,7 +620,9 @@ export type Database = {
           company_id: string
           creado_por: string
           created_at: string
-          enviada_at: string | null
+          enviada_proveedor_at: string | null
+          enviada_proveedor_por: string | null
+          enviada_supervisor_at: string | null
           estatus: Database["public"]["Enums"]["oc_estatus"]
           folio: string
           id: string
@@ -594,7 +641,9 @@ export type Database = {
           company_id: string
           creado_por: string
           created_at?: string
-          enviada_at?: string | null
+          enviada_proveedor_at?: string | null
+          enviada_proveedor_por?: string | null
+          enviada_supervisor_at?: string | null
           estatus?: Database["public"]["Enums"]["oc_estatus"]
           folio: string
           id?: string
@@ -613,7 +662,9 @@ export type Database = {
           company_id?: string
           creado_por?: string
           created_at?: string
-          enviada_at?: string | null
+          enviada_proveedor_at?: string | null
+          enviada_proveedor_por?: string | null
+          enviada_supervisor_at?: string | null
           estatus?: Database["public"]["Enums"]["oc_estatus"]
           folio?: string
           id?: string
@@ -1149,6 +1200,7 @@ export type Database = {
         | "borrador"
         | "pendiente_autorizacion"
         | "autorizada"
+        | "enviada"
         | "rechazada"
         | "pagada"
       requisicion_estatus:
@@ -1335,6 +1387,7 @@ export const Constants = {
         "borrador",
         "pendiente_autorizacion",
         "autorizada",
+        "enviada",
         "rechazada",
         "pagada",
       ],

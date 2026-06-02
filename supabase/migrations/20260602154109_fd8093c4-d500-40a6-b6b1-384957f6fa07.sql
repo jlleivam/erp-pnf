@@ -1,0 +1,1 @@
+ALTER TYPE public.oc_estatus ADD VALUE IF NOT EXISTS 'enviada' AFTER 'autorizada';
