@@ -1,0 +1,1 @@
+ALTER TABLE public.obra_nomina_asistencias ADD COLUMN IF NOT EXISTS nota_extras text;

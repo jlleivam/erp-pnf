@@ -800,6 +800,7 @@ export type Database = {
           horas_extras: number
           id: string
           jornada: number
+          nota_extras: string | null
           renglon_id: string
         }
         Insert: {
@@ -808,6 +809,7 @@ export type Database = {
           horas_extras?: number
           id?: string
           jornada?: number
+          nota_extras?: string | null
           renglon_id: string
         }
         Update: {
@@ -816,6 +818,7 @@ export type Database = {
           horas_extras?: number
           id?: string
           jornada?: number
+          nota_extras?: string | null
           renglon_id?: string
         }
         Relationships: [
