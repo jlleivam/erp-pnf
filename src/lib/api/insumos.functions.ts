@@ -157,20 +157,29 @@ export const solicitarInsumo = createServerFn({ method: "POST" })
       nombre: z.string().trim().min(1).max(200),
       unidad: unidadSchema,
       categoriaId: z.string().uuid().nullable(),
+      disponibleRenta: z.boolean().optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId } = await getUserCompanyAndDirector(supabase, userId);
+    const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     await validateUnidad(supabase, companyId, data.unidad);
-    const { error } = await supabase.from("insumos").insert({
+    const row: Record<string, unknown> = {
       company_id: companyId,
       categoria_id: data.categoriaId,
       nombre: data.nombre,
       unidad: data.unidad,
-      estatus: "pendiente",
       solicitado_por: userId,
-    });
+    };
+    if (isDirector) {
+      row.estatus = "autorizado";
+      row.autorizado_por = userId;
+      row.autorizado_at = new Date().toISOString();
+      row.disponible_renta = data.disponibleRenta ?? false;
+    } else {
+      row.estatus = "pendiente";
+    }
+    const { error } = await supabase.from("insumos").insert(row);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
