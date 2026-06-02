@@ -277,11 +277,13 @@ export function DestajoDetalleSheet({
         {asignar && (
           <AsignarTrabajadoresDialog
             destajoId={destajoId}
+            destajistaId={destajo?.destajista_id}
             asignadosActuales={trabajadores.map((t) => t.trabajador_id)}
             onClose={() => setAsignar(false)}
             onSaved={() => { setAsignar(false); refresh(); }}
           />
         )}
+
 
         {rejecting && (
           <RechazarDialog
