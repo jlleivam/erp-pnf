@@ -314,6 +314,7 @@ export function CatalogoInsumosModule() {
         open={openSolicitar}
         onOpenChange={setOpenSolicitar}
         categorias={categoriasQ.data ?? []}
+        unidades={unidadesQ.data ?? []}
       />
       {director && (
         <ImportarInsumosDialog open={openImportar} onOpenChange={setOpenImportar} />
@@ -325,10 +326,18 @@ export function CatalogoInsumosModule() {
           categorias={categoriasQ.data ?? []}
         />
       )}
+      {director && (
+        <UnidadesDialog
+          open={openUnidades}
+          onOpenChange={setOpenUnidades}
+          unidades={unidadesQ.data ?? []}
+        />
+      )}
       {editInsumo && (
         <EditarInsumoDialog
           insumo={editInsumo}
           categorias={categoriasQ.data ?? []}
+          unidades={unidadesQ.data ?? []}
           onClose={() => setEditInsumo(null)}
         />
       )}
