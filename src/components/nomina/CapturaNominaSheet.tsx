@@ -52,7 +52,6 @@ type Renglon = {
   id: string;
   trabajador_id: string;
   sueldo_diario_snapshot: number;
-  multiplicador_extras: number;
   dias_trabajados: number;
   horas_extras_total: number;
   importe_jornadas: number;
@@ -67,6 +66,7 @@ type Asistencia = {
   fecha: string;
   jornada: number;
   horas_extras: number;
+  nota_extras: string | null;
 };
 
 export function CapturaNominaSheet({
