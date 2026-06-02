@@ -30,7 +30,7 @@ async function getAccess(supabase: any, userId: string, obraId: string) {
   };
 }
 
-function recalcRenglon(asistencias: { jornada: number; horas_extras: number }[], sueldo: number, mult: number) {
+function recalcRenglon(asistencias: { jornada: number; horas_extras: number }[], sueldo: number) {
   let dias = 0;
   let horas = 0;
   for (const a of asistencias) {
@@ -38,7 +38,7 @@ function recalcRenglon(asistencias: { jornada: number; horas_extras: number }[],
     horas += Number(a.horas_extras ?? 0);
   }
   const importeJornadas = dias * sueldo;
-  const importeExtras = horas * (sueldo / 8) * mult;
+  const importeExtras = horas * (sueldo / 8);
   return {
     dias_trabajados: dias,
     horas_extras_total: horas,
@@ -230,6 +230,7 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
       fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       jornada: z.number().refine((v) => v === 0 || v === 0.5 || v === 1),
       horasExtras: z.number().min(0).max(24),
+      notaExtras: z.string().trim().max(500).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -253,6 +254,11 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
     if (data.fecha < nominaFull.semana_inicio || data.fecha > nominaFull.semana_fin)
       throw new Error("Fecha fuera de la semana de la nómina");
 
+    // Nota obligatoria cuando hay horas extras
+    const notaLimpia = (data.notaExtras ?? "").trim();
+    if (data.horasExtras > 0 && notaLimpia.length < 3) {
+      throw new Error("Las horas extras requieren una nota que explique el motivo (mínimo 3 caracteres).");
+    }
 
     if (data.jornada === 0 && data.horasExtras === 0) {
       await supabase.from("obra_nomina_asistencias")
@@ -266,6 +272,7 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
           fecha: data.fecha,
           jornada: data.jornada,
           horas_extras: data.horasExtras,
+          nota_extras: data.horasExtras > 0 ? notaLimpia : null,
         },
         { onConflict: "renglon_id,fecha" },
       );
@@ -280,7 +287,6 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
     const totals = recalcRenglon(
       asistencias ?? [],
       Number(renglon.sueldo_diario_snapshot),
-      Number(renglon.multiplicador_extras),
     );
     await supabase.from("obra_nomina_renglones").update(totals).eq("id", data.renglonId);
 
@@ -395,7 +401,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
     if (renglonIds.length > 0) {
       const { data } = await supabase
         .from("obra_nomina_asistencias")
-        .select("renglon_id, fecha, jornada, horas_extras")
+        .select("renglon_id, fecha, jornada, horas_extras, nota_extras")
         .in("renglon_id", renglonIds);
       asistencias = data ?? [];
     }
@@ -414,7 +420,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
       dias: number;
       horas_extras: number;
       importe: number;
-      asistencias: { fecha: string; jornada: number; horas_extras: number }[];
+      asistencias: { fecha: string; jornada: number; horas_extras: number; nota_extras: string | null }[];
     };
     type Resumen = {
       trabajador_id: string;
@@ -463,6 +469,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
           fecha: a.fecha,
           jornada: Number(a.jornada),
           horas_extras: Number(a.horas_extras ?? 0),
+          nota_extras: (a.nota_extras ?? null) as string | null,
         })),
       });
     }

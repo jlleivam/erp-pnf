@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { formatMXN } from "@/lib/format";
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DOW = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -49,7 +49,7 @@ type TrabajadorPanel = {
     dias: number;
     horas_extras: number;
     importe: number;
-    asistencias: { fecha: string; jornada: number; horas_extras: number }[];
+    asistencias: { fecha: string; jornada: number; horas_extras: number; nota_extras: string | null }[];
   }[];
   duplicados: { fecha: string; suma: number }[];
 };
@@ -306,7 +306,13 @@ function DetalleTrabajadorDialog({
                         <td key={f} className="p-1 text-center tabular-nums text-xs">
                           {a && a.jornada > 0 ? a.jornada.toFixed(1) : "—"}
                           {a && a.horas_extras > 0 && (
-                            <div className="text-[10px] text-primary">+{a.horas_extras}h</div>
+                            <div
+                              className="text-[10px] text-primary inline-flex items-center gap-0.5 cursor-help"
+                              title={a.nota_extras ?? "Sin nota"}
+                            >
+                              +{a.horas_extras}h
+                              {a.nota_extras && <MessageSquare className="size-2.5 opacity-70" />}
+                            </div>
                           )}
                         </td>
                       );
