@@ -356,7 +356,12 @@ export const importarInsumos = createServerFn({ method: "POST" })
       }
     }
     if (nuevasCats.size > 0) {
-      const toInsert = Array.from(nuevasCats.values()).map((nombre) => ({ company_id: companyId, nombre }));
+      const toInsert: { company_id: string; nombre: string; prefijo: string }[] = [];
+      for (const nombre of nuevasCats.values()) {
+        const base = derivarPrefijo(nombre);
+        const prefijo = await prefijoUnico(supabase, companyId, base);
+        toInsert.push({ company_id: companyId, nombre, prefijo });
+      }
       const { data: inserted, error: insCatErr } = await supabase
         .from("insumo_categorias").insert(toInsert).select("id, nombre");
       if (insCatErr) throw new Error(`Error creando categorías: ${insCatErr.message}`);
