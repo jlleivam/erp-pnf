@@ -36,7 +36,8 @@ import { Plus, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CapturaPresupuestoSheet } from "./CapturaPresupuestoSheet";
 import { VerPresupuestoSheet } from "./VerPresupuestoSheet";
-import { formatCurrency } from "@/lib/format";
+import { formatMXN } from "@/lib/format";
+const formatCurrency = formatMXN;
 
 type Presupuesto = {
   id: string;
