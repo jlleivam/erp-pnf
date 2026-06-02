@@ -1149,6 +1149,7 @@ export type Database = {
         | "borrador"
         | "pendiente_autorizacion"
         | "autorizada"
+        | "enviada"
         | "rechazada"
         | "pagada"
       requisicion_estatus:
@@ -1335,6 +1336,7 @@ export const Constants = {
         "borrador",
         "pendiente_autorizacion",
         "autorizada",
+        "enviada",
         "rechazada",
         "pagada",
       ],
