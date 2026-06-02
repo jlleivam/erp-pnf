@@ -698,6 +698,101 @@ export type Database = {
           },
         ]
       }
+      obra_estimacion_renglones: {
+        Row: {
+          cantidad_ejecutada: number
+          cantidad_vigente: number
+          concepto: string
+          created_at: string
+          estimacion_id: string
+          id: string
+          importe_ejecutado: number
+          pu_vigente: number
+          renglon_clave: string
+          unidad: string | null
+        }
+        Insert: {
+          cantidad_ejecutada?: number
+          cantidad_vigente?: number
+          concepto: string
+          created_at?: string
+          estimacion_id: string
+          id?: string
+          importe_ejecutado?: number
+          pu_vigente?: number
+          renglon_clave: string
+          unidad?: string | null
+        }
+        Update: {
+          cantidad_ejecutada?: number
+          cantidad_vigente?: number
+          concepto?: string
+          created_at?: string
+          estimacion_id?: string
+          id?: string
+          importe_ejecutado?: number
+          pu_vigente?: number
+          renglon_clave?: string
+          unidad?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_estimacion_renglones_estimacion_id_fkey"
+            columns: ["estimacion_id"]
+            isOneToOne: false
+            referencedRelation: "obra_estimaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_estimaciones: {
+        Row: {
+          cerrada_at: string | null
+          cerrada_por: string | null
+          company_id: string
+          creado_por: string
+          created_at: string
+          estatus: Database["public"]["Enums"]["estimacion_estatus"]
+          id: string
+          monto_total: number
+          numero: number
+          obra_id: string
+          semana_fin: string
+          semana_inicio: string
+          updated_at: string
+        }
+        Insert: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id: string
+          creado_por: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["estimacion_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          obra_id: string
+          semana_fin: string
+          semana_inicio: string
+          updated_at?: string
+        }
+        Update: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["estimacion_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          obra_id?: string
+          semana_fin?: string
+          semana_inicio?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       obra_presupuesto_renglones: {
         Row: {
           cantidad: number | null
@@ -1503,6 +1598,7 @@ export type Database = {
         | "auxiliar"
         | "administrativo"
         | "supervisor"
+      estimacion_estatus: "borrador" | "cerrada"
       insumo_estatus: "autorizado" | "pendiente"
       insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON" | "BTO"
       oc_estatus:
@@ -1700,6 +1796,7 @@ export const Constants = {
         "administrativo",
         "supervisor",
       ],
+      estimacion_estatus: ["borrador", "cerrada"],
       insumo_estatus: ["autorizado", "pendiente"],
       insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"],
       oc_estatus: [
