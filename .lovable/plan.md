@@ -1,42 +1,42 @@
-## Plan: Insumos disponibles para renta
+## Objetivo
+Permitir al Director crear/editar/eliminar unidades de medida para insumos (igual que ya hace con categorías), en lugar del enum fijo actual (`KG, M2, M3, ML, PZA, LT, TON, BTO`).
 
-### 1. Categorías
-Ya implementado. Confirmado por el usuario — sin cambios.
+## Enfoque
+Reemplazar el enum `insumo_unidad` por una tabla catálogo `insumo_unidades` por compañía. Esto da flexibilidad total (agregar/editar/eliminar) y queda alineado con el patrón de `insumo_categorias`.
 
-### 2. Flag `disponible_renta` en insumos
+## Cambios
 
-**Base de datos** (migración nueva):
-- `ALTER TABLE insumos ADD COLUMN disponible_renta boolean NOT NULL DEFAULT false`
-- Índice parcial: `CREATE INDEX idx_insumos_disponible_renta ON insumos(company_id) WHERE disponible_renta = true` para acelerar el selector en rentas.
+### 1. Base de datos (migración)
+- Crear tabla `public.insumo_unidades`:
+  - `id`, `company_id`, `codigo` (texto corto, ej. "PZA"), `nombre` (opcional, ej. "Pieza"), `created_at`.
+  - Único `(company_id, upper(codigo))`.
+  - GRANTs para `authenticated` y `service_role`.
+  - RLS:
+    - SELECT: miembros de la compañía.
+    - ALL: solo Director (`is_director_of(company_id)`).
+- Migrar columna `insumos.unidad`:
+  - Convertir de enum `insumo_unidad` a `text`.
+  - Sembrar las 8 unidades actuales en `insumo_unidades` por cada compañía existente.
+  - Eliminar el tipo enum `insumo_unidad` al final.
+- Sin foreign key estricta (se valida en el server function) para mantener flexibilidad ante importaciones.
 
-**Backend** (`src/lib/api/insumos.functions.ts`):
-- `listInsumos`: incluir `disponible_renta` en el select y aceptar filtro opcional `soloRenta?: boolean` (lo usará el módulo de rentas).
-- `editarInsumo`: aceptar `disponible_renta` opcional (solo Director, ya está gateado).
-- `solicitarInsumo`: NO acepta el flag (solo se marca al editar, según respuesta del usuario).
+### 2. Backend (`src/lib/api/insumos.functions.ts`)
+- Quitar `z.enum(UNIDADES)`; validar `unidad` como string (1–10 chars, mayúsculas) y verificar que exista en `insumo_unidades` de la compañía al crear/editar/importar.
+- Nuevas server functions:
+  - `listUnidades()` — lista las unidades de la compañía.
+  - `crearUnidad({ codigo, nombre? })` — solo Director.
+  - `editarUnidad({ id, codigo, nombre? })` — solo Director.
+  - `eliminarUnidad({ id })` — solo Director; bloquear si está en uso por algún insumo.
 
-**UI catálogo** (`src/components/insumos/CatalogoInsumosModule.tsx`):
-- `EditarInsumoDialog` (Director): agregar Checkbox "Disponible para rentas" con descripción corta ("Permite seleccionarlo al crear una solicitud de renta").
-- En la tabla de insumos autorizados: badge pequeño "Renta" junto al nombre cuando `disponible_renta = true`.
+### 3. UI (`src/components/insumos/CatalogoInsumosModule.tsx`)
+- Reemplazar el array constante `UNIDADES` por carga dinámica vía `listUnidades`.
+- Agregar botón "Unidades" junto al de "Categorías" (solo visible para Director) que abre un nuevo `UnidadesDialog` con tabla CRUD (mismo patrón que `CategoriasDialog`).
+- Selects de unidad en filtros, `NuevoInsumoDialog` y `EditarInsumoDialog` se alimentan de la lista dinámica.
 
-### 3. Selector de insumo en Nueva Renta
+### 4. Importación (`ImportarInsumosDialog.tsx`)
+- Validar `unidad` contra la lista dinámica de `insumo_unidades` (no contra el enum).
+- Mensaje de error sugiere agregar la unidad desde el diálogo de Unidades.
 
-**Backend** (`src/lib/api/rentas.functions.ts`):
-- `crearSolicitudRenta`: agregar parámetro `insumo_id: string` (requerido), validar que el insumo pertenezca a la company y tenga `disponible_renta = true` y `estatus = autorizado`.
-- Persistir `insumo_id` en `obra_rentas`.
-
-**BD** (misma migración):
-- `ALTER TABLE obra_rentas ADD COLUMN insumo_id uuid REFERENCES insumos(id)` (nullable para no romper filas existentes; nuevas solicitudes lo exigen a nivel de aplicación).
-
-**UI** (`src/components/rentas/NuevaRentaDialog.tsx`):
-- Reemplazar el campo libre "Equipo" por un Select/Combobox que liste insumos con `disponible_renta = true` de la company (orden alfabético, muestra `código — nombre (unidad)`).
-- Mensaje vacío: "No hay insumos marcados como disponibles para renta. Pídele al Director que active el flag en el catálogo."
-- El nombre/descripción del insumo seleccionado se usa como `equipo` para mantener compatibilidad con el detalle.
-- Mantener: cantidad, periodicidad, fecha estimada, días aviso, descripción adicional.
-
-**Vista de detalle** (`RentaDetalleSheet.tsx`): mostrar el insumo vinculado (código + nombre) cuando exista.
-
-### Alcance
-- Solo Director marca/desmarca el flag.
-- Selector en rentas es obligatorio del catálogo (sin texto libre).
-- Rentas existentes siguen funcionando con `insumo_id = NULL`.
-- No se toca cotización, autorización ni cierre de rentas.
+## Fuera de alcance
+- No se tocan otros módulos que solo leen `unidad` como texto (rentas, almacén). Al ser `text` siguen funcionando igual.
+- Categorías y flag `disponible_renta` quedan intactos.
