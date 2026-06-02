@@ -1,42 +1,28 @@
-## Objetivo
-Permitir al Director crear/editar/eliminar unidades de medida para insumos (igual que ya hace con categorías), en lugar del enum fijo actual (`KG, M2, M3, ML, PZA, LT, TON, BTO`).
+## Problema
 
-## Enfoque
-Reemplazar el enum `insumo_unidad` por una tabla catálogo `insumo_unidades` por compañía. Esto da flexibilidad total (agregar/editar/eliminar) y queda alineado con el patrón de `insumo_categorias`.
+El diálogo "Solicitar insumo" (`SolicitarDialog` en `CatalogoInsumosModule.tsx`) es genérico para todos los roles: solo pide nombre, unidad y categoría, y el server function `solicitarInsumo` siempre inserta el insumo como `estatus: "pendiente"` sin tocar `disponible_renta`. Por eso, aun siendo Director, no aparece el checkbox al crear — actualmente solo se ofrece al editar (`EditarInsumoDialog`).
 
 ## Cambios
 
-### 1. Base de datos (migración)
-- Crear tabla `public.insumo_unidades`:
-  - `id`, `company_id`, `codigo` (texto corto, ej. "PZA"), `nombre` (opcional, ej. "Pieza"), `created_at`.
-  - Único `(company_id, upper(codigo))`.
-  - GRANTs para `authenticated` y `service_role`.
-  - RLS:
-    - SELECT: miembros de la compañía.
-    - ALL: solo Director (`is_director_of(company_id)`).
-- Migrar columna `insumos.unidad`:
-  - Convertir de enum `insumo_unidad` a `text`.
-  - Sembrar las 8 unidades actuales en `insumo_unidades` por cada compañía existente.
-  - Eliminar el tipo enum `insumo_unidad` al final.
-- Sin foreign key estricta (se valida en el server function) para mantener flexibilidad ante importaciones.
+### 1. UI — `src/components/insumos/CatalogoInsumosModule.tsx`
+- En `SolicitarDialog`, recibir `isDirector` como prop (ya disponible en el módulo padre).
+- Si `isDirector`, mostrar un `Checkbox` "Disponible para rentas" (default: `false`), con la misma copy/ayuda que en `EditarInsumoDialog`.
+- Cambiar el título/CTA dinámicamente según el rol:
+  - Director: "Nuevo insumo" / botón "Crear"
+  - No-director: "Solicitar insumo" / botón "Solicitar" (comportamiento actual sin cambios)
+- Enviar `disponibleRenta` en la mutación solo cuando el usuario es Director.
 
-### 2. Backend (`src/lib/api/insumos.functions.ts`)
-- Quitar `z.enum(UNIDADES)`; validar `unidad` como string (1–10 chars, mayúsculas) y verificar que exista en `insumo_unidades` de la compañía al crear/editar/importar.
-- Nuevas server functions:
-  - `listUnidades()` — lista las unidades de la compañía.
-  - `crearUnidad({ codigo, nombre? })` — solo Director.
-  - `editarUnidad({ id, codigo, nombre? })` — solo Director.
-  - `eliminarUnidad({ id })` — solo Director; bloquear si está en uso por algún insumo.
+### 2. Backend — `src/lib/api/insumos.functions.ts`
+- Ampliar `solicitarInsumo`:
+  - Agregar al schema `disponibleRenta: z.boolean().optional()`.
+  - En el handler, leer `isDirector` desde `getUserCompanyAndDirector`.
+  - Si `isDirector`: ignorar el flujo de solicitud y crear el insumo directamente como `estatus: "autorizado"`, con `autorizado_por = userId`, `autorizado_at = now()`, y `disponible_renta = data.disponibleRenta ?? false`.
+  - Si no es Director: mantener comportamiento actual (pendiente, ignorar `disponibleRenta`).
+- No requiere migración: las columnas `disponible_renta`, `autorizado_por`, `autorizado_at` y `estatus` ya existen.
 
-### 3. UI (`src/components/insumos/CatalogoInsumosModule.tsx`)
-- Reemplazar el array constante `UNIDADES` por carga dinámica vía `listUnidades`.
-- Agregar botón "Unidades" junto al de "Categorías" (solo visible para Director) que abre un nuevo `UnidadesDialog` con tabla CRUD (mismo patrón que `CategoriasDialog`).
-- Selects de unidad en filtros, `NuevoInsumoDialog` y `EditarInsumoDialog` se alimentan de la lista dinámica.
+### Fuera de alcance
+- Categorías, unidades, importación masiva y módulo de rentas — sin cambios.
+- Permisos RLS — sin cambios (Director ya puede insertar autorizados).
 
-### 4. Importación (`ImportarInsumosDialog.tsx`)
-- Validar `unidad` contra la lista dinámica de `insumo_unidades` (no contra el enum).
-- Mensaje de error sugiere agregar la unidad desde el diálogo de Unidades.
-
-## Fuera de alcance
-- No se tocan otros módulos que solo leen `unidad` como texto (rentas, almacén). Al ser `text` siguen funcionando igual.
-- Categorías y flag `disponible_renta` quedan intactos.
+## Resultado esperado
+Cuando el Director abra el diálogo desde el catálogo, verá el checkbox "Disponible para rentas" y el insumo quedará creado y autorizado en un solo paso, ya marcado (o no) para rentas según su selección.
