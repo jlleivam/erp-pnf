@@ -54,17 +54,19 @@ export const listInsumos = createServerFn({ method: "POST" })
       categoriaId: z.string().uuid().nullable().optional(),
       unidad: z.enum(UNIDADES).optional(),
       search: z.string().trim().max(200).optional(),
+      soloRenta: z.boolean().optional(),
     }).parse(d ?? {})
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     let q = supabase
       .from("insumos")
-      .select("id, codigo, nombre, unidad, estatus, categoria_id, solicitado_por, created_at, autorizado_at, categoria:insumo_categorias(id, nombre, prefijo)")
+      .select("id, codigo, nombre, unidad, estatus, categoria_id, solicitado_por, created_at, autorizado_at, disponible_renta, categoria:insumo_categorias(id, nombre, prefijo)")
       .order("created_at", { ascending: false });
     if (data.estatus) q = q.eq("estatus", data.estatus);
     if (data.categoriaId) q = q.eq("categoria_id", data.categoriaId);
     if (data.unidad) q = q.eq("unidad", data.unidad);
+    if (data.soloRenta) q = q.eq("disponible_renta", true);
     if (data.search) {
       const s = data.search.replace(/[%_]/g, "\\$&");
       q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`);
