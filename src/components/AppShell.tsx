@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { NotificacionesBell } from "@/components/NotificacionesBell";
+
 
 const ROLE_LABELS: Record<AppRole, string> = {
   director: "Director",
@@ -150,12 +152,15 @@ export function AppShell() {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificacionesBell />
+
             <Button asChild variant="ghost" size="sm" className="gap-2" title="Configuración de la empresa">
               <Link to="/app/configuracion">
                 <Settings className="size-4" />
                 <span className="hidden sm:inline">Configuración</span>
               </Link>
             </Button>
+
 
 
             {realDirector && (
