@@ -63,7 +63,7 @@ export const listInsumos = createServerFn({ method: "POST" })
     z.object({
       estatus: z.enum(["autorizado", "pendiente"]).optional(),
       categoriaId: z.string().uuid().nullable().optional(),
-      unidad: z.enum(UNIDADES).optional(),
+      unidad: unidadSchema.optional(),
       search: z.string().trim().max(200).optional(),
       soloRenta: z.boolean().optional(),
     }).parse(d ?? {})
