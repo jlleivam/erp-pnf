@@ -60,12 +60,15 @@ export const listInsumos = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("insumos")
-      .select("id, nombre, unidad, estatus, categoria_id, solicitado_por, created_at, autorizado_at, categoria:insumo_categorias(id, nombre)")
+      .select("id, codigo, nombre, unidad, estatus, categoria_id, solicitado_por, created_at, autorizado_at, categoria:insumo_categorias(id, nombre, prefijo)")
       .order("created_at", { ascending: false });
     if (data.estatus) q = q.eq("estatus", data.estatus);
     if (data.categoriaId) q = q.eq("categoria_id", data.categoriaId);
     if (data.unidad) q = q.eq("unidad", data.unidad);
-    if (data.search) q = q.ilike("nombre", `%${data.search}%`);
+    if (data.search) {
+      const s = data.search.replace(/[%_]/g, "\\$&");
+      q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`);
+    }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
