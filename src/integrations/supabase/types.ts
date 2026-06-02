@@ -793,6 +793,139 @@ export type Database = {
         }
         Relationships: []
       }
+      obra_nomina_asistencias: {
+        Row: {
+          created_at: string
+          fecha: string
+          horas_extras: number
+          id: string
+          jornada: number
+          renglon_id: string
+        }
+        Insert: {
+          created_at?: string
+          fecha: string
+          horas_extras?: number
+          id?: string
+          jornada?: number
+          renglon_id: string
+        }
+        Update: {
+          created_at?: string
+          fecha?: string
+          horas_extras?: number
+          id?: string
+          jornada?: number
+          renglon_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_nomina_asistencias_renglon_id_fkey"
+            columns: ["renglon_id"]
+            isOneToOne: false
+            referencedRelation: "obra_nomina_renglones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_nomina_renglones: {
+        Row: {
+          created_at: string
+          dias_trabajados: number
+          horas_extras_total: number
+          id: string
+          importe_extras: number
+          importe_jornadas: number
+          importe_total: number
+          multiplicador_extras: number
+          nomina_id: string
+          sueldo_diario_snapshot: number
+          trabajador_id: string
+        }
+        Insert: {
+          created_at?: string
+          dias_trabajados?: number
+          horas_extras_total?: number
+          id?: string
+          importe_extras?: number
+          importe_jornadas?: number
+          importe_total?: number
+          multiplicador_extras?: number
+          nomina_id: string
+          sueldo_diario_snapshot?: number
+          trabajador_id: string
+        }
+        Update: {
+          created_at?: string
+          dias_trabajados?: number
+          horas_extras_total?: number
+          id?: string
+          importe_extras?: number
+          importe_jornadas?: number
+          importe_total?: number
+          multiplicador_extras?: number
+          nomina_id?: string
+          sueldo_diario_snapshot?: number
+          trabajador_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_nomina_renglones_nomina_id_fkey"
+            columns: ["nomina_id"]
+            isOneToOne: false
+            referencedRelation: "obra_nominas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_nominas: {
+        Row: {
+          cerrada_at: string | null
+          cerrada_por: string | null
+          company_id: string
+          creado_por: string
+          created_at: string
+          estatus: Database["public"]["Enums"]["nomina_estatus"]
+          id: string
+          monto_total: number
+          numero: number
+          obra_id: string
+          semana_fin: string
+          semana_inicio: string
+          updated_at: string
+        }
+        Insert: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id: string
+          creado_por: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["nomina_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          obra_id: string
+          semana_fin: string
+          semana_inicio: string
+          updated_at?: string
+        }
+        Update: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["nomina_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          obra_id?: string
+          semana_fin?: string
+          semana_inicio?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       obra_presupuesto_renglones: {
         Row: {
           cantidad: number | null
@@ -1601,6 +1734,7 @@ export type Database = {
       estimacion_estatus: "borrador" | "cerrada"
       insumo_estatus: "autorizado" | "pendiente"
       insumo_unidad: "KG" | "M2" | "M3" | "ML" | "PZA" | "LT" | "TON" | "BTO"
+      nomina_estatus: "borrador" | "cerrada"
       oc_estatus:
         | "borrador"
         | "pendiente_autorizacion"
@@ -1799,6 +1933,7 @@ export const Constants = {
       estimacion_estatus: ["borrador", "cerrada"],
       insumo_estatus: ["autorizado", "pendiente"],
       insumo_unidad: ["KG", "M2", "M3", "ML", "PZA", "LT", "TON", "BTO"],
+      nomina_estatus: ["borrador", "cerrada"],
       oc_estatus: [
         "borrador",
         "pendiente_autorizacion",

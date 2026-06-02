@@ -1,92 +1,107 @@
 
-# Estimaciones semanales (producción)
+# Nómina semanal por obra
 
 ## Concepto
 
-Cada **semana fija Lun–Dom**, el **residente** captura por concepto la **cantidad ejecutada en esa semana** contra el **presupuesto vigente** (base + OC-P autorizadas). El sistema calcula importe, acumulado histórico, % avance y producción global. Se guarda como **borrador** editable cualquier día; al **cerrar la semana** queda inmutable y disponible para comparativos contra gastos (módulo futuro).
+Cada semana **Lun–Dom**, el **residente** de cada obra:
+1. **Asigna** la lista de trabajadores que estarán en la obra esa semana (plantilla semanal).
+2. **Captura asistencia diaria** por trabajador: jornada completa (1.0), media (0.5) o falta (0), más horas extras opcionales.
+
+El **administrativo** tiene un **panel global** que cruza todas las obras de la semana para:
+- Ver días totales pagados por trabajador.
+- Detectar duplicados (suma > 1.0 día) con alerta visual.
+- Consolidar el monto a pagar por trabajador.
 
 ## Reglas clave
 
-- **Semana**: Lun 00:00 → Dom 23:59 (ISO). Una sola estimación por obra+semana.
-- **Captura**: cantidad **de la semana** (no acumulada). El sistema calcula:
-  - `acumulado = Σ cantidades de semanas cerradas anteriores + cantidad semana actual`
-  - `importe_semana = cantidad × PU_vigente`
-  - `% avance concepto = acumulado / cantidad_vigente`
-- **Bloqueo de sobre-ejecución**: si `acumulado > cantidad_vigente` el sistema **impide guardar**, con mensaje claro indicando cuánto sobra y sugiriendo levantar una OC-P primero.
-- **Solo conceptos hoja** del vigente son capturables (los grupos suman automáticamente).
-- **Estatus**: `borrador` (editable por residente) → `cerrada` (inmutable).
-- **Quién**: el **residente miembro del obra_team** captura y cierra. Director puede ver/auditar. Una vez cerrada, ni el residente la modifica (solo el Director podría reabrir vía función especial — fuera de alcance ahora).
-- **PU congelado al cierre**: al cerrar la semana, se persiste el snapshot del PU vigente usado para el cálculo, de modo que OCs futuras no alteren el histórico.
+- **Semana**: Lun 00:00 → Dom 23:59 (igual que estimaciones).
+- **Unidad de asistencia**: `1.0`, `0.5`, `0` (jornada / media / falta).
+- **Multi-obra mismo día permitido**: un trabajador puede tener `0.5` en obra A y `0.5` en obra B el mismo día. Cada residente captura su parte sin ver la de otras obras.
+- **Anti-duplicado (advertir, no bloquear)**: si la suma del día entre todas las obras > 1.0, se muestra alerta en el panel global del administrativo (badge rojo "duplicado") y en el detalle del trabajador, pero el guardado no se bloquea. El administrativo resuelve manualmente.
+- **Horas extras**: por día y trabajador, campo `horas_extras` (número) con `multiplicador` configurable a nivel renglón (default x2). Importe extra = `horas × (sueldo_diario / 8) × multiplicador`.
+- **Sueldo**: se toma de `trabajadores.sueldo_diario` al momento de **abrir la semana** (snapshot en el renglón) para evitar drift si se ajusta el sueldo después.
+- **Plantilla semanal**: se asignan trabajadores a la obra para esa semana. Sólo trabajadores con `estatus_autorizacion = autorizado` y sin `fecha_baja` previa al lunes de la semana.
+- **Estatus**: `borrador` (residente edita) → `cerrada` (residente cierra, inmutable). El administrativo puede ver borradores en su panel.
+- **Quién**: Residente (miembro `obra_team`) o Director captura/cierra. Administrativo sólo consulta el panel global; no edita asistencia.
 
 ## Estructura de datos
 
-### Tabla `obra_estimaciones`
+### `obra_nominas` (header semanal por obra)
 - `id`, `obra_id`, `company_id`
-- `numero` (autoincremental por obra)
-- `semana_inicio` (date, lunes), `semana_fin` (date, domingo)
+- `semana_inicio` (lunes), `semana_fin` (domingo)
 - `estatus`: enum `borrador | cerrada`
-- `monto_total` (suma de renglones, recalculado en cada guardado)
+- `monto_total` (recalculado en cada guardado)
 - `creado_por`, `cerrada_por`, `cerrada_at`, `created_at`, `updated_at`
 - Único: `(obra_id, semana_inicio)`
 
-### Tabla `obra_estimacion_renglones`
-- `id`, `estimacion_id`
-- `renglon_clave` (WBS, ej `1.1.2`), `concepto`, `unidad`
-- `cantidad_vigente`, `pu_vigente` (snapshot al momento del cierre / referencia para cálculo)
-- `cantidad_ejecutada` (esta semana)
-- `importe_ejecutado` (cantidad × pu, calculado)
-- Único: `(estimacion_id, renglon_clave)`
+### `obra_nomina_renglones` (un trabajador en esa nómina semanal)
+- `id`, `nomina_id`, `trabajador_id`
+- `sueldo_diario_snapshot` (numeric, congelado al asignar)
+- `multiplicador_extras` (numeric, default 2)
+- `dias_trabajados` (numeric, suma calculada de los 7 días, ej. 5.5)
+- `horas_extras_total` (numeric)
+- `importe_jornadas`, `importe_extras`, `importe_total`
+- Único: `(nomina_id, trabajador_id)`
 
-Solo se guardan renglones con cantidad > 0 para mantener la tabla ligera.
+### `obra_nomina_asistencias` (asistencia día a día)
+- `id`, `renglon_id`, `fecha` (date)
+- `jornada` (numeric: 0, 0.5, 1.0)
+- `horas_extras` (numeric, default 0)
+- Único: `(renglon_id, fecha)`
+
+Sólo se persisten filas con `jornada > 0` o `horas_extras > 0` para mantener la tabla ligera.
 
 ### RLS
 - SELECT: miembros de la company.
-- INSERT/UPDATE/DELETE en borrador: Director o miembro de `obra_team`.
-- UPDATE de `estatus=cerrada`: bloqueado vía policy (no se permite editar renglones de estimación cerrada).
+- INSERT/UPDATE/DELETE: Director, Administrativo o miembro `obra_team` (sólo en nóminas `borrador`).
+- Renglones cerrados son inmutables (vía policy `estatus = borrador`).
 
-## Server functions (`src/lib/api/estimaciones.functions.ts`)
+## Server functions (`src/lib/api/nominas.functions.ts`)
 
-- `listEstimaciones({ obraId })` — lista semanas con monto, estatus y % acumulado.
-- `getOrCreateBorrador({ obraId, semanaInicio })` — devuelve borrador existente o crea uno nuevo para esa semana; incluye **árbol del vigente** con cantidades ya capturadas y acumulado de semanas cerradas previas.
-- `guardarRenglonesEstimacion({ estimacionId, renglones })` — valida bloqueo de sobre-ejecución contra `acumulado_previo + cantidad_nueva ≤ cantidad_vigente`, recalcula importes y monto_total. Devuelve `{ errores[], monto_total }`.
-- `cerrarEstimacion({ estimacionId })` — valida que esté en borrador, congela snapshot de PU vigente, cambia estatus a `cerrada`.
-- `getEstimacion({ id })` — detalle para vista de solo lectura.
-
-Lógica auxiliar en `src/lib/estimacion-utils.ts`:
-- `calcularSemana(date) → { inicio, fin }` (lunes/domingo ISO).
-- `getAcumuladoPrevio(obraId, semanaInicio, supabase)` → mapa `clave → cantidad acumulada` de semanas cerradas anteriores.
+- `listNominas({ obraId })` — lista semanas con monto/estatus.
+- `getOrCreateNomina({ obraId, semanaInicio })` — devuelve borrador o crea uno; incluye plantilla actual y matriz de asistencia (7 días × N trabajadores).
+- `asignarTrabajadores({ nominaId, trabajadorIds })` — agrega trabajadores (con snapshot de sueldo). Remueve sólo si no tienen asistencias capturadas.
+- `guardarAsistencias({ nominaId, asistencias[] })` — upsert por `(renglon_id, fecha)`; recalcula totales del renglón y de la nómina.
+- `cerrarNomina({ nominaId })` — valida, cambia estatus a `cerrada`.
+- `getPanelGlobalAdmin({ companyId, semanaInicio })` — para administrativo: por trabajador suma jornadas/extras de todas las obras de la semana, marca `tiene_duplicado` cuando algún día acumula > 1.0, devuelve desglose por obra.
 
 ## UI
 
-### Pestaña nueva "Estimaciones" en el módulo de obra
-- Lista de semanas (Lun–Dom, monto, % acumulado de obra, estatus) + botón **"Nueva estimación"** que abre la semana actual (o la última no cerrada).
+### Pestaña "Nómina" en módulo de obra (residente)
+- Lista de semanas con monto y estatus + botón "Nueva semana".
+- `CapturaNominaSheet`:
+  - Encabezado: rango Lun–Dom, estatus, monto semana.
+  - Botón **"Asignar trabajadores"** → diálogo multi-select de trabajadores autorizados.
+  - **Tabla matriz**: filas = trabajadores; columnas = L M M J V S D + "Extras" + "Total".
+  - Cada celda de día: control rápido (botones segmentados `0 · ½ · 1` o popover) + input opcional horas extras.
+  - Footer: total días, total horas extras, importe total.
+  - Botones: **Guardar borrador** y **Cerrar semana**.
 
-### `CapturaEstimacionSheet`
-- Encabezado: rango Lun–Dom, estatus (badge), monto semana, % avance global.
-- **Selector de semana** (calendario que sugiere la actual; permite semanas pasadas sin estimación).
-- **Árbol del vigente** (mismo layout que VerVigente) con columnas:
-  - Concepto / Unidad / Cant. vigente / **Cant. acumulada previa** / **Cant. esta semana (editable)** / Importe semana / % acumulado
-- Filas grupo: solo lectura, suman hijos.
-- Filas hoja: input numérico para cantidad de la semana.
-- **Validación inline**: si acumulado_previo + cantidad > cantidad_vigente, marca el input en rojo con tooltip "Excede vigente por X. Levante una OC-P".
-- Botones: **Guardar borrador** (autosave cada N seg también), **Cerrar semana** (confirm dialog que recalcula y bloquea si hay errores).
-- Filtro/búsqueda por clave o concepto y opción "solo con avance".
+### Nuevo módulo global "Nómina" para administrativo (`/app/admin/nomina`)
+- Selector de semana (default actual).
+- Tabla global: trabajador / sueldo diario / total días / extras / importe / obras donde trabajó (chips) / **badge duplicado** si algún día sumó > 1.0.
+- Click en trabajador → desglose por día con qué obra(s) cubrió cada fracción.
+- Filtros: con duplicados, por obra, por estatus de nómina (borrador/cerrada).
 
-### `VerEstimacionSheet` (solo lectura para semanas cerradas)
-- Mismo árbol con valores congelados, sin inputs.
+### Acceso por rol
+- Residente: ve sólo "Nómina" dentro de la obra donde es miembro.
+- Director: ve ambas vistas.
+- Administrativo: ve el panel global; opcional ver detalle por obra en solo lectura.
 
 ## Detalles técnicos
 
-- Reutilizar `reconstruirVigente()` para obtener el árbol vigente al abrir el sheet.
-- El acumulado previo se calcula sumando renglones de `obra_estimaciones` con estatus `cerrada` y `semana_inicio < semana_actual` para esa obra.
-- Snapshot al cierre: copiar `cantidad_vigente` y `pu_vigente` actuales en cada renglón antes de marcar `cerrada`, para evitar drift si después se autoriza una OC-P.
-- Solo Director puede ver estimaciones de obras donde no es residente (vía RLS por company).
+- Reutilizar `calcularSemana()` de `estimacion-utils.ts` (lunes/domingo ISO).
+- Snapshot de `sueldo_diario` al insertar renglón; si trabajador se reajusta después, no afecta nóminas previas.
+- Cálculo de importe extra: `horas_extras × (sueldo_diario_snapshot / 8) × multiplicador_extras`.
+- Detección de duplicados en panel global: agrupar `obra_nomina_asistencias` por `(trabajador_id, fecha)` cruzando todas las obras de la company en esa semana, sumar `jornada`, marcar cuando `> 1.0`.
+- Performance: índices en `(trabajador_id, fecha)` para consulta cross-obras.
 
 ## Fuera de alcance (siguiente iteración)
 
-- Importación desde Excel de estimaciones.
-- Comparativo estimación vs gastos semanales.
-- Reabrir estimaciones cerradas.
-- Workflow de aprobación por Director.
+- Cálculo de IMSS/ISR y retenciones.
+- Recibos de nómina (PDF, sellado SAT).
+- Destajos (tabla separada).
+- Aprobación formal por administrativo / firma digital.
+- Importación de asistencia desde checador.
 
 ¿Procedo con este diseño?

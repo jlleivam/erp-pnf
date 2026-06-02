@@ -5,6 +5,7 @@ import { RequisicionesModule } from "@/components/requisiciones/RequisicionesMod
 import { AlmacenModule } from "@/components/almacen/AlmacenModule";
 import { PresupuestoModule } from "@/components/presupuesto/PresupuestoModule";
 import { EstimacionesModule } from "@/components/estimaciones/EstimacionesModule";
+import { NominaModule } from "@/components/nomina/NominaModule";
 import { useEffectiveRoles, isDirector } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
@@ -36,6 +37,7 @@ function ObraModule() {
   if (slug === "almacen-obra") return <AlmacenModule obraId={obraId} />;
   if (slug === "presupuesto") return <PresupuestoModule obraId={obraId} />;
   if (slug === "estimaciones") return <EstimacionesModule obraId={obraId} />;
+  if (slug === "nomina") return <NominaModule obraId={obraId} />;
   const title = LABELS[slug] ?? "Módulo";
   const isAuxiliar = !isDirector(roles) && roles.includes("auxiliar");
 
@@ -47,4 +49,3 @@ function ObraModule() {
     />
   );
 }
-
