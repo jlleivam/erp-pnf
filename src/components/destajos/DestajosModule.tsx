@@ -34,6 +34,7 @@ type Destajo = {
   nombre: string;
   descripcion: string | null;
   estatus: "borrador" | "enviado" | "autorizado" | "rechazado";
+  estatus_base: "borrador" | "enviado" | "autorizado" | "rechazado";
   monto_total: number;
   pagado_acumulado: number;
   created_at: string;
