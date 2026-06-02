@@ -25,10 +25,12 @@ async function recalcEstatusRequisicion(supabase: any, requisicionId: string) {
     .from("ordenes_compra").select("estatus").eq("requisicion_id", requisicionId);
 
   const ocList = (ocs ?? []) as Array<{ estatus: string }>;
+  const enOC = ["autorizada", "enviada", "recibida_parcial", "recibida", "pagada"];
   let nuevo: string | null = null;
   if (ocList.length > 0) {
-    if (ocList.every((o) => o.estatus === "pagada")) nuevo = "completada";
-    else if (ocList.every((o) => ["autorizada", "enviada", "pagada"].includes(o.estatus)))
+    if (ocList.every((o) => o.estatus === "recibida" || o.estatus === "pagada"))
+      nuevo = "completada";
+    else if (ocList.every((o) => enOC.includes(o.estatus)))
       nuevo = "oc_generada";
     else if (ocList.some((o) => o.estatus === "pendiente_autorizacion"))
       nuevo = "pendiente_autorizacion";
@@ -45,6 +47,7 @@ async function recalcEstatusRequisicion(supabase: any, requisicionId: string) {
   if (nuevo === "completada") patch.completada_at = new Date().toISOString();
   await supabase.from("requisiciones").update(patch).eq("id", requisicionId);
 }
+
 
 
 export const getCotizacionRequisicion = createServerFn({ method: "POST" })

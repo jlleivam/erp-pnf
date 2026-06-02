@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { CatalogoInsumosModule } from "@/components/insumos/CatalogoInsumosModule";
 import { RequisicionesModule } from "@/components/requisiciones/RequisicionesModule";
+import { AlmacenModule } from "@/components/almacen/AlmacenModule";
 import { useEffectiveRoles, isDirector } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
@@ -29,6 +30,7 @@ function ObraModule() {
   const slug = (_splat ?? "").split("/")[0];
   if (slug === "catalogos") return <CatalogoInsumosModule />;
   if (slug === "requisiciones") return <RequisicionesModule obraId={obraId} />;
+  if (slug === "almacen-obra") return <AlmacenModule obraId={obraId} />;
   const title = LABELS[slug] ?? "Módulo";
   const isAuxiliar = !isDirector(roles) && roles.includes("auxiliar");
 
@@ -40,3 +42,4 @@ function ObraModule() {
     />
   );
 }
+
