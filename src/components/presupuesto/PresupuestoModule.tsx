@@ -96,19 +96,26 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Presupuesto</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Presupuesto base + adendas aditivas. Estructura WBS hasta 5 niveles.
+            Presupuesto base + órdenes de cambio. Estructura WBS hasta 5 niveles.
           </p>
         </div>
-        {director && !base && (
-          <Button onClick={() => setCreating("base")}>
-            <Plus className="size-4 mr-1" /> Crear presupuesto base
-          </Button>
-        )}
-        {director && base?.estatus === "autorizado" && (
-          <Button variant="outline" onClick={() => setCreating("adenda")}>
-            <Plus className="size-4 mr-1" /> Agregar adenda
-          </Button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {base?.estatus === "autorizado" && (
+            <Button variant="outline" onClick={() => setVerVigente(true)}>
+              <Eye className="size-4 mr-1" /> Ver vigente
+            </Button>
+          )}
+          {director && !base && (
+            <Button onClick={() => setCreating("base")}>
+              <Plus className="size-4 mr-1" /> Crear presupuesto base
+            </Button>
+          )}
+          {director && base?.estatus === "autorizado" && (
+            <Button variant="outline" onClick={() => setCreating("adenda")}>
+              <Plus className="size-4 mr-1" /> Nueva orden de cambio
+            </Button>
+          )}
+        </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -117,8 +124,16 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
           <p className="mt-2 text-xl font-semibold">{formatCurrency(totalBase)}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Adendas autorizadas</p>
-          <p className="mt-2 text-xl font-semibold">{formatCurrency(totalAdendas)}</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Σ Órdenes de cambio
+          </p>
+          <p
+            className={`mt-2 text-xl font-semibold ${
+              totalAdendas < 0 ? "text-destructive" : ""
+            }`}
+          >
+            {formatCurrency(totalAdendas)}
+          </p>
           <p className="text-xs text-muted-foreground mt-1">
             {adendas.filter((a) => a.estatus === "autorizado").length} de {adendas.length}
           </p>
@@ -132,7 +147,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
       <Tabs defaultValue="base">
         <TabsList>
           <TabsTrigger value="base">Base</TabsTrigger>
-          <TabsTrigger value="adendas">Adendas ({adendas.length})</TabsTrigger>
+          <TabsTrigger value="adendas">Órdenes de cambio ({adendas.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="base" className="mt-4">
@@ -147,7 +162,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
               p={base}
               director={director}
               onView={() => setViewing(base.id)}
-              onEdit={() => setEditing(base.id)}
+              onEdit={() => setEditing({ id: base.id, tipo: "base" })}
               onDelete={() => setToDelete(base)}
             />
           )}
@@ -156,7 +171,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         <TabsContent value="adendas" className="mt-4 space-y-3">
           {adendas.length === 0 ? (
             <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
-              Sin adendas registradas.
+              Sin órdenes de cambio registradas.
             </Card>
           ) : (
             adendas.map((a) => (
@@ -165,7 +180,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
                 p={a}
                 director={director}
                 onView={() => setViewing(a.id)}
-                onEdit={() => setEditing(a.id)}
+                onEdit={() => setEditing({ id: a.id, tipo: "adenda" })}
                 onDelete={() => setToDelete(a)}
               />
             ))
@@ -182,16 +197,17 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
           }
           onClose={() => setCreating(null)}
           onCreated={(id) => {
+            const tipo = creating;
             setCreating(null);
             refresh();
-            setEditing(id);
+            if (tipo) setEditing({ id, tipo });
           }}
         />
       )}
 
-      {editing && (
+      {editing && editing.tipo === "base" && (
         <CapturaPresupuestoSheet
-          presupuestoId={editing}
+          presupuestoId={editing.id}
           onClose={() => setEditing(null)}
           onSaved={() => {
             refresh();
@@ -199,6 +215,24 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
           }}
         />
       )}
+
+      {editing && editing.tipo === "adenda" && (
+        <CapturaOrdenCambioSheet
+          obraId={obraId}
+          presupuestoId={editing.id}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            refresh();
+            qc.invalidateQueries({ queryKey: ["presupuesto-vigente", obraId] });
+            setEditing(null);
+          }}
+        />
+      )}
+
+      {verVigente && (
+        <VerVigenteSheet obraId={obraId} onClose={() => setVerVigente(false)} />
+      )}
+
 
       {viewing && (
         <VerPresupuestoSheet
