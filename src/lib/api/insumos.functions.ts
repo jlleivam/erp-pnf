@@ -14,6 +14,38 @@ async function getUserCompanyAndDirector(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, isDirector };
 }
 
+const CODIGO_REGEX = /^[A-Z0-9]{2,5}-\d{3,6}$/;
+const PREFIJO_REGEX = /^[A-Z0-9]{3}$/;
+
+function derivarPrefijo(nombre: string): string {
+  const clean = nombre.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return (clean + "XXX").slice(0, 3);
+}
+
+async function prefijoUnico(
+  supabase: any,
+  companyId: string,
+  base: string,
+  excludeId?: string,
+): Promise<string> {
+  let candidate = base;
+  for (let suffix = 1; suffix <= 99; suffix++) {
+    let q = supabase
+      .from("insumo_categorias")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("prefijo", candidate);
+    if (excludeId) q = q.neq("id", excludeId);
+    const { count } = await q;
+    if (!count) return candidate;
+    candidate =
+      suffix < 10
+        ? base.slice(0, 2) + String(suffix + 1)
+        : base.slice(0, 1) + String(suffix + 1).padStart(2, "0");
+  }
+  throw new Error("No se pudo generar un prefijo único");
+}
+
 export const listInsumos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
