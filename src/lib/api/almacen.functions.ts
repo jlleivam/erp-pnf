@@ -94,10 +94,15 @@ async function getOrCreateSemanaAbierta(
       .from("almacen_movimientos_semana")
       .select("insumo_id, inv_inicial, recibido, utilizado, precio_unitario")
       .eq("semana_id", prevCerrada.id);
+    // Trasladar un renglón por lote (insumo_id + precio_unitario) con saldo final ≠ 0
     const rows = (prevMov ?? [])
       .map((m: any) => {
         const final = Number(m.inv_inicial) + Number(m.recibido) - Number(m.utilizado);
-        return { insumo_id: m.insumo_id, inv_inicial: final, precio_unitario: m.precio_unitario };
+        return {
+          insumo_id: m.insumo_id,
+          inv_inicial: final,
+          precio_unitario: Number(m.precio_unitario),
+        };
       })
       .filter((m: any) => Number(m.inv_inicial) !== 0);
     if (rows.length > 0) {
