@@ -1,44 +1,42 @@
+## Plan: Insumos disponibles para renta
 
-## Plan: Campo `código` en catálogo de insumos
+### 1. Categorías
+Ya implementado. Confirmado por el usuario — sin cambios.
 
-### Formato
-`[PREFIJO_CATEGORÍA]-[CONSECUTIVO 4 dígitos]` — ej. `CEM-0001`, `ACE-0023`, `GEN-0007` (sin categoría).
+### 2. Flag `disponible_renta` en insumos
 
-### Cambios en base de datos (migración)
+**Base de datos** (migración nueva):
+- `ALTER TABLE insumos ADD COLUMN disponible_renta boolean NOT NULL DEFAULT false`
+- Índice parcial: `CREATE INDEX idx_insumos_disponible_renta ON insumos(company_id) WHERE disponible_renta = true` para acelerar el selector en rentas.
 
-1. **`insumo_categorias`**: agregar columna `prefijo TEXT NOT NULL` (3 letras mayúsculas, validado con CHECK `^[A-Z]{3}$`). Default = primeras 3 letras del nombre. Único por `company_id`.
-2. **`insumos`**: agregar columna `codigo TEXT` (único por `company_id`, índice).
-3. **Función `siguiente_codigo_insumo(_company_id uuid, _categoria_id uuid)`**:
-   - Lee el prefijo de la categoría (o `'GEN'` si null).
-   - Calcula `MAX(consecutivo) + 1` por prefijo dentro de la compañía.
-   - Devuelve `'PREFIJO-0001'` con padding 4.
-4. **Backfill**: asignar prefijo a categorías existentes (3 primeras letras en mayúsculas, desambiguar duplicados con sufijo) y generar `codigo` para insumos existentes ordenados por `created_at`.
-5. **Trigger `BEFORE INSERT` en `insumos`**: si `codigo IS NULL`, autogenera con la función.
+**Backend** (`src/lib/api/insumos.functions.ts`):
+- `listInsumos`: incluir `disponible_renta` en el select y aceptar filtro opcional `soloRenta?: boolean` (lo usará el módulo de rentas).
+- `editarInsumo`: aceptar `disponible_renta` opcional (solo Director, ya está gateado).
+- `solicitarInsumo`: NO acepta el flag (solo se marca al editar, según respuesta del usuario).
 
-### Cambios en backend (`src/lib/api/insumos.functions.ts`)
+**UI catálogo** (`src/components/insumos/CatalogoInsumosModule.tsx`):
+- `EditarInsumoDialog` (Director): agregar Checkbox "Disponible para rentas" con descripción corta ("Permite seleccionarlo al crear una solicitud de renta").
+- En la tabla de insumos autorizados: badge pequeño "Renta" junto al nombre cuando `disponible_renta = true`.
 
-- **`listInsumos`**: incluir `codigo` y `categoria.prefijo` en el select; ampliar `search` para buscar por código además del nombre.
-- **`solicitarInsumo`**: sin cambios (trigger asigna código al autorizar — ver siguiente).
-- **`autorizarInsumo`**: si el insumo no tiene código, generarlo en ese momento (para evitar quemar consecutivos en solicitudes rechazadas).
-- **`editarInsumo`**: aceptar `codigo` opcional; validar formato `^[A-Z]{2,5}-\d{3,6}$` y unicidad por compañía. **No** regenerar automáticamente si cambia la categoría.
-- **`crearCategoria`** y **`editarCategoria`**: aceptar `prefijo` (3 letras), validar único por compañía. Default auto desde nombre si viene vacío.
-- **`importarInsumos`**: ignorar cualquier columna de código del Excel; autogenerar todos los códigos al insertar (las categorías nuevas creadas durante la importación usan prefijo derivado del nombre).
+### 3. Selector de insumo en Nueva Renta
 
-### Cambios en UI (`src/components/insumos/CatalogoInsumosModule.tsx`)
+**Backend** (`src/lib/api/rentas.functions.ts`):
+- `crearSolicitudRenta`: agregar parámetro `insumo_id: string` (requerido), validar que el insumo pertenezca a la company y tenga `disponible_renta = true` y `estatus = autorizado`.
+- Persistir `insumo_id` en `obra_rentas`.
 
-- **Tabla autorizados**: nueva primera columna `Código` (monospace, badge sutil).
-- **Tabla pendientes**: mostrar `— (al autorizar)` en columna código.
-- **`EditarInsumoDialog`**: input adicional `Código` (solo Director, editable, con validación de formato y mensaje de unicidad).
-- **`CategoriasDialog`**: input adicional `Prefijo (3 letras)` al crear/editar categoría, con autocompletado desde el nombre.
-- **Búsqueda**: placeholder pasa a "Nombre o código...".
-- **`SolicitarDialog`** y **`ImportarInsumosDialog`**: nota informativa "El código se genera automáticamente al autorizar".
+**BD** (misma migración):
+- `ALTER TABLE obra_rentas ADD COLUMN insumo_id uuid REFERENCES insumos(id)` (nullable para no romper filas existentes; nuevas solicitudes lo exigen a nivel de aplicación).
 
-### Fuera de alcance
-- Regeneración masiva de códigos al cambiar prefijo de categoría (queda como acción manual futura).
-- Edición de código por Administrativo (se mantiene solo Director, como hoy).
+**UI** (`src/components/rentas/NuevaRentaDialog.tsx`):
+- Reemplazar el campo libre "Equipo" por un Select/Combobox que liste insumos con `disponible_renta = true` de la company (orden alfabético, muestra `código — nombre (unidad)`).
+- Mensaje vacío: "No hay insumos marcados como disponibles para renta. Pídele al Director que active el flag en el catálogo."
+- El nombre/descripción del insumo seleccionado se usa como `equipo` para mantener compatibilidad con el detalle.
+- Mantener: cantidad, periodicidad, fecha estimada, días aviso, descripción adicional.
 
-### Archivos tocados
-- `supabase/migrations/<nuevo>.sql` (schema + función + trigger + backfill)
-- `src/lib/api/insumos.functions.ts`
-- `src/components/insumos/CatalogoInsumosModule.tsx`
-- `src/components/insumos/ImportarInsumosDialog.tsx` (solo nota informativa)
+**Vista de detalle** (`RentaDetalleSheet.tsx`): mostrar el insumo vinculado (código + nombre) cuando exista.
+
+### Alcance
+- Solo Director marca/desmarca el flag.
+- Selector en rentas es obligatorio del catálogo (sin texto libre).
+- Rentas existentes siguen funcionando con `insumo_id = NULL`.
+- No se toca cotización, autorización ni cierre de rentas.

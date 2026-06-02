@@ -541,6 +541,7 @@ export type Database = {
           codigo: string | null
           company_id: string
           created_at: string
+          disponible_renta: boolean
           estatus: Database["public"]["Enums"]["insumo_estatus"]
           id: string
           nombre: string
@@ -554,6 +555,7 @@ export type Database = {
           codigo?: string | null
           company_id: string
           created_at?: string
+          disponible_renta?: boolean
           estatus?: Database["public"]["Enums"]["insumo_estatus"]
           id?: string
           nombre: string
@@ -567,6 +569,7 @@ export type Database = {
           codigo?: string | null
           company_id?: string
           created_at?: string
+          disponible_renta?: boolean
           estatus?: Database["public"]["Enums"]["insumo_estatus"]
           id?: string
           nombre?: string
@@ -1592,6 +1595,7 @@ export type Database = {
           fecha_fin_programada: string | null
           fecha_llegada_real: string | null
           id: string
+          insumo_id: string | null
           numero: number
           obra_id: string
           periodicidad: Database["public"]["Enums"]["renta_periodicidad"] | null
@@ -1622,6 +1626,7 @@ export type Database = {
           fecha_fin_programada?: string | null
           fecha_llegada_real?: string | null
           id?: string
+          insumo_id?: string | null
           numero?: number
           obra_id: string
           periodicidad?:
@@ -1654,6 +1659,7 @@ export type Database = {
           fecha_fin_programada?: string | null
           fecha_llegada_real?: string | null
           id?: string
+          insumo_id?: string | null
           numero?: number
           obra_id?: string
           periodicidad?:
@@ -1672,6 +1678,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_rentas_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
             referencedColumns: ["id"]
           },
           {

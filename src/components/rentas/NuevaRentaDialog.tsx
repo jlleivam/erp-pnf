@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { crearSolicitudRenta } from "@/lib/api/rentas.functions";
+import { listInsumos } from "@/lib/api/insumos.functions";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -23,12 +24,22 @@ export function NuevaRentaDialog({
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
-  const [equipo, setEquipo] = useState("");
+  const [insumoId, setInsumoId] = useState<string>("");
   const [cantidad, setCantidad] = useState("1");
   const [descripcion, setDescripcion] = useState("");
   const [fechaEstimada, setFechaEstimada] = useState("");
   const [periodicidad, setPeriodicidad] = useState<string>("");
   const [diasAviso, setDiasAviso] = useState("3");
+
+  const listFn = useServerFn(listInsumos);
+  const insumosQ = useQuery({
+    queryKey: ["insumos-renta"],
+    queryFn: () => listFn({ data: { estatus: "autorizado", soloRenta: true } }),
+  });
+  const insumos = useMemo(
+    () => (insumosQ.data ?? []).slice().sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)),
+    [insumosQ.data],
+  );
 
   const crear = useServerFn(crearSolicitudRenta);
   const m = useMutation({
@@ -40,24 +51,44 @@ export function NuevaRentaDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const sinInsumos = !insumosQ.isLoading && insumos.length === 0;
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nueva solicitud de renta</DialogTitle>
           <DialogDescription>
-            Captura el equipo que necesitas. El administrativo cotizará y el supervisor
+            Selecciona un equipo del catálogo. El administrativo cotizará y el supervisor
             autorizará antes de comenzar la renta.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label>Equipo</Label>
-            <Input
-              value={equipo}
-              onChange={(e) => setEquipo(e.target.value)}
-              placeholder="Ej. Andamio multidireccional, revolvedora 1 saco…"
-            />
+            <Select value={insumoId} onValueChange={setInsumoId} disabled={sinInsumos}>
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  insumosQ.isLoading
+                    ? "Cargando…"
+                    : sinInsumos
+                      ? "Sin equipos disponibles para renta"
+                      : "Selecciona un equipo del catálogo"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {insumos.map((i: any) => (
+                  <SelectItem key={i.id} value={i.id}>
+                    {i.codigo ? `${i.codigo} — ` : ""}{i.nombre} ({i.unidad})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {sinInsumos && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Pídele al Director que marque insumos como "Disponible para rentas" en el catálogo.
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -114,12 +145,12 @@ export function NuevaRentaDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
-            disabled={m.isPending || !equipo.trim() || Number(cantidad) <= 0}
+            disabled={m.isPending || !insumoId || Number(cantidad) <= 0}
             onClick={() =>
               m.mutate({
                 data: {
                   obraId,
-                  equipo: equipo.trim(),
+                  insumoId,
                   cantidad: Number(cantidad),
                   descripcion: descripcion.trim() || undefined,
                   fechaEstimadaInicio: fechaEstimada || undefined,

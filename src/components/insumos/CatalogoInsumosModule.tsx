@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -222,7 +223,14 @@ export function CatalogoInsumosModule() {
                 {(insumosQ.data ?? []).map((i: any) => (
                   <TableRow key={i.id}>
                     <TableCell className="font-mono text-xs">{i.codigo ?? "—"}</TableCell>
-                    <TableCell className="font-medium">{i.nombre}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {i.nombre}
+                        {i.disponible_renta && (
+                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Renta</Badge>
+                        )}
+                      </span>
+                    </TableCell>
                     <TableCell><Badge variant="outline">{i.unidad}</Badge></TableCell>
                     <TableCell>
                       {i.categoria ? (
@@ -556,6 +564,7 @@ function EditarInsumoDialog({
   const [codigo, setCodigo] = useState<string>(insumo.codigo ?? "");
   const [unidad, setUnidad] = useState<Unidad>(insumo.unidad);
   const [categoriaId, setCategoriaId] = useState<string>(insumo.categoria_id ?? "none");
+  const [disponibleRenta, setDisponibleRenta] = useState<boolean>(!!insumo.disponible_renta);
 
   const codigoValido = !codigo || /^[A-Z0-9]{2,5}-\d{3,6}$/.test(codigo);
 
@@ -564,6 +573,7 @@ function EditarInsumoDialog({
     onSuccess: () => {
       toast.success("Insumo actualizado");
       qc.invalidateQueries({ queryKey: ["insumos"] });
+      qc.invalidateQueries({ queryKey: ["insumos-renta"] });
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
@@ -614,6 +624,21 @@ function EditarInsumoDialog({
               </Select>
             </div>
           </div>
+
+          <label className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/40">
+            <Checkbox
+              checked={disponibleRenta}
+              onCheckedChange={(v) => setDisponibleRenta(v === true)}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Disponible para rentas</p>
+              <p className="text-xs text-muted-foreground">
+                Si está activo, el insumo podrá seleccionarse al crear una solicitud de renta en obra.
+              </p>
+            </div>
+          </label>
+
           <p className="text-xs text-muted-foreground">
             El código se asigna automáticamente al crear el insumo. Solo se edita si necesitas corregirlo manualmente.
           </p>
@@ -626,6 +651,7 @@ function EditarInsumoDialog({
               id: insumo.id, nombre: nombre.trim(), unidad,
               categoriaId: categoriaId === "none" ? null : categoriaId,
               codigo: codigo || undefined,
+              disponibleRenta,
             } })}
           >
             Guardar
