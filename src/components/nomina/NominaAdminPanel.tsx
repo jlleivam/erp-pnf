@@ -306,7 +306,13 @@ function DetalleTrabajadorDialog({
                         <td key={f} className="p-1 text-center tabular-nums text-xs">
                           {a && a.jornada > 0 ? a.jornada.toFixed(1) : "—"}
                           {a && a.horas_extras > 0 && (
-                            <div className="text-[10px] text-primary">+{a.horas_extras}h</div>
+                            <div
+                              className="text-[10px] text-primary inline-flex items-center gap-0.5 cursor-help"
+                              title={a.nota_extras ?? "Sin nota"}
+                            >
+                              +{a.horas_extras}h
+                              {a.nota_extras && <MessageSquare className="size-2.5 opacity-70" />}
+                            </div>
                           )}
                         </td>
                       );
