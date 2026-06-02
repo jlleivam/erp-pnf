@@ -698,6 +698,128 @@ export type Database = {
           },
         ]
       }
+      obra_presupuesto_renglones: {
+        Row: {
+          cantidad: number | null
+          clave: string
+          concepto: string
+          created_at: string
+          es_grupo: boolean
+          id: string
+          importe: number
+          nivel: number
+          orden: number
+          parent_clave: string | null
+          precio_unitario: number | null
+          presupuesto_id: string
+          unidad: string | null
+        }
+        Insert: {
+          cantidad?: number | null
+          clave: string
+          concepto: string
+          created_at?: string
+          es_grupo?: boolean
+          id?: string
+          importe?: number
+          nivel: number
+          orden?: number
+          parent_clave?: string | null
+          precio_unitario?: number | null
+          presupuesto_id: string
+          unidad?: string | null
+        }
+        Update: {
+          cantidad?: number | null
+          clave?: string
+          concepto?: string
+          created_at?: string
+          es_grupo?: boolean
+          id?: string
+          importe?: number
+          nivel?: number
+          orden?: number
+          parent_clave?: string | null
+          precio_unitario?: number | null
+          presupuesto_id?: string
+          unidad?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_presupuesto_renglones_presupuesto_id_fkey"
+            columns: ["presupuesto_id"]
+            isOneToOne: false
+            referencedRelation: "obra_presupuestos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_presupuestos: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          descripcion: string | null
+          estatus: Database["public"]["Enums"]["presupuesto_estatus"]
+          id: string
+          monto_total: number
+          nombre: string
+          numero: number
+          obra_id: string
+          tipo: Database["public"]["Enums"]["presupuesto_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          descripcion?: string | null
+          estatus?: Database["public"]["Enums"]["presupuesto_estatus"]
+          id?: string
+          monto_total?: number
+          nombre: string
+          numero?: number
+          obra_id: string
+          tipo: Database["public"]["Enums"]["presupuesto_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          descripcion?: string | null
+          estatus?: Database["public"]["Enums"]["presupuesto_estatus"]
+          id?: string
+          monto_total?: number
+          nombre?: string
+          numero?: number
+          obra_id?: string
+          tipo?: Database["public"]["Enums"]["presupuesto_tipo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_presupuestos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_presupuestos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_team: {
         Row: {
           created_at: string
@@ -1386,6 +1508,8 @@ export type Database = {
         | "pagada"
         | "recibida_parcial"
         | "recibida"
+      presupuesto_estatus: "borrador" | "autorizado"
+      presupuesto_tipo: "base" | "adenda"
       requisicion_estatus:
         | "borrador"
         | "enviada"
@@ -1577,6 +1701,8 @@ export const Constants = {
         "recibida_parcial",
         "recibida",
       ],
+      presupuesto_estatus: ["borrador", "autorizado"],
+      presupuesto_tipo: ["base", "adenda"],
       requisicion_estatus: [
         "borrador",
         "enviada",
