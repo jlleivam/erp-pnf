@@ -130,9 +130,10 @@ export function AsignarTrabajadoresDialog({
             </p>
           ) : (
             filtered.map((t) => {
+              const esDestajista = t.id === destajistaId;
               const enOtro = ocupadosEnOtro.get(t.id);
-              const checked = selected.has(t.id);
-              const disabled = !!enOtro && !checked;
+              const checked = selected.has(t.id) || esDestajista;
+              const disabled = esDestajista || (!!enOtro && !checked);
               return (
                 <label
                   key={t.id}
@@ -149,7 +150,8 @@ export function AsignarTrabajadoresDialog({
                     <p className="font-medium">{t.nombre_completo}</p>
                     <p className="text-xs text-muted-foreground">{t.puesto ?? "—"}</p>
                   </div>
-                  {enOtro && (
+                  {esDestajista && <Badge>Destajista</Badge>}
+                  {!esDestajista && enOtro && (
                     <Badge variant="outline" title={`Asignado a: ${enOtro}`}>
                       En "{enOtro}"
                     </Badge>
@@ -157,6 +159,7 @@ export function AsignarTrabajadoresDialog({
                 </label>
               );
             })
+
           )}
         </Card>
 
