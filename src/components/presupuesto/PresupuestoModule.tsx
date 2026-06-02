@@ -32,10 +32,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { CapturaPresupuestoSheet } from "./CapturaPresupuestoSheet";
+import { CapturaOrdenCambioSheet } from "./CapturaOrdenCambioSheet";
 import { VerPresupuestoSheet } from "./VerPresupuestoSheet";
+import { VerVigenteSheet } from "./VerVigenteSheet";
 import { formatMXN } from "@/lib/format";
 const formatCurrency = formatMXN;
 
@@ -61,8 +63,9 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   });
 
   const [creating, setCreating] = useState<null | "base" | "adenda">(null);
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; tipo: "base" | "adenda" } | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [verVigente, setVerVigente] = useState(false);
   const [toDelete, setToDelete] = useState<Presupuesto | null>(null);
 
   const remove = useServerFn(eliminarPresupuesto);
