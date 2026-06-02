@@ -204,6 +204,7 @@ export function CatalogoInsumosModule() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[120px]">Código</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead>Categoría</TableHead>
@@ -214,12 +215,13 @@ export function CatalogoInsumosModule() {
               </TableHeader>
               <TableBody>
                 {(insumosQ.data ?? []).length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No hay insumos autorizados con esos filtros.
                   </TableCell></TableRow>
                 )}
                 {(insumosQ.data ?? []).map((i: any) => (
                   <TableRow key={i.id}>
+                    <TableCell className="font-mono text-xs">{i.codigo ?? "—"}</TableCell>
                     <TableCell className="font-medium">{i.nombre}</TableCell>
                     <TableCell><Badge variant="outline">{i.unidad}</Badge></TableCell>
                     <TableCell>
