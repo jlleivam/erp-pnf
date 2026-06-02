@@ -488,6 +488,16 @@ function AsignarTrabajadoresDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {nuevoOpen && (
+        <TrabajadorFormDialog
+          open
+          canManage={canManage}
+          onClose={() => {
+            setNuevoOpen(false);
+            dispQ.refetch();
+          }}
+        />
+      )}
     </Dialog>
   );
 }
