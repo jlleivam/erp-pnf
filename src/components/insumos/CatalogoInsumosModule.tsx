@@ -418,21 +418,28 @@ function SolicitarDialog({
   );
 }
 
+function derivarPrefijoUI(nombre: string): string {
+  const clean = nombre.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return (clean + "XXX").slice(0, 3);
+}
+
 function CategoriasDialog({
   open, onOpenChange, categorias,
 }: { open: boolean; onOpenChange: (b: boolean) => void; categorias: any[] }) {
   const qc = useQueryClient();
   const [nueva, setNueva] = useState("");
-  const [editing, setEditing] = useState<{ id: string; nombre: string } | null>(null);
+  const [nuevoPrefijo, setNuevoPrefijo] = useState("");
+  const [editing, setEditing] = useState<{ id: string; nombre: string; prefijo: string } | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["insumo-categorias"] });
     qc.invalidateQueries({ queryKey: ["insumos-metricas"] });
+    qc.invalidateQueries({ queryKey: ["insumos"] });
   };
 
   const crearMut = useMutation({
     mutationFn: useServerFn(crearCategoria),
-    onSuccess: () => { toast.success("Categoría creada"); setNueva(""); invalidate(); },
+    onSuccess: () => { toast.success("Categoría creada"); setNueva(""); setNuevoPrefijo(""); invalidate(); },
     onError: (e: any) => toast.error(e.message),
   });
   const editMut = useMutation({
@@ -446,23 +453,44 @@ function CategoriasDialog({
     onError: (e: any) => toast.error(e.message),
   });
 
+  const prefijoAuto = nueva.trim() ? derivarPrefijoUI(nueva.trim()) : "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Categorías de insumos</DialogTitle>
+          <DialogDescription>
+            El prefijo (3 caracteres) se usa para generar el código de los insumos, ej. <span className="font-mono">CEM-0001</span>.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={nueva}
-              onChange={(e) => setNueva(e.target.value)}
-              placeholder="Nueva categoría..."
-              maxLength={100}
-            />
+          <div className="grid grid-cols-[1fr_100px_auto] gap-2 items-end">
+            <div>
+              <Label className="text-xs">Nombre</Label>
+              <Input
+                value={nueva}
+                onChange={(e) => setNueva(e.target.value)}
+                placeholder="Nueva categoría..."
+                maxLength={100}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Prefijo</Label>
+              <Input
+                value={nuevoPrefijo}
+                onChange={(e) => setNuevoPrefijo(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3))}
+                placeholder={prefijoAuto || "AUTO"}
+                maxLength={3}
+                className="font-mono uppercase"
+              />
+            </div>
             <Button
               disabled={!nueva.trim() || crearMut.isPending}
-              onClick={() => crearMut.mutate({ data: { nombre: nueva.trim() } })}
+              onClick={() => crearMut.mutate({ data: {
+                nombre: nueva.trim(),
+                prefijo: nuevoPrefijo.length === 3 ? nuevoPrefijo : undefined,
+              } })}
             >
               <Plus /> Agregar
             </Button>
@@ -479,14 +507,26 @@ function CategoriasDialog({
                       value={editing.nombre}
                       onChange={(e) => setEditing((prev) => prev ? { ...prev, nombre: e.target.value } : prev)}
                       maxLength={100}
+                      className="flex-1"
                     />
-                    <Button size="sm" onClick={() => editing && editMut.mutate({ data: editing })}>Guardar</Button>
+                    <Input
+                      value={editing.prefijo}
+                      onChange={(e) => setEditing((prev) => prev ? { ...prev, prefijo: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) } : prev)}
+                      maxLength={3}
+                      className="w-20 font-mono uppercase"
+                    />
+                    <Button size="sm" onClick={() => editing && editMut.mutate({ data: {
+                      id: editing.id,
+                      nombre: editing.nombre.trim(),
+                      prefijo: editing.prefijo.length === 3 ? editing.prefijo : undefined,
+                    } })}>Guardar</Button>
                     <Button size="sm" variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
                   </>
                 ) : (
                   <>
                     <span className="flex-1 text-sm">{c.nombre}</span>
-                    <Button size="icon" variant="ghost" onClick={() => setEditing({ id: c.id, nombre: c.nombre })}>
+                    <Badge variant="outline" className="font-mono">{c.prefijo ?? "—"}</Badge>
+                    <Button size="icon" variant="ghost" onClick={() => setEditing({ id: c.id, nombre: c.nombre, prefijo: c.prefijo ?? "" })}>
                       <Pencil />
                     </Button>
                     <Button
