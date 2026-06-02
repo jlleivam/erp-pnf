@@ -317,7 +317,7 @@ export const importarInsumos = createServerFn({ method: "POST" })
       filas: z.array(
         z.object({
           nombre: z.string().trim().min(1).max(200),
-          unidad: z.enum(UNIDADES),
+          unidad: unidadSchema,
           categoria: z.string().trim().min(1).max(100),
           row: z.number().int().positive(),
         })
