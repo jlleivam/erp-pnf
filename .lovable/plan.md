@@ -1,48 +1,82 @@
-## Objetivo
+# Módulo de Rentas
 
-Crear el módulo **Subcontratos** dentro de cada obra, replicando el flujo del módulo de destajos (presupuesto base + órdenes de cambio + estimaciones semanales con autorización del supervisor), con dos diferencias:
+Replica el patrón de Destajos/Subcontratos (a nivel obra) pero orientado a equipos rentados con cobro periódico prorrateado y control de vencimiento.
 
-1. El subcontrato se asigna a un **tercero** (categoría `contratista` o `ambos`) en lugar de a un trabajador.
-2. **No hay pestaña Trabajadores** — el contratista responde por sus propias altas ante el IMSS.
+## Flujo
+
+1. **Residente** crea solicitud: equipo, cantidad, periodicidad sugerida, fecha estimada de inicio, notas.
+2. **Administrativo** cotiza: selecciona **proveedor** del catálogo de terceros (categoría `proveedor` o `ambos`), captura tarifa, periodicidad (diaria / semanal / quincenal / mensual), depósito, condiciones.
+3. **Supervisor** autoriza o rechaza la cotización.
+4. **Residente** marca **fecha de llegada real** — desde ese día corre el contador de renta.
+5. Durante la vigencia el residente puede:
+   - Registrar eventos de **avería / inactividad** (bitácora con fecha inicio, fecha fin, motivo, foto opcional). No descuenta el cobro pero queda como soporte para reclamar al proveedor.
+   - **Renovar** (extender fecha fin) → requiere autorización del supervisor de nuevo.
+   - **Devolver** (cerrar la renta) → captura fecha de devolución real, congela cobro acumulado.
+6. Sistema dispara **alertas** N días antes del vencimiento al residente y supervisor.
+
+## Estatus de la renta
+
+`borrador → cotizada → autorizada → rechazada → activa (al marcar llegada) → por_vencer → devuelta`
+
+Renovaciones generan un sub-documento con su propio ciclo `pendiente → autorizada/rechazada`.
 
 ## Base de datos (nueva migración)
 
-Espejo de las tablas de destajos, prefijo `obra_subcontrato_`:
+- `obra_rentas` — `obra_id`, `company_id`, `proveedor_id` (FK `terceros`), `numero`, `equipo` (texto), `cantidad`, `descripcion`, `periodicidad` (enum `diaria|semanal|quincenal|mensual`), `tarifa_unitaria`, `deposito`, `fecha_estimada_inicio`, `fecha_llegada_real`, `fecha_fin_programada`, `fecha_devolucion_real`, `estatus` (enum nuevo `renta_estatus`), `dias_aviso_vencimiento` (default 3), `creado_por`, `cotizado_por`, `autorizado_por`, `rechazado_por`, `rechazo_motivo`, timestamps.
+- `obra_renta_renovaciones` — `renta_id`, `numero`, `fecha_fin_nueva`, `tarifa_nueva` (opcional), `estatus` (`pendiente|autorizada|rechazada`), `solicitado_por`, `autorizado_por`, `rechazado_por`, `rechazo_motivo`, timestamps.
+- `obra_renta_eventos` — `renta_id`, `tipo` (`averia|inactividad|nota`), `fecha_inicio`, `fecha_fin`, `descripcion`, `evidencia_url` (opcional), `creado_por`, `created_at`. Bitácora, sin afectar cobro.
+- `obra_renta_pagos` — `renta_id`, `periodo_inicio`, `periodo_fin`, `monto`, `pagado_at`, `referencia`, `creado_por`. Registro de pagos efectuados (informativo; el prorrateo se calcula al vuelo desde `fecha_llegada_real` + `periodicidad` + `tarifa`).
 
-- `obra_subcontratos` — `obra_id`, `company_id`, `contratista_id` (FK a `terceros`), `numero`, `nombre`, `descripcion`, `estatus` (enum existente `destajo_doc_estatus`), `monto_total`, `creado_por`, timestamps.
-- `obra_subcontrato_presupuestos` — igual a `obra_destajo_presupuestos` (tipo `base | adenda`, mismo flujo `borrador → enviado → autorizado | rechazado`).
-- `obra_subcontrato_renglones` — igual a `obra_destajo_renglones`.
-- `obra_subcontrato_estimaciones` — igual a `obra_destajo_estimaciones`.
-- `obra_subcontrato_estimacion_renglones` — igual a `obra_destajo_estimacion_renglones`.
+Enum nuevo: `renta_estatus` (`borrador, cotizada, autorizada, rechazada, activa, por_vencer, devuelta`).
+Enum nuevo: `renta_periodicidad` (`diaria, semanal, quincenal, mensual`).
 
-Para cada tabla en la misma migración: `GRANT SELECT/INSERT/UPDATE/DELETE … TO authenticated`, `GRANT ALL … TO service_role`, `ENABLE ROW LEVEL SECURITY` y políticas equivalentes a las de destajos (director / supervisor / miembro de obra leen y gestionan; sólo `borrador` editable en renglones y estimaciones). Reutilizamos los enums `destajo_doc_estatus`, `destajo_estimacion_estatus` y `presupuesto_movimiento` que ya existen.
+Para cada tabla: `GRANT … TO authenticated` + `service_role`, RLS habilitado y políticas equivalentes a Destajos:
+- Lectura: miembros de la compañía.
+- Residente (miembro de obra) crea solicitud y eventos, marca llegada/devolución/renovación.
+- Administrativo cotiza (rol `administrativo`).
+- Supervisor autoriza/rechaza (rol `supervisor`).
+- Director hace todo.
 
-No se crea tabla de trabajadores asignados (no aplica).
+## Backend — `src/lib/api/rentas.functions.ts`
 
-## Backend
+- `listRentas(obraId)` — devuelve rentas con `proveedor_nombre`, `dias_acumulados`, `monto_acumulado`, `dias_restantes`.
+- `getRenta(id)` — header + renovaciones + eventos + pagos.
+- `crearSolicitudRenta` (residente) — estatus `borrador`.
+- `cotizarRenta` (administrativo) — captura proveedor/tarifa/periodicidad → `cotizada`.
+- `autorizarRenta` / `rechazarRenta` (supervisor) → `autorizada` / `rechazada`.
+- `marcarLlegada(rentaId, fechaLlegada, fechaFinProgramada)` → `activa`.
+- `solicitarRenovacion` / `autorizarRenovacion` / `rechazarRenovacion`.
+- `marcarDevolucion(rentaId, fecha)` → `devuelta`.
+- `registrarEvento` / `listEventos`.
+- `registrarPago` / `listPagos`.
+- Helper de prorrateo: dado periodicidad + tarifa + fecha llegada + fecha actual (o devolución), regresa periodos transcurridos y monto acumulado.
 
-Nuevo archivo `src/lib/api/subcontratos.functions.ts`, copia 1-a-1 de `destajos.functions.ts`:
+## Frontend — `src/components/rentas/`
 
-- `listSubcontratos`, `getSubcontrato` — devuelven `contratista_nombre` (de `terceros.razon_social`) en lugar de `destajista_nombre`; sin bloque de `obra_destajo_trabajadores`.
-- `crearSubcontrato` — valida que `contratistaId` exista en `terceros` con `categoria in ('contratista','ambos')`. Crea el subcontrato + presupuesto base en borrador. Sin lógica de asignación de trabajadores.
-- `eliminarSubcontrato` — mismas reglas que `eliminarDestajo` (sin estimaciones cerradas y base aún en `borrador`).
-- Presupuesto base + OCs (`guardarRenglonesSubcontrato`, `crearOrdenCambio…`, `guardarRenglonesOC…`, `getVigente…`, `enviar/autorizar/rechazar/reabrirPresupuestoSubcontrato`).
-- Estimaciones semanales (`listEstimacionesSubcontrato`, `crearEstimacion…`, `guardarRenglones…`, `cerrar/reabrirEstimacion…`).
+- `RentasModule.tsx` — tabla con columnas #, Equipo, Proveedor, Estatus, Llegada, Vence, Acumulado, Acciones. KPIs: **Rentas activas**, **Acumulado del mes**, **Próximas a vencer** (≤ días aviso).
+- `NuevaRentaDialog.tsx` — formulario simple del residente (equipo, cantidad, fecha estimada, notas).
+- `RentaDetalleSheet.tsx` — header con datos + estatus, pestañas:
+  - **Cotización** (captura del administrativo + botones autorizar/rechazar del supervisor).
+  - **Vigencia** (marcar llegada, renovar, devolver, fechas y monto acumulado).
+  - **Bitácora** (eventos de avería/inactividad).
+  - **Pagos** (registro informativo).
+- `CotizarRentaDialog.tsx`, `MarcarLlegadaDialog.tsx`, `RenovarRentaDialog.tsx`, `DevolverRentaDialog.tsx`, `RegistrarEventoDialog.tsx`, `RegistrarPagoDialog.tsx`.
+- Banner amarillo en cabecera cuando `dias_restantes <= dias_aviso_vencimiento`.
 
-## Frontend
+## Notificaciones
 
-Nueva carpeta `src/components/subcontratos/`, espejo de `destajos/`:
+Al cambiar a `cotizada` → notificar al supervisor. Al `autorizada/rechazada` → notificar al residente. Al cruzar el umbral de aviso (calculado en `listRentas` y mostrado en KPI; alerta visual por ahora, sin cron job).
 
-- `SubcontratosModule.tsx` — tabla con columnas #, Subcontrato, **Contratista**, Estatus (basado en `estatus_base`), Contratado, Pagado, Acciones; mismas tarjetas de KPI (Contratado vigente, Pagado acumulado, Subcontratos activos); botón Eliminar visible sólo cuando `director && estatus_base === "borrador" && pagado_acumulado === 0`.
-- `NuevoSubcontratoDialog.tsx` — selector de **Contratista** alimentado por `listTerceros` filtrado a `categoria ∈ {contratista, ambos}`.
-- `SubcontratoDetalleSheet.tsx` — copia del de destajos pero **sin pestaña Trabajadores**; sólo dos tabs: **Presupuesto** y **Estimaciones**. Encabezado muestra "Contratista: {razón social}".
-- `CapturaSubcontratoSheet.tsx`, `CapturaOrdenCambioSubcontratoSheet.tsx`, `CapturaEstimacionSubcontratoSheet.tsx`, `EstimacionesSubcontratoTab.tsx` — copias directas de las versiones de destajos apuntando a los endpoints nuevos.
+## Routing
 
-## Routing y navegación
+En `src/routes/_authenticated/app.obras.$obraId.$.tsx` añadir:
+```ts
+if (slug === "rentas") return <RentasModule obraId={obraId} />;
+```
+(El slug y label ya existen en `LABELS`.)
 
-- En `src/routes/_authenticated/app.obras.$obraId.$.tsx` añadir el caso `if (slug === "subcontratos") return <SubcontratosModule obraId={obraId} />;` (el slug y el label ya existen en `LABELS`).
-- `src/lib/modules.ts` ya tiene el módulo admin de subcontratos como placeholder; lo dejamos igual por ahora (módulo a nivel obra es lo solicitado).
+## Fuera de alcance
 
-## Resultado
-
-El residente abre **Subcontratos** dentro de una obra, crea un subcontrato eligiendo un contratista del catálogo de terceros, captura el presupuesto base, lo envía al supervisor para autorización, registra órdenes de cambio y estimaciones semanales — exactamente igual que destajos, pero sin gestión de trabajadores.
+- Cron job real para enviar notificaciones automáticas de vencimiento (por ahora solo bandera visual en UI/KPI).
+- Descuento automático del cobro por tiempo inactivo (acordamos: solo bitácora).
+- Módulo admin global de rentas (`/app/admin/rentas` queda como placeholder).
