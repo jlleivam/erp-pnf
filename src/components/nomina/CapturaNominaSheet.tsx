@@ -218,6 +218,7 @@ export function CapturaNominaSheet({
                                 fecha={fecha}
                                 jornada={Number(a?.jornada ?? 0)}
                                 horasExtras={Number(a?.horas_extras ?? 0)}
+                                notaExtras={a?.nota_extras ?? null}
                                 disabled={!!isClosed}
                                 onSaved={() => {
                                   qc.invalidateQueries({
