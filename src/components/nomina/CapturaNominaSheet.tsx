@@ -287,19 +287,23 @@ export function CapturaNominaSheet({
 }
 
 function DiaCell({
-  renglonId, fecha, jornada, horasExtras, disabled, onSaved,
+  renglonId, fecha, jornada, horasExtras, notaExtras, disabled, onSaved,
 }: {
   renglonId: string;
   fecha: string;
   jornada: number;
   horasExtras: number;
+  notaExtras: string | null;
   disabled: boolean;
   onSaved: () => void;
 }) {
   const [j, setJ] = useState(jornada);
   const [h, setH] = useState(horasExtras);
+  const [nota, setNota] = useState(notaExtras ?? "");
+  const [popOpen, setPopOpen] = useState(false);
   useEffect(() => { setJ(jornada); }, [jornada]);
   useEffect(() => { setH(horasExtras); }, [horasExtras]);
+  useEffect(() => { setNota(notaExtras ?? ""); }, [notaExtras]);
 
   const guardar = useServerFn(guardarAsistencia);
   const save = useMutation({
@@ -308,9 +312,31 @@ function DiaCell({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const commit = (nj: number, nh: number) => {
-    if (nj === jornada && nh === horasExtras) return;
-    save.mutate({ data: { renglonId, fecha, jornada: nj, horasExtras: nh } });
+  const commitJornada = (nj: number) => {
+    if (nj === jornada) return;
+    save.mutate({
+      data: { renglonId, fecha, jornada: nj, horasExtras, notaExtras: notaExtras ?? null },
+    });
+  };
+
+  const guardarExtras = () => {
+    const notaLimpia = nota.trim();
+    if (h > 0 && notaLimpia.length < 3) {
+      toast.error("Captura una nota que explique el motivo de las horas extras.");
+      return;
+    }
+    save.mutate(
+      {
+        data: {
+          renglonId,
+          fecha,
+          jornada: j,
+          horasExtras: h,
+          notaExtras: h > 0 ? notaLimpia : null,
+        },
+      },
+      { onSuccess: () => setPopOpen(false) },
+    );
   };
 
   return (
@@ -327,7 +353,7 @@ function DiaCell({
             disabled={disabled || save.isPending}
             onClick={() => {
               setJ(opt.v);
-              commit(opt.v, h);
+              commitJornada(opt.v);
             }}
             className={cn(
               "w-6 h-6 text-xs leading-none transition-colors",
@@ -339,18 +365,80 @@ function DiaCell({
           </button>
         ))}
       </div>
-      <input
-        type="number"
-        min={0}
-        max={24}
-        step={0.5}
-        value={h || ""}
-        disabled={disabled || save.isPending}
-        placeholder="+h"
-        onChange={(e) => setH(Number(e.target.value) || 0)}
-        onBlur={() => commit(j, h)}
-        className="w-14 h-6 text-xs text-center rounded border border-border bg-background disabled:opacity-60"
-      />
+      <Popover
+        open={popOpen}
+        onOpenChange={(o) => {
+          setPopOpen(o);
+          if (o) {
+            setH(horasExtras);
+            setNota(notaExtras ?? "");
+          }
+        }}
+      >
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              "w-14 h-6 text-xs rounded border border-border bg-background hover:bg-muted",
+              "inline-flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed",
+              horasExtras > 0 && "border-primary/50 text-primary font-medium",
+            )}
+            title={notaExtras ?? undefined}
+          >
+            {horasExtras > 0 ? `+${horasExtras}h` : "+h"}
+            {horasExtras > 0 && notaExtras && (
+              <MessageSquare className="size-3 opacity-70" />
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72" align="center">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Horas extras</Label>
+              <Input
+                type="number"
+                min={0}
+                max={24}
+                step={0.5}
+                value={h || ""}
+                disabled={disabled || save.isPending}
+                placeholder="0"
+                onChange={(e) => setH(Number(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">
+                Motivo {h > 0 && <span className="text-destructive">*</span>}
+              </Label>
+              <Textarea
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+                disabled={disabled || save.isPending || h === 0}
+                placeholder="Explica por qué se pagan horas extras este día…"
+                rows={3}
+                maxLength={500}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Requerido cuando hay horas extras. Visible para el administrativo.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPopOpen(false)}
+                disabled={save.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={guardarExtras} disabled={disabled || save.isPending}>
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
