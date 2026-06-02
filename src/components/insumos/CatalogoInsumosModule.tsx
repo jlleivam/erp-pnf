@@ -738,3 +738,124 @@ function HistorialDialog({ insumo, onClose }: { insumo: any; onClose: () => void
     </Dialog>
   );
 }
+
+function UnidadesDialog({
+  open, onOpenChange, unidades,
+}: { open: boolean; onOpenChange: (b: boolean) => void; unidades: any[] }) {
+  const qc = useQueryClient();
+  const [codigo, setCodigo] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [editing, setEditing] = useState<{ id: string; codigo: string; nombre: string } | null>(null);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["insumo-unidades"] });
+    qc.invalidateQueries({ queryKey: ["insumos"] });
+  };
+
+  const crearMut = useMutation({
+    mutationFn: useServerFn(crearUnidad),
+    onSuccess: () => { toast.success("Unidad creada"); setCodigo(""); setNombre(""); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const editMut = useMutation({
+    mutationFn: useServerFn(editarUnidad),
+    onSuccess: () => { toast.success("Unidad actualizada"); setEditing(null); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const delMut = useMutation({
+    mutationFn: useServerFn(eliminarUnidad),
+    onSuccess: () => { toast.success("Unidad eliminada"); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Unidades de medida</DialogTitle>
+          <DialogDescription>
+            El código (ej. <span className="font-mono">PZA</span>) es el que aparece en los insumos. El nombre es opcional para mayor claridad.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-[110px_1fr_auto] gap-2 items-end">
+            <div>
+              <Label className="text-xs">Código</Label>
+              <Input
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))}
+                placeholder="PZA"
+                maxLength={10}
+                className="font-mono uppercase"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Nombre (opcional)</Label>
+              <Input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Pieza"
+                maxLength={100}
+              />
+            </div>
+            <Button
+              disabled={!codigo.trim() || crearMut.isPending}
+              onClick={() => crearMut.mutate({ data: {
+                codigo: codigo.trim(),
+                nombre: nombre.trim() || null,
+              } })}
+            >
+              <Plus /> Agregar
+            </Button>
+          </div>
+          <div className="border rounded-md divide-y max-h-80 overflow-auto">
+            {unidades.length === 0 && (
+              <p className="text-sm text-muted-foreground p-4 text-center">Sin unidades aún.</p>
+            )}
+            {unidades.map((u: any) => (
+              <div key={u.id} className="flex items-center gap-2 p-2">
+                {editing && editing.id === u.id ? (
+                  <>
+                    <Input
+                      value={editing.codigo}
+                      onChange={(e) => setEditing((prev) => prev ? { ...prev, codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) } : prev)}
+                      maxLength={10}
+                      className="w-24 font-mono uppercase"
+                    />
+                    <Input
+                      value={editing.nombre}
+                      onChange={(e) => setEditing((prev) => prev ? { ...prev, nombre: e.target.value } : prev)}
+                      maxLength={100}
+                      className="flex-1"
+                    />
+                    <Button size="sm" onClick={() => editing && editMut.mutate({ data: {
+                      id: editing.id, codigo: editing.codigo.trim(),
+                      nombre: editing.nombre.trim() || null,
+                    } })}>Guardar</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
+                  </>
+                ) : (
+                  <>
+                    <Badge variant="outline" className="font-mono">{u.codigo}</Badge>
+                    <span className="flex-1 text-sm text-muted-foreground">{u.nombre ?? "—"}</span>
+                    <Button size="icon" variant="ghost" onClick={() => setEditing({ id: u.id, codigo: u.codigo, nombre: u.nombre ?? "" })}>
+                      <Pencil />
+                    </Button>
+                    <Button
+                      size="icon" variant="ghost"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar la unidad "${u.codigo}"?`)) delMut.mutate({ data: { id: u.id } });
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
