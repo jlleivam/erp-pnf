@@ -229,20 +229,20 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
       .from("almacen_recepcion_partidas").insert(partidasRows);
     if (partidasErr) throw new Error(partidasErr.message);
 
-    // Actualizar movimientos de la semana abierta
+    // Actualizar movimientos de la semana abierta — un renglón por (insumo, precio)
     for (const p of data.partidas) {
       const { data: existente } = await supabase
         .from("almacen_movimientos_semana")
         .select("id, recibido")
         .eq("semana_id", semana.id)
         .eq("insumo_id", p.insumo_id)
+        .eq("precio_unitario", p.precio_unitario)
         .maybeSingle();
       if (existente) {
         await supabase
           .from("almacen_movimientos_semana")
           .update({
             recibido: Number(existente.recibido) + p.cantidad,
-            precio_unitario: p.precio_unitario,
           })
           .eq("id", existente.id);
       } else {
