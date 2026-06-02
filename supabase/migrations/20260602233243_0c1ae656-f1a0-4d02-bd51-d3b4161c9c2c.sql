@@ -1,0 +1,1 @@
+ALTER TABLE public.obra_rentas ADD COLUMN periodos_estimados numeric NULL;
