@@ -1412,6 +1412,255 @@ export type Database = {
           },
         ]
       }
+      obra_subcontrato_estimacion_renglones: {
+        Row: {
+          cantidad_ejecutada: number
+          cantidad_vigente: number
+          concepto: string
+          created_at: string
+          estimacion_id: string
+          id: string
+          importe_ejecutado: number
+          pu_vigente: number
+          renglon_clave: string
+          unidad: string | null
+        }
+        Insert: {
+          cantidad_ejecutada?: number
+          cantidad_vigente?: number
+          concepto: string
+          created_at?: string
+          estimacion_id: string
+          id?: string
+          importe_ejecutado?: number
+          pu_vigente?: number
+          renglon_clave: string
+          unidad?: string | null
+        }
+        Update: {
+          cantidad_ejecutada?: number
+          cantidad_vigente?: number
+          concepto?: string
+          created_at?: string
+          estimacion_id?: string
+          id?: string
+          importe_ejecutado?: number
+          pu_vigente?: number
+          renglon_clave?: string
+          unidad?: string | null
+        }
+        Relationships: []
+      }
+      obra_subcontrato_estimaciones: {
+        Row: {
+          cerrada_at: string | null
+          cerrada_por: string | null
+          company_id: string
+          creado_por: string
+          created_at: string
+          estatus: Database["public"]["Enums"]["destajo_estimacion_estatus"]
+          id: string
+          monto_total: number
+          numero: number
+          semana_fin: string
+          semana_inicio: string
+          subcontrato_id: string
+          updated_at: string
+        }
+        Insert: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id: string
+          creado_por: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          semana_fin: string
+          semana_inicio: string
+          subcontrato_id: string
+          updated_at?: string
+        }
+        Update: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
+          id?: string
+          monto_total?: number
+          numero?: number
+          semana_fin?: string
+          semana_inicio?: string
+          subcontrato_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      obra_subcontrato_presupuestos: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          creado_por: string
+          created_at: string
+          descripcion: string | null
+          enviado_at: string | null
+          enviado_por: string | null
+          estatus: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id: string
+          monto_total: number
+          nombre: string
+          numero: number
+          rechazado_at: string | null
+          rechazado_por: string | null
+          rechazo_motivo: string | null
+          subcontrato_id: string
+          tipo: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          creado_por: string
+          created_at?: string
+          descripcion?: string | null
+          enviado_at?: string | null
+          enviado_por?: string | null
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre: string
+          numero?: number
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          subcontrato_id: string
+          tipo: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          creado_por?: string
+          created_at?: string
+          descripcion?: string | null
+          enviado_at?: string | null
+          enviado_por?: string | null
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre?: string
+          numero?: number
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
+          subcontrato_id?: string
+          tipo?: Database["public"]["Enums"]["destajo_presupuesto_tipo"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      obra_subcontrato_renglones: {
+        Row: {
+          cantidad: number | null
+          clave: string
+          concepto: string
+          created_at: string
+          es_grupo: boolean
+          id: string
+          importe: number
+          importe_delta: number
+          nivel: number
+          orden: number
+          parent_clave: string | null
+          precio_unitario: number | null
+          presupuesto_subcontrato_id: string
+          tipo_movimiento: Database["public"]["Enums"]["presupuesto_movimiento"]
+          unidad: string | null
+        }
+        Insert: {
+          cantidad?: number | null
+          clave: string
+          concepto: string
+          created_at?: string
+          es_grupo?: boolean
+          id?: string
+          importe?: number
+          importe_delta?: number
+          nivel: number
+          orden?: number
+          parent_clave?: string | null
+          precio_unitario?: number | null
+          presupuesto_subcontrato_id: string
+          tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
+          unidad?: string | null
+        }
+        Update: {
+          cantidad?: number | null
+          clave?: string
+          concepto?: string
+          created_at?: string
+          es_grupo?: boolean
+          id?: string
+          importe?: number
+          importe_delta?: number
+          nivel?: number
+          orden?: number
+          parent_clave?: string | null
+          precio_unitario?: number | null
+          presupuesto_subcontrato_id?: string
+          tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
+          unidad?: string | null
+        }
+        Relationships: []
+      }
+      obra_subcontratos: {
+        Row: {
+          company_id: string
+          contratista_id: string
+          creado_por: string
+          created_at: string
+          descripcion: string | null
+          estatus: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id: string
+          monto_total: number
+          nombre: string
+          numero: number
+          obra_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contratista_id: string
+          creado_por: string
+          created_at?: string
+          descripcion?: string | null
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre: string
+          numero?: number
+          obra_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contratista_id?: string
+          creado_por?: string
+          created_at?: string
+          descripcion?: string | null
+          estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          id?: string
+          monto_total?: number
+          nombre?: string
+          numero?: number
+          obra_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       obra_team: {
         Row: {
           created_at: string
