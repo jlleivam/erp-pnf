@@ -29,7 +29,15 @@ export function NuevaRentaDialog({
   const [descripcion, setDescripcion] = useState("");
   const [fechaEstimada, setFechaEstimada] = useState("");
   const [periodicidad, setPeriodicidad] = useState<string>("");
+  const [periodos, setPeriodos] = useState("");
   const [diasAviso, setDiasAviso] = useState("3");
+
+  const periodoLabel =
+    periodicidad === "diaria" ? "días"
+    : periodicidad === "semanal" ? "semanas"
+    : periodicidad === "quincenal" ? "quincenas"
+    : periodicidad === "mensual" ? "meses"
+    : "periodos";
 
   const listFn = useServerFn(listInsumos);
   const insumosQ = useQuery({
@@ -115,6 +123,25 @@ export function NuevaRentaDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <Label>Cantidad de periodos a ocupar</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={periodos}
+                  disabled={!periodicidad}
+                  placeholder={periodicidad ? `Ej. 3 ${periodoLabel}` : "Elige periodicidad"}
+                  onChange={(e) => setPeriodos(e.target.value)}
+                />
+              </div>
+              {periodicidad && periodos && Number(periodos) > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  ≈ {periodos} {periodoLabel}
+                </p>
+              )}
+            </div>
+            <div>
               <Label>Fecha estimada de inicio</Label>
               <Input
                 type="date"
@@ -122,16 +149,16 @@ export function NuevaRentaDialog({
                 onChange={(e) => setFechaEstimada(e.target.value)}
               />
             </div>
-            <div>
-              <Label>Días de aviso antes de vencer</Label>
-              <Input
-                type="number"
-                min="0"
-                max="60"
-                value={diasAviso}
-                onChange={(e) => setDiasAviso(e.target.value)}
-              />
-            </div>
+          </div>
+          <div>
+            <Label>Días de aviso antes de vencer</Label>
+            <Input
+              type="number"
+              min="0"
+              max="60"
+              value={diasAviso}
+              onChange={(e) => setDiasAviso(e.target.value)}
+            />
           </div>
           <div>
             <Label>Notas (opcional)</Label>
@@ -155,6 +182,7 @@ export function NuevaRentaDialog({
                   descripcion: descripcion.trim() || undefined,
                   fechaEstimadaInicio: fechaEstimada || undefined,
                   periodicidadSugerida: (periodicidad || undefined) as any,
+                  periodosEstimados: periodos && Number(periodos) > 0 ? Number(periodos) : undefined,
                   diasAvisoVencimiento: Number(diasAviso) || 3,
                 },
               })
