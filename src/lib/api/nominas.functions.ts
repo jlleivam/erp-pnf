@@ -103,11 +103,27 @@ export const getOrCreateNomina = createServerFn({ method: "POST" })
 
     const { data: renglones } = await supabase
       .from("obra_nomina_renglones")
-      .select("*, trabajadores:trabajador_id (id, nombre_completo, puesto, sueldo_diario, estatus_autorizacion, fecha_baja)")
+      .select("*")
       .eq("nomina_id", nomina.id)
       .order("created_at", { ascending: true });
 
-    const renglonIds = (renglones ?? []).map((r: any) => r.id);
+    const renglonesArr = renglones ?? [];
+    const trabIds = renglonesArr.map((r: any) => r.trabajador_id);
+    let trabajadores: any[] = [];
+    if (trabIds.length > 0) {
+      const { data: trabs } = await supabase
+        .from("trabajadores")
+        .select("id, nombre_completo, puesto, sueldo_diario, estatus_autorizacion, fecha_baja")
+        .in("id", trabIds);
+      trabajadores = trabs ?? [];
+    }
+    const trabMap = new Map(trabajadores.map((t: any) => [t.id, t]));
+    const renglonesConTrab = renglonesArr.map((r: any) => ({
+      ...r,
+      trabajador: trabMap.get(r.trabajador_id) ?? null,
+    }));
+
+    const renglonIds = renglonesArr.map((r: any) => r.id);
     let asistencias: any[] = [];
     if (renglonIds.length > 0) {
       const { data } = await supabase
@@ -117,7 +133,8 @@ export const getOrCreateNomina = createServerFn({ method: "POST" })
       asistencias = data ?? [];
     }
 
-    return { nomina, renglones: renglones ?? [], asistencias };
+    return { nomina, renglones: renglonesConTrab, asistencias };
+
   });
 
 export const listTrabajadoresDisponibles = createServerFn({ method: "POST" })
@@ -232,8 +249,10 @@ export const guardarAsistencia = createServerFn({ method: "POST" })
     // validar fecha dentro de la semana
     const { data: nominaFull } = await supabase
       .from("obra_nominas").select("semana_inicio, semana_fin").eq("id", nomina.id).single();
+    if (!nominaFull) throw new Error("Nómina no encontrada");
     if (data.fecha < nominaFull.semana_inicio || data.fecha > nominaFull.semana_fin)
       throw new Error("Fecha fuera de la semana de la nómina");
+
 
     if (data.jornada === 0 && data.horasExtras === 0) {
       await supabase.from("obra_nomina_asistencias")
@@ -330,29 +349,46 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
     // Todas las nóminas de la company esa semana
     const { data: nominas } = await supabase
       .from("obra_nominas")
-      .select("id, obra_id, estatus, monto_total, obras:obra_id (id, nombre)")
+      .select("id, obra_id, estatus, monto_total")
       .eq("company_id", companyId)
       .eq("semana_inicio", semana.inicio);
 
     const nominasArr = nominas ?? [];
     const nominaIds = nominasArr.map((n: any) => n.id);
+    const obraIds = Array.from(new Set(nominasArr.map((n: any) => n.obra_id)));
+
+    let obrasMap = new Map<string, string>();
+    if (obraIds.length > 0) {
+      const { data: obrasRows } = await supabase
+        .from("obras").select("id, nombre").in("id", obraIds);
+      obrasMap = new Map((obrasRows ?? []).map((o: any) => [o.id, o.nombre]));
+    }
     const obraNamePorNomina = new Map<string, { id: string; nombre: string }>();
     for (const n of nominasArr) {
-      obraNamePorNomina.set(n.id, { id: n.obra_id, nombre: n.obras?.nombre ?? "—" });
+      obraNamePorNomina.set(n.id, { id: n.obra_id, nombre: obrasMap.get(n.obra_id) ?? "—" });
     }
 
     if (nominaIds.length === 0) {
       return { semana, trabajadores: [], obrasConNomina: 0 };
     }
 
-    // Renglones
     const { data: renglones } = await supabase
       .from("obra_nomina_renglones")
-      .select("id, nomina_id, trabajador_id, sueldo_diario_snapshot, dias_trabajados, horas_extras_total, importe_total, trabajadores:trabajador_id (id, nombre_completo, puesto)")
+      .select("id, nomina_id, trabajador_id, sueldo_diario_snapshot, dias_trabajados, horas_extras_total, importe_total")
       .in("nomina_id", nominaIds);
 
     const renglonesArr = renglones ?? [];
     const renglonIds = renglonesArr.map((r: any) => r.id);
+    const trabIds = Array.from(new Set(renglonesArr.map((r: any) => r.trabajador_id)));
+
+    let trabsMap = new Map<string, any>();
+    if (trabIds.length > 0) {
+      const { data: trabsRows } = await supabase
+        .from("trabajadores")
+        .select("id, nombre_completo, puesto")
+        .in("id", trabIds);
+      trabsMap = new Map((trabsRows ?? []).map((t: any) => [t.id, t]));
+    }
 
     // Asistencias
     let asistencias: any[] = [];
@@ -368,6 +404,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
       if (!asistenciasPorRenglon.has(a.renglon_id)) asistenciasPorRenglon.set(a.renglon_id, []);
       asistenciasPorRenglon.get(a.renglon_id)!.push(a);
     }
+
 
     // Agrupar por trabajador
     type ObraDetalle = {
