@@ -469,6 +469,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
           fecha: a.fecha,
           jornada: Number(a.jornada),
           horas_extras: Number(a.horas_extras ?? 0),
+          nota_extras: (a.nota_extras ?? null) as string | null,
         })),
       });
     }
