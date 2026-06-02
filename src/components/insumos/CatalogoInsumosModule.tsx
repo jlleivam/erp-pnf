@@ -64,17 +64,19 @@ export function CatalogoInsumosModule() {
   const [openSolicitar, setOpenSolicitar] = useState(false);
   const [openImportar, setOpenImportar] = useState(false);
   const [openCategorias, setOpenCategorias] = useState(false);
+  const [openUnidades, setOpenUnidades] = useState(false);
   const [editInsumo, setEditInsumo] = useState<any | null>(null);
   const [historialFor, setHistorialFor] = useState<any | null>(null);
 
   const listFn = useServerFn(listInsumos);
   const catsFn = useServerFn(listCategorias);
+  const unitsFn = useServerFn(listUnidades);
   const metFn = useServerFn(getMetricasInsumos);
 
   const filtros = {
     estatus: tab,
     categoriaId: categoriaId === "all" ? null : categoriaId,
-    unidad: unidad === "all" ? undefined : (unidad as Unidad),
+    unidad: unidad === "all" ? undefined : unidad,
     search: search || undefined,
   };
 
@@ -83,6 +85,7 @@ export function CatalogoInsumosModule() {
     queryFn: () => listFn({ data: filtros }),
   });
   const categoriasQ = useQuery({ queryKey: ["insumo-categorias"], queryFn: () => catsFn() });
+  const unidadesQ = useQuery({ queryKey: ["insumo-unidades"], queryFn: () => unitsFn() });
   const metricasQ = useQuery({ queryKey: ["insumos-metricas"], queryFn: () => metFn() });
 
   const pendientesCount = metricasQ.data?.pendientes ?? 0;
