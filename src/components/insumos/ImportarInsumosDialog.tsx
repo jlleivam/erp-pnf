@@ -35,6 +35,9 @@ export function ImportarInsumosDialog({
 }) {
   const qc = useQueryClient();
   const importarFn = useServerFn(importarInsumos);
+  const unitsFn = useServerFn(listUnidades);
+  const unidadesQ = useQuery({ queryKey: ["insumo-unidades"], queryFn: () => unitsFn() });
+  const unidadesValidas = (unidadesQ.data ?? []).map((u: any) => String(u.codigo).toUpperCase());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<"upload" | "errors" | "preview">("upload");
