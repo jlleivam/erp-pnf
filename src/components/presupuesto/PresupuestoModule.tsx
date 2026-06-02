@@ -32,10 +32,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { CapturaPresupuestoSheet } from "./CapturaPresupuestoSheet";
+import { CapturaOrdenCambioSheet } from "./CapturaOrdenCambioSheet";
 import { VerPresupuestoSheet } from "./VerPresupuestoSheet";
+import { VerVigenteSheet } from "./VerVigenteSheet";
 import { formatMXN } from "@/lib/format";
 const formatCurrency = formatMXN;
 
@@ -61,8 +63,9 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   });
 
   const [creating, setCreating] = useState<null | "base" | "adenda">(null);
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; tipo: "base" | "adenda" } | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [verVigente, setVerVigente] = useState(false);
   const [toDelete, setToDelete] = useState<Presupuesto | null>(null);
 
   const remove = useServerFn(eliminarPresupuesto);
@@ -93,19 +96,26 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Presupuesto</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Presupuesto base + adendas aditivas. Estructura WBS hasta 5 niveles.
+            Presupuesto base + órdenes de cambio. Estructura WBS hasta 5 niveles.
           </p>
         </div>
-        {director && !base && (
-          <Button onClick={() => setCreating("base")}>
-            <Plus className="size-4 mr-1" /> Crear presupuesto base
-          </Button>
-        )}
-        {director && base?.estatus === "autorizado" && (
-          <Button variant="outline" onClick={() => setCreating("adenda")}>
-            <Plus className="size-4 mr-1" /> Agregar adenda
-          </Button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {base?.estatus === "autorizado" && (
+            <Button variant="outline" onClick={() => setVerVigente(true)}>
+              <Eye className="size-4 mr-1" /> Ver vigente
+            </Button>
+          )}
+          {director && !base && (
+            <Button onClick={() => setCreating("base")}>
+              <Plus className="size-4 mr-1" /> Crear presupuesto base
+            </Button>
+          )}
+          {director && base?.estatus === "autorizado" && (
+            <Button variant="outline" onClick={() => setCreating("adenda")}>
+              <Plus className="size-4 mr-1" /> Nueva orden de cambio
+            </Button>
+          )}
+        </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -114,8 +124,16 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
           <p className="mt-2 text-xl font-semibold">{formatCurrency(totalBase)}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Adendas autorizadas</p>
-          <p className="mt-2 text-xl font-semibold">{formatCurrency(totalAdendas)}</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Σ Órdenes de cambio
+          </p>
+          <p
+            className={`mt-2 text-xl font-semibold ${
+              totalAdendas < 0 ? "text-destructive" : ""
+            }`}
+          >
+            {formatCurrency(totalAdendas)}
+          </p>
           <p className="text-xs text-muted-foreground mt-1">
             {adendas.filter((a) => a.estatus === "autorizado").length} de {adendas.length}
           </p>
@@ -129,7 +147,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
       <Tabs defaultValue="base">
         <TabsList>
           <TabsTrigger value="base">Base</TabsTrigger>
-          <TabsTrigger value="adendas">Adendas ({adendas.length})</TabsTrigger>
+          <TabsTrigger value="adendas">Órdenes de cambio ({adendas.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="base" className="mt-4">
@@ -144,7 +162,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
               p={base}
               director={director}
               onView={() => setViewing(base.id)}
-              onEdit={() => setEditing(base.id)}
+              onEdit={() => setEditing({ id: base.id, tipo: "base" })}
               onDelete={() => setToDelete(base)}
             />
           )}
@@ -153,7 +171,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         <TabsContent value="adendas" className="mt-4 space-y-3">
           {adendas.length === 0 ? (
             <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
-              Sin adendas registradas.
+              Sin órdenes de cambio registradas.
             </Card>
           ) : (
             adendas.map((a) => (
@@ -162,7 +180,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
                 p={a}
                 director={director}
                 onView={() => setViewing(a.id)}
-                onEdit={() => setEditing(a.id)}
+                onEdit={() => setEditing({ id: a.id, tipo: "adenda" })}
                 onDelete={() => setToDelete(a)}
               />
             ))
@@ -179,16 +197,17 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
           }
           onClose={() => setCreating(null)}
           onCreated={(id) => {
+            const tipo = creating;
             setCreating(null);
             refresh();
-            setEditing(id);
+            if (tipo) setEditing({ id, tipo });
           }}
         />
       )}
 
-      {editing && (
+      {editing && editing.tipo === "base" && (
         <CapturaPresupuestoSheet
-          presupuestoId={editing}
+          presupuestoId={editing.id}
           onClose={() => setEditing(null)}
           onSaved={() => {
             refresh();
@@ -196,6 +215,24 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
           }}
         />
       )}
+
+      {editing && editing.tipo === "adenda" && (
+        <CapturaOrdenCambioSheet
+          obraId={obraId}
+          presupuestoId={editing.id}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            refresh();
+            qc.invalidateQueries({ queryKey: ["presupuesto-vigente", obraId] });
+            setEditing(null);
+          }}
+        />
+      )}
+
+      {verVigente && (
+        <VerVigenteSheet obraId={obraId} onClose={() => setVerVigente(false)} />
+      )}
+
 
       {viewing && (
         <VerPresupuestoSheet
@@ -239,7 +276,8 @@ function PresupuestoCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const label = p.tipo === "base" ? "Presupuesto base" : `Adenda ${p.numero}`;
+  const label = p.tipo === "base" ? "Presupuesto base" : `Orden de cambio ${p.numero}`;
+  const esOC = p.tipo === "adenda";
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -256,7 +294,9 @@ function PresupuestoCard({
           )}
         </div>
         <div className="text-right">
-          <p className="text-lg font-semibold">{formatCurrency(p.monto_total)}</p>
+          <p className={`text-lg font-semibold ${esOC && Number(p.monto_total) < 0 ? "text-destructive" : ""}`}>
+            {esOC ? "Δ " : ""}{formatCurrency(p.monto_total)}
+          </p>
           {p.autorizado_at && (
             <p className="text-xs text-muted-foreground mt-1">
               Autorizado: {new Date(p.autorizado_at).toLocaleDateString("es-MX")}
@@ -297,7 +337,7 @@ function CrearPresupuestoDialog({
   onCreated: (id: string) => void;
 }) {
   const [nombre, setNombre] = useState(
-    tipo === "base" ? "Presupuesto base" : `Adenda ${numeroSugerido}`,
+    tipo === "base" ? "Presupuesto base" : `Orden de cambio ${numeroSugerido}`,
   );
   const [descripcion, setDescripcion] = useState("");
   const crear = useServerFn(crearPresupuesto);
@@ -314,9 +354,9 @@ function CrearPresupuestoDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{tipo === "base" ? "Crear presupuesto base" : "Agregar adenda"}</DialogTitle>
+          <DialogTitle>{tipo === "base" ? "Crear presupuesto base" : "Nueva orden de cambio"}</DialogTitle>
           <DialogDescription>
-            Se creará en estado borrador. Después podrás capturar o importar los renglones.
+            Se creará en estado borrador. Después podrás capturar los movimientos.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -329,7 +369,7 @@ function CrearPresupuestoDialog({
             <Textarea
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              placeholder={tipo === "adenda" ? "Motivo de la adenda…" : ""}
+              placeholder={tipo === "adenda" ? "Motivo de la orden de cambio…" : ""}
             />
           </div>
         </div>

@@ -1,7 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { procesarRenglones, type RenglonInput } from "@/lib/presupuesto-utils";
+import {
+  procesarRenglones,
+  procesarOrdenCambio,
+  reconstruirVigente,
+  type RenglonInput,
+  type RenglonBase,
+  type RenglonOC,
+  type OCInput,
+} from "@/lib/presupuesto-utils";
 
 async function getCompanyAndIsDirector(supabase: any, userId: string) {
   const { data: profile } = await supabase
@@ -274,3 +282,168 @@ export const descargarPlantillaPresupuesto = createServerFn({ method: "GET" })
     const b64 = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
     return { fileBase64: b64 as string };
   });
+
+// ============================================================
+// Órdenes de cambio + presupuesto vigente
+// ============================================================
+
+async function loadBaseYOcs(supabase: any, obraId: string) {
+  const { data: presupuestos, error } = await supabase
+    .from("obra_presupuestos")
+    .select("id, tipo, numero, nombre, estatus")
+    .eq("obra_id", obraId);
+  if (error) throw new Error(error.message);
+
+  const base = (presupuestos ?? []).find(
+    (p: any) => p.tipo === "base" && p.estatus === "autorizado",
+  );
+  const ocs = (presupuestos ?? [])
+    .filter((p: any) => p.tipo === "adenda" && p.estatus === "autorizado")
+    .sort((a: any, b: any) => a.numero - b.numero);
+
+  let baseRenglones: RenglonBase[] = [];
+  if (base) {
+    const { data: r } = await supabase
+      .from("obra_presupuesto_renglones")
+      .select("*")
+      .eq("presupuesto_id", base.id)
+      .order("orden", { ascending: true });
+    baseRenglones = (r ?? []).map((x: any) => ({
+      clave: x.clave,
+      concepto: x.concepto,
+      unidad: x.unidad,
+      cantidad: x.cantidad != null ? Number(x.cantidad) : null,
+      precio_unitario: x.precio_unitario != null ? Number(x.precio_unitario) : null,
+      importe: Number(x.importe ?? 0),
+      es_grupo: !!x.es_grupo,
+      nivel: x.nivel,
+      parent_clave: x.parent_clave,
+    }));
+  }
+
+  const ocsRenglones: RenglonOC[][] = [];
+  for (const oc of ocs) {
+    const { data: r } = await supabase
+      .from("obra_presupuesto_renglones")
+      .select("*")
+      .eq("presupuesto_id", oc.id)
+      .order("orden", { ascending: true });
+    ocsRenglones.push(
+      (r ?? [])
+        .filter((x: any) => x.tipo_movimiento && x.tipo_movimiento !== "renglon")
+        .map((x: any) => ({
+          clave: x.clave,
+          tipo_movimiento: x.tipo_movimiento,
+          importe_delta: Number(x.importe_delta ?? 0),
+          concepto: x.concepto,
+          unidad: x.unidad,
+          cantidad: x.cantidad != null ? Number(x.cantidad) : null,
+          precio_unitario: x.precio_unitario != null ? Number(x.precio_unitario) : null,
+        })),
+    );
+  }
+
+  return { base, ocs, baseRenglones, ocsRenglones };
+}
+
+export const getVigente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ obraId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { base, baseRenglones, ocsRenglones } = await loadBaseYOcs(supabase, data.obraId);
+    if (!base) return { vigente: [], montoTotal: 0, hasBase: false };
+    const { vigente, montoTotal } = reconstruirVigente(baseRenglones, ocsRenglones);
+    return { vigente, montoTotal, hasBase: true };
+  });
+
+const ocInputSchema = z.object({
+  clave: z.string().trim().min(1).max(50),
+  tipo_movimiento: z.enum(["modificacion", "adicion", "eliminacion"]),
+  concepto: z.string().trim().max(500).optional(),
+  unidad: z.string().trim().max(20).nullable().optional(),
+  cantidad: z.number().finite().nullable().optional(),
+  precio_unitario: z.number().finite().nullable().optional(),
+});
+
+export const guardarRenglonesOC = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      presupuestoId: z.string().uuid(),
+      renglones: z.array(ocInputSchema).max(2000),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    if (!isDirector) throw new Error("Solo el Director puede editar órdenes de cambio");
+
+    const { data: presupuesto } = await supabase
+      .from("obra_presupuestos")
+      .select("id, obra_id, tipo, estatus")
+      .eq("id", data.presupuestoId)
+      .single();
+    if (!presupuesto) throw new Error("Presupuesto no encontrado");
+    if (presupuesto.tipo !== "adenda")
+      throw new Error("Este endpoint es solo para órdenes de cambio");
+    if (presupuesto.estatus === "autorizado")
+      throw new Error("La orden de cambio está autorizada y no se puede editar");
+
+    // Reconstruir el vigente SIN incluir esta OC (aunque no esté autorizada, igual la excluimos)
+    const { baseRenglones, ocsRenglones } = await loadBaseYOcs(supabase, presupuesto.obra_id);
+    const { vigente } = reconstruirVigente(baseRenglones, ocsRenglones);
+
+    const { renglones, errores, montoDelta } = procesarOrdenCambio(
+      vigente,
+      data.renglones as OCInput[],
+    );
+    if (errores.length > 0) {
+      throw new Error(
+        `Errores en ${errores.length} renglón(es): ${errores
+          .slice(0, 3)
+          .map((e) => `${e.clave || "(s/c)"}: ${e.errores.join(", ")}`)
+          .join(" | ")}`,
+      );
+    }
+
+    const { error: delErr } = await supabase
+      .from("obra_presupuesto_renglones")
+      .delete()
+      .eq("presupuesto_id", data.presupuestoId);
+    if (delErr) throw new Error(delErr.message);
+
+    if (renglones.length > 0) {
+      const rows = renglones.map((r) => ({
+        presupuesto_id: data.presupuestoId,
+        clave: r.clave,
+        nivel: r.nivel,
+        parent_clave: r.parent_clave,
+        concepto: r.concepto,
+        unidad: r.unidad,
+        cantidad: r.cantidad,
+        precio_unitario: r.precio_unitario,
+        importe:
+          r.tipo_movimiento === "adicion" || r.tipo_movimiento === "modificacion"
+            ? Number(r.cantidad ?? 0) * Number(r.precio_unitario ?? 0)
+            : 0,
+        importe_delta: r.importe_delta,
+        tipo_movimiento: r.tipo_movimiento,
+        es_grupo: false,
+        orden: r.orden,
+      }));
+      const { error: insErr } = await supabase
+        .from("obra_presupuesto_renglones")
+        .insert(rows);
+      if (insErr) throw new Error(insErr.message);
+    }
+
+    const { error: updErr } = await supabase
+      .from("obra_presupuestos")
+      .update({ monto_total: montoDelta })
+      .eq("id", data.presupuestoId);
+    if (updErr) throw new Error(updErr.message);
+
+    return { ok: true, montoDelta, renglonesCount: renglones.length };
+  });
+

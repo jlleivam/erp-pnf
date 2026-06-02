@@ -707,11 +707,13 @@ export type Database = {
           es_grupo: boolean
           id: string
           importe: number
+          importe_delta: number
           nivel: number
           orden: number
           parent_clave: string | null
           precio_unitario: number | null
           presupuesto_id: string
+          tipo_movimiento: Database["public"]["Enums"]["presupuesto_movimiento"]
           unidad: string | null
         }
         Insert: {
@@ -722,11 +724,13 @@ export type Database = {
           es_grupo?: boolean
           id?: string
           importe?: number
+          importe_delta?: number
           nivel: number
           orden?: number
           parent_clave?: string | null
           precio_unitario?: number | null
           presupuesto_id: string
+          tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
           unidad?: string | null
         }
         Update: {
@@ -737,11 +741,13 @@ export type Database = {
           es_grupo?: boolean
           id?: string
           importe?: number
+          importe_delta?: number
           nivel?: number
           orden?: number
           parent_clave?: string | null
           precio_unitario?: number | null
           presupuesto_id?: string
+          tipo_movimiento?: Database["public"]["Enums"]["presupuesto_movimiento"]
           unidad?: string | null
         }
         Relationships: [
@@ -1509,6 +1515,11 @@ export type Database = {
         | "recibida_parcial"
         | "recibida"
       presupuesto_estatus: "borrador" | "autorizado"
+      presupuesto_movimiento:
+        | "renglon"
+        | "modificacion"
+        | "adicion"
+        | "eliminacion"
       presupuesto_tipo: "base" | "adenda"
       requisicion_estatus:
         | "borrador"
@@ -1702,6 +1713,12 @@ export const Constants = {
         "recibida",
       ],
       presupuesto_estatus: ["borrador", "autorizado"],
+      presupuesto_movimiento: [
+        "renglon",
+        "modificacion",
+        "adicion",
+        "eliminacion",
+      ],
       presupuesto_tipo: ["base", "adenda"],
       requisicion_estatus: [
         "borrador",
