@@ -373,13 +373,14 @@ function MetricCard({
 }
 
 function SolicitarDialog({
-  open, onOpenChange, categorias, unidades,
-}: { open: boolean; onOpenChange: (b: boolean) => void; categorias: any[]; unidades: any[] }) {
+  open, onOpenChange, categorias, unidades, isDirector,
+}: { open: boolean; onOpenChange: (b: boolean) => void; categorias: any[]; unidades: any[]; isDirector: boolean }) {
   const qc = useQueryClient();
   const defaultUnidad = unidades[0]?.codigo ?? "";
   const [nombre, setNombre] = useState("");
   const [unidad, setUnidad] = useState<Unidad>(defaultUnidad);
   const [categoriaId, setCategoriaId] = useState<string>("none");
+  const [disponibleRenta, setDisponibleRenta] = useState<boolean>(false);
 
   // Ensure unidad has a valid default when unidades load
   if (!unidad && defaultUnidad) {
@@ -389,10 +390,10 @@ function SolicitarDialog({
   const mut = useMutation({
     mutationFn: useServerFn(solicitarInsumo),
     onSuccess: () => {
-      toast.success("Insumo solicitado. Pendiente de autorización.");
+      toast.success(isDirector ? "Insumo creado y autorizado." : "Insumo solicitado. Pendiente de autorización.");
       qc.invalidateQueries({ queryKey: ["insumos"] });
       qc.invalidateQueries({ queryKey: ["insumos-metricas"] });
-      setNombre(""); setUnidad(defaultUnidad); setCategoriaId("none");
+      setNombre(""); setUnidad(defaultUnidad); setCategoriaId("none"); setDisponibleRenta(false);
       onOpenChange(false);
     },
     onError: (e: any) => toast.error(e.message),
@@ -402,8 +403,10 @@ function SolicitarDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Solicitar insumo</DialogTitle>
-          <DialogDescription>El Director revisará tu solicitud.</DialogDescription>
+          <DialogTitle>{isDirector ? "Nuevo insumo" : "Solicitar insumo"}</DialogTitle>
+          <DialogDescription>
+            {isDirector ? "El insumo se creará autorizado en el catálogo." : "El Director revisará tu solicitud."}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
@@ -440,6 +443,23 @@ function SolicitarDialog({
               </Select>
             </div>
           </div>
+          {isDirector && (
+            <div className="flex items-start gap-2 pt-1">
+              <Checkbox
+                id="disponible-renta-nuevo"
+                checked={disponibleRenta}
+                onCheckedChange={(v) => setDisponibleRenta(v === true)}
+              />
+              <div className="grid gap-0.5">
+                <Label htmlFor="disponible-renta-nuevo" className="cursor-pointer">
+                  Disponible para rentas
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Si se activa, este insumo podrá seleccionarse al crear una renta.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -448,9 +468,10 @@ function SolicitarDialog({
             onClick={() => mut.mutate({ data: {
               nombre: nombre.trim(), unidad,
               categoriaId: categoriaId === "none" ? null : categoriaId,
+              ...(isDirector ? { disponibleRenta } : {}),
             } })}
           >
-            Solicitar
+            {isDirector ? "Crear" : "Solicitar"}
           </Button>
         </DialogFooter>
       </DialogContent>
