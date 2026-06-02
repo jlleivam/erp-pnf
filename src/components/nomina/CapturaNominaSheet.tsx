@@ -27,8 +27,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
-import { UserPlus, Lock } from "lucide-react";
+import { UserPlus, Lock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TrabajadorFormDialog } from "@/components/trabajadores/TrabajadorFormDialog";
+import { useEffectiveRoles } from "@/stores/auth";
 
 const DOW = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -362,6 +364,8 @@ function AsignarTrabajadoresDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const roles = useEffectiveRoles();
+  const canManage = roles.includes("director") || roles.includes("administrativo");
   const fetchDisp = useServerFn(listTrabajadoresDisponibles);
   const dispQ = useQuery({
     queryKey: ["trabajadores-disponibles", obraId, semanaInicio],
@@ -369,6 +373,8 @@ function AsignarTrabajadoresDialog({
   });
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set(asignadosActuales));
   const [filtro, setFiltro] = useState("");
+  const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [idsPrevios, setIdsPrevios] = useState<Set<string> | null>(null);
 
   const asignar = useServerFn(asignarTrabajadores);
   const asignarM = useMutation({
@@ -381,6 +387,30 @@ function AsignarTrabajadoresDialog({
   });
 
   const lista = (dispQ.data ?? []) as any[];
+
+  // Detecta trabajadores recién creados y los pre-selecciona (sólo si el usuario puede autorizar).
+  useEffect(() => {
+    const idsActuales = new Set<string>(lista.map((t) => t.id));
+    if (idsPrevios === null) {
+      setIdsPrevios(idsActuales);
+      return;
+    }
+    if (!canManage) return;
+    const nuevos: string[] = [];
+    idsActuales.forEach((id) => {
+      if (!idsPrevios.has(id)) nuevos.push(id);
+    });
+    if (nuevos.length > 0) {
+      setSeleccionados((prev) => {
+        const next = new Set(prev);
+        nuevos.forEach((id) => next.add(id));
+        return next;
+      });
+      setIdsPrevios(idsActuales);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lista.length]);
+
   const filtered = lista.filter((t) =>
     t.nombre_completo.toLowerCase().includes(filtro.toLowerCase()),
   );
@@ -396,11 +426,18 @@ function AsignarTrabajadoresDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <Input
-            placeholder="Buscar por nombre…"
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Buscar por nombre…"
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              className="flex-1"
+            />
+            <Button variant="outline" size="sm" onClick={() => setNuevoOpen(true)}>
+              <Plus className="size-4 mr-1" />
+              {canManage ? "Nuevo" : "Solicitar alta"}
+            </Button>
+          </div>
           <Card className="max-h-[400px] overflow-y-auto divide-y">
             {dispQ.isLoading ? (
               <p className="p-4 text-sm text-muted-foreground">Cargando…</p>
@@ -451,6 +488,16 @@ function AsignarTrabajadoresDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {nuevoOpen && (
+        <TrabajadorFormDialog
+          open
+          canManage={canManage}
+          onClose={() => {
+            setNuevoOpen(false);
+            dispQ.refetch();
+          }}
+        />
+      )}
     </Dialog>
   );
 }
