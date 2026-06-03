@@ -1,52 +1,45 @@
 ## Objetivo
 
-En **móvil**, sustituir el menú hamburguesa actual del `AppShell` por una **barra inferior fija** de 5 íconos. Cuando el usuario entra a una obra, esa misma barra cambia de contenido para mostrar la navegación interna de la obra (lo que hoy hace `ObraShell` aparte). En **desktop** todo sigue exactamente igual: sidebar lateral en `AppShell` y contenido pleno en obra.
+Dentro de una obra, en móvil, mostrar los 10 módulos de la obra en una **barra inferior con scroll horizontal**, sin paginación ni botón "Más". Fuera de obra el bottom bar sigue igual (5 íconos fijos).
 
 ## Cambios
 
-### 1. Nuevo componente `src/components/MobileBottomBar.tsx`
+### 1. `src/components/MobileBottomBar.tsx`
 
-Barra fija inferior (`fixed bottom-0 inset-x-0 h-16 bg-card border-t z-30`), visible solo en `md:hidden`. Recibe props:
-- `items: { to, label, icon, match }[]` — 4 entradas + 1 slot fijo "Más".
-- `onMoreClick: () => void` — abre un Sheet con el resto del menú.
+Añadir una prop `variant?: "fixed" | "scroll"` (default `"fixed"`):
 
-Cada ítem es un `<Link>` con estado activo basado en `pathname` (resaltado en `text-primary`).
+- **`fixed`** (comportamiento actual): 4 items + botón "Más", repartidos con `flex-1`. Sin cambios para el modo corporativo.
+- **`scroll`**: contenedor `overflow-x-auto` con scroll horizontal, sin botón "Más", sin `flex-1`. Cada item con ancho mínimo (`min-w-[72px]`) e ícono + label. Se añade un degradado a la derecha (`pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-card to-transparent`) para insinuar que hay más contenido. `scrollbar-width: none` + `[&::-webkit-scrollbar]:hidden` para ocultar la barra.
 
-### 2. `AppShell.tsx` — modo corporativo
+El estado activo y el matching de pathname se mantienen igual.
 
-- Detectar si la ruta actual es una obra: `pathname.startsWith("/app/obras/") && pathname !== "/app/obras/nueva"`.
-- Calcular los `items` del bottom bar:
-  - **Fuera de obra** (corporativo):
-    1. Dashboard → `/app`
-    2. Obras → `/app` (lista — mismo destino, pero podemos dejar Catálogos)
-    3. Catálogos → `/app/catalogos`
-    4. Configuración → `/app/configuracion`
-    5. Más → abre Sheet
-  - **Dentro de obra**:
-    1. Resumen → `/app/obras/$obraId`
-    2. Estimaciones → `/app/obras/$obraId/estimaciones`
-    3. Tareas → `/app/obras/$obraId/tareas`
-    4. Almacén → `/app/obras/$obraId/almacen-obra`
-    5. Más → abre Sheet (con los módulos restantes de la obra + atajo "Salir a Obras")
-- Reemplazar el `Sheet` hamburguesa actual del header por:
-  - Quitar el botón `Menu` del header en móvil.
-  - El Sheet del menú completo se abre ahora con el ítem "Más" del bottom bar (mismo `SheetContent side="left"` con el nav existente).
-- Renderizar `<MobileBottomBar />` justo antes de cerrar el shell, fuera del `<main>`.
-- Añadir `pb-20 md:pb-0` al `<main>` para que la barra no tape el contenido.
+### 2. `src/components/AppShell.tsx`
 
-### 3. `ObraShell.tsx`
+- Cuando `isInsideObra`, pasar `variant="scroll"` y un array de 10 items (en este orden, según pidió el usuario):
+  1. Presupuesto → `/app/obras/$obraId/presupuesto`
+  2. Requisiciones → `/app/obras/$obraId/requisiciones`
+  3. Nómina → `/app/obras/$obraId/nomina`
+  4. Destajos → `/app/obras/$obraId/destajos`
+  5. Subcontratos → `/app/obras/$obraId/subcontratos`
+  6. Almacén → `/app/obras/$obraId/almacen-obra`
+  7. Rentas → `/app/obras/$obraId/rentas`
+  8. Gasolinas → `/app/obras/$obraId/gasolinas`
+  9. Caja chica → `/app/obras/$obraId/caja-chica`
+  10. Tareas → `/app/obras/$obraId/tareas`
+- Quitar `onMoreClick` cuando `variant="scroll"` (la prop se vuelve opcional).
+- Fuera de obra: sin cambios (sigue con `variant="fixed"`, 4 items + "Más" abriendo el Sheet con el menú corporativo completo).
+- "Resumen" no entra en el bottom bar de obra: se accede tocando el nombre de la obra en el header de `ObraShell` (ver punto 3).
 
-- Eliminar la `nav` bottom bar actual (ahora la maneja `AppShell`).
-- Quitar el `pb-24` del `<main>` (lo aporta el AppShell).
-- Conservar el header con "← Obras" para el botón de salida en móvil.
+### 3. `src/components/ObraShell.tsx`
 
-### 4. Lista de módulos de obra para el bottom bar
+Hacer que el header móvil de la obra (donde aparece "← Obras" y el nombre de la obra) sea el acceso a **Resumen**: el bloque del nombre/título se convierte en `<Link to="/app/obras/$obraId">`. Así no se pierde el acceso al Resumen a pesar de no estar en el bottom bar.
 
-Crear un export `OBRA_QUICK_NAV` en `src/lib/modules.ts` con las 4 entradas principales (Resumen, Estimaciones, Tareas, Almacén) y `OBRA_MORE_MODULES` con el resto, para alimentar el Sheet "Más" dentro de obra.
+### 4. Iconos
+
+Reutilizar los iconos ya definidos en `src/lib/modules.ts` (`ClipboardList`, `Users`, `Hammer`, `Handshake`, `Warehouse`, `Truck`, `Fuel`, `Coins`, `ListTodo`) + `Receipt` para Presupuesto/Requisiciones según convenga. Sin nuevos assets.
 
 ## Resultado
 
-- **Desktop**: sin cambios visibles. Sidebar siempre presente.
-- **Móvil corporativo**: barra inferior con Dashboard / Obras / Catálogos / Config / Más.
-- **Móvil dentro de obra**: la misma barra inferior cambia a Resumen / Estimaciones / Tareas / Almacén / Más, sin duplicación, sin perder la posibilidad de regresar a otros módulos vía "Más".
-- Header móvil se limpia (sin hamburguesa).
+- Móvil dentro de obra: barra inferior con los 10 módulos en scroll horizontal, fade derecho como pista visual de "hay más", sin estados ocultos ni paginación.
+- Acceso a Resumen via el título del header de la obra.
+- Móvil fuera de obra y desktop: sin cambios.
