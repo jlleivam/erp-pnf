@@ -20,6 +20,7 @@ import {
   Fuel,
   Coins,
   ListTodo,
+  BarChart3,
 } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -245,6 +246,7 @@ export function AppShell() {
           variant="scroll"
           items={[
             { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt },
+            { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: BarChart3 },
             { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList },
             { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users },
             { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer },
