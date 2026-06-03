@@ -58,7 +58,6 @@ function shiftSemana(inicio: string, dias: number): string {
 export function EstadoResultadosModule({ obraId }: { obraId: string }) {
   const semanaActual = useMemo(() => calcularSemana(new Date()), []);
   const [semanaInicio, setSemanaInicio] = useState<string>(semanaActual.inicio);
-  const [detalleCat, setDetalleCat] = useState<CostoCategoria | "produccion" | null>(null);
 
   const fetchSemana = useServerFn(getEstadoResultadosSemana);
   const fetchHistorico = useServerFn(getEstadoResultadosHistorico);
@@ -76,19 +75,6 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
   const semana = semanaQ.data;
   const rango = formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6));
 
-  const detalleDocs: DocumentoCosto[] =
-    detalleCat === "produccion"
-      ? semana?.produccion_detalle ?? []
-      : detalleCat
-        ? semana?.detalle[detalleCat] ?? []
-        : [];
-  const detalleTitulo =
-    detalleCat === "produccion"
-      ? "Producción ejercida"
-      : detalleCat
-        ? CATEGORIA_LABELS[detalleCat]
-        : "";
-
   const acumulado = useMemo(() => {
     if (!histQ.data) return null;
     const hasta = histQ.data.filter((s) => s.semana_inicio <= semanaInicio);
@@ -101,6 +87,7 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
       { produccion: 0, costos: 0, resultado: 0 },
     );
   }, [histQ.data, semanaInicio]);
+
 
   return (
     <div className="space-y-6">
