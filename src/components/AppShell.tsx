@@ -148,24 +148,12 @@ export function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
-            {/* Mobile sidebar trigger */}
-            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menú">
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col">
-                {sidebarBranding}
-                {renderNav(() => setMobileOpen(false))}
-              </SheetContent>
-            </Sheet>
-
             <Link to="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Building2 className="size-5 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">ERP PNF</span>
             </Link>
           </div>
+
 
           <div className="flex items-center gap-3">
             <NotificacionesBell />
