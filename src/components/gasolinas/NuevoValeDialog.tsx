@@ -31,6 +31,7 @@ export function NuevoValeDialog({ open, onOpenChange, obraId = null, pickObra = 
   const obrasQ = useQuery({
     queryKey: ["obras-for-vale"],
     queryFn: () => listObrasFn().catch(() => []),
+    enabled: pickObra && open,
   });
 
   const [tipo, setTipo] = useState<"magna" | "premium" | "diesel">("magna");
