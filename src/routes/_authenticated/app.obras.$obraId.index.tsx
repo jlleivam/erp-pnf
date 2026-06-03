@@ -35,6 +35,7 @@ const MODULES = [
   { to: "gasolinas", label: "Gasolinas" },
   { to: "caja-chica", label: "Caja chica" },
   { to: "almacen-obra", label: "Almacén de obra" },
+  { to: "estado-resultados", label: "Estado de resultados" },
   { to: "tareas", label: "Tareas" },
   { to: "catalogos", label: "Catálogos" },
 ];
