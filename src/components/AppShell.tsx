@@ -205,6 +205,14 @@ export function AppShell() {
 
 
           <div className="flex items-center gap-3">
+            {isInsideObra && (
+              <Button asChild variant="ghost" size="sm" className="gap-2" title="Salir de la obra">
+                <Link to="/app" aria-label="Salir de la obra">
+                  <X className="size-4" />
+                  <span className="hidden sm:inline">Salir</span>
+                </Link>
+              </Button>
+            )}
             <NotificacionesBell />
 
             <Button asChild variant="ghost" size="sm" className="gap-2" title="Configuración de la empresa">
