@@ -122,24 +122,6 @@ function ObraDashboard() {
         ))}
       </div>
 
-      {/* Módulos */}
-      <div>
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          Módulos de la obra
-        </h2>
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {MODULES.map((mod) => (
-            <Link
-              key={mod.to}
-              to="/app/obras/$obraId/$"
-              params={{ obraId, _splat: mod.to }}
-              className="rounded-md border border-border bg-card hover:border-primary/40 transition-colors p-3 text-sm"
-            >
-              {mod.label}
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
