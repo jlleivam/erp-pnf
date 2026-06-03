@@ -60,7 +60,11 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
 
   const revisarM = useMutation({
     mutationFn: revisar,
-    onSuccess: invalidate,
+    onSuccess: (_data, vars: any) => {
+      const decision = vars?.data?.decision;
+      toast.success(decision === "aprobado" ? "Gasto aprobado" : "Gasto rechazado");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
   const cerrarM = useMutation({
