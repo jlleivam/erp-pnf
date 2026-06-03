@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { ClientOnly } from "@tanstack/react-router";
 import {
   getEstadoResultadosSemana,
   getEstadoResultadosHistorico,
