@@ -9,8 +9,7 @@ import {
   getEstadoResultadosAcumulado,
   getObraSemanaBoundaries,
 } from "@/lib/api/estado-resultados.functions";
-import { numeroSemanaObra } from "@/lib/estimacion-utils";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { numeroSemanaObra, rangoSemanaObra } from "@/lib/estimacion-utils";
 import {
   listMisTareasObra,
   actualizarTareaEstatus,
