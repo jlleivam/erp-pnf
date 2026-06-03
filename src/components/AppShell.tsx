@@ -227,12 +227,45 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto">
           <Outlet />
         </main>
       </div>
+
+      {/* Bottom bar móvil (contextual) */}
+      <MobileBottomBar
+        pathname={pathname}
+        items={
+          isInsideObra && obraId
+            ? [
+                { to: `/app/obras/${obraId}`, label: "Resumen", icon: LayoutGrid, exact: true },
+                { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: Receipt },
+                { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListChecks },
+                { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Package },
+              ] satisfies BottomBarItem[]
+            : [
+                { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+                { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
+                { to: "/app/equipo", label: "Equipo", icon: UserCog },
+                { to: "/app/configuracion", label: "Config", icon: Settings },
+              ] satisfies BottomBarItem[]
+        }
+        onMoreClick={() => setMobileOpen(true)}
+      />
+
+      {/* Sheet con menú completo (se abre desde "Más") */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent
+          side="left"
+          className="p-0 w-72 bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col"
+        >
+          {sidebarBranding}
+          {renderNav(() => setMobileOpen(false))}
+        </SheetContent>
+      </Sheet>
     </div>
   );
+
 }
 
 function NavItem({
