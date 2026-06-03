@@ -239,25 +239,35 @@ export function AppShell() {
       </div>
 
       {/* Bottom bar móvil (contextual) */}
-      <MobileBottomBar
-        pathname={pathname}
-        items={
-          isInsideObra && obraId
-            ? [
-                { to: `/app/obras/${obraId}`, label: "Resumen", icon: LayoutGrid, exact: true },
-                { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: Receipt },
-                { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListChecks },
-                { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Package },
-              ] satisfies BottomBarItem[]
-            : [
-                { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
-                { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
-                { to: "/app/equipo", label: "Equipo", icon: UserCog },
-                { to: "/app/configuracion", label: "Config", icon: Settings },
-              ] satisfies BottomBarItem[]
-        }
-        onMoreClick={() => setMobileOpen(true)}
-      />
+      {isInsideObra && obraId ? (
+        <MobileBottomBar
+          pathname={pathname}
+          variant="scroll"
+          items={[
+            { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt },
+            { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList },
+            { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users },
+            { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer },
+            { to: `/app/obras/${obraId}/subcontratos`, label: "Subcontratos", icon: Handshake },
+            { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Warehouse },
+            { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck },
+            { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel },
+            { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins },
+            { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo },
+          ] satisfies BottomBarItem[]}
+        />
+      ) : (
+        <MobileBottomBar
+          pathname={pathname}
+          items={[
+            { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+            { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
+            { to: "/app/equipo", label: "Equipo", icon: UserCog },
+            { to: "/app/configuracion", label: "Config", icon: Settings },
+          ] satisfies BottomBarItem[]}
+          onMoreClick={() => setMobileOpen(true)}
+        />
+      )}
 
       {/* Sheet con menú completo (se abre desde "Más") */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
