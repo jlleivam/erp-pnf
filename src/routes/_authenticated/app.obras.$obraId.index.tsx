@@ -255,37 +255,66 @@ function ObraHeader({
 function PanelEstadoResultados({
   obraId,
   inicio,
+  modo,
+  onModoChange,
   isLoading,
   data,
+  boundaries,
 }: {
   obraId: string;
   inicio: string;
+  modo: "semana" | "global";
+  onModoChange: (m: "semana" | "global") => void;
   isLoading: boolean;
   data:
     | {
-        semana_inicio: string;
-        semana_fin: string;
+        semana_inicio?: string;
+        semana_fin?: string;
         produccion: number;
         costos_total: number;
         resultado: number;
         margen: number;
       }
     | undefined;
+  boundaries: { fechaInicio: string; primerSemana: string; semanaActual: string } | undefined;
 }) {
   const positivo = (data?.resultado ?? 0) >= 0;
 
-  const rango = data
-    ? `${new Date(data.semana_inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${new Date(data.semana_fin).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`
-    : new Date(inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+  const numSemana = boundaries
+    ? numeroSemanaObra(boundaries.fechaInicio, inicio)
+    : null;
+
+  const rangoSemana =
+    data && data.semana_inicio && data.semana_fin
+      ? `${new Date(data.semana_inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${new Date(data.semana_fin).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`
+      : new Date(inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+
+  const subtitulo =
+    modo === "semana"
+      ? numSemana
+        ? `Semana ${numSemana} · ${rangoSemana}`
+        : rangoSemana
+      : "Desde inicio de obra hasta hoy";
 
   return (
     <Card className="p-4 space-y-4 flex flex-col">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-          <TrendingUp className="size-3.5" /> Resultado semana
+          <TrendingUp className="size-3.5" />
+          {modo === "semana" ? "Resultado semana" : "Resultado global"}
         </div>
-        <span className="text-xs text-muted-foreground">{rango}</span>
+        <ToggleGroup
+          type="single"
+          value={modo}
+          onValueChange={(v) => v && onModoChange(v as "semana" | "global")}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="semana" className="text-xs h-7 px-2">Semana</ToggleGroupItem>
+          <ToggleGroupItem value="global" className="text-xs h-7 px-2">Global</ToggleGroupItem>
+        </ToggleGroup>
       </div>
+      <p className="text-xs text-muted-foreground -mt-2">{subtitulo}</p>
 
       {isLoading ? (
         <div className="space-y-3 flex-1">
