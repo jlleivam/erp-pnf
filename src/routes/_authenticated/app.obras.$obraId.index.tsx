@@ -1,10 +1,34 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { getObraDashboard } from "@/lib/api/obras.functions";
+import { getEstadoResultadosSemana } from "@/lib/api/estado-resultados.functions";
+import {
+  listMisTareasObra,
+  actualizarTareaEstatus,
+} from "@/lib/api/tareas.functions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, FileText, Users, Construction } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Calendar,
+  MapPin,
+  FileText,
+  Users,
+  Copy,
+  ExternalLink,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
+  Plus,
+  ListTodo,
+} from "lucide-react";
+import { formatMXN, formatDate } from "@/lib/format";
+import { NuevaTareaDialog } from "@/components/tareas/NuevaTareaDialog";
 
 const TIPO_LABELS: Record<string, string> = {
   industrial: "Industrial",
@@ -23,26 +47,47 @@ const ROLE_LABELS: Record<string, string> = {
   supervisor: "Supervisor",
 };
 
-
 export const Route = createFileRoute("/_authenticated/app/obras/$obraId/")({
   component: ObraDashboard,
 });
 
+// Lunes de la semana actual como YYYY-MM-DD
+function lunesSemanaActual(): string {
+  const d = new Date();
+  const day = d.getDay(); // 0=dom, 1=lun, ...
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
 function ObraDashboard() {
   const { obraId } = Route.useParams();
   const fetchDashboard = useServerFn(getObraDashboard);
-  const { data, isLoading, error } = useQuery({
+  const fetchSemana = useServerFn(getEstadoResultadosSemana);
+  const fetchTareas = useServerFn(listMisTareasObra);
+
+  const semanaInicio = lunesSemanaActual();
+
+  const dashboard = useQuery({
     queryKey: ["obra-dashboard", obraId],
     queryFn: () => fetchDashboard({ data: { obraId } }),
   });
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
-  if (error || !data) return <p className="text-sm text-destructive">No se pudo cargar la obra.</p>;
+  const semana = useQuery({
+    queryKey: ["obra-semana", obraId, semanaInicio],
+    queryFn: () => fetchSemana({ data: { obraId, semanaInicio } }),
+  });
 
-  const { obra, team } = data;
+  const tareas = useQuery({
+    queryKey: ["mis-tareas-obra", obraId],
+    queryFn: () => fetchTareas({ data: { obraId } }),
+  });
 
-  const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  if (dashboard.isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
+  if (dashboard.error || !dashboard.data)
+    return <p className="text-sm text-destructive">No se pudo cargar la obra.</p>;
+
+  const { obra, team } = dashboard.data;
 
   return (
     <div className="space-y-6">
@@ -53,75 +98,324 @@ function ObraDashboard() {
         </div>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-2">
-            <Users className="size-3.5" /> Cliente
-          </div>
-          <p className="font-medium">{obra.cliente?.razon_social ?? "Sin cliente"}</p>
-          {obra.cliente?.rfc && (
-            <p className="text-sm text-muted-foreground mt-1">{obra.cliente.rfc}</p>
-          )}
-        </Card>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <PanelInfoGeneral obra={obra} team={team} />
+        <PanelEstadoResultados
+          obraId={obraId}
+          inicio={semanaInicio}
+          isLoading={semana.isLoading}
+          data={semana.data}
+        />
+        <PanelTareas obraId={obraId} isLoading={tareas.isLoading} tareas={tareas.data ?? []} />
+      </div>
+    </div>
+  );
+}
 
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-2">
-            <FileText className="size-3.5" /> Contrato
-          </div>
-          <p className="font-medium">{obra.numero_contrato ?? "—"}</p>
-          {obra.ubicacion && (
-            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-              <MapPin className="size-3" /> {obra.ubicacion}
-            </p>
-          )}
-        </Card>
+// ============================================================
+// Panel 1 — Info general
+// ============================================================
 
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-2">
-            <Calendar className="size-3.5" /> Fechas
-          </div>
-          <p className="text-sm">
-            <span className="text-muted-foreground">Inicio:</span> {fmtDate(obra.fecha_inicio)}
-          </p>
-          <p className="text-sm">
-            <span className="text-muted-foreground">Terminación:</span> {fmtDate(obra.fecha_terminacion)}
-          </p>
-        </Card>
+function PanelInfoGeneral({
+  obra,
+  team,
+}: {
+  obra: {
+    nombre: string;
+    numero_contrato: string | null;
+    ubicacion: string | null;
+    fecha_inicio: string | null;
+    fecha_terminacion: string | null;
+    cliente: { razon_social: string; rfc: string | null } | null;
+  };
+  team: Array<{ id: string; role: string; user: { nombre_completo: string } | null }>;
+}) {
+  const copiarUbicacion = async () => {
+    if (!obra.ubicacion) return;
+    try {
+      await navigator.clipboard.writeText(obra.ubicacion);
+      toast.success("Ubicación copiada");
+    } catch {
+      toast.error("No se pudo copiar");
+    }
+  };
+
+  const mapsHref = obra.ubicacion
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(obra.ubicacion)}`
+    : null;
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+        <FileText className="size-3.5" /> Información general
       </div>
 
-      <Card className="p-4">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-3">
-          <Users className="size-3.5" /> Equipo asignado
+      <div>
+        <p className="text-xs text-muted-foreground">Cliente</p>
+        <p className="font-medium">{obra.cliente?.razon_social ?? "Sin cliente"}</p>
+        {obra.cliente?.rfc && <p className="text-xs text-muted-foreground">{obra.cliente.rfc}</p>}
+      </div>
+
+      {obra.numero_contrato && (
+        <div>
+          <p className="text-xs text-muted-foreground">Contrato</p>
+          <p className="text-sm">{obra.numero_contrato}</p>
         </div>
+      )}
+
+      <div>
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <MapPin className="size-3" /> Ubicación
+        </p>
+        {obra.ubicacion ? (
+          <div className="space-y-2">
+            <p className="text-sm">{obra.ubicacion}</p>
+            <div className="flex gap-2">
+              <Button asChild size="sm" variant="outline">
+                <a href={mapsHref!} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="size-3.5" /> Maps
+                </a>
+              </Button>
+              <Button size="sm" variant="outline" onClick={copiarUbicacion}>
+                <Copy className="size-3.5" /> Copiar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">—</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Calendar className="size-3" /> Inicio
+          </p>
+          <p className="text-sm">{formatDate(obra.fecha_inicio)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Calendar className="size-3" /> Terminación
+          </p>
+          <p className="text-sm">{formatDate(obra.fecha_terminacion)}</p>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+          <Users className="size-3" /> Equipo
+        </p>
         {team.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sin equipo asignado.</p>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="space-y-1.5">
             {team.map((m) => (
-              <li key={m.id} className="py-2 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{m.user?.nombre_completo ?? "—"}</p>
-                  <p className="text-xs text-muted-foreground">{m.user?.email ?? ""}</p>
-                </div>
-                <Badge variant="outline">{ROLE_LABELS[m.role] ?? m.role}</Badge>
+              <li key={m.id} className="flex items-center justify-between text-sm">
+                <span>{m.user?.nombre_completo ?? "—"}</span>
+                <Badge variant="outline" className="text-xs">
+                  {ROLE_LABELS[m.role] ?? m.role}
+                </Badge>
               </li>
             ))}
           </ul>
         )}
-      </Card>
+      </div>
+    </Card>
+  );
+}
 
-      {/* Métricas placeholder */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {["Avance físico", "Presupuesto ejercido", "Caja chica"].map((m) => (
-          <Card key={m} className="p-4 border-dashed">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">{m}</p>
-            <p className="mt-2 text-sm text-muted-foreground flex items-center gap-1">
-              <Construction className="size-3.5" /> Próximamente
-            </p>
-          </Card>
-        ))}
+// ============================================================
+// Panel 2 — Estado de resultados (semana actual)
+// ============================================================
+
+function PanelEstadoResultados({
+  obraId,
+  inicio,
+  isLoading,
+  data,
+}: {
+  obraId: string;
+  inicio: string;
+  isLoading: boolean;
+  data:
+    | {
+        semana_inicio: string;
+        semana_fin: string;
+        produccion: number;
+        costos_total: number;
+        resultado: number;
+        margen: number;
+      }
+    | undefined;
+}) {
+  const positivo = (data?.resultado ?? 0) >= 0;
+
+  const rango = data
+    ? `${new Date(data.semana_inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${new Date(data.semana_fin).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`
+    : new Date(inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+
+  return (
+    <Card className="p-4 space-y-4 flex flex-col">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+          <TrendingUp className="size-3.5" /> Resultado semana
+        </div>
+        <span className="text-xs text-muted-foreground">{rango}</span>
       </div>
 
-    </div>
+      {isLoading ? (
+        <div className="space-y-3 flex-1">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      ) : (
+        <div className="space-y-3 flex-1">
+          <div>
+            <p className="text-xs text-muted-foreground">Producción</p>
+            <p className="text-lg font-semibold">{formatMXN(data?.produccion ?? 0)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Gasto</p>
+            <p className="text-lg font-semibold">{formatMXN(data?.costos_total ?? 0)}</p>
+          </div>
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              {positivo ? (
+                <TrendingUp className="size-3 text-emerald-600" />
+              ) : (
+                <TrendingDown className="size-3 text-destructive" />
+              )}
+              {positivo ? "Utilidad" : "Pérdida"}
+            </p>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p
+                className={`text-2xl font-bold ${
+                  positivo ? "text-emerald-600" : "text-destructive"
+                }`}
+              >
+                {formatMXN(data?.resultado ?? 0)}
+              </p>
+              <Badge variant={positivo ? "default" : "destructive"} className="text-xs">
+                {((data?.margen ?? 0) * 100).toFixed(1)}%
+              </Badge>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Button asChild variant="outline" size="sm" className="w-full">
+        <Link to="/app/obras/$obraId/$" params={{ obraId, _splat: "estado-resultados" }}>
+          Ver detalle <ArrowRight className="size-3.5" />
+        </Link>
+      </Button>
+    </Card>
+  );
+}
+
+// ============================================================
+// Panel 3 — Mis tareas pendientes
+// ============================================================
+
+function PanelTareas({
+  obraId,
+  isLoading,
+  tareas,
+}: {
+  obraId: string;
+  isLoading: boolean;
+  tareas: Array<{
+    id: string;
+    titulo: string;
+    fecha_limite: string | null;
+    estatus: string;
+  }>;
+}) {
+  const [openNueva, setOpenNueva] = useState(false);
+  const qc = useQueryClient();
+  const actualizar = useServerFn(actualizarTareaEstatus);
+
+  const mEstatus = useMutation({
+    mutationFn: (vars: { id: string; estatus: "completada" | "pendiente" }) =>
+      actualizar({ data: vars }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mis-tareas-obra", obraId] });
+      qc.invalidateQueries({ queryKey: ["tareas-obra", obraId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Error"),
+  });
+
+  return (
+    <Card className="p-4 space-y-4 flex flex-col">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+          <ListTodo className="size-3.5" /> Mis tareas pendientes
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => setOpenNueva(true)}>
+          <Plus className="size-3.5" /> Nueva
+        </Button>
+      </div>
+
+      <div className="flex-1">
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : tareas.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            No tienes tareas pendientes en esta obra.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {tareas.map((t) => (
+              <TareaRow
+                key={t.id}
+                tarea={t}
+                onToggle={(checked) =>
+                  mEstatus.mutate({ id: t.id, estatus: checked ? "completada" : "pendiente" })
+                }
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <Button asChild variant="outline" size="sm" className="w-full">
+        <Link to="/app/obras/$obraId/$" params={{ obraId, _splat: "tareas" }}>
+          Ver todas <ArrowRight className="size-3.5" />
+        </Link>
+      </Button>
+
+      <NuevaTareaDialog obraId={obraId} open={openNueva} onOpenChange={setOpenNueva} />
+    </Card>
+  );
+}
+
+function TareaRow({
+  tarea,
+  onToggle,
+}: {
+  tarea: { id: string; titulo: string; fecha_limite: string | null };
+  onToggle: (checked: boolean) => void;
+}) {
+  let urgencyClass = "text-muted-foreground";
+  if (tarea.fecha_limite) {
+    const ms = new Date(tarea.fecha_limite).getTime() - Date.now();
+    const dias = Math.floor(ms / (1000 * 60 * 60 * 24));
+    if (dias < 0) urgencyClass = "text-destructive font-medium";
+    else if (dias <= 3) urgencyClass = "text-amber-600 dark:text-amber-400";
+  }
+
+  return (
+    <li className="py-2 flex items-center gap-3">
+      <Checkbox onCheckedChange={(v) => onToggle(Boolean(v))} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm truncate">{tarea.titulo}</p>
+        {tarea.fecha_limite && (
+          <p className={`text-xs ${urgencyClass}`}>{formatDate(tarea.fecha_limite)}</p>
+        )}
+      </div>
+    </li>
   );
 }
