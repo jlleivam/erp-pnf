@@ -274,12 +274,7 @@ function PanelEstadoResultados({
   const numSemana = boundaries ? numeroSemanaObra(boundaries.fechaInicio, inicio) : null;
 
   const rangoSemana = boundaries
-    ? (() => {
-        const r = rangoSemanaObra(boundaries.fechaInicio, inicio);
-        const fmt = (d: string) =>
-          new Date(d).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-        return `${fmt(r.inicio)} – ${fmt(r.fin)}`;
-      })()
+    ? rangoSemanaObra(boundaries.fechaInicio, inicio)
     : new Date(inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 
   const subSemana = numSemana ? `Semana ${numSemana} · ${rangoSemana}` : rangoSemana;
