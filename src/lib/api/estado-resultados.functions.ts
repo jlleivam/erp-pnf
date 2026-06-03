@@ -624,7 +624,7 @@ export const getObraSemanaBoundaries = createServerFn({ method: "POST" })
     z.object({ obraId: z.string().uuid() }).parse(d),
   )
   .handler(
-    async ({ data, context }): Promise<{ primerSemana: string; semanaActual: string }> => {
+    async ({ data, context }): Promise<{ fechaInicio: string; primerSemana: string; semanaActual: string }> => {
       const { supabase } = context;
       const { data: obra, error } = await supabase
         .from("obras")
@@ -636,9 +636,10 @@ export const getObraSemanaBoundaries = createServerFn({ method: "POST" })
       const base = obra.fecha_inicio
         ? new Date(obra.fecha_inicio + "T12:00:00")
         : new Date(obra.created_at);
+      const fechaInicio = toISODate(base);
       const primerSemana = calcularSemana(base).inicio;
       const semanaActual = calcularSemana(new Date()).inicio;
-      return { primerSemana, semanaActual };
+      return { fechaInicio, primerSemana, semanaActual };
     },
   );
 

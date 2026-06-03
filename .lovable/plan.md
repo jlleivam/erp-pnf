@@ -1,36 +1,35 @@
-## Vista Global + límite de navegación de semanas en Estado de resultados
+## Objetivo
 
-### Cambios en backend
+Mostrar "Semana N" en el estado de resultados, contando desde la fecha de inicio (o creación) de la obra. La **Semana 1** abarca desde `fecha_inicio` hasta el domingo de esa misma semana ISO (parcial si la obra arrancó en miércoles, jueves, etc.). Las siguientes semanas son completas lunes–domingo.
 
-**`src/lib/api/estado-resultados.functions.ts`** — añadir 2 server fns:
+## Cambios
 
-1. **`getObraSemanaBoundaries({ obraId })`** → `{ primerSemana: string, semanaActual: string }`
-   - Lee `obras.fecha_inicio` y `obras.created_at`; usa `fecha_inicio` si existe, si no `created_at` (fallback). La fecha base se normaliza al lunes de su semana con `calcularSemana()`.
-   - `semanaActual` = lunes de la semana de hoy.
-   - Sirve para limitar el navegador de semanas.
+### 1. Helpers en `src/lib/estimacion-utils.ts`
 
-2. **`getEstadoResultadosAcumulado({ obraId })`** → `SemanaDetalle` (mismo shape que `getEstadoResultadosSemana`)
-   - Calcula la lista de semanas desde `primerSemana` hasta `semanaActual` (helper interno tipo `semanasEntre(inicio, fin)`).
-   - Llama `calcularBuckets(..., withDetail=true)` y agrega: suma `produccion`, suma cada categoría de `costos`, concatena `detalle[cat]` y `produccion_detalle` de todos los buckets. `resultado` y `margen` recalculados a partir del agregado.
-   - `semana_inicio` = primerSemana, `semana_fin` = fin de semanaActual.
+Agregar dos utilidades puras (no tocan las existentes):
 
-### Cambios en UI
+- **`numeroSemanaObra(fechaInicioObra: string, semanaInicio: string): number`**
+  Devuelve el índice 1-based de la semana. Se calcula como `floor((semanaInicio_lunes − primerSemana_lunes) / 7 días) + 1`. Para cualquier fecha dentro de la primera semana ISO de la obra, retorna `1`.
 
-**`src/components/estado-resultados/EstadoResultadosModule.tsx`**:
+- **`rangoSemanaObra(fechaInicioObra: string, semanaInicio: string): string`**
+  Igual que `formatRangoSemana`, pero si `semanaInicio` corresponde a la **semana 1** y `fechaInicio` cae después del lunes de esa semana, el rango inicia en `fechaInicio` en vez del lunes (ej.: "05 jun – 08 jun 2026" para una obra que arrancó jueves). Para las demás semanas, comportamiento normal lunes–domingo.
 
-- Estado nuevo: `modo: "semana" | "global"` (default `"semana"`).
-- Query nueva para boundaries; otra query para `getEstadoResultadosAcumulado` (habilitada sólo cuando `modo === "global"`).
-- **Header**:
-  - Añadir un `ToggleGroup` (o tabs) `[Semana | Global]` a la izquierda del navegador de semanas.
-  - En modo `"semana"`: navegador visible. Botón **anterior** se deshabilita cuando `semanaInicio <= primerSemana`. Botón **siguiente** ya está limitado por `semanaActual`.
-  - En modo `"global"`: navegador oculto; en su lugar muestra un texto `Desde {primerSemana} hasta {semanaActual}`.
-- **Cuerpo**: las tarjetas resumen y el desglose por categorías ya son agnósticos al rango — se alimentan de la misma estructura `SemanaDetalle`, así que sólo cambia la fuente de datos según el modo.
-- **Histórico de 8 semanas**: se mantiene visible en ambos modos (es un gráfico independiente).
-- **Card "Acumulado de la obra"** (al final): sólo se muestra en modo `"semana"` (en modo global es redundante).
-- Etiquetas dinámicas de las tarjetas: "Producción ejercida" / "Costos totales" / "Resultado" funcionan igual; el subtítulo del header pasa a `"Producción contra costos · {semana | acumulado de la obra}"`.
+### 2. Backend `src/lib/api/estado-resultados.functions.ts`
 
-### Archivos a tocar
-- `src/lib/api/estado-resultados.functions.ts` (2 nuevas server fns + helper `semanasEntre`)
-- `src/components/estado-resultados/EstadoResultadosModule.tsx` (toggle, queries, render condicional)
+- **`getObraSemanaBoundaries`**: incluir también `fechaInicio` (string ISO YYYY-MM-DD) en el retorno, además de `primerSemana` y `semanaActual`. Es la fecha real (no normalizada a lunes) que se usa para mostrar el rango de la semana 1.
 
-Sin migraciones de DB.
+### 3. UI `src/components/estado-resultados/EstadoResultadosModule.tsx`
+
+- Importar los nuevos helpers.
+- Reemplazar el cálculo de `rango` para combinar número + rango:
+  - Modo semana: `"Semana N · {rangoSemanaObra(...)}"`.
+  - Modo global: `"Acumulado · Semanas 1–N hasta hoy"`, donde N corresponde a `semanaActual`.
+- Subtítulo del header: en modo semana, `"Producción contra costos · Semana N de la obra"`.
+- En la card "Acumulado de la obra (hasta esta semana)" del modo semana, agregar el sufijo `"(Semanas 1–N)"`.
+- En el histórico de 8 semanas, sustituir el tick del eje X (`s.semana_inicio.slice(5)`) por `"S{N}"` calculado con `numeroSemanaObra`, dejando la fecha completa en el tooltip.
+
+## Notas técnicas
+
+- No se modifica `calcularSemana` (sigue normalizando a lunes–domingo ISO); la numeración es derivada y vive solo en presentación + cómputo.
+- No requiere migración: `fecha_inicio` y `created_at` ya se leen en `getObraSemanaBoundaries`.
+- Si `fecha_inicio` es nula se usa `created_at` como hoy, igual que ya lo hace el código actual.

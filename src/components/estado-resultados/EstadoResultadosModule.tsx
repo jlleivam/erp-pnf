@@ -11,7 +11,7 @@ import {
   type DocumentoCosto,
   type ConceptoDetalle,
 } from "@/lib/api/estado-resultados.functions";
-import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
+import { calcularSemana, formatRangoSemana, numeroSemanaObra, rangoSemanaObra, toISODate } from "@/lib/estimacion-utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,14 +93,23 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
 
   const activeQ = modo === "semana" ? semanaQ : acumQ;
   const semana = activeQ.data;
+  const fechaInicio = boundariesQ.data?.fechaInicio;
+  const primerSemana = boundariesQ.data?.primerSemana;
+  const numActual = fechaInicio
+    ? numeroSemanaObra(fechaInicio, semanaActual.inicio)
+    : 0;
+  const numSeleccion = fechaInicio
+    ? numeroSemanaObra(fechaInicio, semanaInicio)
+    : 0;
   const rango =
     modo === "semana"
-      ? formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6))
-      : boundariesQ.data
-        ? `Desde ${formatRangoSemana(boundariesQ.data.primerSemana, shiftSemana(boundariesQ.data.primerSemana, 6))} hasta hoy`
+      ? fechaInicio
+        ? `Semana ${numSeleccion} · ${rangoSemanaObra(fechaInicio, semanaInicio)}`
+        : formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6))
+      : fechaInicio
+        ? `Acumulado · Semanas 1–${numActual} hasta hoy`
         : "Acumulado de la obra";
 
-  const primerSemana = boundariesQ.data?.primerSemana;
   const puedeAnterior =
     modo === "semana" && (!primerSemana || semanaInicio > primerSemana);
   const puedeSiguiente =
@@ -126,7 +135,9 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Estado de resultados</h1>
           <p className="text-sm text-muted-foreground">
-            Producción contra costos · {modo === "semana" ? "semana seleccionada" : "acumulado de la obra"}
+            Producción contra costos · {modo === "semana"
+              ? fechaInicio ? `Semana ${numSeleccion} de la obra` : "semana seleccionada"
+              : "acumulado de la obra"}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -152,7 +163,7 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
               >
                 <ChevronLeft className="size-4" />
               </Button>
-              <div className="text-sm font-medium px-3 min-w-[180px] text-center">{rango}</div>
+              <div className="text-sm font-medium px-3 min-w-[260px] text-center">{rango}</div>
               <Button
                 variant="outline"
                 size="icon"
@@ -304,7 +315,9 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
                 >
                   <BarChart
                     data={histQ.data.map((s) => ({
-                      semana: s.semana_inicio.slice(5),
+                      semana: fechaInicio
+                        ? `S${numeroSemanaObra(fechaInicio, s.semana_inicio)}`
+                        : s.semana_inicio.slice(5),
                       produccion: s.produccion,
                       costos: s.costos_total,
                     }))}
@@ -337,7 +350,9 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
           {/* Acumulado */}
           {acumulado && (
             <Card className="p-4">
-              <h2 className="text-sm font-medium mb-3">Acumulado de la obra (hasta esta semana)</h2>
+              <h2 className="text-sm font-medium mb-3">
+                Acumulado de la obra{fechaInicio ? ` (Semanas 1–${numSeleccion})` : " (hasta esta semana)"}
+              </h2>
               <div className="grid gap-4 sm:grid-cols-3 text-sm">
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">

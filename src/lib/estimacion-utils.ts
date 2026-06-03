@@ -32,6 +32,35 @@ export function formatRangoSemana(inicio: string, fin: string): string {
   return `${fmt(i)} – ${fmt(f)} ${f.getFullYear()}`;
 }
 
+/**
+ * Número de semana 1-based relativo a la fecha de inicio de la obra.
+ * La primera semana ISO (lunes-domingo) que contiene `fechaInicioObra` es la semana 1.
+ */
+export function numeroSemanaObra(
+  fechaInicioObra: string,
+  semanaInicio: string,
+): number {
+  const primer = calcularSemana(fechaInicioObra).inicio;
+  const a = new Date(primer + "T12:00:00").getTime();
+  const b = new Date(semanaInicio + "T12:00:00").getTime();
+  const diffDias = Math.round((b - a) / (1000 * 60 * 60 * 24));
+  return Math.floor(diffDias / 7) + 1;
+}
+
+/**
+ * Rango legible de una semana. Para la semana 1, inicia en `fechaInicioObra`
+ * (puede ser parcial, p.ej. jueves-domingo). Para el resto, lunes-domingo completo.
+ */
+export function rangoSemanaObra(
+  fechaInicioObra: string,
+  semanaInicio: string,
+): string {
+  const { inicio, fin } = calcularSemana(semanaInicio);
+  const esPrimera = numeroSemanaObra(fechaInicioObra, semanaInicio) === 1;
+  const inicioReal = esPrimera && fechaInicioObra > inicio ? fechaInicioObra : inicio;
+  return formatRangoSemana(inicioReal, fin);
+}
+
 export type EstimacionRenglonInput = {
   renglon_clave: string;
   cantidad_ejecutada: number;
