@@ -70,7 +70,11 @@ function ObraDashboard() {
   const fetchSemana = useServerFn(getEstadoResultadosSemana);
   const fetchTareas = useServerFn(listMisTareasObra);
 
+  const fetchAcumulado = useServerFn(getEstadoResultadosAcumulado);
+  const fetchBoundaries = useServerFn(getObraSemanaBoundaries);
+
   const semanaInicio = lunesSemanaActual();
+  const [modoER, setModoER] = useState<"semana" | "global">("semana");
 
   const dashboard = useQuery({
     queryKey: ["obra-dashboard", obraId],
@@ -80,6 +84,18 @@ function ObraDashboard() {
   const semana = useQuery({
     queryKey: ["obra-semana", obraId, semanaInicio],
     queryFn: () => fetchSemana({ data: { obraId, semanaInicio } }),
+    enabled: modoER === "semana",
+  });
+
+  const acumulado = useQuery({
+    queryKey: ["obra-acumulado", obraId],
+    queryFn: () => fetchAcumulado({ data: { obraId } }),
+    enabled: modoER === "global",
+  });
+
+  const boundaries = useQuery({
+    queryKey: ["obra-semana-boundaries", obraId],
+    queryFn: () => fetchBoundaries({ data: { obraId } }),
   });
 
   const tareas = useQuery({
@@ -101,8 +117,11 @@ function ObraDashboard() {
         <PanelEstadoResultados
           obraId={obraId}
           inicio={semanaInicio}
-          isLoading={semana.isLoading}
-          data={semana.data}
+          modo={modoER}
+          onModoChange={setModoER}
+          isLoading={modoER === "semana" ? semana.isLoading : acumulado.isLoading}
+          data={modoER === "semana" ? semana.data : acumulado.data}
+          boundaries={boundaries.data}
         />
         <PanelTareas obraId={obraId} isLoading={tareas.isLoading} tareas={tareas.data ?? []} />
       </div>
