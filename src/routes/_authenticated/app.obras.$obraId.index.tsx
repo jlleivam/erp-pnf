@@ -287,28 +287,34 @@ function PanelEstadoResultados({
         Resultado
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-        <ResultadoColumna
-          titulo="Semana"
-          subtitulo={subSemana}
-          isLoading={isLoading}
-          data={dataSemana}
-        />
-        <div className="sm:border-l sm:border-border sm:pl-4 border-t border-border pt-4 sm:border-t-0 sm:pt-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 flex-1">
+        <Link
+          to="/app/obras/$obraId/$"
+          params={{ obraId, _splat: "estado-resultados" }}
+          hash="semana"
+          className="rounded-md p-2 -m-2 hover:bg-muted/50 transition-colors"
+        >
+          <ResultadoColumna
+            titulo="Semana"
+            subtitulo={subSemana}
+            isLoading={isLoading}
+            data={dataSemana}
+          />
+        </Link>
+        <Link
+          to="/app/obras/$obraId/$"
+          params={{ obraId, _splat: "estado-resultados" }}
+          hash="global"
+          className="rounded-md p-2 -m-2 hover:bg-muted/50 transition-colors sm:border-l sm:border-border sm:pl-4 border-t border-border pt-4 sm:border-t-0 mt-4 sm:mt-0"
+        >
           <ResultadoColumna
             titulo="Global"
             subtitulo={subGlobal}
             isLoading={isLoading}
             data={dataAcumulado}
           />
-        </div>
-      </div>
-
-      <Button asChild variant="outline" size="sm" className="w-full">
-        <Link to="/app/obras/$obraId/$" params={{ obraId, _splat: "estado-resultados" }}>
-          Ver detalle <ArrowRight className="size-3.5" />
         </Link>
-      </Button>
+      </div>
     </Card>
   );
 }
