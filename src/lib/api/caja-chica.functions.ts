@@ -477,13 +477,15 @@ export const solicitarReembolsoCajaChica = createServerFn({ method: "POST" })
     }
     const total = gastos.reduce((a: number, g: any) => a + Number(g.monto), 0);
 
-    const { data: folio } = await supabase
+    const { data: folio, error: folioErr } = await supabase
       .rpc("siguiente_folio_caja_chica", { _company_id: ctx.companyId });
+    if (folioErr) throw new Error(folioErr.message);
+    if (!folio) throw new Error("No se pudo generar folio");
 
     const { data: reemb, error } = await supabase
       .from("caja_chica_reembolsos")
       .insert({
-        folio,
+        folio: folio as string,
         company_id: ctx.companyId,
         obra_id: data.obraId,
         residente_id: userId,
