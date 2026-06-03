@@ -613,3 +613,105 @@ export const getEstadoResultadosHistorico = createServerFn({ method: "POST" })
     const buckets = await calcularBuckets(supabase, data.obraId, semanas);
     return buckets.map(bucketToResultado);
   });
+
+// ============================================================
+// Boundaries (primer semana de la obra y semana actual)
+// ============================================================
+
+export const getObraSemanaBoundaries = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ obraId: z.string().uuid() }).parse(d),
+  )
+  .handler(
+    async ({ data, context }): Promise<{ primerSemana: string; semanaActual: string }> => {
+      const { supabase } = context;
+      const { data: obra, error } = await supabase
+        .from("obras")
+        .select("fecha_inicio, created_at")
+        .eq("id", data.obraId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!obra) throw new Error("Obra no encontrada");
+      const base = obra.fecha_inicio
+        ? new Date(obra.fecha_inicio + "T12:00:00")
+        : new Date(obra.created_at);
+      const primerSemana = calcularSemana(base).inicio;
+      const semanaActual = calcularSemana(new Date()).inicio;
+      return { primerSemana, semanaActual };
+    },
+  );
+
+// ============================================================
+// Acumulado global (desde primer semana hasta semana actual)
+// ============================================================
+
+function semanasEntre(
+  inicioISO: string,
+  finISO: string,
+): { inicio: string; fin: string }[] {
+  const out: { inicio: string; fin: string }[] = [];
+  const start = new Date(inicioISO + "T12:00:00");
+  const end = new Date(finISO + "T12:00:00");
+  const cur = new Date(start);
+  // Seguro: cap a 520 semanas (~10 años) para evitar bucles patológicos.
+  let guard = 0;
+  while (cur <= end && guard < 520) {
+    out.push(calcularSemana(cur));
+    cur.setDate(cur.getDate() + 7);
+    guard++;
+  }
+  return out;
+}
+
+export const getEstadoResultadosAcumulado = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ obraId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<SemanaDetalle> => {
+    const { supabase } = context;
+    const { data: obra, error } = await supabase
+      .from("obras")
+      .select("fecha_inicio, created_at")
+      .eq("id", data.obraId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!obra) throw new Error("Obra no encontrada");
+    const base = obra.fecha_inicio
+      ? new Date(obra.fecha_inicio + "T12:00:00")
+      : new Date(obra.created_at);
+    const primer = calcularSemana(base);
+    const actual = calcularSemana(new Date());
+    const semanas = semanasEntre(primer.inicio, actual.inicio);
+
+    const buckets = await calcularBuckets(supabase, data.obraId, semanas, true);
+
+    // Agregar
+    const costos = emptyCostos();
+    const detalle = emptyDetalle();
+    const produccion_detalle: DocumentoCosto[] = [];
+    let produccion = 0;
+    for (const b of buckets) {
+      produccion += b.produccion;
+      for (const cat of Object.keys(costos) as CostoCategoria[]) {
+        costos[cat] += b.costos[cat];
+        detalle[cat].push(...b.detalle[cat]);
+      }
+      produccion_detalle.push(...b.produccion_detalle);
+    }
+    const ct = totalCostos(costos);
+    const resultado = produccion - ct;
+    return {
+      semana_inicio: primer.inicio,
+      semana_fin: actual.fin,
+      produccion,
+      costos,
+      costos_total: ct,
+      resultado,
+      margen: produccion > 0 ? resultado / produccion : 0,
+      detalle,
+      produccion_detalle,
+    };
+  });
+
