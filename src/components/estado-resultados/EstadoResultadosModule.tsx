@@ -14,21 +14,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -42,6 +27,7 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
 import { formatMXN } from "@/lib/format";
+
 
 const CATEGORIA_LABELS: Record<CostoCategoria, string> = {
   almacen: "Almacén (consumido)",
@@ -72,7 +58,6 @@ function shiftSemana(inicio: string, dias: number): string {
 export function EstadoResultadosModule({ obraId }: { obraId: string }) {
   const semanaActual = useMemo(() => calcularSemana(new Date()), []);
   const [semanaInicio, setSemanaInicio] = useState<string>(semanaActual.inicio);
-  const [detalleCat, setDetalleCat] = useState<CostoCategoria | "produccion" | null>(null);
 
   const fetchSemana = useServerFn(getEstadoResultadosSemana);
   const fetchHistorico = useServerFn(getEstadoResultadosHistorico);
@@ -90,19 +75,6 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
   const semana = semanaQ.data;
   const rango = formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6));
 
-  const detalleDocs: DocumentoCosto[] =
-    detalleCat === "produccion"
-      ? semana?.produccion_detalle ?? []
-      : detalleCat
-        ? semana?.detalle[detalleCat] ?? []
-        : [];
-  const detalleTitulo =
-    detalleCat === "produccion"
-      ? "Producción ejercida"
-      : detalleCat
-        ? CATEGORIA_LABELS[detalleCat]
-        : "";
-
   const acumulado = useMemo(() => {
     if (!histQ.data) return null;
     const hasta = histQ.data.filter((s) => s.semana_inicio <= semanaInicio);
@@ -115,6 +87,7 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
       { produccion: 0, costos: 0, resultado: 0 },
     );
   }, [histQ.data, semanaInicio]);
+
 
   return (
     <div className="space-y-6">
@@ -155,22 +128,18 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
         <>
           {/* Tarjetas resumen */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <button
-              onClick={() => setDetalleCat("produccion")}
-              className="text-left"
-            >
-              <Card className="p-4 border-l-4 border-l-emerald-500 hover:border-l-emerald-400 transition-colors">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Producción ejercida
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                  {formatMXN(semana.produccion)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {semana.produccion_detalle.length} estimación(es)
-                </p>
-              </Card>
-            </button>
+            <Card className="p-4 border-l-4 border-l-emerald-500">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                Producción ejercida
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                {formatMXN(semana.produccion)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {semana.produccion_detalle.length} estimación(es)
+              </p>
+            </Card>
+
 
             <Card className="p-4 border-l-4 border-l-rose-500">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -213,60 +182,63 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
               </p>
             </Card>
           </div>
-
-          {/* Tabla por categoría */}
+          {/* Producción y categorías de costo (acordeón inline) */}
           <Card className="p-0 overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
-              <h2 className="text-sm font-medium">Costos por categoría</h2>
+              <h2 className="text-sm font-medium">Desglose de la semana</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Expande cada categoría para ver documentos y conceptos.
+              </p>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead className="text-right">% costo</TableHead>
-                  <TableHead className="text-right">% producción</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {CATEGORIAS.map((cat) => {
-                  const monto = semana.costos[cat];
-                  const pctCosto = semana.costos_total > 0 ? (monto / semana.costos_total) * 100 : 0;
-                  const pctProd = semana.produccion > 0 ? (monto / semana.produccion) * 100 : 0;
-                  return (
-                    <TableRow
-                      key={cat}
-                      className="cursor-pointer"
-                      onClick={() => monto > 0 && setDetalleCat(cat)}
-                    >
-                      <TableCell className="font-medium">{CATEGORIA_LABELS[cat]}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {monto > 0 ? formatMXN(monto) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {monto > 0 ? `${pctCosto.toFixed(1)}%` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {monto > 0 && semana.produccion > 0 ? `${pctProd.toFixed(1)}%` : "—"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="border-t-2 font-semibold">
-                  <TableCell>Total costos</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMXN(semana.costos_total)}
-                  </TableCell>
-                  <TableCell className="text-right">100%</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {semana.produccion > 0
-                      ? `${((semana.costos_total / semana.produccion) * 100).toFixed(1)}%`
-                      : "—"}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <Accordion type="multiple" className="divide-y divide-border">
+              {/* Producción */}
+              <CategoriaAccordion
+                value="produccion"
+                label="Producción ejercida"
+                monto={semana.produccion}
+                pctCosto={null}
+                pctProd={null}
+                accent="emerald"
+                docs={semana.produccion_detalle}
+              />
+              {/* Categorías de costo */}
+              {CATEGORIAS.map((cat) => {
+                const monto = semana.costos[cat];
+                const pctCosto =
+                  semana.costos_total > 0 ? (monto / semana.costos_total) * 100 : 0;
+                const pctProd =
+                  semana.produccion > 0 ? (monto / semana.produccion) * 100 : 0;
+                return (
+                  <CategoriaAccordion
+                    key={cat}
+                    value={cat}
+                    label={CATEGORIA_LABELS[cat]}
+                    monto={monto}
+                    pctCosto={monto > 0 ? pctCosto : null}
+                    pctProd={monto > 0 && semana.produccion > 0 ? pctProd : null}
+                    accent="rose"
+                    docs={semana.detalle[cat]}
+                  />
+                );
+              })}
+              {/* Total costos (no expandible) */}
+              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 font-semibold text-sm bg-muted/30">
+                <div>Total costos</div>
+                <div className="tabular-nums text-right min-w-[110px]">
+                  {formatMXN(semana.costos_total)}
+                </div>
+                <div className="tabular-nums text-right text-muted-foreground min-w-[60px]">
+                  100%
+                </div>
+                <div className="tabular-nums text-right text-muted-foreground min-w-[70px]">
+                  {semana.produccion > 0
+                    ? `${((semana.costos_total / semana.produccion) * 100).toFixed(1)}%`
+                    : "—"}
+                </div>
+              </div>
+            </Accordion>
           </Card>
+
 
           {/* Histórico 8 semanas */}
           {histQ.data && histQ.data.length > 0 && (
@@ -350,21 +322,58 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
         </>
       )}
 
-      {/* Detalle por categoría */}
-      <Sheet open={!!detalleCat} onOpenChange={(o) => !o && setDetalleCat(null)}>
-        <SheetContent className="sm:max-w-lg w-full overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{detalleTitulo}</SheetTitle>
-            <SheetDescription>{rango}</SheetDescription>
-          </SheetHeader>
-          <div className="mt-4">
-            <DocumentosLista docs={detalleDocs} />
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
+
+function CategoriaAccordion({
+  value,
+  label,
+  monto,
+  pctCosto,
+  pctProd,
+  accent,
+  docs,
+}: {
+  value: string;
+  label: string;
+  monto: number;
+  pctCosto: number | null;
+  pctProd: number | null;
+  accent: "emerald" | "rose";
+  docs: DocumentoCosto[];
+}) {
+  const disabled = monto <= 0;
+  const accentClass =
+    accent === "emerald"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-rose-600 dark:text-rose-400";
+  return (
+    <AccordionItem value={value} className="border-0" disabled={disabled}>
+      <AccordionTrigger
+        className="px-4 py-3 hover:no-underline data-[disabled]:opacity-60 data-[disabled]:cursor-default"
+        disabled={disabled}
+      >
+        <div className="flex-1 grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 pr-2 text-sm">
+          <div className="font-medium text-left">{label}</div>
+          <div className={`tabular-nums text-right min-w-[110px] ${monto > 0 ? accentClass : "text-muted-foreground"}`}>
+            {monto > 0 ? formatMXN(monto) : "—"}
+          </div>
+          <div className="tabular-nums text-right text-muted-foreground min-w-[60px]">
+            {pctCosto != null ? `${pctCosto.toFixed(1)}%` : "—"}
+          </div>
+          <div className="tabular-nums text-right text-muted-foreground min-w-[70px]">
+            {pctProd != null ? `${pctProd.toFixed(1)}%` : "—"}
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4 pt-0 bg-muted/20">
+        <DocumentosLista docs={docs} />
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
 
 function DocumentosLista({ docs }: { docs: DocumentoCosto[] }) {
   if (docs.length === 0) {

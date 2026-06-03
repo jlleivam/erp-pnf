@@ -1,49 +1,28 @@
+## Objetivo
 
-# Detalle granular por categoría en Estado de resultados
+Que cada categoría de la tabla "Costos por categoría" — y también la fila de "Producción ejercida" — se pueda **expandir/colapsar inline** en la página principal para revelar sus documentos y conceptos, sin tener que abrir un panel lateral.
 
-Hoy el panel de detalle muestra una lista plana de documentos (ej. "Nómina #3 — $42,000"). Vamos a enriquecerlo para que cada documento se pueda expandir y mostrar sus conceptos internos, mediante acordeones, sin saturar la vista.
+## Cambios (un solo archivo)
 
-## Qué se mostrará por categoría
+`src/components/estado-resultados/EstadoResultadosModule.tsx`
 
-- **Producción (estimación):** cada estimación con sus renglones (clave, concepto, unidad, cantidad ejecutada, P.U., importe ejecutado).
-- **Almacén:** la semana de almacén con la lista de insumos consumidos (nombre, unidad, utilizado, P.U., subtotal).
-- **Nómina:** cada nómina con la lista de trabajadores (nombre, días, horas extra, importe total).
-- **Destajos:** cada estimación de destajo con sus renglones (concepto, cantidad ejecutada, P.U., importe).
-- **Subcontratos:** cada estimación de subcontrato con sus renglones (concepto, cantidad ejecutada, P.U., importe).
-- **Rentas:** cada equipo rentado con detalle del prorrateo (días activos en la semana, tarifa diaria efectiva, monto). *(Ya es por equipo, se ajusta el formato.)*
-- **Gasolinas:** vales (folio, tipo de combustible, descripción, monto). *(Ya es por vale, sin sub-detalle, no requiere acordeón.)*
-- **Caja chica:** cada gasto reembolsado (concepto, descripción, tipo de comprobante, fecha, monto).
+1. **Eliminar el `<Sheet>` de detalle** y el estado `detalleCat`/`setDetalleCat`. Ya no se necesita panel lateral.
 
-## UX
+2. **Reemplazar la tabla "Costos por categoría"** por un `Accordion type="multiple"` que renderice un `AccordionItem` por cada una de las 7 categorías más una fila final estática "Total costos".
 
-- El sheet de detalle conserva el encabezado (categoría + rango de semana).
-- Cada documento queda dentro de un `Accordion` (collapsed por defecto). El trigger muestra: título + estatus + monto total. Al abrir, se despliega una tabla compacta con los conceptos.
-- Categorías sin sub-detalle natural (gasolinas) seguirán como tarjetas simples.
-- En la tarjeta resumen "Producción ejercida" del módulo, al hacer clic se abre el mismo sheet con las estimaciones de la semana y sus renglones expandibles.
+   - El **header** del item (AccordionTrigger) muestra en una sola línea: nombre de categoría · monto · `% costo` · `% producción` — visualmente equivalente a la fila actual de la tabla (grid de 4 columnas con `tabular-nums`).
+   - El **body** (AccordionContent) renderiza el componente existente `DocumentosLista` con `semana.detalle[cat]`, que ya sabe pintar acordeones de segundo nivel (documento → conceptos) cuando hay `conceptos`, o lista plana cuando no.
+   - Si la categoría tiene `monto === 0`, deshabilitar el trigger (no expandible) y mostrar "—".
 
-## Detalles técnicos
+3. **Añadir bloque "Producción ejercida" como acordeón hermano** justo arriba o abajo de las categorías de costo, con el mismo patrón: header con monto, body con `DocumentosLista docs={semana.produccion_detalle}`.
 
-- En `src/lib/api/estado-resultados.functions.ts`:
-  - Ampliar el tipo `DocumentoCosto` para incluir `conceptos?: ConceptoDetalle[]` opcional.
-  - Definir `ConceptoDetalle = { id, descripcion, cantidad?, unidad?, precio_unitario?, monto, meta?: string }`.
-  - En `calcularBuckets`, además de los selects actuales:
-    - **Producción:** ya se traen los renglones de `obra_estimacion_renglones` (hoy solo se suman). Guardarlos por estimación para devolverlos como `conceptos`.
-    - **Almacén:** traer `almacen_movimientos_semana` con join a `insumos(nombre, unidad)` y mapear cada movimiento utilizado > 0 como concepto.
-    - **Nómina:** traer `obra_nomina_renglones` con join a `trabajadores(nombre)` por las nóminas de la semana; cada renglón → concepto.
-    - **Destajos / Subcontratos:** traer `obra_destajo_estimacion_renglones` / `obra_subcontrato_estimacion_renglones` por las estimaciones de la semana; cada renglón → concepto.
-    - **Rentas:** mantener cada equipo como un `DocumentoCosto` con `conceptos` = un único concepto resumen (días × tarifa diaria = monto).
-    - **Caja chica:** cada gasto sigue siendo un `DocumentoCosto`; sus campos extra (`descripcion`, `tipo_comprobante`, `fecha`) se exponen en `meta`/sub-línea.
-  - Para no inflar el payload, los selects de detalle se filtran por los IDs de la semana visible (la función `getEstadoResultadosSemana` ya pide solo 1 semana; el histórico de 8 semanas no necesita el detalle, así que ese branch sigue sin traer renglones).
+4. **Tarjetas resumen superiores**: dejarlas como están pero quitar el `onClick` de la tarjeta de Producción (ya no abre Sheet — el detalle vive abajo en el acordeón).
 
-- En `src/components/estado-resultados/EstadoResultadosModule.tsx`:
-  - Reemplazar la lista del sheet por un `Accordion` de shadcn (`type="multiple"`).
-  - Crear un sub-componente `<ConceptoTabla items={conceptos} />` para renderizar la tabla compacta dentro de cada accordion item.
-  - Mantener el "Sin movimientos en esta semana" para listas vacías.
+5. **Sin cambios** en:
+   - Backend (`estado-resultados.functions.ts`) — ya entrega `conceptos`.
+   - Sub-componentes `DocumentosLista`, `DocumentoFlat`, `ConceptosTabla` — se reutilizan tal cual.
+   - Tarjetas resumen, histórico de 8 semanas, acumulado.
 
-- Sin migraciones de BD. Sin cambios al cálculo de totales.
+## Resultado esperado
 
-## Fuera de alcance
-
-- Edición desde el detalle (sigue siendo de solo lectura).
-- Links a los módulos de origen (se pueden añadir después).
-- Exportar el desglose a Excel/PDF.
+La página muestra de un vistazo todas las categorías con su monto, y el usuario puede abrir/cerrar cada una para ver sus documentos y, dentro de cada documento, sus conceptos — todo sin navegar a un panel lateral. Soporta múltiples categorías abiertas al mismo tiempo (`type="multiple"`).
