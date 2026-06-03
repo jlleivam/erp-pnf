@@ -61,7 +61,10 @@ function shiftSemana(inicio: string, dias: number): string {
 
 export function EstadoResultadosModule({ obraId }: { obraId: string }) {
   const semanaActual = useMemo(() => calcularSemana(new Date()), []);
-  const [modo, setModo] = useState<"semana" | "global">("semana");
+  const [modo, setModo] = useState<"semana" | "global">(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#global") return "global";
+    return "semana";
+  });
   const [semanaInicio, setSemanaInicio] = useState<string>(semanaActual.inicio);
 
   const fetchSemana = useServerFn(getEstadoResultadosSemana);
