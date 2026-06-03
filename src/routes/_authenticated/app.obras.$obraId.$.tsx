@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { CatalogoInsumosModule } from "@/components/insumos/CatalogoInsumosModule";
 import { RequisicionesModule } from "@/components/requisiciones/RequisicionesModule";
