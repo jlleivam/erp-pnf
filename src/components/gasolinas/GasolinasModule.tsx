@@ -92,7 +92,7 @@ type Props = {
 export function GasolinasModule({ obraId, scope = "obra" }: Props) {
   const director = useEffectiveIsDirector();
   const roles = useEffectiveRoles();
-  const userId = useAuthStore((s) => s.user?.id);
+  const userId = useAuthStore((s) => s.userId);
   const isSupervisor = roles.includes("supervisor");
   const isAdministrativo = roles.includes("administrativo");
 
