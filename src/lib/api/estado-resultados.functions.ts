@@ -587,7 +587,7 @@ export const getEstadoResultadosSemana = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<SemanaDetalle> => {
     const { supabase } = context;
     const semana = calcularSemana(data.semanaInicio);
-    const buckets = await calcularBuckets(supabase, data.obraId, [semana]);
+    const buckets = await calcularBuckets(supabase, data.obraId, [semana], true);
     const b = buckets[0];
     return {
       ...bucketToResultado(b),
