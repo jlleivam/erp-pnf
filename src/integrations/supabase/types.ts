@@ -2682,6 +2682,90 @@ export type Database = {
           },
         ]
       }
+      vales_gasolina: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          cancelado_at: string | null
+          cancelado_por: string | null
+          codigo_vale: string | null
+          company_id: string
+          confirmado_at: string | null
+          confirmado_por: string | null
+          created_at: string
+          descripcion: string
+          estatus: Database["public"]["Enums"]["vale_gasolina_estatus"]
+          folio: string
+          id: string
+          ligado_at: string | null
+          ligado_por: string | null
+          monto_autorizado: number | null
+          monto_solicitado: number
+          motivo_rechazo: string | null
+          obra_id: string | null
+          rechazado_at: string | null
+          rechazado_por: string | null
+          solicitado_at: string
+          solicitado_por: string
+          tipo_combustible: Database["public"]["Enums"]["vale_gasolina_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          codigo_vale?: string | null
+          company_id: string
+          confirmado_at?: string | null
+          confirmado_por?: string | null
+          created_at?: string
+          descripcion: string
+          estatus?: Database["public"]["Enums"]["vale_gasolina_estatus"]
+          folio: string
+          id?: string
+          ligado_at?: string | null
+          ligado_por?: string | null
+          monto_autorizado?: number | null
+          monto_solicitado: number
+          motivo_rechazo?: string | null
+          obra_id?: string | null
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          solicitado_at?: string
+          solicitado_por: string
+          tipo_combustible: Database["public"]["Enums"]["vale_gasolina_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          codigo_vale?: string | null
+          company_id?: string
+          confirmado_at?: string | null
+          confirmado_por?: string | null
+          created_at?: string
+          descripcion?: string
+          estatus?: Database["public"]["Enums"]["vale_gasolina_estatus"]
+          folio?: string
+          id?: string
+          ligado_at?: string | null
+          ligado_por?: string | null
+          monto_autorizado?: number | null
+          monto_solicitado?: number
+          motivo_rechazo?: string | null
+          obra_id?: string | null
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          solicitado_at?: string
+          solicitado_por?: string
+          tipo_combustible?: Database["public"]["Enums"]["vale_gasolina_tipo"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2708,6 +2792,10 @@ export type Database = {
         Returns: string
       }
       siguiente_folio_sc: { Args: { _company_id: string }; Returns: string }
+      siguiente_folio_vale_gasolina: {
+        Args: { _company_id: string }
+        Returns: string
+      }
     }
     Enums: {
       almacen_semana_estatus: "abierta" | "cerrada"
@@ -2793,6 +2881,14 @@ export type Database = {
         | "eventual_urbano"
         | "eventual_campo"
         | "permanente"
+      vale_gasolina_estatus:
+        | "pendiente_autorizacion"
+        | "autorizado"
+        | "rechazado"
+        | "cancelado"
+        | "entregado"
+        | "confirmado"
+      vale_gasolina_tipo: "magna" | "premium" | "diesel"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3013,6 +3109,15 @@ export const Constants = {
         "eventual_campo",
         "permanente",
       ],
+      vale_gasolina_estatus: [
+        "pendiente_autorizacion",
+        "autorizado",
+        "rechazado",
+        "cancelado",
+        "entregado",
+        "confirmado",
+      ],
+      vale_gasolina_tipo: ["magna", "premium", "diesel"],
     },
   },
 } as const
