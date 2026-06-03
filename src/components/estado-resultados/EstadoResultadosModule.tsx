@@ -352,37 +352,154 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
 
       {/* Detalle por categoría */}
       <Sheet open={!!detalleCat} onOpenChange={(o) => !o && setDetalleCat(null)}>
-        <SheetContent className="sm:max-w-md w-full overflow-y-auto">
+        <SheetContent className="sm:max-w-lg w-full overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{detalleTitulo}</SheetTitle>
             <SheetDescription>{rango}</SheetDescription>
           </SheetHeader>
-          <div className="mt-4 space-y-2">
-            {detalleDocs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin movimientos en esta semana.</p>
-            ) : (
-              detalleDocs.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-start justify-between gap-3 p-3 rounded-md border border-border"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{doc.titulo}</p>
-                    {doc.estatus && (
-                      <Badge variant="outline" className="mt-1 text-xs">
-                        {doc.estatus}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm tabular-nums font-medium whitespace-nowrap">
-                    {formatMXN(doc.monto)}
-                  </p>
-                </div>
-              ))
-            )}
+          <div className="mt-4">
+            <DocumentosLista docs={detalleDocs} />
           </div>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function DocumentosLista({ docs }: { docs: DocumentoCosto[] }) {
+  if (docs.length === 0) {
+    return <p className="text-sm text-muted-foreground">Sin movimientos en esta semana.</p>;
+  }
+  // Si ningún documento tiene conceptos, mostrar lista plana
+  const conConceptos = docs.some((d) => d.conceptos && d.conceptos.length > 0);
+  if (!conConceptos) {
+    return (
+      <div className="space-y-2">
+        {docs.map((doc) => (
+          <DocumentoFlat key={doc.id} doc={doc} />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <Accordion type="multiple" className="space-y-2">
+      {docs.map((doc) => {
+        const hasConceptos = (doc.conceptos?.length ?? 0) > 0;
+        if (!hasConceptos) {
+          return (
+            <div key={doc.id}>
+              <DocumentoFlat doc={doc} />
+            </div>
+          );
+        }
+        return (
+          <AccordionItem
+            key={doc.id}
+            value={doc.id}
+            className="border border-border rounded-md px-3"
+          >
+            <AccordionTrigger className="py-3 hover:no-underline">
+              <div className="flex-1 flex items-start justify-between gap-3 min-w-0 pr-2">
+                <div className="min-w-0 text-left">
+                  <p className="text-sm font-medium truncate">{doc.titulo}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {doc.estatus && (
+                      <Badge variant="outline" className="text-xs">
+                        {doc.estatus}
+                      </Badge>
+                    )}
+                    {doc.meta && (
+                      <span className="text-xs text-muted-foreground truncate">{doc.meta}</span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm tabular-nums font-medium whitespace-nowrap">
+                  {formatMXN(doc.monto)}
+                </p>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3">
+              <ConceptosTabla items={doc.conceptos!} />
+            </AccordionContent>
+          </AccordionItem>
+        );
+      })}
+    </Accordion>
+  );
+}
+
+function DocumentoFlat({ doc }: { doc: DocumentoCosto }) {
+  return (
+    <div className="flex items-start justify-between gap-3 p-3 rounded-md border border-border">
+      <div className="min-w-0">
+        <p className="text-sm font-medium truncate">{doc.titulo}</p>
+        <div className="flex items-center gap-2 mt-1">
+          {doc.estatus && (
+            <Badge variant="outline" className="text-xs">
+              {doc.estatus}
+            </Badge>
+          )}
+          {doc.meta && (
+            <span className="text-xs text-muted-foreground truncate">{doc.meta}</span>
+          )}
+        </div>
+      </div>
+      <p className="text-sm tabular-nums font-medium whitespace-nowrap">
+        {formatMXN(doc.monto)}
+      </p>
+    </div>
+  );
+}
+
+function ConceptosTabla({ items }: { items: ConceptoDetalle[] }) {
+  if (items.length === 0) {
+    return <p className="text-xs text-muted-foreground">Sin conceptos.</p>;
+  }
+  const showCantidad = items.some(
+    (i) => i.cantidad != null && i.cantidad !== 0,
+  );
+  const showPU = items.some(
+    (i) => i.precio_unitario != null && i.precio_unitario !== 0,
+  );
+  return (
+    <div className="overflow-x-auto -mx-3">
+      <table className="w-full text-xs">
+        <thead className="text-muted-foreground">
+          <tr className="border-b border-border">
+            <th className="text-left font-normal py-1.5 px-3">Concepto</th>
+            {showCantidad && <th className="text-right font-normal py-1.5 px-2">Cant.</th>}
+            {showPU && <th className="text-right font-normal py-1.5 px-2">P.U.</th>}
+            <th className="text-right font-normal py-1.5 px-3">Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((c) => (
+            <tr key={c.id} className="border-b border-border/50 last:border-b-0">
+              <td className="py-1.5 px-3">
+                <div className="font-medium">{c.descripcion}</div>
+                {c.meta && (
+                  <div className="text-[10px] text-muted-foreground">{c.meta}</div>
+                )}
+              </td>
+              {showCantidad && (
+                <td className="text-right tabular-nums py-1.5 px-2">
+                  {c.cantidad != null
+                    ? `${c.cantidad}${c.unidad ? ` ${c.unidad}` : ""}`
+                    : "—"}
+                </td>
+              )}
+              {showPU && (
+                <td className="text-right tabular-nums py-1.5 px-2 text-muted-foreground">
+                  {c.precio_unitario != null ? formatMXN(c.precio_unitario) : "—"}
+                </td>
+              )}
+              <td className="text-right tabular-nums py-1.5 px-3 font-medium">
+                {formatMXN(c.monto)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
