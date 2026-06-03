@@ -247,85 +247,112 @@ function ObraHeader({
 // Panel 2 — Estado de resultados (semana actual)
 // ============================================================
 
+type ResultadoData = {
+  semana_inicio?: string;
+  semana_fin?: string;
+  produccion: number;
+  costos_total: number;
+  resultado: number;
+  margen: number;
+};
+
 function PanelEstadoResultados({
   obraId,
   inicio,
-  modo,
-  onModoChange,
   isLoading,
-  data,
+  dataSemana,
+  dataAcumulado,
   boundaries,
 }: {
   obraId: string;
   inicio: string;
-  modo: "semana" | "global";
-  onModoChange: (m: "semana" | "global") => void;
   isLoading: boolean;
-  data:
-    | {
-        semana_inicio?: string;
-        semana_fin?: string;
-        produccion: number;
-        costos_total: number;
-        resultado: number;
-        margen: number;
-      }
-    | undefined;
+  dataSemana: ResultadoData | undefined;
+  dataAcumulado: ResultadoData | undefined;
   boundaries: { fechaInicio: string; primerSemana: string; semanaActual: string } | undefined;
 }) {
-  const positivo = (data?.resultado ?? 0) >= 0;
+  const numSemana = boundaries ? numeroSemanaObra(boundaries.fechaInicio, inicio) : null;
 
-  const numSemana = boundaries
-    ? numeroSemanaObra(boundaries.fechaInicio, inicio)
-    : null;
+  const rangoSemana = boundaries
+    ? (() => {
+        const r = rangoSemanaObra(boundaries.fechaInicio, inicio);
+        const fmt = (d: string) =>
+          new Date(d).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+        return `${fmt(r.inicio)} – ${fmt(r.fin)}`;
+      })()
+    : new Date(inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 
-  const rangoSemana =
-    data && data.semana_inicio && data.semana_fin
-      ? `${new Date(data.semana_inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${new Date(data.semana_fin).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`
-      : new Date(inicio).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-
-  const subtitulo =
-    modo === "semana"
-      ? numSemana
-        ? `Semana ${numSemana} · ${rangoSemana}`
-        : rangoSemana
-      : "Desde inicio de obra hasta hoy";
+  const subSemana = numSemana ? `Semana ${numSemana} · ${rangoSemana}` : rangoSemana;
+  const subGlobal = "Desde inicio · hoy";
 
   return (
     <Card className="p-4 space-y-4 flex flex-col">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-          <TrendingUp className="size-3.5" />
-          {modo === "semana" ? "Resultado semana" : "Resultado global"}
-        </div>
-        <ToggleGroup
-          type="single"
-          value={modo}
-          onValueChange={(v) => v && onModoChange(v as "semana" | "global")}
-          variant="outline"
-          size="sm"
-        >
-          <ToggleGroupItem value="semana" className="text-xs h-7 px-2">Semana</ToggleGroupItem>
-          <ToggleGroupItem value="global" className="text-xs h-7 px-2">Global</ToggleGroupItem>
-        </ToggleGroup>
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+        <TrendingUp className="size-3.5" />
+        Resultado
       </div>
-      <p className="text-xs text-muted-foreground -mt-2">{subtitulo}</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+        <ResultadoColumna
+          titulo="Semana"
+          subtitulo={subSemana}
+          isLoading={isLoading}
+          data={dataSemana}
+        />
+        <div className="sm:border-l sm:border-border sm:pl-4 border-t border-border pt-4 sm:border-t-0 sm:pt-0">
+          <ResultadoColumna
+            titulo="Global"
+            subtitulo={subGlobal}
+            isLoading={isLoading}
+            data={dataAcumulado}
+          />
+        </div>
+      </div>
+
+      <Button asChild variant="outline" size="sm" className="w-full">
+        <Link to="/app/obras/$obraId/$" params={{ obraId, _splat: "estado-resultados" }}>
+          Ver detalle <ArrowRight className="size-3.5" />
+        </Link>
+      </Button>
+    </Card>
+  );
+}
+
+function ResultadoColumna({
+  titulo,
+  subtitulo,
+  isLoading,
+  data,
+}: {
+  titulo: string;
+  subtitulo: string;
+  isLoading: boolean;
+  data: ResultadoData | undefined;
+}) {
+  const positivo = (data?.resultado ?? 0) >= 0;
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-xs font-medium">{titulo}</p>
+        <p className="text-[11px] text-muted-foreground">{subtitulo}</p>
+      </div>
 
       {isLoading ? (
-        <div className="space-y-3 flex-1">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-24" />
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-7 w-28" />
         </div>
       ) : (
-        <div className="space-y-3 flex-1">
+        <>
           <div>
             <p className="text-xs text-muted-foreground">Producción</p>
-            <p className="text-lg font-semibold">{formatMXN(data?.produccion ?? 0)}</p>
+            <p className="text-base font-semibold">{formatMXN(data?.produccion ?? 0)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Gasto</p>
-            <p className="text-lg font-semibold">{formatMXN(data?.costos_total ?? 0)}</p>
+            <p className="text-base font-semibold">{formatMXN(data?.costos_total ?? 0)}</p>
           </div>
           <div className="pt-2 border-t border-border">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -338,7 +365,7 @@ function PanelEstadoResultados({
             </p>
             <div className="flex items-baseline gap-2 flex-wrap">
               <p
-                className={`text-2xl font-bold ${
+                className={`text-xl font-bold ${
                   positivo ? "text-emerald-600" : "text-destructive"
                 }`}
               >
@@ -349,15 +376,9 @@ function PanelEstadoResultados({
               </Badge>
             </div>
           </div>
-        </div>
+        </>
       )}
-
-      <Button asChild variant="outline" size="sm" className="w-full">
-        <Link to="/app/obras/$obraId/$" params={{ obraId, _splat: "estado-resultados" }}>
-          Ver detalle <ArrowRight className="size-3.5" />
-        </Link>
-      </Button>
-    </Card>
+    </div>
   );
 }
 
