@@ -17,8 +17,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar,
   MapPin,
-  FileText,
-  Users,
   Copy,
   ExternalLink,
   TrendingUp,
