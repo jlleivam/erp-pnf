@@ -163,7 +163,7 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
               >
                 <ChevronLeft className="size-4" />
               </Button>
-              <div className="text-sm font-medium px-3 min-w-[180px] text-center">{rango}</div>
+              <div className="text-sm font-medium px-3 min-w-[260px] text-center">{rango}</div>
               <Button
                 variant="outline"
                 size="icon"
