@@ -282,19 +282,7 @@ export function AppShell() {
         <MobileBottomBar
           pathname={pathname}
           variant="scroll"
-          items={[
-            { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt },
-            { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: BarChart3 },
-            { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList },
-            { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users },
-            { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer },
-            { to: `/app/obras/${obraId}/subcontratos`, label: "Subcontratos", icon: Handshake },
-            { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Warehouse },
-            { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck },
-            { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel },
-            { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins },
-            { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo },
-          ] satisfies BottomBarItem[]}
+          items={obraNavItems}
         />
       ) : (
         <MobileBottomBar
