@@ -5,6 +5,8 @@ import { ClientOnly } from "@tanstack/react-router";
 import {
   getEstadoResultadosSemana,
   getEstadoResultadosHistorico,
+  getEstadoResultadosAcumulado,
+  getObraSemanaBoundaries,
   type CostoCategoria,
   type DocumentoCosto,
   type ConceptoDetalle,
@@ -13,6 +15,7 @@ import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-u
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   ChartContainer,
   ChartTooltip,
@@ -27,6 +30,7 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
 import { formatMXN } from "@/lib/format";
+
 
 
 const CATEGORIA_LABELS: Record<CostoCategoria, string> = {
