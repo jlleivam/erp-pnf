@@ -60,7 +60,7 @@ export const listValesGasolina = createServerFn({ method: "POST" })
       .select("*")
       .order("created_at", { ascending: false });
     if (data.obraId) q = q.eq("obra_id", data.obraId);
-    if (data.estatus) q = q.eq("estatus", data.estatus);
+    if (data.estatus) q = q.eq("estatus", data.estatus as any);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     const arr = rows ?? [];
