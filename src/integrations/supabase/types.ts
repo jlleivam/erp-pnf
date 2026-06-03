@@ -187,6 +187,251 @@ export type Database = {
         }
         Relationships: []
       }
+      caja_chica_asignaciones: {
+        Row: {
+          activo: boolean
+          asignado_por: string
+          company_id: string
+          created_at: string
+          id: string
+          monto_base: number
+          notas: string | null
+          obra_id: string
+          residente_id: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          asignado_por: string
+          company_id: string
+          created_at?: string
+          id?: string
+          monto_base?: number
+          notas?: string | null
+          obra_id: string
+          residente_id: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          asignado_por?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          monto_base?: number
+          notas?: string | null
+          obra_id?: string
+          residente_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      caja_chica_fondos: {
+        Row: {
+          cancelado_at: string | null
+          cancelado_por: string | null
+          company_id: string
+          created_at: string
+          entregado_at: string | null
+          entregado_por: string | null
+          estatus: Database["public"]["Enums"]["caja_chica_fondo_estatus"]
+          id: string
+          monto_entregado: number | null
+          monto_solicitado: number
+          notas: string | null
+          obra_id: string
+          residente_id: string
+          solicitado_at: string
+          solicitado_por: string
+          updated_at: string
+        }
+        Insert: {
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          company_id: string
+          created_at?: string
+          entregado_at?: string | null
+          entregado_por?: string | null
+          estatus?: Database["public"]["Enums"]["caja_chica_fondo_estatus"]
+          id?: string
+          monto_entregado?: number | null
+          monto_solicitado: number
+          notas?: string | null
+          obra_id: string
+          residente_id: string
+          solicitado_at?: string
+          solicitado_por: string
+          updated_at?: string
+        }
+        Update: {
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          company_id?: string
+          created_at?: string
+          entregado_at?: string | null
+          entregado_por?: string | null
+          estatus?: Database["public"]["Enums"]["caja_chica_fondo_estatus"]
+          id?: string
+          monto_entregado?: number | null
+          monto_solicitado?: number
+          notas?: string | null
+          obra_id?: string
+          residente_id?: string
+          solicitado_at?: string
+          solicitado_por?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      caja_chica_gastos: {
+        Row: {
+          company_id: string
+          concepto: string
+          created_at: string
+          descripcion: string | null
+          estatus: Database["public"]["Enums"]["caja_chica_gasto_estatus"]
+          evidencia_url: string | null
+          fecha: string
+          id: string
+          monto: number
+          motivo_rechazo: string | null
+          obra_id: string
+          reembolso_id: string | null
+          residente_id: string
+          revisado_at: string | null
+          revisado_por: string | null
+          tipo_comprobante: Database["public"]["Enums"]["caja_chica_gasto_tipo_comprobante"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          concepto: string
+          created_at?: string
+          descripcion?: string | null
+          estatus?: Database["public"]["Enums"]["caja_chica_gasto_estatus"]
+          evidencia_url?: string | null
+          fecha: string
+          id?: string
+          monto: number
+          motivo_rechazo?: string | null
+          obra_id: string
+          reembolso_id?: string | null
+          residente_id: string
+          revisado_at?: string | null
+          revisado_por?: string | null
+          tipo_comprobante?: Database["public"]["Enums"]["caja_chica_gasto_tipo_comprobante"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          concepto?: string
+          created_at?: string
+          descripcion?: string | null
+          estatus?: Database["public"]["Enums"]["caja_chica_gasto_estatus"]
+          evidencia_url?: string | null
+          fecha?: string
+          id?: string
+          monto?: number
+          motivo_rechazo?: string | null
+          obra_id?: string
+          reembolso_id?: string | null
+          residente_id?: string
+          revisado_at?: string | null
+          revisado_por?: string | null
+          tipo_comprobante?: Database["public"]["Enums"]["caja_chica_gasto_tipo_comprobante"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caja_chica_gastos_reembolso_id_fkey"
+            columns: ["reembolso_id"]
+            isOneToOne: false
+            referencedRelation: "caja_chica_reembolsos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caja_chica_reembolsos: {
+        Row: {
+          company_id: string
+          created_at: string
+          enviado_admin_at: string | null
+          enviado_admin_por: string | null
+          estatus: Database["public"]["Enums"]["caja_chica_reembolso_estatus"]
+          folio: string
+          id: string
+          monto_aprobado: number
+          monto_reembolsado: number | null
+          monto_solicitado: number
+          motivo_rechazo: string | null
+          obra_id: string
+          rechazado_at: string | null
+          rechazado_por: string | null
+          repuesto_at: string | null
+          repuesto_por: string | null
+          residente_id: string
+          revisado_at: string | null
+          revisado_por: string | null
+          semana_fin: string
+          semana_inicio: string
+          solicitado_at: string
+          solicitado_por: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          enviado_admin_at?: string | null
+          enviado_admin_por?: string | null
+          estatus?: Database["public"]["Enums"]["caja_chica_reembolso_estatus"]
+          folio: string
+          id?: string
+          monto_aprobado?: number
+          monto_reembolsado?: number | null
+          monto_solicitado?: number
+          motivo_rechazo?: string | null
+          obra_id: string
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          repuesto_at?: string | null
+          repuesto_por?: string | null
+          residente_id: string
+          revisado_at?: string | null
+          revisado_por?: string | null
+          semana_fin: string
+          semana_inicio: string
+          solicitado_at?: string
+          solicitado_por: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          enviado_admin_at?: string | null
+          enviado_admin_por?: string | null
+          estatus?: Database["public"]["Enums"]["caja_chica_reembolso_estatus"]
+          folio?: string
+          id?: string
+          monto_aprobado?: number
+          monto_reembolsado?: number | null
+          monto_solicitado?: number
+          motivo_rechazo?: string | null
+          obra_id?: string
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          repuesto_at?: string | null
+          repuesto_por?: string | null
+          residente_id?: string
+          revisado_at?: string | null
+          revisado_por?: string | null
+          semana_fin?: string
+          semana_inicio?: string
+          solicitado_at?: string
+          solicitado_por?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           banco: string | null
@@ -2786,6 +3031,10 @@ export type Database = {
         Args: { _categoria_id: string; _company_id: string }
         Returns: string
       }
+      siguiente_folio_caja_chica: {
+        Args: { _company_id: string }
+        Returns: string
+      }
       siguiente_folio_oc: { Args: { _company_id: string }; Returns: string }
       siguiente_folio_requisicion: {
         Args: { _company_id: string }
@@ -2805,6 +3054,20 @@ export type Database = {
         | "auxiliar"
         | "administrativo"
         | "supervisor"
+      caja_chica_fondo_estatus: "pendiente" | "entregado" | "cancelado"
+      caja_chica_gasto_estatus:
+        | "borrador"
+        | "solicitado"
+        | "aprobado"
+        | "rechazado"
+        | "reembolsado"
+      caja_chica_gasto_tipo_comprobante: "factura" | "nota" | "ninguno"
+      caja_chica_reembolso_estatus:
+        | "solicitado"
+        | "en_revision"
+        | "enviado_admin"
+        | "repuesto"
+        | "rechazado"
       destajo_doc_estatus: "borrador" | "enviado" | "autorizado" | "rechazado"
       destajo_estimacion_estatus: "borrador" | "cerrada"
       destajo_presupuesto_tipo: "base" | "adenda"
@@ -3023,6 +3286,22 @@ export const Constants = {
         "auxiliar",
         "administrativo",
         "supervisor",
+      ],
+      caja_chica_fondo_estatus: ["pendiente", "entregado", "cancelado"],
+      caja_chica_gasto_estatus: [
+        "borrador",
+        "solicitado",
+        "aprobado",
+        "rechazado",
+        "reembolsado",
+      ],
+      caja_chica_gasto_tipo_comprobante: ["factura", "nota", "ninguno"],
+      caja_chica_reembolso_estatus: [
+        "solicitado",
+        "en_revision",
+        "enviado_admin",
+        "repuesto",
+        "rechazado",
       ],
       destajo_doc_estatus: ["borrador", "enviado", "autorizado", "rechazado"],
       destajo_estimacion_estatus: ["borrador", "cerrada"],
