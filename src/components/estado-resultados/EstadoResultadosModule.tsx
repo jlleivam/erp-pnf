@@ -182,60 +182,63 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
               </p>
             </Card>
           </div>
-
-          {/* Tabla por categoría */}
+          {/* Producción y categorías de costo (acordeón inline) */}
           <Card className="p-0 overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
-              <h2 className="text-sm font-medium">Costos por categoría</h2>
+              <h2 className="text-sm font-medium">Desglose de la semana</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Expande cada categoría para ver documentos y conceptos.
+              </p>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead className="text-right">% costo</TableHead>
-                  <TableHead className="text-right">% producción</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {CATEGORIAS.map((cat) => {
-                  const monto = semana.costos[cat];
-                  const pctCosto = semana.costos_total > 0 ? (monto / semana.costos_total) * 100 : 0;
-                  const pctProd = semana.produccion > 0 ? (monto / semana.produccion) * 100 : 0;
-                  return (
-                    <TableRow
-                      key={cat}
-                      className="cursor-pointer"
-                      onClick={() => monto > 0 && setDetalleCat(cat)}
-                    >
-                      <TableCell className="font-medium">{CATEGORIA_LABELS[cat]}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {monto > 0 ? formatMXN(monto) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {monto > 0 ? `${pctCosto.toFixed(1)}%` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {monto > 0 && semana.produccion > 0 ? `${pctProd.toFixed(1)}%` : "—"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="border-t-2 font-semibold">
-                  <TableCell>Total costos</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMXN(semana.costos_total)}
-                  </TableCell>
-                  <TableCell className="text-right">100%</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {semana.produccion > 0
-                      ? `${((semana.costos_total / semana.produccion) * 100).toFixed(1)}%`
-                      : "—"}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <Accordion type="multiple" className="divide-y divide-border">
+              {/* Producción */}
+              <CategoriaAccordion
+                value="produccion"
+                label="Producción ejercida"
+                monto={semana.produccion}
+                pctCosto={null}
+                pctProd={null}
+                accent="emerald"
+                docs={semana.produccion_detalle}
+              />
+              {/* Categorías de costo */}
+              {CATEGORIAS.map((cat) => {
+                const monto = semana.costos[cat];
+                const pctCosto =
+                  semana.costos_total > 0 ? (monto / semana.costos_total) * 100 : 0;
+                const pctProd =
+                  semana.produccion > 0 ? (monto / semana.produccion) * 100 : 0;
+                return (
+                  <CategoriaAccordion
+                    key={cat}
+                    value={cat}
+                    label={CATEGORIA_LABELS[cat]}
+                    monto={monto}
+                    pctCosto={monto > 0 ? pctCosto : null}
+                    pctProd={monto > 0 && semana.produccion > 0 ? pctProd : null}
+                    accent="rose"
+                    docs={semana.detalle[cat]}
+                  />
+                );
+              })}
+              {/* Total costos (no expandible) */}
+              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 font-semibold text-sm bg-muted/30">
+                <div>Total costos</div>
+                <div className="tabular-nums text-right min-w-[110px]">
+                  {formatMXN(semana.costos_total)}
+                </div>
+                <div className="tabular-nums text-right text-muted-foreground min-w-[60px]">
+                  100%
+                </div>
+                <div className="tabular-nums text-right text-muted-foreground min-w-[70px]">
+                  {semana.produccion > 0
+                    ? `${((semana.costos_total / semana.produccion) * 100).toFixed(1)}%`
+                    : "—"}
+                </div>
+              </div>
+            </Accordion>
           </Card>
+
 
           {/* Histórico 8 semanas */}
           {histQ.data && histQ.data.length > 0 && (
