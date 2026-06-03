@@ -7,6 +7,7 @@ import {
   getEstadoResultadosHistorico,
   type CostoCategoria,
   type DocumentoCosto,
+  type ConceptoDetalle,
 } from "@/lib/api/estado-resultados.functions";
 import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
 import { Card } from "@/components/ui/card";
