@@ -11,7 +11,7 @@ import {
   type DocumentoCosto,
   type ConceptoDetalle,
 } from "@/lib/api/estado-resultados.functions";
-import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
+import { calcularSemana, formatRangoSemana, numeroSemanaObra, rangoSemanaObra, toISODate } from "@/lib/estimacion-utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
