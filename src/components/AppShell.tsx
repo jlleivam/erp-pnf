@@ -1,6 +1,20 @@
 import { useState } from "react";
-import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Building2, LayoutDashboard, BookOpen, Settings, LogOut, ChevronDown, HardHat, UserCog, Menu, ShieldCheck } from "lucide-react";
+import { Link, Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import {
+  Building2,
+  LayoutDashboard,
+  BookOpen,
+  Settings,
+  LogOut,
+  ChevronDown,
+  HardHat,
+  UserCog,
+  ShieldCheck,
+  LayoutGrid,
+  Receipt,
+  ListChecks,
+  Package,
+} from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,8 +28,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { NotificacionesBell } from "@/components/NotificacionesBell";
+import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
+
 
 
 const ROLE_LABELS: Record<AppRole, string> = {
