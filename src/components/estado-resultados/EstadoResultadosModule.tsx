@@ -93,14 +93,23 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
 
   const activeQ = modo === "semana" ? semanaQ : acumQ;
   const semana = activeQ.data;
+  const fechaInicio = boundariesQ.data?.fechaInicio;
+  const primerSemana = boundariesQ.data?.primerSemana;
+  const numActual = fechaInicio
+    ? numeroSemanaObra(fechaInicio, semanaActual.inicio)
+    : 0;
+  const numSeleccion = fechaInicio
+    ? numeroSemanaObra(fechaInicio, semanaInicio)
+    : 0;
   const rango =
     modo === "semana"
-      ? formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6))
-      : boundariesQ.data
-        ? `Desde ${formatRangoSemana(boundariesQ.data.primerSemana, shiftSemana(boundariesQ.data.primerSemana, 6))} hasta hoy`
+      ? fechaInicio
+        ? `Semana ${numSeleccion} · ${rangoSemanaObra(fechaInicio, semanaInicio)}`
+        : formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6))
+      : fechaInicio
+        ? `Acumulado · Semanas 1–${numActual} hasta hoy`
         : "Acumulado de la obra";
 
-  const primerSemana = boundariesQ.data?.primerSemana;
   const puedeAnterior =
     modo === "semana" && (!primerSemana || semanaInicio > primerSemana);
   const puedeSiguiente =
