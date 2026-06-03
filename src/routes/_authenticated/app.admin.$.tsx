@@ -32,6 +32,7 @@ function AdminModule() {
   const { _splat } = Route.useParams();
   const slug = (_splat ?? "").split("/")[0];
   if (slug === "nomina") return <NominaAdminPanel />;
+  if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   const title = LABELS[slug] ?? "Módulo administrativo";
   return <ModulePlaceholder title={title} description="Módulo administrativo" />;
 }
