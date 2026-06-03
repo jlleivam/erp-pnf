@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getObraDashboard } from "@/lib/api/obras.functions";
@@ -23,22 +23,6 @@ const ROLE_LABELS: Record<string, string> = {
   supervisor: "Supervisor",
 };
 
-const MODULES = [
-  { to: "presupuesto", label: "Presupuesto" },
-  { to: "estimaciones", label: "Estimaciones" },
-  { to: "ordenes-cambio", label: "Órdenes de cambio" },
-  { to: "requisiciones", label: "Requisiciones" },
-  { to: "nomina", label: "Nómina" },
-  { to: "destajos", label: "Destajos" },
-  { to: "subcontratos", label: "Subcontratos" },
-  { to: "rentas", label: "Rentas" },
-  { to: "gasolinas", label: "Gasolinas" },
-  { to: "caja-chica", label: "Caja chica" },
-  { to: "almacen-obra", label: "Almacén de obra" },
-  { to: "estado-resultados", label: "Estado de resultados" },
-  { to: "tareas", label: "Tareas" },
-  { to: "catalogos", label: "Catálogos" },
-];
 
 export const Route = createFileRoute("/_authenticated/app/obras/$obraId/")({
   component: ObraDashboard,
@@ -138,24 +122,6 @@ function ObraDashboard() {
         ))}
       </div>
 
-      {/* Módulos */}
-      <div>
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          Módulos de la obra
-        </h2>
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {MODULES.map((mod) => (
-            <Link
-              key={mod.to}
-              to="/app/obras/$obraId/$"
-              params={{ obraId, _splat: mod.to }}
-              className="rounded-md border border-border bg-card hover:border-primary/40 transition-colors p-3 text-sm"
-            >
-              {mod.label}
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
