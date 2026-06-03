@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { NominaAdminPanel } from "@/components/nomina/NominaAdminPanel";
+import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 
 const LABELS: Record<string, string> = {
   requisiciones: "Requisiciones",
