@@ -1,35 +1,39 @@
 ## Objetivo
 
-Mostrar "Semana N" en el estado de resultados, contando desde la fecha de inicio (o creación) de la obra. La **Semana 1** abarca desde `fecha_inicio` hasta el domingo de esa misma semana ISO (parcial si la obra arrancó en miércoles, jueves, etc.). Las siguientes semanas son completas lunes–domingo.
+Agregar un toggle **Semana / Global** al panel "Resultado semana" del dashboard de la obra, sin navegación entre semanas. La vista Semana muestra los datos de la semana actual (como ya lo hace); la vista Global muestra el acumulado desde el inicio de la obra hasta hoy.
 
 ## Cambios
 
-### 1. Helpers en `src/lib/estimacion-utils.ts`
+Archivo único: `src/routes/_authenticated/app.obras.$obraId.index.tsx`.
 
-Agregar dos utilidades puras (no tocan las existentes):
+### 1. Imports
+- Agregar `getEstadoResultadosAcumulado` y `getObraSemanaBoundaries` a la importación desde `@/lib/api/estado-resultados.functions`.
+- Importar `ToggleGroup`, `ToggleGroupItem` de `@/components/ui/toggle-group`.
+- Importar `numeroSemanaObra` de `@/lib/estimacion-utils` para etiquetar la semana actual.
 
-- **`numeroSemanaObra(fechaInicioObra: string, semanaInicio: string): number`**
-  Devuelve el índice 1-based de la semana. Se calcula como `floor((semanaInicio_lunes − primerSemana_lunes) / 7 días) + 1`. Para cualquier fecha dentro de la primera semana ISO de la obra, retorna `1`.
+### 2. `ObraDashboard`
+- Añadir `useState<"semana" | "global">("semana")` para el modo.
+- Crear queries adicionales:
+  - `acumulado` con `getEstadoResultadosAcumulado`, `enabled: modo === "global"`.
+  - `boundaries` con `getObraSemanaBoundaries` (para conocer el número de semana actual y mostrar "Semana N" en el header del panel).
+- Pasar `modo`, `onModoChange`, datos de `semana` y `acumulado`, y `boundaries.data` al `PanelEstadoResultados`.
 
-- **`rangoSemanaObra(fechaInicioObra: string, semanaInicio: string): string`**
-  Igual que `formatRangoSemana`, pero si `semanaInicio` corresponde a la **semana 1** y `fechaInicio` cae después del lunes de esa semana, el rango inicia en `fechaInicio` en vez del lunes (ej.: "05 jun – 08 jun 2026" para una obra que arrancó jueves). Para las demás semanas, comportamiento normal lunes–domingo.
+### 3. `PanelEstadoResultados`
+- Nueva firma: recibe `modo`, `onModoChange`, `dataSemana`, `dataAcumulado`, `boundaries` (`{ fechaInicio, semanaActual } | undefined`), `isLoading` (combinado según modo).
+- Header del panel:
+  - Línea 1 conservada: ícono + label que cambia entre "Resultado semana" y "Resultado global".
+  - Reemplazar el rango de fecha de la derecha por un `ToggleGroup` pequeño (`size="sm"`, `variant="outline"`) con opciones **Semana** / **Global**.
+  - Debajo (o en una segunda línea muted), mostrar:
+    - Modo semana: `"Semana N · {rango}"` (N calculado con `numeroSemanaObra(fechaInicio, semanaActual)`; fallback al rango actual si no hay boundaries todavía).
+    - Modo global: `"Desde inicio de obra hasta hoy"`.
+- Cuerpo: leer del objeto correcto (`dataSemana` o `dataAcumulado`); ambos tienen las mismas keys `produccion`, `costos_total`, `resultado`, `margen`.
+- Etiqueta "Producción" y "Gasto" sin cambios; el bloque inferior cambia entre "Utilidad / Pérdida" igual que hoy (la lógica `positivo` usa `resultado`).
+- Botón "Ver detalle" sin cambios.
 
-### 2. Backend `src/lib/api/estado-resultados.functions.ts`
-
-- **`getObraSemanaBoundaries`**: incluir también `fechaInicio` (string ISO YYYY-MM-DD) en el retorno, además de `primerSemana` y `semanaActual`. Es la fecha real (no normalizada a lunes) que se usa para mostrar el rango de la semana 1.
-
-### 3. UI `src/components/estado-resultados/EstadoResultadosModule.tsx`
-
-- Importar los nuevos helpers.
-- Reemplazar el cálculo de `rango` para combinar número + rango:
-  - Modo semana: `"Semana N · {rangoSemanaObra(...)}"`.
-  - Modo global: `"Acumulado · Semanas 1–N hasta hoy"`, donde N corresponde a `semanaActual`.
-- Subtítulo del header: en modo semana, `"Producción contra costos · Semana N de la obra"`.
-- En la card "Acumulado de la obra (hasta esta semana)" del modo semana, agregar el sufijo `"(Semanas 1–N)"`.
-- En el histórico de 8 semanas, sustituir el tick del eje X (`s.semana_inicio.slice(5)`) por `"S{N}"` calculado con `numeroSemanaObra`, dejando la fecha completa en el tooltip.
+### 4. Sin navegación de semanas
+- No agregar flechas ni selector de fecha. La vista semanal queda fija en la semana actual.
 
 ## Notas técnicas
 
-- No se modifica `calcularSemana` (sigue normalizando a lunes–domingo ISO); la numeración es derivada y vive solo en presentación + cómputo.
-- No requiere migración: `fecha_inicio` y `created_at` ya se leen en `getObraSemanaBoundaries`.
-- Si `fecha_inicio` es nula se usa `created_at` como hoy, igual que ya lo hace el código actual.
+- No requiere cambios en backend ni en `EstadoResultadosModule` (el módulo completo ya tiene su propio toggle).
+- El cálculo de "Semana N" reutiliza el helper agregado anteriormente; si `boundaries` aún no carga, se muestra solo el rango sin el número.
