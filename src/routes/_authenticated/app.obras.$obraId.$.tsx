@@ -69,17 +69,15 @@ function ObraModule() {
   }
 
   return (
-    <div>
-      <div className="mb-3">
-        <Link
-          to="/app/obras/$obraId"
-          params={{ obraId }}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="size-4" />
-          Volver a la obra
-        </Link>
-      </div>
+    <div className="relative">
+      <Link
+        to="/app/obras/$obraId"
+        params={{ obraId }}
+        aria-label="Cerrar módulo"
+        className="absolute top-0 right-0 z-10 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      >
+        <X className="size-4" />
+      </Link>
       {content}
     </div>
   );
