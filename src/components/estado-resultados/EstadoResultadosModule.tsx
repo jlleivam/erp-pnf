@@ -135,7 +135,9 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Estado de resultados</h1>
           <p className="text-sm text-muted-foreground">
-            Producción contra costos · {modo === "semana" ? "semana seleccionada" : "acumulado de la obra"}
+            Producción contra costos · {modo === "semana"
+              ? fechaInicio ? `Semana ${numSeleccion} de la obra` : "semana seleccionada"
+              : "acumulado de la obra"}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
