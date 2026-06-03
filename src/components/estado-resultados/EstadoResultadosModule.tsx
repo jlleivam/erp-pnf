@@ -265,41 +265,43 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
           {histQ.data && histQ.data.length > 0 && (
             <Card className="p-4">
               <h2 className="text-sm font-medium mb-3">Últimas 8 semanas</h2>
-              <ChartContainer
-                config={{
-                  produccion: { label: "Producción", color: "hsl(142 71% 45%)" },
-                  costos: { label: "Costos", color: "hsl(346 77% 50%)" },
-                }}
-                className="h-[220px] w-full"
-              >
-                <BarChart
-                  data={histQ.data.map((s) => ({
-                    semana: s.semana_inicio.slice(5),
-                    produccion: s.produccion,
-                    costos: s.costos_total,
-                  }))}
+              <ClientOnly fallback={<div className="h-[220px]" />}>
+                <ChartContainer
+                  config={{
+                    produccion: { label: "Producción", color: "hsl(142 71% 45%)" },
+                    costos: { label: "Costos", color: "hsl(346 77% 50%)" },
+                  }}
+                  className="h-[220px] w-full"
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="semana" tickLine={false} axisLine={false} />
-                  <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tickLine={false} axisLine={false} width={50} />
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value, name) => (
-                          <span>
-                            <span className="text-muted-foreground mr-2">
-                              {name === "produccion" ? "Producción" : "Costos"}:
+                  <BarChart
+                    data={histQ.data.map((s) => ({
+                      semana: s.semana_inicio.slice(5),
+                      produccion: s.produccion,
+                      costos: s.costos_total,
+                    }))}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="semana" tickLine={false} axisLine={false} />
+                    <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tickLine={false} axisLine={false} width={50} />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => (
+                            <span>
+                              <span className="text-muted-foreground mr-2">
+                                {name === "produccion" ? "Producción" : "Costos"}:
+                              </span>
+                              {formatMXN(Number(value))}
                             </span>
-                            {formatMXN(Number(value))}
-                          </span>
-                        )}
-                      />
-                    }
-                  />
-                  <Bar dataKey="produccion" fill="var(--color-produccion)" radius={4} />
-                  <Bar dataKey="costos" fill="var(--color-costos)" radius={4} />
-                </BarChart>
-              </ChartContainer>
+                          )}
+                        />
+                      }
+                    />
+                    <Bar dataKey="produccion" fill="var(--color-produccion)" radius={4} />
+                    <Bar dataKey="costos" fill="var(--color-costos)" radius={4} />
+                  </BarChart>
+                </ChartContainer>
+              </ClientOnly>
             </Card>
           )}
 
