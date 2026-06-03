@@ -315,7 +315,9 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
                 >
                   <BarChart
                     data={histQ.data.map((s) => ({
-                      semana: s.semana_inicio.slice(5),
+                      semana: fechaInicio
+                        ? `S${numeroSemanaObra(fechaInicio, s.semana_inicio)}`
+                        : s.semana_inicio.slice(5),
                       produccion: s.produccion,
                       costos: s.costos_total,
                     }))}
