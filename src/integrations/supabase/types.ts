@@ -2278,6 +2278,51 @@ export type Database = {
           },
         ]
       }
+      obra_tareas: {
+        Row: {
+          asignado_a: string
+          company_id: string
+          completada_at: string | null
+          creado_por: string
+          created_at: string
+          descripcion: string | null
+          estatus: string
+          fecha_limite: string | null
+          id: string
+          obra_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          asignado_a: string
+          company_id: string
+          completada_at?: string | null
+          creado_por: string
+          created_at?: string
+          descripcion?: string | null
+          estatus?: string
+          fecha_limite?: string | null
+          id?: string
+          obra_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          asignado_a?: string
+          company_id?: string
+          completada_at?: string | null
+          creado_por?: string
+          created_at?: string
+          descripcion?: string | null
+          estatus?: string
+          fecha_limite?: string | null
+          id?: string
+          obra_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       obra_team: {
         Row: {
           created_at: string
