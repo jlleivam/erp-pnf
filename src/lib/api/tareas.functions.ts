@@ -21,19 +21,8 @@ export type Tarea = {
 };
 
 async function hydrateProfiles(
-  supabase: ReturnType<typeof requireSupabaseAuth> extends never ? never : any,
-  rows: Array<{
-    id: string;
-    obra_id: string;
-    titulo: string;
-    descripcion: string | null;
-    asignado_a: string;
-    creado_por: string;
-    fecha_limite: string | null;
-    estatus: TareaEstatus;
-    completada_at: string | null;
-    created_at: string;
-  }>,
+  supabase: any,
+  rows: Array<any>,
 ): Promise<Tarea[]> {
   const ids = Array.from(new Set(rows.flatMap((r) => [r.asignado_a, r.creado_por])));
   let nameMap = new Map<string, string>();
@@ -46,7 +35,16 @@ async function hydrateProfiles(
     nameMap = new Map((profiles ?? []).map((p: any) => [p.id, p.nombre_completo]));
   }
   return rows.map((r) => ({
-    ...r,
+    id: r.id,
+    obra_id: r.obra_id,
+    titulo: r.titulo,
+    descripcion: r.descripcion,
+    asignado_a: r.asignado_a,
+    creado_por: r.creado_por,
+    fecha_limite: r.fecha_limite,
+    estatus: r.estatus as TareaEstatus,
+    completada_at: r.completada_at,
+    created_at: r.created_at,
     asignado_nombre: nameMap.get(r.asignado_a) ?? null,
     creado_por_nombre: nameMap.get(r.creado_por) ?? null,
   }));
@@ -129,8 +127,10 @@ export const actualizarTareaEstatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const patch: Record<string, unknown> = { estatus: data.estatus };
-    patch.completada_at = data.estatus === "completada" ? new Date().toISOString() : null;
+    const patch = {
+      estatus: data.estatus,
+      completada_at: data.estatus === "completada" ? new Date().toISOString() : null,
+    };
     const { error } = await supabase.from("obra_tareas").update(patch).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };

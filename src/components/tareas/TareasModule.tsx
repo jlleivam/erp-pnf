@@ -54,7 +54,7 @@ export function TareasModule({ obraId }: { obraId: string }) {
 
   const [openNueva, setOpenNueva] = useState(false);
   const [filtroEstatus, setFiltroEstatus] = useState<"todas" | TareaEstatus>("todas");
-  const [filtroAsignado, setFiltroAsignado] = useState<"todos" | "mias">("todas" as "todas" === "todas" ? "todos" : "todos");
+  const [filtroAsignado, setFiltroAsignado] = useState<"todos" | "mias">("todos");
 
   const { data: tareas, isLoading } = useQuery({
     queryKey: ["tareas-obra", obraId],
