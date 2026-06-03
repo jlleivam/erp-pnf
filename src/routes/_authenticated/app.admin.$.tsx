@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { NominaAdminPanel } from "@/components/nomina/NominaAdminPanel";
+import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 
 const LABELS: Record<string, string> = {
   requisiciones: "Requisiciones",
@@ -31,6 +32,7 @@ function AdminModule() {
   const { _splat } = Route.useParams();
   const slug = (_splat ?? "").split("/")[0];
   if (slug === "nomina") return <NominaAdminPanel />;
+  if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   const title = LABELS[slug] ?? "Módulo administrativo";
   return <ModulePlaceholder title={title} description="Módulo administrativo" />;
 }
