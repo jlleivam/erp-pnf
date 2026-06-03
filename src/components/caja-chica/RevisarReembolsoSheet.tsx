@@ -60,7 +60,11 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
 
   const revisarM = useMutation({
     mutationFn: revisar,
-    onSuccess: invalidate,
+    onSuccess: (_data, vars: any) => {
+      const decision = vars?.data?.decision;
+      toast.success(decision === "aprobado" ? "Gasto aprobado" : "Gasto rechazado");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
   const cerrarM = useMutation({
@@ -161,39 +165,55 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
                     </div>
                   )}
 
-                  {canReview && ["solicitado", "aprobado", "rechazado"].includes(g.estatus) && (
-                    <div className="flex flex-wrap gap-2 items-end">
-                      <div className="flex-1 min-w-[200px]">
-                        <Label className="text-xs">Motivo (si rechaza)</Label>
-                        <Input
-                          value={rechazoMotivoPorGasto[g.id] ?? ""}
-                          onChange={(e) =>
-                            setRechazoMotivoPorGasto((s) => ({ ...s, [g.id]: e.target.value }))
-                          }
-                          placeholder="Opcional"
-                        />
+                  {canReview && ["solicitado", "aprobado", "rechazado"].includes(g.estatus) && (() => {
+                    const pendingId = (revisarM.variables as any)?.data?.gastoId;
+                    const isPending = revisarM.isPending && pendingId === g.id;
+                    const showAprobar = g.estatus !== "aprobado";
+                    const showRechazar = g.estatus !== "rechazado";
+                    return (
+                      <div className="flex flex-wrap gap-2 items-end">
+                        {showRechazar && (
+                          <div className="flex-1 min-w-[200px]">
+                            <Label className="text-xs">Motivo (si rechaza)</Label>
+                            <Input
+                              value={rechazoMotivoPorGasto[g.id] ?? ""}
+                              onChange={(e) =>
+                                setRechazoMotivoPorGasto((s) => ({ ...s, [g.id]: e.target.value }))
+                              }
+                              placeholder="Describe el motivo"
+                              disabled={isPending}
+                            />
+                          </div>
+                        )}
+                        {showAprobar && (
+                          <Button
+                            size="sm" variant="default" disabled={isPending}
+                            onClick={() => revisarM.mutate({
+                              data: { gastoId: g.id, decision: "aprobado" },
+                            })}
+                          >
+                            <Check className="w-3.5 h-3.5 mr-1" />
+                            {isPending ? "Guardando…" : "Aprobar"}
+                          </Button>
+                        )}
+                        {showRechazar && (
+                          <Button
+                            size="sm" variant="destructive" disabled={isPending}
+                            onClick={() => {
+                              const motivo = rechazoMotivoPorGasto[g.id]?.trim();
+                              if (!motivo) return toast.error("Motivo de rechazo requerido");
+                              revisarM.mutate({
+                                data: { gastoId: g.id, decision: "rechazado", motivo },
+                              });
+                            }}
+                          >
+                            <X className="w-3.5 h-3.5 mr-1" />
+                            {isPending ? "Guardando…" : "Rechazar"}
+                          </Button>
+                        )}
                       </div>
-                      <Button
-                        size="sm" variant="default"
-                        onClick={() => revisarM.mutate({
-                          data: { gastoId: g.id, decision: "aprobado" },
-                        })}
-                      >
-                        <Check className="w-3.5 h-3.5 mr-1" /> Aprobar
-                      </Button>
-                      <Button
-                        size="sm" variant="destructive"
-                        onClick={() => revisarM.mutate({
-                          data: {
-                            gastoId: g.id, decision: "rechazado",
-                            motivo: rechazoMotivoPorGasto[g.id]?.trim() || undefined,
-                          },
-                        })}
-                      >
-                        <X className="w-3.5 h-3.5 mr-1" /> Rechazar
-                      </Button>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               ))}
             </div>
