@@ -155,6 +155,7 @@ async function calcularBuckets(
   supabase: any,
   obraId: string,
   semanas: { inicio: string; fin: string }[],
+  withDetail: boolean = false,
 ): Promise<Bucket[]> {
   const buckets = new Map<string, Bucket>();
   for (const s of semanas) {
@@ -181,18 +182,14 @@ async function calcularBuckets(
     gasolinasRes,
     cajaRes,
   ] = await Promise.all([
-    // Producción: estimaciones cuya semana_inicio cae en alguna de las semanas
     supabase
       .from("obra_estimaciones")
       .select("id, numero, semana_inicio, semana_fin, monto_total, estatus")
       .eq("obra_id", obraId)
       .in("semana_inicio", semanasInicios),
-    // Almacén: agrupar por almacen_semanas.semana_inicio
     supabase
       .from("almacen_semanas")
-      .select(
-        "id, semana_inicio, semana_fin, estatus, almacen_movimientos_semana(utilizado, precio_unitario)",
-      )
+      .select("id, semana_inicio, semana_fin, estatus")
       .eq("obra_id", obraId)
       .in("semana_inicio", semanasInicios),
     supabase
@@ -200,7 +197,6 @@ async function calcularBuckets(
       .select("id, numero, semana_inicio, semana_fin, monto_total, estatus")
       .eq("obra_id", obraId)
       .in("semana_inicio", semanasInicios),
-    // Destajos: estimaciones de destajo
     supabase
       .from("obra_destajo_estimaciones")
       .select(
@@ -215,7 +211,6 @@ async function calcularBuckets(
       )
       .eq("obra_subcontratos.obra_id", obraId)
       .in("semana_inicio", semanasInicios),
-    // Rentas: cualquiera cuyo período se superponga con el rango total
     supabase
       .from("obra_rentas")
       .select(
@@ -234,48 +229,151 @@ async function calcularBuckets(
       .lte("solicitado_at", rangoFin + "T23:59:59"),
     supabase
       .from("caja_chica_gastos")
-      .select("id, concepto, fecha, monto, estatus")
+      .select("id, concepto, descripcion, tipo_comprobante, fecha, monto, estatus")
       .eq("obra_id", obraId)
       .neq("estatus", "rechazado")
       .gte("fecha", rangoInicio)
       .lte("fecha", rangoFin),
   ]);
 
-  // Producción
+  // === Detalle (segunda ronda de fetch, sólo cuando se necesita) ===
   const estIds = (estimacionesRes.data ?? []).map((e: any) => e.id);
-  let renglonesByEst = new Map<string, number>();
-  if (estIds.length > 0) {
-    const { data: rens } = await supabase
-      .from("obra_estimacion_renglones")
-      .select("estimacion_id, importe_ejecutado")
-      .in("estimacion_id", estIds);
-    for (const r of rens ?? []) {
-      const cur = renglonesByEst.get(r.estimacion_id) ?? 0;
-      renglonesByEst.set(r.estimacion_id, cur + num(r.importe_ejecutado));
-    }
+  const almacenIds = (almacenRes.data ?? []).map((s: any) => s.id);
+  const nominaIds = (nominasRes.data ?? []).map((n: any) => n.id);
+  const destajoEstIds = (destajosRes.data ?? []).map((d: any) => d.id);
+  const subcEstIds = (subcontratosRes.data ?? []).map((s: any) => s.id);
+
+  const detailPromises: Promise<any>[] = [];
+  // Estimación renglones (siempre se necesitan para sumar producción)
+  detailPromises.push(
+    estIds.length > 0
+      ? supabase
+          .from("obra_estimacion_renglones")
+          .select(
+            "id, estimacion_id, renglon_clave, concepto, unidad, cantidad_ejecutada, pu_vigente, importe_ejecutado",
+          )
+          .in("estimacion_id", estIds)
+      : Promise.resolve({ data: [] }),
+  );
+  if (withDetail) {
+    detailPromises.push(
+      almacenIds.length > 0
+        ? supabase
+            .from("almacen_movimientos_semana")
+            .select("id, semana_id, utilizado, precio_unitario, insumos(nombre, unidad)")
+            .in("semana_id", almacenIds)
+            .gt("utilizado", 0)
+        : Promise.resolve({ data: [] }),
+      nominaIds.length > 0
+        ? supabase
+            .from("obra_nomina_renglones")
+            .select(
+              "id, nomina_id, dias_trabajados, horas_extras_total, sueldo_diario_snapshot, importe_total, trabajadores(nombre_completo, puesto)",
+            )
+            .in("nomina_id", nominaIds)
+        : Promise.resolve({ data: [] }),
+      destajoEstIds.length > 0
+        ? supabase
+            .from("obra_destajo_estimacion_renglones")
+            .select(
+              "id, estimacion_id, renglon_clave, concepto, unidad, cantidad_ejecutada, pu_vigente, importe_ejecutado",
+            )
+            .in("estimacion_id", destajoEstIds)
+        : Promise.resolve({ data: [] }),
+      subcEstIds.length > 0
+        ? supabase
+            .from("obra_subcontrato_estimacion_renglones")
+            .select(
+              "id, estimacion_id, renglon_clave, concepto, unidad, cantidad_ejecutada, pu_vigente, importe_ejecutado",
+            )
+            .in("estimacion_id", subcEstIds)
+        : Promise.resolve({ data: [] }),
+    );
   }
+
+  const detailResults = await Promise.all(detailPromises);
+  const estRenglonesRes = detailResults[0];
+  const almacenMovsRes = withDetail ? detailResults[1] : { data: [] };
+  const nominaRenglonesRes = withDetail ? detailResults[2] : { data: [] };
+  const destajoRenglonesRes = withDetail ? detailResults[3] : { data: [] };
+  const subcRenglonesRes = withDetail ? detailResults[4] : { data: [] };
+
+  // Indexar renglones de estimación por estimacion_id
+  const renglonesByEst = new Map<string, any[]>();
+  for (const r of estRenglonesRes.data ?? []) {
+    const arr = renglonesByEst.get(r.estimacion_id) ?? [];
+    arr.push(r);
+    renglonesByEst.set(r.estimacion_id, arr);
+  }
+
+  // Producción
   for (const e of estimacionesRes.data ?? []) {
     const b = buckets.get(e.semana_inicio);
     if (!b) continue;
-    const monto = renglonesByEst.get(e.id) ?? num(e.monto_total);
+    const rens = renglonesByEst.get(e.id) ?? [];
+    const monto = rens.length > 0
+      ? rens.reduce((acc, r) => acc + num(r.importe_ejecutado), 0)
+      : num(e.monto_total);
     b.produccion += monto;
     b.produccion_detalle.push({
       id: e.id,
       titulo: `Estimación #${e.numero}`,
       monto,
       estatus: e.estatus,
-      link: null,
+      conceptos: withDetail
+        ? rens
+            .filter((r) => num(r.importe_ejecutado) > 0)
+            .map((r) => ({
+              id: r.id,
+              descripcion: r.concepto,
+              cantidad: num(r.cantidad_ejecutada),
+              unidad: r.unidad,
+              precio_unitario: num(r.pu_vigente),
+              monto: num(r.importe_ejecutado),
+              meta: r.renglon_clave,
+            }))
+        : undefined,
     });
   }
 
-  // Almacén
+  // Almacén — indexar movimientos por semana_id
+  const movsBySemana = new Map<string, any[]>();
+  for (const m of almacenMovsRes.data ?? []) {
+    const arr = movsBySemana.get(m.semana_id) ?? [];
+    arr.push(m);
+    movsBySemana.set(m.semana_id, arr);
+  }
   for (const s of almacenRes.data ?? []) {
     const b = buckets.get(s.semana_inicio);
     if (!b) continue;
-    const monto = (s.almacen_movimientos_semana ?? []).reduce(
-      (acc: number, m: any) => acc + num(m.utilizado) * num(m.precio_unitario),
-      0,
-    );
+    let monto = 0;
+    const conceptos: ConceptoDetalle[] = [];
+    if (withDetail) {
+      const movs = movsBySemana.get(s.id) ?? [];
+      for (const m of movs) {
+        const sub = num(m.utilizado) * num(m.precio_unitario);
+        if (sub === 0) continue;
+        monto += sub;
+        conceptos.push({
+          id: m.id,
+          descripcion: m.insumos?.nombre ?? "Insumo",
+          cantidad: num(m.utilizado),
+          unidad: m.insumos?.unidad ?? null,
+          precio_unitario: num(m.precio_unitario),
+          monto: sub,
+        });
+      }
+    } else {
+      // Sin detalle: necesitamos el monto total → sub-fetch agregado
+      const { data: agg } = await supabase
+        .from("almacen_movimientos_semana")
+        .select("utilizado, precio_unitario")
+        .eq("semana_id", s.id);
+      monto = (agg ?? []).reduce(
+        (acc: number, m: any) => acc + num(m.utilizado) * num(m.precio_unitario),
+        0,
+      );
+    }
     if (monto === 0) continue;
     b.costos.almacen += monto;
     b.detalle.almacen.push({
@@ -283,48 +381,110 @@ async function calcularBuckets(
       titulo: `Consumo semana almacén`,
       monto,
       estatus: s.estatus,
+      conceptos: withDetail ? conceptos : undefined,
     });
   }
 
-  // Nómina
+  // Nómina — indexar renglones por nomina_id
+  const renglonesByNomina = new Map<string, any[]>();
+  for (const r of nominaRenglonesRes.data ?? []) {
+    const arr = renglonesByNomina.get(r.nomina_id) ?? [];
+    arr.push(r);
+    renglonesByNomina.set(r.nomina_id, arr);
+  }
   for (const n of nominasRes.data ?? []) {
     const b = buckets.get(n.semana_inicio);
     if (!b) continue;
     const monto = num(n.monto_total);
     b.costos.nomina += monto;
+    const rens = renglonesByNomina.get(n.id) ?? [];
     b.detalle.nomina.push({
       id: n.id,
       titulo: `Nómina #${n.numero}`,
       monto,
       estatus: n.estatus,
+      conceptos: withDetail
+        ? rens.map((r) => ({
+            id: r.id,
+            descripcion: r.trabajadores?.nombre_completo ?? "Trabajador",
+            cantidad: num(r.dias_trabajados),
+            unidad: "días",
+            precio_unitario: num(r.sueldo_diario_snapshot),
+            monto: num(r.importe_total),
+            meta:
+              num(r.horas_extras_total) > 0
+                ? `${r.trabajadores?.puesto ?? ""} · ${num(r.horas_extras_total)}h extra`
+                : (r.trabajadores?.puesto ?? null),
+          }))
+        : undefined,
     });
   }
 
-  // Destajos
+  // Destajos — indexar renglones por estimacion_id
+  const renglonesByDestajo = new Map<string, any[]>();
+  for (const r of destajoRenglonesRes.data ?? []) {
+    const arr = renglonesByDestajo.get(r.estimacion_id) ?? [];
+    arr.push(r);
+    renglonesByDestajo.set(r.estimacion_id, arr);
+  }
   for (const d of destajosRes.data ?? []) {
     const b = buckets.get(d.semana_inicio);
     if (!b) continue;
     const monto = num(d.monto_total);
     b.costos.destajos += monto;
+    const rens = renglonesByDestajo.get(d.id) ?? [];
     b.detalle.destajos.push({
       id: d.id,
       titulo: `${d.obra_destajos?.nombre ?? "Destajo"} — estim. #${d.numero}`,
       monto,
       estatus: d.estatus,
+      conceptos: withDetail
+        ? rens
+            .filter((r) => num(r.importe_ejecutado) > 0)
+            .map((r) => ({
+              id: r.id,
+              descripcion: r.concepto,
+              cantidad: num(r.cantidad_ejecutada),
+              unidad: r.unidad,
+              precio_unitario: num(r.pu_vigente),
+              monto: num(r.importe_ejecutado),
+              meta: r.renglon_clave,
+            }))
+        : undefined,
     });
   }
 
-  // Subcontratos
+  // Subcontratos — indexar
+  const renglonesBySubc = new Map<string, any[]>();
+  for (const r of subcRenglonesRes.data ?? []) {
+    const arr = renglonesBySubc.get(r.estimacion_id) ?? [];
+    arr.push(r);
+    renglonesBySubc.set(r.estimacion_id, arr);
+  }
   for (const sc of subcontratosRes.data ?? []) {
     const b = buckets.get(sc.semana_inicio);
     if (!b) continue;
     const monto = num(sc.monto_total);
     b.costos.subcontratos += monto;
+    const rens = renglonesBySubc.get(sc.id) ?? [];
     b.detalle.subcontratos.push({
       id: sc.id,
       titulo: `${sc.obra_subcontratos?.nombre ?? "Subcontrato"} — estim. #${sc.numero}`,
       monto,
       estatus: sc.estatus,
+      conceptos: withDetail
+        ? rens
+            .filter((r) => num(r.importe_ejecutado) > 0)
+            .map((r) => ({
+              id: r.id,
+              descripcion: r.concepto,
+              cantidad: num(r.cantidad_ejecutada),
+              unidad: r.unidad,
+              precio_unitario: num(r.pu_vigente),
+              monto: num(r.importe_ejecutado),
+              meta: r.renglon_clave,
+            }))
+        : undefined,
     });
   }
 
@@ -334,17 +494,33 @@ async function calcularBuckets(
     const inicio = r.fecha_llegada_real ?? r.fecha_estimada_inicio;
     if (!inicio) continue;
     const fin = r.fecha_devolucion_real ?? r.fecha_fin_programada ?? hoyISO;
-    const td = tarifaDiaria(num(r.tarifa_unitaria), r.periodicidad) * num(r.cantidad || 1);
+    const tdUnit = tarifaDiaria(num(r.tarifa_unitaria), r.periodicidad);
+    const cant = num(r.cantidad || 1);
+    const td = tdUnit * cant;
     for (const b of buckets.values()) {
       const dias = diasOverlap(inicio, fin, b.inicio, b.fin);
       if (dias <= 0) continue;
       const monto = td * dias;
       b.costos.rentas += monto;
       b.detalle.rentas.push({
-        id: r.id,
-        titulo: `${r.equipo} (${dias}d × ${r.periodicidad ?? "mensual"})`,
+        id: `${r.id}-${b.inicio}`,
+        titulo: `${r.equipo}`,
         monto,
         estatus: r.estatus,
+        meta: `${dias}d × ${r.periodicidad ?? "mensual"}`,
+        conceptos: withDetail
+          ? [
+              {
+                id: `${r.id}-detail`,
+                descripcion: `${r.equipo} (×${cant})`,
+                cantidad: dias,
+                unidad: "días",
+                precio_unitario: td,
+                monto,
+                meta: `Tarifa ${r.periodicidad ?? "mensual"}: ${num(r.tarifa_unitaria).toFixed(2)} → diaria ${tdUnit.toFixed(2)}`,
+              },
+            ]
+          : undefined,
       });
     }
   }
@@ -363,6 +539,7 @@ async function calcularBuckets(
       titulo: `${v.folio} — ${v.tipo_combustible}`,
       monto,
       estatus: v.estatus,
+      meta: v.descripcion ?? null,
     });
   }
 
@@ -377,6 +554,7 @@ async function calcularBuckets(
       titulo: g.concepto,
       monto,
       estatus: g.estatus,
+      meta: [g.fecha, g.tipo_comprobante, g.descripcion].filter(Boolean).join(" · "),
     });
   }
 
