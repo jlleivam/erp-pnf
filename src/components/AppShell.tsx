@@ -102,8 +102,45 @@ export function AppShell() {
     </div>
   );
 
+  const obraNavItems: BottomBarItem[] = obraId
+    ? [
+        { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt },
+        { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: BarChart3 },
+        { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList },
+        { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users },
+        { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer },
+        { to: `/app/obras/${obraId}/subcontratos`, label: "Subcontratos", icon: Handshake },
+        { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Warehouse },
+        { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck },
+        { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel },
+        { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins },
+        { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo },
+      ]
+    : [];
+
   const renderNav = (onNavigate?: () => void) => (
     <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+      {isInsideObra && obraNavItems.length > 0 && (
+        <div>
+          <p className="px-3 mb-2 text-xs uppercase tracking-wider text-sidebar-foreground/50">
+            Obra
+          </p>
+          {obraNavItems.map((m) => {
+            const Icon = m.icon;
+            return (
+              <NavItem
+                key={m.to}
+                to={m.to}
+                label={m.label}
+                icon={<Icon className="size-4" />}
+                active={pathname === m.to || pathname.startsWith(m.to + "/")}
+                onNavigate={onNavigate}
+              />
+            );
+          })}
+        </div>
+      )}
+
       <div>
         <p className="px-3 mb-2 text-xs uppercase tracking-wider text-sidebar-foreground/50">
           Corporativo
