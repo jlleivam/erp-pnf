@@ -1,6 +1,20 @@
 import { useState } from "react";
-import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Building2, LayoutDashboard, BookOpen, Settings, LogOut, ChevronDown, HardHat, UserCog, Menu, ShieldCheck } from "lucide-react";
+import { Link, Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import {
+  Building2,
+  LayoutDashboard,
+  BookOpen,
+  Settings,
+  LogOut,
+  ChevronDown,
+  HardHat,
+  UserCog,
+  ShieldCheck,
+  LayoutGrid,
+  Receipt,
+  ListChecks,
+  Package,
+} from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,8 +28,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { NotificacionesBell } from "@/components/NotificacionesBell";
+import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
+
 
 
 const ROLE_LABELS: Record<AppRole, string> = {
@@ -34,7 +50,11 @@ export function AppShell() {
   const setAssumedRole = useAuthStore((s) => s.setAssumedRole);
   const reset = useAuthStore((s) => s.reset);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const params = useParams({ strict: false }) as { obraId?: string };
+  const obraId = params.obraId;
+  const isInsideObra = Boolean(obraId) && pathname.startsWith(`/app/obras/${obraId}`);
   const [mobileOpen, setMobileOpen] = useState(false);
+
 
   const realDirector = useRealIsDirector();
   const effRoles = useEffectiveRoles();
@@ -132,24 +152,12 @@ export function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
-            {/* Mobile sidebar trigger */}
-            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menú">
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col">
-                {sidebarBranding}
-                {renderNav(() => setMobileOpen(false))}
-              </SheetContent>
-            </Sheet>
-
             <Link to="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Building2 className="size-5 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">ERP PNF</span>
             </Link>
           </div>
+
 
           <div className="flex items-center gap-3">
             <NotificacionesBell />
@@ -219,12 +227,45 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto">
           <Outlet />
         </main>
       </div>
+
+      {/* Bottom bar móvil (contextual) */}
+      <MobileBottomBar
+        pathname={pathname}
+        items={
+          isInsideObra && obraId
+            ? [
+                { to: `/app/obras/${obraId}`, label: "Resumen", icon: LayoutGrid, exact: true },
+                { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: Receipt },
+                { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListChecks },
+                { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Package },
+              ] satisfies BottomBarItem[]
+            : [
+                { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+                { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
+                { to: "/app/equipo", label: "Equipo", icon: UserCog },
+                { to: "/app/configuracion", label: "Config", icon: Settings },
+              ] satisfies BottomBarItem[]
+        }
+        onMoreClick={() => setMobileOpen(true)}
+      />
+
+      {/* Sheet con menú completo (se abre desde "Más") */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent
+          side="left"
+          className="p-0 w-72 bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col"
+        >
+          {sidebarBranding}
+          {renderNav(() => setMobileOpen(false))}
+        </SheetContent>
+      </Sheet>
     </div>
   );
+
 }
 
 function NavItem({
