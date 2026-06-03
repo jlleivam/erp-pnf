@@ -50,7 +50,11 @@ export function AppShell() {
   const setAssumedRole = useAuthStore((s) => s.setAssumedRole);
   const reset = useAuthStore((s) => s.reset);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const params = useParams({ strict: false }) as { obraId?: string };
+  const obraId = params.obraId;
+  const isInsideObra = Boolean(obraId) && pathname.startsWith(`/app/obras/${obraId}`);
   const [mobileOpen, setMobileOpen] = useState(false);
+
 
   const realDirector = useRealIsDirector();
   const effRoles = useEffectiveRoles();
