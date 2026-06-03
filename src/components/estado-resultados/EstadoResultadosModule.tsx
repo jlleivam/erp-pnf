@@ -322,21 +322,58 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
         </>
       )}
 
-      {/* Detalle por categoría */}
-      <Sheet open={!!detalleCat} onOpenChange={(o) => !o && setDetalleCat(null)}>
-        <SheetContent className="sm:max-w-lg w-full overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{detalleTitulo}</SheetTitle>
-            <SheetDescription>{rango}</SheetDescription>
-          </SheetHeader>
-          <div className="mt-4">
-            <DocumentosLista docs={detalleDocs} />
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
+
+function CategoriaAccordion({
+  value,
+  label,
+  monto,
+  pctCosto,
+  pctProd,
+  accent,
+  docs,
+}: {
+  value: string;
+  label: string;
+  monto: number;
+  pctCosto: number | null;
+  pctProd: number | null;
+  accent: "emerald" | "rose";
+  docs: DocumentoCosto[];
+}) {
+  const disabled = monto <= 0;
+  const accentClass =
+    accent === "emerald"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-rose-600 dark:text-rose-400";
+  return (
+    <AccordionItem value={value} className="border-0" disabled={disabled}>
+      <AccordionTrigger
+        className="px-4 py-3 hover:no-underline data-[disabled]:opacity-60 data-[disabled]:cursor-default"
+        disabled={disabled}
+      >
+        <div className="flex-1 grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 pr-2 text-sm">
+          <div className="font-medium text-left">{label}</div>
+          <div className={`tabular-nums text-right min-w-[110px] ${monto > 0 ? accentClass : "text-muted-foreground"}`}>
+            {monto > 0 ? formatMXN(monto) : "—"}
+          </div>
+          <div className="tabular-nums text-right text-muted-foreground min-w-[60px]">
+            {pctCosto != null ? `${pctCosto.toFixed(1)}%` : "—"}
+          </div>
+          <div className="tabular-nums text-right text-muted-foreground min-w-[70px]">
+            {pctProd != null ? `${pctProd.toFixed(1)}%` : "—"}
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4 pt-0 bg-muted/20">
+        <DocumentosLista docs={docs} />
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
 
 function DocumentosLista({ docs }: { docs: DocumentoCosto[] }) {
   if (docs.length === 0) {
