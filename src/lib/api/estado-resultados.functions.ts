@@ -16,12 +16,24 @@ export type CostoCategoria =
   | "gasolinas"
   | "cajaChica";
 
+export type ConceptoDetalle = {
+  id: string;
+  descripcion: string;
+  cantidad?: number | null;
+  unidad?: string | null;
+  precio_unitario?: number | null;
+  monto: number;
+  meta?: string | null;
+};
+
 export type DocumentoCosto = {
   id: string;
   titulo: string;
   monto: number;
   estatus?: string | null;
   link?: string | null;
+  meta?: string | null;
+  conceptos?: ConceptoDetalle[];
 };
 
 export type SemanaResultado = {
