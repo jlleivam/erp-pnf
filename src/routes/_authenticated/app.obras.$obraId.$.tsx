@@ -9,6 +9,7 @@ import { NominaModule } from "@/components/nomina/NominaModule";
 import { DestajosModule } from "@/components/destajos/DestajosModule";
 import { SubcontratosModule } from "@/components/subcontratos/SubcontratosModule";
 import { RentasModule } from "@/components/rentas/RentasModule";
+import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 import { useEffectiveRoles, isDirector } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
