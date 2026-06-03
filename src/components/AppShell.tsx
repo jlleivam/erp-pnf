@@ -21,7 +21,6 @@ import {
   Coins,
   ListTodo,
   BarChart3,
-  X,
 } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
