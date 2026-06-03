@@ -5,6 +5,8 @@ import { ClientOnly } from "@tanstack/react-router";
 import {
   getEstadoResultadosSemana,
   getEstadoResultadosHistorico,
+  getEstadoResultadosAcumulado,
+  getObraSemanaBoundaries,
   type CostoCategoria,
   type DocumentoCosto,
   type ConceptoDetalle,
@@ -13,6 +15,7 @@ import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-u
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   ChartContainer,
   ChartTooltip,
@@ -27,6 +30,7 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
 import { formatMXN } from "@/lib/format";
+
 
 
 const CATEGORIA_LABELS: Record<CostoCategoria, string> = {
@@ -57,14 +61,29 @@ function shiftSemana(inicio: string, dias: number): string {
 
 export function EstadoResultadosModule({ obraId }: { obraId: string }) {
   const semanaActual = useMemo(() => calcularSemana(new Date()), []);
+  const [modo, setModo] = useState<"semana" | "global">("semana");
   const [semanaInicio, setSemanaInicio] = useState<string>(semanaActual.inicio);
 
   const fetchSemana = useServerFn(getEstadoResultadosSemana);
   const fetchHistorico = useServerFn(getEstadoResultadosHistorico);
+  const fetchAcumulado = useServerFn(getEstadoResultadosAcumulado);
+  const fetchBoundaries = useServerFn(getObraSemanaBoundaries);
+
+  const boundariesQ = useQuery({
+    queryKey: ["obra-semana-boundaries", obraId],
+    queryFn: () => fetchBoundaries({ data: { obraId } }),
+  });
 
   const semanaQ = useQuery({
     queryKey: ["estado-resultados", obraId, semanaInicio],
     queryFn: () => fetchSemana({ data: { obraId, semanaInicio } }),
+    enabled: modo === "semana",
+  });
+
+  const acumQ = useQuery({
+    queryKey: ["estado-resultados-acum", obraId],
+    queryFn: () => fetchAcumulado({ data: { obraId } }),
+    enabled: modo === "global",
   });
 
   const histQ = useQuery({
@@ -72,11 +91,23 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
     queryFn: () => fetchHistorico({ data: { obraId, semanas: 8 } }),
   });
 
-  const semana = semanaQ.data;
-  const rango = formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6));
+  const activeQ = modo === "semana" ? semanaQ : acumQ;
+  const semana = activeQ.data;
+  const rango =
+    modo === "semana"
+      ? formatRangoSemana(semanaInicio, shiftSemana(semanaInicio, 6))
+      : boundariesQ.data
+        ? `Desde ${formatRangoSemana(boundariesQ.data.primerSemana, shiftSemana(boundariesQ.data.primerSemana, 6))} hasta hoy`
+        : "Acumulado de la obra";
+
+  const primerSemana = boundariesQ.data?.primerSemana;
+  const puedeAnterior =
+    modo === "semana" && (!primerSemana || semanaInicio > primerSemana);
+  const puedeSiguiente =
+    modo === "semana" && semanaInicio < semanaActual.inicio;
 
   const acumulado = useMemo(() => {
-    if (!histQ.data) return null;
+    if (modo !== "semana" || !histQ.data) return null;
     const hasta = histQ.data.filter((s) => s.semana_inicio <= semanaInicio);
     return hasta.reduce(
       (acc, s) => ({
@@ -86,7 +117,7 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
       }),
       { produccion: 0, costos: 0, resultado: 0 },
     );
-  }, [histQ.data, semanaInicio]);
+  }, [histQ.data, semanaInicio, modo]);
 
 
   return (
@@ -95,32 +126,51 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Estado de resultados</h1>
           <p className="text-sm text-muted-foreground">
-            Producción contra costos por semana
+            Producción contra costos · {modo === "semana" ? "semana seleccionada" : "acumulado de la obra"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
+        <div className="flex items-center gap-3 flex-wrap">
+          <ToggleGroup
+            type="single"
+            value={modo}
+            onValueChange={(v) => v && setModo(v as "semana" | "global")}
             variant="outline"
-            size="icon"
-            onClick={() => setSemanaInicio(shiftSemana(semanaInicio, -7))}
-            aria-label="Semana anterior"
+            size="sm"
           >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <div className="text-sm font-medium px-3 min-w-[180px] text-center">{rango}</div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSemanaInicio(shiftSemana(semanaInicio, 7))}
-            disabled={semanaInicio >= semanaActual.inicio}
-            aria-label="Semana siguiente"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
+            <ToggleGroupItem value="semana">Semana</ToggleGroupItem>
+            <ToggleGroupItem value="global">Global</ToggleGroupItem>
+          </ToggleGroup>
+
+          {modo === "semana" ? (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSemanaInicio(shiftSemana(semanaInicio, -7))}
+                disabled={!puedeAnterior}
+                aria-label="Semana anterior"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <div className="text-sm font-medium px-3 min-w-[180px] text-center">{rango}</div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSemanaInicio(shiftSemana(semanaInicio, 7))}
+                disabled={!puedeSiguiente}
+                aria-label="Semana siguiente"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">{rango}</div>
+          )}
         </div>
       </header>
 
-      {semanaQ.isLoading ? (
+      {activeQ.isLoading ? (
+
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : !semana ? (
         <p className="text-sm text-destructive">No se pudo cargar el estado de resultados.</p>
