@@ -1,28 +1,52 @@
 ## Objetivo
 
-Que cada categoría de la tabla "Costos por categoría" — y también la fila de "Producción ejercida" — se pueda **expandir/colapsar inline** en la página principal para revelar sus documentos y conceptos, sin tener que abrir un panel lateral.
+En **móvil**, sustituir el menú hamburguesa actual del `AppShell` por una **barra inferior fija** de 5 íconos. Cuando el usuario entra a una obra, esa misma barra cambia de contenido para mostrar la navegación interna de la obra (lo que hoy hace `ObraShell` aparte). En **desktop** todo sigue exactamente igual: sidebar lateral en `AppShell` y contenido pleno en obra.
 
-## Cambios (un solo archivo)
+## Cambios
 
-`src/components/estado-resultados/EstadoResultadosModule.tsx`
+### 1. Nuevo componente `src/components/MobileBottomBar.tsx`
 
-1. **Eliminar el `<Sheet>` de detalle** y el estado `detalleCat`/`setDetalleCat`. Ya no se necesita panel lateral.
+Barra fija inferior (`fixed bottom-0 inset-x-0 h-16 bg-card border-t z-30`), visible solo en `md:hidden`. Recibe props:
+- `items: { to, label, icon, match }[]` — 4 entradas + 1 slot fijo "Más".
+- `onMoreClick: () => void` — abre un Sheet con el resto del menú.
 
-2. **Reemplazar la tabla "Costos por categoría"** por un `Accordion type="multiple"` que renderice un `AccordionItem` por cada una de las 7 categorías más una fila final estática "Total costos".
+Cada ítem es un `<Link>` con estado activo basado en `pathname` (resaltado en `text-primary`).
 
-   - El **header** del item (AccordionTrigger) muestra en una sola línea: nombre de categoría · monto · `% costo` · `% producción` — visualmente equivalente a la fila actual de la tabla (grid de 4 columnas con `tabular-nums`).
-   - El **body** (AccordionContent) renderiza el componente existente `DocumentosLista` con `semana.detalle[cat]`, que ya sabe pintar acordeones de segundo nivel (documento → conceptos) cuando hay `conceptos`, o lista plana cuando no.
-   - Si la categoría tiene `monto === 0`, deshabilitar el trigger (no expandible) y mostrar "—".
+### 2. `AppShell.tsx` — modo corporativo
 
-3. **Añadir bloque "Producción ejercida" como acordeón hermano** justo arriba o abajo de las categorías de costo, con el mismo patrón: header con monto, body con `DocumentosLista docs={semana.produccion_detalle}`.
+- Detectar si la ruta actual es una obra: `pathname.startsWith("/app/obras/") && pathname !== "/app/obras/nueva"`.
+- Calcular los `items` del bottom bar:
+  - **Fuera de obra** (corporativo):
+    1. Dashboard → `/app`
+    2. Obras → `/app` (lista — mismo destino, pero podemos dejar Catálogos)
+    3. Catálogos → `/app/catalogos`
+    4. Configuración → `/app/configuracion`
+    5. Más → abre Sheet
+  - **Dentro de obra**:
+    1. Resumen → `/app/obras/$obraId`
+    2. Estimaciones → `/app/obras/$obraId/estimaciones`
+    3. Tareas → `/app/obras/$obraId/tareas`
+    4. Almacén → `/app/obras/$obraId/almacen-obra`
+    5. Más → abre Sheet (con los módulos restantes de la obra + atajo "Salir a Obras")
+- Reemplazar el `Sheet` hamburguesa actual del header por:
+  - Quitar el botón `Menu` del header en móvil.
+  - El Sheet del menú completo se abre ahora con el ítem "Más" del bottom bar (mismo `SheetContent side="left"` con el nav existente).
+- Renderizar `<MobileBottomBar />` justo antes de cerrar el shell, fuera del `<main>`.
+- Añadir `pb-20 md:pb-0` al `<main>` para que la barra no tape el contenido.
 
-4. **Tarjetas resumen superiores**: dejarlas como están pero quitar el `onClick` de la tarjeta de Producción (ya no abre Sheet — el detalle vive abajo en el acordeón).
+### 3. `ObraShell.tsx`
 
-5. **Sin cambios** en:
-   - Backend (`estado-resultados.functions.ts`) — ya entrega `conceptos`.
-   - Sub-componentes `DocumentosLista`, `DocumentoFlat`, `ConceptosTabla` — se reutilizan tal cual.
-   - Tarjetas resumen, histórico de 8 semanas, acumulado.
+- Eliminar la `nav` bottom bar actual (ahora la maneja `AppShell`).
+- Quitar el `pb-24` del `<main>` (lo aporta el AppShell).
+- Conservar el header con "← Obras" para el botón de salida en móvil.
 
-## Resultado esperado
+### 4. Lista de módulos de obra para el bottom bar
 
-La página muestra de un vistazo todas las categorías con su monto, y el usuario puede abrir/cerrar cada una para ver sus documentos y, dentro de cada documento, sus conceptos — todo sin navegar a un panel lateral. Soporta múltiples categorías abiertas al mismo tiempo (`type="multiple"`).
+Crear un export `OBRA_QUICK_NAV` en `src/lib/modules.ts` con las 4 entradas principales (Resumen, Estimaciones, Tareas, Almacén) y `OBRA_MORE_MODULES` con el resto, para alimentar el Sheet "Más" dentro de obra.
+
+## Resultado
+
+- **Desktop**: sin cambios visibles. Sidebar siempre presente.
+- **Móvil corporativo**: barra inferior con Dashboard / Obras / Catálogos / Config / Más.
+- **Móvil dentro de obra**: la misma barra inferior cambia a Resumen / Estimaciones / Tareas / Almacén / Más, sin duplicación, sin perder la posibilidad de regresar a otros módulos vía "Más".
+- Header móvil se limpia (sin hamburguesa).
