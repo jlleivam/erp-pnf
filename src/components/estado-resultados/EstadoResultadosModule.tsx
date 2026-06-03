@@ -128,22 +128,18 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
         <>
           {/* Tarjetas resumen */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <button
-              onClick={() => setDetalleCat("produccion")}
-              className="text-left"
-            >
-              <Card className="p-4 border-l-4 border-l-emerald-500 hover:border-l-emerald-400 transition-colors">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Producción ejercida
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                  {formatMXN(semana.produccion)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {semana.produccion_detalle.length} estimación(es)
-                </p>
-              </Card>
-            </button>
+            <Card className="p-4 border-l-4 border-l-emerald-500">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                Producción ejercida
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                {formatMXN(semana.produccion)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {semana.produccion_detalle.length} estimación(es)
+              </p>
+            </Card>
+
 
             <Card className="p-4 border-l-4 border-l-rose-500">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
