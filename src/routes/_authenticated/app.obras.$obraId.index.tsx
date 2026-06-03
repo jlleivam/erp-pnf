@@ -91,15 +91,9 @@ function ObraDashboard() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-semibold tracking-tight">{obra.nombre}</h1>
-          <Badge variant="secondary">{TIPO_LABELS[obra.tipo_obra] ?? obra.tipo_obra}</Badge>
-        </div>
-      </header>
+      <ObraHeader obra={obra} team={team} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <PanelInfoGeneral obra={obra} team={team} />
+      <div className="grid gap-4 lg:grid-cols-2">
         <PanelEstadoResultados
           obraId={obraId}
           inicio={semanaInicio}
@@ -113,15 +107,16 @@ function ObraDashboard() {
 }
 
 // ============================================================
-// Panel 1 — Info general
+// Header compacto — info general en 2 líneas
 // ============================================================
 
-function PanelInfoGeneral({
+function ObraHeader({
   obra,
   team,
 }: {
   obra: {
     nombre: string;
+    tipo_obra: string;
     numero_contrato: string | null;
     ubicacion: string | null;
     fecha_inicio: string | null;
@@ -144,83 +139,89 @@ function PanelInfoGeneral({
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(obra.ubicacion)}`
     : null;
 
+  const initials = (name?: string | null) =>
+    (name ?? "?")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("");
+
+  const visibleTeam = team.slice(0, 3);
+  const extra = team.length - visibleTeam.length;
+
   return (
-    <Card className="p-4 space-y-4">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-        <FileText className="size-3.5" /> Información general
-      </div>
-
-      <div>
-        <p className="text-xs text-muted-foreground">Cliente</p>
-        <p className="font-medium">{obra.cliente?.razon_social ?? "Sin cliente"}</p>
-        {obra.cliente?.rfc && <p className="text-xs text-muted-foreground">{obra.cliente.rfc}</p>}
-      </div>
-
-      {obra.numero_contrato && (
-        <div>
-          <p className="text-xs text-muted-foreground">Contrato</p>
-          <p className="text-sm">{obra.numero_contrato}</p>
+    <header className="border-b border-border pb-4 space-y-2">
+      {/* Línea 1: título + cliente + contrato + avatares */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight truncate">{obra.nombre}</h1>
+          <Badge variant="secondary" className="text-xs">
+            {TIPO_LABELS[obra.tipo_obra] ?? obra.tipo_obra}
+          </Badge>
+          <span className="text-sm text-muted-foreground">
+            · {obra.cliente?.razon_social ?? "Sin cliente"}
+            {obra.numero_contrato && ` · ${obra.numero_contrato}`}
+          </span>
         </div>
-      )}
 
-      <div>
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <MapPin className="size-3" /> Ubicación
-        </p>
+        {team.length > 0 && (
+          <div className="flex -space-x-2">
+            {visibleTeam.map((m) => (
+              <div
+                key={m.id}
+                title={`${m.user?.nombre_completo ?? "—"} · ${ROLE_LABELS[m.role] ?? m.role}`}
+                className="size-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-medium"
+              >
+                {initials(m.user?.nombre_completo)}
+              </div>
+            ))}
+            {extra > 0 && (
+              <div className="size-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                +{extra}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Línea 2: meta (ubicación + fechas) */}
+      <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-sm text-muted-foreground">
         {obra.ubicacion ? (
-          <div className="space-y-2">
-            <p className="text-sm">{obra.ubicacion}</p>
-            <div className="flex gap-2">
-              <Button asChild size="sm" variant="outline">
-                <a href={mapsHref!} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="size-3.5" /> Maps
-                </a>
-              </Button>
-              <Button size="sm" variant="outline" onClick={copiarUbicacion}>
-                <Copy className="size-3.5" /> Copiar
-              </Button>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <MapPin className="size-3.5" />
+            <span>{obra.ubicacion}</span>
+            <a
+              href={mapsHref!}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Abrir en Google Maps"
+              className="hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="size-3.5" />
+            </a>
+            <button
+              onClick={copiarUbicacion}
+              title="Copiar ubicación"
+              className="hover:text-foreground transition-colors"
+            >
+              <Copy className="size-3.5" />
+            </button>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">—</p>
+          <div className="flex items-center gap-1.5">
+            <MapPin className="size-3.5" /> <span>Sin ubicación</span>
+          </div>
         )}
-      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Calendar className="size-3" /> Inicio
-          </p>
-          <p className="text-sm">{formatDate(obra.fecha_inicio)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Calendar className="size-3" /> Terminación
-          </p>
-          <p className="text-sm">{formatDate(obra.fecha_terminacion)}</p>
+        <div className="flex items-center gap-1.5">
+          <Calendar className="size-3.5" />
+          <span>
+            {formatDate(obra.fecha_inicio) || "—"} → {formatDate(obra.fecha_terminacion) || "—"}
+          </span>
         </div>
       </div>
-
-      <div>
-        <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
-          <Users className="size-3" /> Equipo
-        </p>
-        {team.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sin equipo asignado.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {team.map((m) => (
-              <li key={m.id} className="flex items-center justify-between text-sm">
-                <span>{m.user?.nombre_completo ?? "—"}</span>
-                <Badge variant="outline" className="text-xs">
-                  {ROLE_LABELS[m.role] ?? m.role}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Card>
+    </header>
   );
 }
 
