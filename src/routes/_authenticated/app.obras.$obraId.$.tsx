@@ -45,6 +45,7 @@ function ObraModule() {
   if (slug === "destajos") return <DestajosModule obraId={obraId} />;
   if (slug === "subcontratos") return <SubcontratosModule obraId={obraId} />;
   if (slug === "rentas") return <RentasModule obraId={obraId} />;
+  if (slug === "gasolinas") return <GasolinasModule obraId={obraId} scope="obra" />;
   const title = LABELS[slug] ?? "Módulo";
   const isAuxiliar = !isDirector(roles) && roles.includes("auxiliar");
 
