@@ -350,7 +350,9 @@ export function EstadoResultadosModule({ obraId }: { obraId: string }) {
           {/* Acumulado */}
           {acumulado && (
             <Card className="p-4">
-              <h2 className="text-sm font-medium mb-3">Acumulado de la obra (hasta esta semana)</h2>
+              <h2 className="text-sm font-medium mb-3">
+                Acumulado de la obra{fechaInicio ? ` (Semanas 1–${numSeleccion})` : " (hasta esta semana)"}
+              </h2>
               <div className="grid gap-4 sm:grid-cols-3 text-sm">
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
