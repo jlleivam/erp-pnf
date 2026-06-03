@@ -11,6 +11,7 @@ import { SubcontratosModule } from "@/components/subcontratos/SubcontratosModule
 import { RentasModule } from "@/components/rentas/RentasModule";
 import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
+import { EstadoResultadosModule } from "@/components/estado-resultados/EstadoResultadosModule";
 import { useEffectiveRoles, isDirector } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
@@ -24,6 +25,7 @@ const LABELS: Record<string, string> = {
   rentas: "Rentas",
   gasolinas: "Gasolinas",
   "caja-chica": "Caja chica",
+  "estado-resultados": "Estado de resultados",
   "almacen-obra": "Almacén de obra",
   tareas: "Tareas",
   catalogos: "Catálogos",
@@ -48,6 +50,7 @@ function ObraModule() {
   if (slug === "rentas") return <RentasModule obraId={obraId} />;
   if (slug === "gasolinas") return <GasolinasModule obraId={obraId} scope="obra" />;
   if (slug === "caja-chica") return <CajaChicaModule obraId={obraId} scope="obra" />;
+  if (slug === "estado-resultados") return <EstadoResultadosModule obraId={obraId} />;
   const title = LABELS[slug] ?? "Módulo";
   const isAuxiliar = !isDirector(roles) && roles.includes("auxiliar");
 
