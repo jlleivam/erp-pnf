@@ -6,8 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, HardHat, Construction } from "lucide-react";
-import { useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
-import { ADMIN_MODULES, CONFIG_MODULES, type ModuleEntry } from "@/lib/modules";
+import { useEffectiveIsDirector } from "@/stores/auth";
+import { CONFIG_MODULES, type ModuleEntry } from "@/lib/modules";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
