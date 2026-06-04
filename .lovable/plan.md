@@ -1,33 +1,20 @@
-## Objetivo
-Mover el botón "Guardar cambios" del interior de `FacturacionTab` y `ConfiguracionTab` al componente padre `app.configuracion.tsx`, de modo que siempre esté visible sin importar qué pestaña esté activa. Al hacer clic, guardará los datos de la pestaña actualmente visible.
+## Mostrar el logo de la empresa en la barra superior
 
-## Cambios necesarios
+Reemplazar el ícono `Building2` + texto "ERP PNF" del header de `AppShell` por el logo de la empresa cuando exista uno cargado. El elemento sigue siendo un `<Link to="/app">`, conservando su función de navegación al dashboard.
 
-### 1. `FacturacionTab.tsx` — Exponer método de guardado
-- Eliminar el botón "Guardar cambios" del final del formulario.
-- Convertir el componente a `forwardRef`.
-- Usar `useImperativeHandle` para exponer un método `submit()` que llame `formRef.current?.requestSubmit()`.
-- Crear un `useRef<HTMLFormElement>(null)` para referenciar el `<form>`.
-- El formulario sigue manejando `onSubmit` con la mutación existente; solo se quita el botón interno.
+### Cambios en `src/components/AppShell.tsx`
 
-### 2. `ConfiguracionTab.tsx` — Exponer método de guardado
-- Eliminar el botón "Guardar" de la sección General.
-- Convertir el componente a `forwardRef`.
-- Usar `useImperativeHandle` para exponer un método `save()` que invoque `save.mutate({ data: { moneda, zona_horaria: zona } })`.
+1. Importar `useQuery` de `@tanstack/react-query`, `useServerFn` de `@tanstack/react-start`, y `getCompanyConfig` + `getCompanyLogoSignedUrl` de `@/lib/api/company.functions`.
+2. Dentro de `AppShell`:
+   - Consultar la config de la empresa con `useQuery(["company-config"], …)` (misma queryKey que ya usa `IdentidadTab`, así se comparte caché).
+   - Si `cfg.data?.logo_url` existe, resolver la signed URL con un segundo `useQuery(["company-logo-signed", path], …)` con `staleTime` de ~50 min.
+3. En el `<header>`, dentro del `<Link to="/app">`:
+   - Si hay `signedUrl`: renderizar `<img src={signedUrl} alt={profile?.company?... ?? "Logo empresa"} className="h-8 w-auto max-w-[160px] object-contain" />`.
+   - Si no hay logo: mantener el `Building2` + "ERP PNF" actual como fallback.
+4. No tocar el branding del sidebar (`sidebarBranding`) — el usuario solo pidió la barra superior.
 
-### 3. `IdentidadTab.tsx`
-- No requiere cambios: el logo se guarda automáticamente al subir el archivo.
+### Notas técnicas
 
-### 4. `app.configuracion.tsx` — Agregar botón global de guardado
-- Importar `useRef` y `useState`.
-- Mantener un objeto `tabsRef = useRef<Record<string, any>>({})` para guardar las referencias de cada pestaña.
-- Leer el valor activo del Tabs mediante `value` controlado (`activeTab`, `setActiveTab`).
-- Agregar un botón "Guardar cambios" fijo (por ejemplo, en la parte superior derecha del header o debajo del `TabsList`).
-- Al hacer clic, llamar `tabsRef.current[activeTab]?.save()` o `.submit()` según la pestaña activa.
-- Agregar feedback con `toast` (ya disponible en el padre o en los hijos).
-
-## Notas técnicas
-- `FacturacionTab` usa un `<form>` nativo; `requestSubmit()` dispara el `onSubmit` sin necesidad de un botón `type="submit"` dentro del formulario.
-- `ConfiguracionTab` guarda con un `onClick` manual; su ref expone directamente el trigger.
-- Si la pestaña activa no expone un método de guardado (como Identidad o Documentación), el botón puede deshabilitarse o mostrar un mensaje informativo.
-- Se mantiene el `navigate({ to: "/app" })` al guardar exitosamente.
+- La queryKey `["company-config"]` ya se invalida desde `IdentidadTab` al subir/eliminar el logo, así que el header se actualizará automáticamente.
+- La signed URL del bucket `company-logos` (privado) dura 1 h; se refresca por re-render cuando expira el `staleTime`.
+- No se modifica ningún archivo de backend ni el esquema; solo presentación en `AppShell.tsx`.
