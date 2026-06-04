@@ -33,14 +33,6 @@ import {
 import { formatMXN, formatDate } from "@/lib/format";
 import { NuevaTareaDialog } from "@/components/tareas/NuevaTareaDialog";
 
-const TIPO_LABELS: Record<string, string> = {
-  industrial: "Industrial",
-  comercial: "Comercial",
-  residencial: "Residencial",
-  infraestructura: "Infraestructura",
-  vivienda_serie: "Vivienda en serie",
-  urbanizacion: "Urbanización",
-};
 
 const ROLE_LABELS: Record<string, string> = {
   director: "Director",
@@ -134,7 +126,7 @@ function ObraHeader({
 }: {
   obra: {
     nombre: string;
-    tipo_obra: string;
+    unidad_negocio: { id: string; nombre: string } | null;
     numero_contrato: string | null;
     ubicacion: string | null;
     fecha_inicio: string | null;
@@ -174,9 +166,11 @@ function ObraHeader({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <h1 className="text-xl font-semibold tracking-tight truncate">{obra.nombre}</h1>
-          <Badge variant="secondary" className="text-xs">
-            {TIPO_LABELS[obra.tipo_obra] ?? obra.tipo_obra}
-          </Badge>
+          {obra.unidad_negocio && (
+            <Badge variant="secondary" className="text-xs">
+              {obra.unidad_negocio.nombre}
+            </Badge>
+          )}
           <span className="text-sm text-muted-foreground">
             · {obra.cliente?.razon_social ?? "Sin cliente"}
             {obra.numero_contrato && ` · ${obra.numero_contrato}`}
