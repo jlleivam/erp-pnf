@@ -12,8 +12,7 @@ import {
 } from "@/lib/api/obras.functions";
 import { listClientes } from "@/lib/api/clientes.functions";
 import { listUnidadesNegocio } from "@/lib/api/unidades-negocio.functions";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuthStore, useEffectiveIsDirector } from "@/stores/auth";
+import { useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
