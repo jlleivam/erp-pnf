@@ -138,9 +138,6 @@ function DatosTab({ obraId, initial }: { obraId: string; initial: ObraData }) {
   const [ubicacion, setUbicacion] = useState(initial.ubicacion ?? "");
   const [fechaInicio, setFechaInicio] = useState(initial.fecha_inicio ?? "");
   const [fechaTerm, setFechaTerm] = useState(initial.fecha_terminacion ?? "");
-  const [montoContratado, setMontoContratado] = useState<string>(
-    initial.monto_contratado != null ? String(initial.monto_contratado) : ""
-  );
 
   const m = useMutation({
     mutationFn: update,
@@ -166,7 +163,6 @@ function DatosTab({ obraId, initial }: { obraId: string; initial: ObraData }) {
         ubicacion: ubicacion.trim() || null,
         fecha_inicio: fechaInicio || null,
         fecha_terminacion: fechaTerm || null,
-        monto_contratado: montoContratado === "" ? null : Number(montoContratado),
       },
     });
   };
