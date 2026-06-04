@@ -1,20 +1,35 @@
-## Mostrar el logo de la empresa en la barra superior
+# Editar configuración de obra (Director)
 
-Reemplazar el ícono `Building2` + texto "ERP PNF" del header de `AppShell` por el logo de la empresa cuando exista uno cargado. El elemento sigue siendo un `<Link to="/app">`, conservando su función de navegación al dashboard.
+Agregar un acceso "Configuración" dentro de la navegación de la obra (visible solo para el Director) que abra una pantalla para editar la obra ya creada.
 
-### Cambios en `src/components/AppShell.tsx`
+## 1. Nueva ruta
+- Archivo: `src/routes/_authenticated/app.obras.$obraId.configuracion.tsx`
+- Componente: `ConfiguracionObra` que reusa el formulario de `app.obras.nueva.tsx` adaptado a modo edición, con 4 secciones en pestañas (Tabs):
+  1. **Datos generales** — nombre, unidad de negocio, cliente, número de contrato, ubicación, fechas, monto contratado.
+  2. **Presupuesto** — reemplazar archivo (sube a bucket `presupuestos`, actualiza `presupuesto_url`).
+  3. **Equipo** — agregar/quitar miembros (`obra_team`), respetando la regla de mínimo 1 Residente + 1 Administrativo + 1 Supervisor.
+  4. **Comisiones** — editar filas de `obra_comisiones` (usuario, %, base de cálculo).
+- Acceso restringido: si `useEffectiveIsDirector()` es falso → `redirect` a `/app/obras/$obraId`.
 
-1. Importar `useQuery` de `@tanstack/react-query`, `useServerFn` de `@tanstack/react-start`, y `getCompanyConfig` + `getCompanyLogoSignedUrl` de `@/lib/api/company.functions`.
-2. Dentro de `AppShell`:
-   - Consultar la config de la empresa con `useQuery(["company-config"], …)` (misma queryKey que ya usa `IdentidadTab`, así se comparte caché).
-   - Si `cfg.data?.logo_url` existe, resolver la signed URL con un segundo `useQuery(["company-logo-signed", path], …)` con `staleTime` de ~50 min.
-3. En el `<header>`, dentro del `<Link to="/app">`:
-   - Si hay `signedUrl`: renderizar `<img src={signedUrl} alt={profile?.company?... ?? "Logo empresa"} className="h-8 w-auto max-w-[160px] object-contain" />`.
-   - Si no hay logo: mantener el `Building2` + "ERP PNF" actual como fallback.
-4. No tocar el branding del sidebar (`sidebarBranding`) — el usuario solo pidió la barra superior.
+## 2. Server functions nuevas en `src/lib/api/obras.functions.ts`
+- `getObraConfiguracion({ obraId })` — devuelve obra completa + team + comisiones para precargar el formulario.
+- `actualizarObra({ obraId, ...campos })` — UPDATE de campos generales y `presupuesto_url`. Valida con Zod (mismo shape que `crearObraSchema` pero todos opcionales salvo `obraId`).
+- `actualizarObraTeam({ obraId, team })` — reemplaza `obra_team` (delete + insert en transacción lógica) y valida los 3 roles mínimos.
+- `actualizarObraComisiones({ obraId, comisiones })` — reemplaza filas de `obra_comisiones`.
 
-### Notas técnicas
+Todas con `requireSupabaseAuth` + chequeo de que el usuario es Director de la `company_id` de la obra (`is_director_of`).
 
-- La queryKey `["company-config"]` ya se invalida desde `IdentidadTab` al subir/eliminar el logo, así que el header se actualizará automáticamente.
-- La signed URL del bucket `company-logos` (privado) dura 1 h; se refresca por re-render cuando expira el `staleTime`.
-- No se modifica ningún archivo de backend ni el esquema; solo presentación en `AppShell.tsx`.
+## 3. Navegación
+- En `src/components/AppShell.tsx`, dentro de `obraNavItems` (solo cuando el usuario efectivo es Director), agregar:
+  ```ts
+  { to: `/app/obras/${obraId}/configuracion`, label: "Configuración", icon: Settings }
+  ```
+  Esto lo muestra tanto en la barra inferior móvil (scroll) como en cualquier futura barra lateral de obra.
+
+## 4. UX al guardar
+- Cada pestaña tiene su propio botón "Guardar cambios" (igual patrón que tabs de configuración global).
+- Tras éxito: `toast.success` + `queryClient.invalidateQueries(["obra-dashboard", obraId])` para refrescar header del dashboard. Permanecer en la pestaña (no redirigir).
+
+## Notas técnicas
+- Reusar componentes existentes de `app.obras.nueva.tsx` extrayéndolos a `src/components/obras/ObraForm*.tsx` (DatosGenerales, EquipoEditor, ComisionesEditor, PresupuestoUploader) para evitar duplicación.
+- No se tocan tablas ni RLS: las políticas existentes de `obras`, `obra_team`, `obra_comisiones` ya permiten al director de la company.
