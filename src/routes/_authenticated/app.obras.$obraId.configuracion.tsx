@@ -92,7 +92,7 @@ function ConfiguracionObra() {
           <DatosTab obraId={obraId} initial={cfg.data.obra} />
         </TabsContent>
         <TabsContent value="presupuesto">
-          <PresupuestoTab obraId={obraId} initial={cfg.data.obra} />
+          <PresupuestoModule obraId={obraId} />
         </TabsContent>
         <TabsContent value="equipo">
           <EquipoTab obraId={obraId} initial={cfg.data.team as TeamRow[]} />
