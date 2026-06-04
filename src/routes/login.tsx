@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -15,13 +16,30 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+const REMEMBER_EMAIL_KEY = "login:remember-email";
+const KEEP_SESSION_KEY = "login:keep-session";
+
 function LoginPage() {
   const navigate = useNavigate();
   const userId = useAuthStore((s) => s.userId);
   const profile = useAuthStore((s) => s.profile);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberEmail, setRememberEmail] = useState(false);
+  const [keepSession, setKeepSession] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Cargar email recordado al montar
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+    if (saved) {
+      setEmail(saved);
+      setRememberEmail(true);
+    }
+    const keep = localStorage.getItem(KEEP_SESSION_KEY);
+    if (keep === "false") setKeepSession(false);
+  }, []);
 
   useEffect(() => {
     if (userId && profile) {
@@ -37,6 +55,24 @@ function LoginPage() {
     if (error) {
       toast.error(error.message);
       return;
+    }
+
+    // Guardar preferencia de "Recuerda mi cuenta"
+    if (rememberEmail) {
+      localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(REMEMBER_EMAIL_KEY);
+    }
+
+    // Guardar preferencia de "Mantén mi sesión abierta"
+    localStorage.setItem(KEEP_SESSION_KEY, String(keepSession));
+
+    // Si el usuario NO quiere mantener la sesión abierta, cerrar sesión al cerrar pestaña/navegador
+    if (!keepSession) {
+      const handler = () => {
+        void supabase.auth.signOut();
+      };
+      window.addEventListener("beforeunload", handler);
     }
     // navigation happens via AuthSync useEffect
   };
@@ -71,6 +107,28 @@ function LoginPage() {
                 required
                 autoComplete="current-password"
               />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="remember-email"
+                  checked={rememberEmail}
+                  onCheckedChange={(v) => setRememberEmail(v === true)}
+                />
+                <Label htmlFor="remember-email" className="cursor-pointer font-normal">
+                  Recuerda mi cuenta
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="keep-session"
+                  checked={keepSession}
+                  onCheckedChange={(v) => setKeepSession(v === true)}
+                />
+                <Label htmlFor="keep-session" className="cursor-pointer font-normal">
+                  Mantén mi sesión abierta
+                </Label>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Ingresando…" : "Ingresar"}
