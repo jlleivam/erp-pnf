@@ -212,7 +212,14 @@ export function FacturacionTab() {
           </div>
           <div>
             <Label>Estado</Label>
-            <Input value={f.estado} onChange={(e) => set("estado", e.target.value)} />
+            <Select value={f.estado} onValueChange={(v) => set("estado", v)}>
+              <SelectTrigger><SelectValue placeholder="Selecciona estado" /></SelectTrigger>
+              <SelectContent>
+                {ESTADOS_MX.map((e) => (
+                  <SelectItem key={e} value={e}>{e}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Código postal</Label>
