@@ -111,7 +111,7 @@ function ConfiguracionObra() {
 type ObraData = {
   id: string;
   nombre: string;
-  unidad_negocio_id: string;
+  unidad_negocio_id: string | null;
   cliente_id: string | null;
   numero_contrato: string | null;
   ubicacion: string | null;
