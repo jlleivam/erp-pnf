@@ -8,7 +8,7 @@ import {
   LogOut,
   ChevronDown,
   HardHat,
-  UserCog,
+
   ShieldCheck,
   Receipt,
   ClipboardList,
@@ -147,13 +147,13 @@ export function AppShell() {
         <NavItem to="/app" label="Dashboard" icon={<LayoutDashboard className="size-4" />} active={pathname === "/app"} onNavigate={onNavigate} />
         <NavItem to="/app/catalogos" label="Catálogos" icon={<BookOpen className="size-4" />} active={pathname.startsWith("/app/catalogos")} onNavigate={onNavigate} />
         {director && (
-          <NavItem to="/app/equipo" label="Equipo" icon={<UserCog className="size-4" />} active={pathname.startsWith("/app/equipo")} onNavigate={onNavigate} />
-        )}
-        {director && (
           <NavItem to="/app/obras/nueva" label="Nueva obra" icon={<HardHat className="size-4" />} active={pathname === "/app/obras/nueva"} onNavigate={onNavigate} />
         )}
-        <NavItem to="/app/configuracion" label="Configuración" icon={<Settings className="size-4" />} active={pathname.startsWith("/app/configuracion")} onNavigate={onNavigate} />
+        {director && (
+          <NavItem to="/app/configuracion" label="Configuración" icon={<Settings className="size-4" />} active={pathname.startsWith("/app/configuracion")} onNavigate={onNavigate} />
+        )}
       </div>
+
 
       {showSupervisor && (
         <div>
@@ -206,12 +206,7 @@ export function AppShell() {
           <div className="flex items-center gap-3">
             <NotificacionesBell />
 
-            <Button asChild variant="ghost" size="sm" className="gap-2" title="Configuración de la empresa">
-              <Link to="/app/configuracion">
-                <Settings className="size-4" />
-                <span className="hidden sm:inline">Configuración</span>
-              </Link>
-            </Button>
+
 
 
 
@@ -289,12 +284,14 @@ export function AppShell() {
           items={[
             { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
-            { to: "/app/equipo", label: "Equipo", icon: UserCog },
-            { to: "/app/configuracion", label: "Config", icon: Settings },
+            ...(director
+              ? [{ to: "/app/configuracion", label: "Config", icon: Settings }]
+              : []),
           ] satisfies BottomBarItem[]}
           onMoreClick={() => setMobileOpen(true)}
         />
       )}
+
 
       {/* Sheet con menú completo (se abre desde "Más") */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
