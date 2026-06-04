@@ -232,18 +232,6 @@ function NuevaObra() {
               <Label htmlFor="ft">Fecha de terminación</Label>
               <Input id="ft" type="date" value={fechaTerm} onChange={(e) => setFechaTerm(e.target.value)} />
             </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="monto">Monto contratado (MXN)</Label>
-              <Input
-                id="monto"
-                type="number"
-                min={0}
-                step="0.01"
-                value={montoContratado}
-                onChange={(e) => setMontoContratado(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
           </div>
           <div className="flex justify-between">
 
