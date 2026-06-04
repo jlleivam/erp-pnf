@@ -212,8 +212,14 @@ export function AppShell() {
         <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
             <Link to="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <Building2 className="size-5 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">ERP PNF</span>
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo empresa" className="h-8 w-auto max-w-[160px] object-contain" />
+              ) : (
+                <>
+                  <Building2 className="size-5 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">ERP PNF</span>
+                </>
+              )}
             </Link>
           </div>
 
