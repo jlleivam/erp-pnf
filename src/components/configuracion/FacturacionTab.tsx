@@ -29,6 +29,7 @@ type TipoPersona = "moral" | "fisica";
 
 export function FacturacionTab() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const fetchCfg = useServerFn(getCompanyConfig);
   const saveFn = useServerFn(updateCompanyFacturacion);
 
