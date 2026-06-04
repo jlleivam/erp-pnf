@@ -1,31 +1,31 @@
-# Agregar checkboxes al login
+# Configuración de empresa exclusiva para director + Equipo como pestaña
 
-Modificar `src/routes/login.tsx`:
+## 1. Restringir ruta `/app/configuracion` a directores
+**Archivo:** `src/routes/_authenticated/app.configuracion.tsx`
+- Agregar hook `useEffectiveIsDirector` desde `@/stores/auth`.
+- Agregar `useNavigate` y `useEffect`.
+- Si `!director`, redirigir a `/app` y retornar `null`.
 
-1. **Importar** `Checkbox` de `@/components/ui/checkbox`.
-2. **Nuevos estados**:
-   - `rememberEmail` (bool, inicial: leer `localStorage.getItem("login:remember-email")` para prellenar checked + email).
-   - `keepSession` (bool, inicial: `true` por defecto — Supabase ya persiste sesión por defecto).
-3. **Prellenar email** al montar: si hay email guardado en `localStorage`, ponerlo en el campo y marcar el checkbox.
-4. **Dos checkboxes** debajo del campo de contraseña, antes del botón:
-   - "Recuerda mi cuenta" → al hacer submit, si está marcado guarda `email` en `localStorage`; si no, lo borra.
-   - "Mantén mi sesión abierta" → controla persistencia de Supabase.
-5. **En `handleSubmit`**:
-   - Antes de `signInWithPassword`, ajustar el storage de Supabase Auth según `keepSession`:
-     - Si `keepSession` está marcado: usar `localStorage` (sesión persiste al cerrar el navegador) — comportamiento actual por defecto.
-     - Si NO está marcado: cambiar a `sessionStorage` para que la sesión expire al cerrar el navegador. Implementación: llamar `supabase.auth.signOut({ scope: 'local' })` previo no aplica; en su lugar, tras login exitoso, mover el token de `localStorage` a `sessionStorage` manualmente (key `sb-<project>-auth-token`), o re-configurar antes. La opción más limpia: tras login, si `!keepSession`, copiar el item de `localStorage` a `sessionStorage` y borrar del `localStorage`. El cliente Supabase preconfigurado usa `localStorage`; al recargar leerá de ahí. Como no podemos editar el cliente, alternativa práctica: registrar un listener `beforeunload` que limpie `localStorage` del token si `!keepSession` — pero eso cierra la sesión al cerrar pestaña.
-   - Guardar/borrar email recordado en `localStorage` clave `login:remember-email`.
+## 2. Limpiar menú desktop (sidebar)
+**Archivo:** `src/components/AppShell.tsx`
+- Quitar import `UserCog` de `lucide-react`.
+- Quitar el `NavItem` de "Equipo" del sidebar corporativo (líneas 149-151).
+- Envolver el `NavItem` de "Configuración" con `{director && (...)}` para que solo lo vean directores.
 
-## Nota técnica
-El cliente Supabase de este proyecto (`src/integrations/supabase/client.ts`) está auto-generado y siempre usa `localStorage`. Para "no mantener sesión" implementaremos un workaround: tras login, si el usuario NO marcó "Mantén mi sesión abierta", se registra un handler `window.addEventListener("beforeunload")` que llama `supabase.auth.signOut()` al cerrar pestaña/navegador. Esto cumple la intención sin tocar el cliente generado.
+## 3. Limpiar menú móvil (bottom bar)
+**Archivo:** `src/components/AppShell.tsx`
+- Construir el array de items dinámicamente.
+- Quitar "Equipo".
+- Solo incluir "Config" cuando `director === true`.
 
-## Resultado UI
-```
-[ Correo electrónico ]
-[ Contraseña         ]
-[x] Recuerda mi cuenta
-[x] Mantén mi sesión abierta
-[       Ingresar      ]
-```
+## 4. Limpiar header (botón redundante)
+**Archivo:** `src/components/AppShell.tsx`
+- Quitar el botón "Configuración" del header (líneas 209-214) por redundante; ya queda accesible desde el menú lateral/inferior para directores.
 
-Solo se modifica `src/routes/login.tsx`. Sin cambios de backend.
+## Resultado
+- **Director desktop:** Sidebar Corporativo = Dashboard, Catálogos, Nueva obra, Configuración.
+- **Director móvil:** Bottom bar = Dashboard, Catálogos, Config.
+- **No-director desktop:** Sidebar Corporativo = Dashboard, Catálogos. (Sin Configuración ni Equipo).
+- **No-director móvil:** Bottom bar = Dashboard, Catálogos. (Sin Configuración ni Equipo).
+- Dentro de Configuración, "Equipo" ya existe como pestaña (`TabsTrigger value="equipo"`).
+- Ruta `/app/configuracion` redirige a `/app` si un no-director entra directamente por URL.

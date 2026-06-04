@@ -1,14 +1,26 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { EquipoModule } from "@/components/equipo/EquipoModule";
+import { useEffectiveIsDirector } from "@/stores/auth";
 
 export const Route = createFileRoute("/_authenticated/app/configuracion")({
   component: Configuracion,
 });
 
 function Configuracion() {
+  const navigate = useNavigate();
+  const director = useEffectiveIsDirector();
+
+  useEffect(() => {
+    if (!director) navigate({ to: "/app", replace: true });
+  }, [director, navigate]);
+
+  if (!director) return null;
+
+
   return (
     <div className="space-y-6">
       <header>
