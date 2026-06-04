@@ -520,28 +520,73 @@ export type Database = {
       }
       companies: {
         Row: {
+          calle: string | null
+          codigo_postal: string | null
+          colonia: string | null
           created_at: string
+          curp: string | null
           datos_facturacion: Json
+          estado: string | null
           id: string
+          logo_url: string | null
+          moneda: string
+          municipio: string | null
+          nombre_completo: string | null
+          numero: string | null
           razon_social: string
+          regimen_fiscal: string | null
+          registro_imss: string | null
+          registro_infonavit: string | null
           rfc: string
           tipo_persona: Database["public"]["Enums"]["tipo_persona"]
+          updated_at: string
+          zona_horaria: string
         }
         Insert: {
+          calle?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           created_at?: string
+          curp?: string | null
           datos_facturacion?: Json
+          estado?: string | null
           id?: string
+          logo_url?: string | null
+          moneda?: string
+          municipio?: string | null
+          nombre_completo?: string | null
+          numero?: string | null
           razon_social: string
+          regimen_fiscal?: string | null
+          registro_imss?: string | null
+          registro_infonavit?: string | null
           rfc: string
           tipo_persona: Database["public"]["Enums"]["tipo_persona"]
+          updated_at?: string
+          zona_horaria?: string
         }
         Update: {
+          calle?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           created_at?: string
+          curp?: string | null
           datos_facturacion?: Json
+          estado?: string | null
           id?: string
+          logo_url?: string | null
+          moneda?: string
+          municipio?: string | null
+          nombre_completo?: string | null
+          numero?: string | null
           razon_social?: string
+          regimen_fiscal?: string | null
+          registro_imss?: string | null
+          registro_infonavit?: string | null
           rfc?: string
           tipo_persona?: Database["public"]["Enums"]["tipo_persona"]
+          updated_at?: string
+          zona_horaria?: string
         }
         Relationships: []
       }
@@ -2368,8 +2413,8 @@ export type Database = {
           nombre: string
           numero_contrato: string | null
           presupuesto_url: string | null
-          tipo_obra: Database["public"]["Enums"]["tipo_obra"]
           ubicacion: string | null
+          unidad_negocio_id: string | null
         }
         Insert: {
           cliente_id?: string | null
@@ -2383,8 +2428,8 @@ export type Database = {
           nombre: string
           numero_contrato?: string | null
           presupuesto_url?: string | null
-          tipo_obra: Database["public"]["Enums"]["tipo_obra"]
           ubicacion?: string | null
+          unidad_negocio_id?: string | null
         }
         Update: {
           cliente_id?: string | null
@@ -2398,8 +2443,8 @@ export type Database = {
           nombre?: string
           numero_contrato?: string | null
           presupuesto_url?: string | null
-          tipo_obra?: Database["public"]["Enums"]["tipo_obra"]
           ubicacion?: string | null
+          unidad_negocio_id?: string | null
         }
         Relationships: [
           {
@@ -2414,6 +2459,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obras_unidad_negocio_id_fkey"
+            columns: ["unidad_negocio_id"]
+            isOneToOne: false
+            referencedRelation: "unidades_negocio"
             referencedColumns: ["id"]
           },
         ]
@@ -2940,6 +2992,38 @@ export type Database = {
           },
         ]
       }
+      unidades_negocio: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          nombre: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          nombre: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          nombre?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unidades_negocio_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string
@@ -3161,13 +3245,6 @@ export type Database = {
         | "domicilio_fiscal"
         | "repse"
       tercero_tipo_persona: "moral" | "fisica"
-      tipo_obra:
-        | "industrial"
-        | "comercial"
-        | "residencial"
-        | "infraestructura"
-        | "vivienda_serie"
-        | "urbanizacion"
       tipo_persona: "moral" | "fisica"
       trabajador_autorizacion: "autorizado" | "pendiente"
       trabajador_doc_tipo: "ine" | "curp" | "domicilio" | "contrato"
@@ -3401,14 +3478,6 @@ export const Constants = {
         "repse",
       ],
       tercero_tipo_persona: ["moral", "fisica"],
-      tipo_obra: [
-        "industrial",
-        "comercial",
-        "residencial",
-        "infraestructura",
-        "vivienda_serie",
-        "urbanizacion",
-      ],
       tipo_persona: ["moral", "fisica"],
       trabajador_autorizacion: ["autorizado", "pendiente"],
       trabajador_doc_tipo: ["ine", "curp", "domicilio", "contrato"],

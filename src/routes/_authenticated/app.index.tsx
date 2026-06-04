@@ -54,9 +54,11 @@ function Dashboard() {
                 <Card className="p-4 hover:border-primary/40 transition-colors h-full">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-medium leading-snug">{o.nombre}</h3>
-                    <Badge variant="secondary" className="capitalize text-xs">
-                      {o.tipo_obra.replace("_", " ")}
-                    </Badge>
+                    {o.unidad_negocio && (
+                      <Badge variant="secondary" className="text-xs">
+                        {o.unidad_negocio.nombre}
+                      </Badge>
+                    )}
                   </div>
                   {o.cliente && (
                     <p className="text-sm text-muted-foreground mt-2">{o.cliente.razon_social}</p>

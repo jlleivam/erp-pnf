@@ -9,7 +9,7 @@ export const listObras = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("obras")
       .select(
-        "id, nombre, tipo_obra, numero_contrato, ubicacion, fecha_inicio, fecha_terminacion, cliente:clientes(razon_social)"
+        "id, nombre, unidad_negocio:unidades_negocio(id, nombre), numero_contrato, ubicacion, fecha_inicio, fecha_terminacion, cliente:clientes(razon_social)"
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -25,15 +25,13 @@ export const getObraDashboard = createServerFn({ method: "POST" })
     const { data: obra, error: obraError } = await supabase
       .from("obras")
       .select(
-        "id, nombre, tipo_obra, numero_contrato, ubicacion, fecha_inicio, fecha_terminacion, presupuesto_url, cliente:clientes(id, razon_social, rfc, tipo_persona)"
+        "id, nombre, unidad_negocio:unidades_negocio(id, nombre), numero_contrato, ubicacion, fecha_inicio, fecha_terminacion, presupuesto_url, cliente:clientes(id, razon_social, rfc, tipo_persona)"
       )
       .eq("id", data.obraId)
       .maybeSingle();
     if (obraError) throw new Error(obraError.message);
     if (!obra) throw new Error("Obra no encontrada");
 
-    // Two-step fetch: obra_team has no FK to profiles (user_id -> auth.users),
-    // so we resolve profiles manually instead of relying on PostgREST joins.
     const { data: teamRows, error: teamError } = await supabase
       .from("obra_team")
       .select("id, role, user_id")
@@ -63,14 +61,7 @@ export const getObraDashboard = createServerFn({ method: "POST" })
 
 const crearObraSchema = z.object({
   nombre: z.string().trim().min(1).max(255),
-  tipo_obra: z.enum([
-    "industrial",
-    "comercial",
-    "residencial",
-    "infraestructura",
-    "vivienda_serie",
-    "urbanizacion",
-  ]),
+  unidad_negocio_id: z.string().uuid(),
   cliente_id: z.string().uuid().nullable(),
   numero_contrato: z.string().trim().max(100).optional(),
   ubicacion: z.string().trim().max(500).optional(),
@@ -121,7 +112,7 @@ export const crearObra = createServerFn({ method: "POST" })
       .insert({
         company_id: profile.company_id,
         nombre: data.nombre,
-        tipo_obra: data.tipo_obra,
+        unidad_negocio_id: data.unidad_negocio_id,
         cliente_id: data.cliente_id,
         numero_contrato: data.numero_contrato || null,
         ubicacion: data.ubicacion || null,
@@ -130,7 +121,6 @@ export const crearObra = createServerFn({ method: "POST" })
         presupuesto_url: data.presupuesto_url || null,
         monto_contratado: data.monto_contratado ?? null,
         created_by: userId,
-
       })
       .select("id")
       .single();

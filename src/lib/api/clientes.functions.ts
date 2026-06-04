@@ -117,7 +117,7 @@ export const getCliente = createServerFn({ method: "POST" })
 
     const { data: obrasRows, error: oErr } = await supabase
       .from("obras")
-      .select("id, nombre, tipo_obra, numero_contrato, fecha_inicio, fecha_terminacion, monto_contratado")
+      .select("id, nombre, numero_contrato, fecha_inicio, fecha_terminacion, monto_contratado")
       .eq("cliente_id", data.id)
       .order("created_at", { ascending: false });
     if (oErr) throw new Error(oErr.message);
