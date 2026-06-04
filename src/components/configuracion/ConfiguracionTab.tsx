@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getCompanyConfig, updateCompanyConfig } from "@/lib/api/company.functions";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -28,7 +27,9 @@ const ZONAS = [
   "America/Monterrey",
 ];
 
-export function ConfiguracionTab() {
+export type ConfiguracionTabHandle = { submit: () => void; isSaving: boolean };
+
+export const ConfiguracionTab = forwardRef<ConfiguracionTabHandle>(function ConfiguracionTab(_, ref) {
   const qc = useQueryClient();
   const fetchCfg = useServerFn(getCompanyConfig);
   const saveFn = useServerFn(updateCompanyConfig);
@@ -52,6 +53,11 @@ export function ConfiguracionTab() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  useImperativeHandle(ref, () => ({
+    submit: () => save.mutate({ data: { moneda, zona_horaria: zona } }),
+    isSaving: save.isPending,
+  }), [save, moneda, zona]);
 
   if (cfg.isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
 
@@ -83,14 +89,6 @@ export function ConfiguracionTab() {
             </Select>
           </div>
         </div>
-        <div className="flex justify-end">
-          <Button
-            onClick={() => save.mutate({ data: { moneda, zona_horaria: zona } })}
-            disabled={save.isPending}
-          >
-            {save.isPending ? "Guardando…" : "Guardar"}
-          </Button>
-        </div>
       </section>
 
       <section className="space-y-4 border-t pt-6">
@@ -99,4 +97,4 @@ export function ConfiguracionTab() {
       </section>
     </div>
   );
-}
+});

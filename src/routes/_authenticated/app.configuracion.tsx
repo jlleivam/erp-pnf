@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { EquipoModule } from "@/components/equipo/EquipoModule";
-import { FacturacionTab } from "@/components/configuracion/FacturacionTab";
-import { ConfiguracionTab } from "@/components/configuracion/ConfiguracionTab";
+import { FacturacionTab, type FacturacionTabHandle } from "@/components/configuracion/FacturacionTab";
+import { ConfiguracionTab, type ConfiguracionTabHandle } from "@/components/configuracion/ConfiguracionTab";
 import { IdentidadTab } from "@/components/configuracion/IdentidadTab";
 import { useEffectiveIsDirector } from "@/stores/auth";
 
@@ -16,6 +17,9 @@ export const Route = createFileRoute("/_authenticated/app/configuracion")({
 function Configuracion() {
   const navigate = useNavigate();
   const director = useEffectiveIsDirector();
+  const [tab, setTab] = useState("facturacion");
+  const facturacionRef = useRef<FacturacionTabHandle>(null);
+  const configRef = useRef<ConfiguracionTabHandle>(null);
 
   useEffect(() => {
     if (!director) navigate({ to: "/app", replace: true });
@@ -23,16 +27,27 @@ function Configuracion() {
 
   if (!director) return null;
 
+  const savable = tab === "facturacion" || tab === "configuracion";
+  const handleSave = () => {
+    if (tab === "facturacion") facturacionRef.current?.submit();
+    else if (tab === "configuracion") configRef.current?.submit();
+  };
+
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Configuración de empresa</h1>
-        <p className="text-sm text-muted-foreground">
-          Datos fiscales, identidad, equipo y otras opciones.
-        </p>
+      <header className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Configuración de empresa</h1>
+          <p className="text-sm text-muted-foreground">
+            Datos fiscales, identidad, equipo y otras opciones.
+          </p>
+        </div>
+        {savable && (
+          <Button onClick={handleSave}>Guardar cambios</Button>
+        )}
       </header>
 
-      <Tabs defaultValue="facturacion">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="facturacion">Datos de facturación</TabsTrigger>
           <TabsTrigger value="configuracion">Configuración</TabsTrigger>
@@ -45,7 +60,7 @@ function Configuracion() {
           <Card>
             <CardHeader><CardTitle>Datos de facturación</CardTitle></CardHeader>
             <CardContent>
-              <FacturacionTab />
+              <FacturacionTab ref={facturacionRef} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -54,7 +69,7 @@ function Configuracion() {
           <Card>
             <CardHeader><CardTitle>Configuración general</CardTitle></CardHeader>
             <CardContent>
-              <ConfiguracionTab />
+              <ConfiguracionTab ref={configRef} />
             </CardContent>
           </Card>
         </TabsContent>
