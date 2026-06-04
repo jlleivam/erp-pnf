@@ -202,7 +202,7 @@ function ObraHeader({
         {obra.ubicacion ? (
           <div className="flex items-center gap-1.5">
             <MapPin className="size-3.5" />
-            <span>{obra.ubicacion}</span>
+            <span className="truncate max-w-[260px]">{ubicacionTexto}</span>
             <a
               href={mapsHref!}
               target="_blank"
