@@ -1,18 +1,11 @@
-# Separar Número Exterior e Interior
+# Mejoras al formulario de Datos de facturación
 
-## Cambios
+## 1) Redirigir al dashboard tras guardar
+En `FacturacionTab.tsx`, al `onSuccess` de la mutación `save`, navegar a `/app` con `useNavigate` de TanStack Router (además del toast e invalidación de la query).
 
-1. **Base de datos** (`companies` table)
-   - Reemplazar columna `numero` por `numero_exterior` y `numero_interior` (text, nullable)
-   - Migración mueve `numero` → `numero_exterior` antes de eliminarla
+## 2) Estado como dropdown
+Reemplazar el `<Input>` del campo "Estado" por un `<Select>` con las 32 entidades federativas de México (incluye CDMX). Lista hard-coded en el mismo archivo:
 
-2. **Backend** (`src/lib/api/company.functions.ts`)
-   - Actualizar SELECT y Zod schema: `numero_exterior` (max 50), `numero_interior` (max 50, nullable)
+Aguascalientes, Baja California, Baja California Sur, Campeche, Chiapas, Chihuahua, Ciudad de México, Coahuila, Colima, Durango, Estado de México, Guanajuato, Guerrero, Hidalgo, Jalisco, Michoacán, Morelos, Nayarit, Nuevo León, Oaxaca, Puebla, Querétaro, Quintana Roo, San Luis Potosí, Sinaloa, Sonora, Tabasco, Tamaulipas, Tlaxcala, Veracruz, Yucatán, Zacatecas.
 
-3. **UI** (`src/components/configuracion/FacturacionTab.tsx`)
-   - Reemplazar el campo "Número" por dos campos lado a lado: "Número exterior" y "Número interior (opcional)"
-   - Layout: grid de 2 columnas dentro de la fila de dirección
-
-4. **Mismo cambio aplicado al formulario de clientes** si tiene el mismo campo (verificar en build mode)
-
-No se tocan obras ni otros módulos.
+Solo se toca `src/components/configuracion/FacturacionTab.tsx`.
