@@ -22,6 +22,29 @@ async function getCompanyAndIsDirector(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, isDirector: !!dir };
 }
 
+/**
+ * Recalcula obras.monto_contratado como la suma del monto_total de todos los
+ * presupuestos autorizados de la obra (base + órdenes de cambio).
+ */
+async function recalcularMontoContratado(supabase: any, obraId: string) {
+  const { data: rows, error } = await supabase
+    .from("obra_presupuestos")
+    .select("monto_total")
+    .eq("obra_id", obraId)
+    .eq("estatus", "autorizado");
+  if (error) throw new Error(error.message);
+  const total = (rows ?? []).reduce(
+    (acc: number, r: { monto_total: number | null }) =>
+      acc + (Number(r.monto_total) || 0),
+    0,
+  );
+  const { error: updErr } = await supabase
+    .from("obras")
+    .update({ monto_contratado: total })
+    .eq("id", obraId);
+  if (updErr) throw new Error(updErr.message);
+}
+
 export const listPresupuestos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ obraId: z.string().uuid() }).parse(d))
@@ -190,6 +213,13 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
     const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede autorizar presupuestos");
 
+    const { data: pres, error: pErr } = await supabase
+      .from("obra_presupuestos")
+      .select("obra_id")
+      .eq("id", data.id)
+      .single();
+    if (pErr) throw new Error(pErr.message);
+
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
       .select("id", { count: "exact", head: true })
@@ -206,6 +236,8 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    await recalcularMontoContratado(supabase, pres.obra_id);
     return { ok: true };
   });
 
