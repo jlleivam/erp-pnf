@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getCompanyConfig, updateCompanyFacturacion } from "@/lib/api/company.functions";
@@ -16,10 +17,19 @@ import {
 } from "@/components/ui/select";
 import { REGIMENES_MORAL, REGIMENES_FISICA } from "@/components/terceros/constants";
 
+const ESTADOS_MX = [
+  "Aguascalientes","Baja California","Baja California Sur","Campeche","Chiapas",
+  "Chihuahua","Ciudad de México","Coahuila","Colima","Durango","Estado de México",
+  "Guanajuato","Guerrero","Hidalgo","Jalisco","Michoacán","Morelos","Nayarit",
+  "Nuevo León","Oaxaca","Puebla","Querétaro","Quintana Roo","San Luis Potosí",
+  "Sinaloa","Sonora","Tabasco","Tamaulipas","Tlaxcala","Veracruz","Yucatán","Zacatecas",
+];
+
 type TipoPersona = "moral" | "fisica";
 
 export function FacturacionTab() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const fetchCfg = useServerFn(getCompanyConfig);
   const saveFn = useServerFn(updateCompanyFacturacion);
 
@@ -69,6 +79,7 @@ export function FacturacionTab() {
     onSuccess: () => {
       toast.success("Datos actualizados");
       qc.invalidateQueries({ queryKey: ["company-config"] });
+      navigate({ to: "/app" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -201,7 +212,14 @@ export function FacturacionTab() {
           </div>
           <div>
             <Label>Estado</Label>
-            <Input value={f.estado} onChange={(e) => set("estado", e.target.value)} />
+            <Select value={f.estado} onValueChange={(v) => set("estado", v)}>
+              <SelectTrigger><SelectValue placeholder="Selecciona estado" /></SelectTrigger>
+              <SelectContent>
+                {ESTADOS_MX.map((e) => (
+                  <SelectItem key={e} value={e}>{e}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Código postal</Label>
