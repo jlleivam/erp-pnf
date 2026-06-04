@@ -73,13 +73,8 @@ function Dashboard() {
         )}
       </section>
 
-      {showAdmin && (
-        <ModuleSection
-          title="Administración"
-          description="Módulos administrativos a nivel empresa."
-          modules={ADMIN_MODULES}
-        />
-      )}
+
+
 
       {director && (
         <ModuleSection
