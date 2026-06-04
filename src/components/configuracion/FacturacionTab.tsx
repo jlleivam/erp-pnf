@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getCompanyConfig, updateCompanyFacturacion } from "@/lib/api/company.functions";
-import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -27,11 +27,14 @@ const ESTADOS_MX = [
 
 type TipoPersona = "moral" | "fisica";
 
-export function FacturacionTab() {
+export type FacturacionTabHandle = { submit: () => void; isSaving: boolean };
+
+export const FacturacionTab = forwardRef<FacturacionTabHandle>(function FacturacionTab(_, ref) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const fetchCfg = useServerFn(getCompanyConfig);
   const saveFn = useServerFn(updateCompanyFacturacion);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const cfg = useQuery({ queryKey: ["company-config"], queryFn: () => fetchCfg() });
 
@@ -87,12 +90,18 @@ export function FacturacionTab() {
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) =>
     setF((p) => ({ ...p, [k]: v }));
 
+  useImperativeHandle(ref, () => ({
+    submit: () => formRef.current?.requestSubmit(),
+    isSaving: save.isPending,
+  }), [save.isPending]);
+
   if (cfg.isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
 
   const regimenes = f.tipo_persona === "moral" ? REGIMENES_MORAL : REGIMENES_FISICA;
 
   return (
     <form
+      ref={formRef}
       className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
@@ -249,11 +258,6 @@ export function FacturacionTab() {
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? "Guardando…" : "Guardar cambios"}
-        </Button>
-      </div>
     </form>
   );
-}
+});
