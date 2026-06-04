@@ -147,13 +147,13 @@ export function AppShell() {
         <NavItem to="/app" label="Dashboard" icon={<LayoutDashboard className="size-4" />} active={pathname === "/app"} onNavigate={onNavigate} />
         <NavItem to="/app/catalogos" label="Catálogos" icon={<BookOpen className="size-4" />} active={pathname.startsWith("/app/catalogos")} onNavigate={onNavigate} />
         {director && (
-          <NavItem to="/app/equipo" label="Equipo" icon={<UserCog className="size-4" />} active={pathname.startsWith("/app/equipo")} onNavigate={onNavigate} />
-        )}
-        {director && (
           <NavItem to="/app/obras/nueva" label="Nueva obra" icon={<HardHat className="size-4" />} active={pathname === "/app/obras/nueva"} onNavigate={onNavigate} />
         )}
-        <NavItem to="/app/configuracion" label="Configuración" icon={<Settings className="size-4" />} active={pathname.startsWith("/app/configuracion")} onNavigate={onNavigate} />
+        {director && (
+          <NavItem to="/app/configuracion" label="Configuración" icon={<Settings className="size-4" />} active={pathname.startsWith("/app/configuracion")} onNavigate={onNavigate} />
+        )}
       </div>
+
 
       {showSupervisor && (
         <div>
