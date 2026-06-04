@@ -55,7 +55,7 @@ function NuevaObra() {
 
   // Step 1
   const [nombre, setNombre] = useState("");
-  const [tipoObra, setTipoObra] = useState<TipoObra>("residencial");
+  const [unidadNegocioId, setUnidadNegocioId] = useState<string>("");
   const [clienteId, setClienteId] = useState<string>("");
   const [numeroContrato, setNumeroContrato] = useState("");
   const [ubicacion, setUbicacion] = useState("");
@@ -79,11 +79,12 @@ function NuevaObra() {
 
   const fetchClientes = useServerFn(listClientes);
   const fetchUsers = useServerFn(listCompanyUsers);
+  const fetchUnidades = useServerFn(listUnidadesNegocio);
   const createObraFn = useServerFn(crearObra);
 
   const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes({ data: {} }) });
-
   const usersQ = useQuery({ queryKey: ["company-users"], queryFn: () => fetchUsers() });
+  const unidadesQ = useQuery({ queryKey: ["unidades-negocio"], queryFn: () => fetchUnidades() });
 
   const createObraM = useMutation({
     mutationFn: createObraFn,
@@ -97,6 +98,7 @@ function NuevaObra() {
 
   const goStep1 = () => {
     if (!nombre.trim()) return toast.error("Nombre requerido");
+    if (!unidadNegocioId) return toast.error("Selecciona una unidad de negocio");
     if (!clienteId) return toast.error("Selecciona un cliente");
     setStep(2);
   };
@@ -136,7 +138,7 @@ function NuevaObra() {
     createObraM.mutate({
       data: {
         nombre: nombre.trim(),
-        tipo_obra: tipoObra,
+        unidad_negocio_id: unidadNegocioId,
         cliente_id: clienteId || null,
         numero_contrato: numeroContrato.trim() || undefined,
         ubicacion: ubicacion.trim() || undefined,
@@ -171,15 +173,30 @@ function NuevaObra() {
             <Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
           </div>
           <div>
-            <Label>Tipo de obra *</Label>
-            <Select value={tipoObra} onValueChange={(v) => setTipoObra(v as TipoObra)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {TIPOS_OBRA.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Unidad de negocio *</Label>
+            {unidadesQ.isLoading ? (
+              <p className="text-xs text-muted-foreground mt-1">Cargando…</p>
+            ) : (unidadesQ.data ?? []).length === 0 ? (
+              <Alert className="mt-2">
+                <AlertCircle className="size-4" />
+                <AlertDescription>
+                  Aún no hay unidades de negocio.{" "}
+                  <Link to="/app/configuracion" className="underline font-medium">
+                    Crea la primera en Configuración
+                  </Link>
+                  .
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Select value={unidadNegocioId} onValueChange={setUnidadNegocioId}>
+                <SelectTrigger><SelectValue placeholder="Selecciona unidad" /></SelectTrigger>
+                <SelectContent>
+                  {(unidadesQ.data ?? []).map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <ClienteSelector
             value={clienteId}
