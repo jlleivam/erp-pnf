@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getCompanyConfig, updateCompanyFacturacion } from "@/lib/api/company.functions";
@@ -15,6 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { REGIMENES_MORAL, REGIMENES_FISICA } from "@/components/terceros/constants";
+
+const ESTADOS_MX = [
+  "Aguascalientes","Baja California","Baja California Sur","Campeche","Chiapas",
+  "Chihuahua","Ciudad de México","Coahuila","Colima","Durango","Estado de México",
+  "Guanajuato","Guerrero","Hidalgo","Jalisco","Michoacán","Morelos","Nayarit",
+  "Nuevo León","Oaxaca","Puebla","Querétaro","Quintana Roo","San Luis Potosí",
+  "Sinaloa","Sonora","Tabasco","Tamaulipas","Tlaxcala","Veracruz","Yucatán","Zacatecas",
+];
 
 type TipoPersona = "moral" | "fisica";
 
