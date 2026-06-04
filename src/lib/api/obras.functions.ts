@@ -68,7 +68,8 @@ const crearObraSchema = z.object({
   fecha_inicio: z.string().optional(),
   fecha_terminacion: z.string().optional(),
   presupuesto_url: z.string().max(1000).nullable().optional(),
-  monto_contratado: z.number().min(0).nullable().optional(),
+
+
 
   team: z
     .array(
