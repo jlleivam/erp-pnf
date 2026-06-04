@@ -1,15 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crearObra, listCompanyUsers } from "@/lib/api/obras.functions";
 import { listClientes, crearCliente } from "@/lib/api/clientes.functions";
+import { listUnidadesNegocio } from "@/lib/api/unidades-negocio.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore, useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -26,20 +28,11 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Trash2, Plus, Upload, Check } from "lucide-react";
+import { Trash2, Plus, Check, AlertCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/obras/nueva")({
   component: NuevaObra,
 });
-
-const TIPOS_OBRA = [
-  { value: "industrial", label: "Industrial" },
-  { value: "comercial", label: "Comercial" },
-  { value: "residencial", label: "Residencial" },
-  { value: "infraestructura", label: "Infraestructura" },
-  { value: "vivienda_serie", label: "Vivienda en serie" },
-  { value: "urbanizacion", label: "Urbanización" },
-] as const;
 
 const ROLES_OBRA = [
   { value: "residente", label: "Residente" },
@@ -48,7 +41,6 @@ const ROLES_OBRA = [
   { value: "supervisor", label: "Supervisor" },
 ] as const;
 
-type TipoObra = (typeof TIPOS_OBRA)[number]["value"];
 type RolObra = "director" | "residente" | "auxiliar" | "administrativo" | "supervisor";
 type TeamRow = { user_id: string; role: RolObra };
 type ComisionRow = { user_id: string; porcentaje: number; base_calculo: "monto_contratado" | "monto_cobrado" };
