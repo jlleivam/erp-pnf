@@ -284,7 +284,6 @@ function PresupuestoTab({ obraId, initial }: { obraId: string; initial: ObraData
           ubicacion: initial.ubicacion,
           fecha_inicio: initial.fecha_inicio,
           fecha_terminacion: initial.fecha_terminacion,
-          monto_contratado: initial.monto_contratado,
           presupuesto_url: path,
         },
       });
