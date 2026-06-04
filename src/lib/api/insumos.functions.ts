@@ -341,12 +341,37 @@ export const importarInsumos = createServerFn({ method: "POST" })
           row: z.number().int().positive(),
         })
       ).min(1).max(500),
+      unidadesNuevas: z.array(
+        z.object({
+          codigo: unidadSchema,
+          nombre: z.string().trim().min(1).max(100),
+        })
+      ).max(100).optional().default([]),
+      categoriasNuevas: z.array(
+        z.object({
+          nombre: z.string().trim().min(1).max(100),
+          prefijo: z.string().trim().toUpperCase().regex(PREFIJO_REGEX, "Prefijo debe ser 3 letras o números").optional(),
+        })
+      ).max(100).optional().default([]),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getUserCompanyAndDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede importar insumos");
+
+    // Crear unidades nuevas (si las hay) antes de validar
+    if (data.unidadesNuevas.length > 0) {
+      const toInsert = data.unidadesNuevas.map((u) => ({
+        company_id: companyId,
+        codigo: u.codigo,
+        nombre: u.nombre,
+      }));
+      const { error: insUnidadesErr } = await supabase
+        .from("insumo_unidades")
+        .upsert(toInsert, { onConflict: "company_id,codigo", ignoreDuplicates: true });
+      if (insUnidadesErr) throw new Error(`Error creando unidades: ${insUnidadesErr.message}`);
+    }
 
     // Validar que todas las unidades existan en el catálogo
     const { data: existingUnits } = await supabase
@@ -360,7 +385,6 @@ export const importarInsumos = createServerFn({ method: "POST" })
         `Las siguientes unidades no existen en el catálogo: ${unidadesFaltantes.join(", ")}. Créalas primero desde el catálogo de Unidades.`
       );
     }
-
 
     // Cargar insumos existentes de la compañía para detectar duplicados
     const { data: existingInsumos, error: exErr } = await supabase
@@ -387,7 +411,6 @@ export const importarInsumos = createServerFn({ method: "POST" })
       return { ok: false as const, errores };
     }
 
-
     // Cargar categorías existentes
     const { data: existingCats, error: catErr } = await supabase
       .from("insumo_categorias").select("id, nombre").eq("company_id", companyId);
@@ -395,7 +418,11 @@ export const importarInsumos = createServerFn({ method: "POST" })
     const catMap = new Map<string, string>();
     for (const c of existingCats ?? []) catMap.set(String(c.nombre).trim().toLowerCase(), c.id);
 
-    // Crear categorías nuevas
+    // Crear categorías nuevas (usando prefijos provistos por el usuario o derivándolos)
+    const prefijoOverrides = new Map<string, string>();
+    for (const c of data.categoriasNuevas) {
+      if (c.prefijo) prefijoOverrides.set(c.nombre.trim().toLowerCase(), c.prefijo);
+    }
     const nuevasCats = new Map<string, string>(); // key -> nombre original
     for (const f of data.filas) {
       const key = f.categoria.trim().toLowerCase();
@@ -405,14 +432,20 @@ export const importarInsumos = createServerFn({ method: "POST" })
     }
     if (nuevasCats.size > 0) {
       const toInsert: { company_id: string; nombre: string; prefijo: string }[] = [];
-      for (const nombre of nuevasCats.values()) {
-        const base = derivarPrefijo(nombre);
-        const prefijo = await prefijoUnico(supabase, companyId, base);
+      for (const [key, nombre] of nuevasCats.entries()) {
+        const override = prefijoOverrides.get(key);
+        const base = override ?? derivarPrefijo(nombre);
+        const prefijo = override ? base : await prefijoUnico(supabase, companyId, base);
         toInsert.push({ company_id: companyId, nombre, prefijo });
       }
       const { data: inserted, error: insCatErr } = await supabase
         .from("insumo_categorias").insert(toInsert).select("id, nombre");
-      if (insCatErr) throw new Error(`Error creando categorías: ${insCatErr.message}`);
+      if (insCatErr) {
+        if (insCatErr.message.includes("insumo_categorias_prefijo_unique")) {
+          throw new Error("Uno de los prefijos elegidos ya está en uso. Ajusta los prefijos e intenta de nuevo.");
+        }
+        throw new Error(`Error creando categorías: ${insCatErr.message}`);
+      }
       for (const c of inserted ?? []) catMap.set(String(c.nombre).trim().toLowerCase(), c.id);
     }
 
@@ -431,7 +464,12 @@ export const importarInsumos = createServerFn({ method: "POST" })
     const { error: insErr } = await supabase.from("insumos").insert(rows);
     if (insErr) throw new Error(`Error insertando insumos: ${insErr.message}`);
 
-    return { ok: true as const, insertadas: rows.length, categoriasCreadas: nuevasCats.size };
+    return {
+      ok: true as const,
+      insertadas: rows.length,
+      categoriasCreadas: nuevasCats.size,
+      unidadesCreadas: data.unidadesNuevas.length,
+    };
   });
 
 // ============= UNIDADES =============
