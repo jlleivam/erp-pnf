@@ -213,6 +213,13 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
     const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
     if (!isDirector) throw new Error("Solo el Director puede autorizar presupuestos");
 
+    const { data: pres, error: pErr } = await supabase
+      .from("obra_presupuestos")
+      .select("obra_id")
+      .eq("id", data.id)
+      .single();
+    if (pErr) throw new Error(pErr.message);
+
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
       .select("id", { count: "exact", head: true })
@@ -229,6 +236,8 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    await recalcularMontoContratado(supabase, pres.obra_id);
     return { ok: true };
   });
 
