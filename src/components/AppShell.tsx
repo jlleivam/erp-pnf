@@ -284,12 +284,14 @@ export function AppShell() {
           items={[
             { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
-            { to: "/app/equipo", label: "Equipo", icon: UserCog },
-            { to: "/app/configuracion", label: "Config", icon: Settings },
+            ...(director
+              ? [{ to: "/app/configuracion", label: "Config", icon: Settings }]
+              : []),
           ] satisfies BottomBarItem[]}
           onMoreClick={() => setMobileOpen(true)}
         />
       )}
+
 
       {/* Sheet con menú completo (se abre desde "Más") */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
