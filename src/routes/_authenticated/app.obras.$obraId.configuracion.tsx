@@ -223,16 +223,14 @@ function DatosTab({ obraId, initial }: { obraId: string; initial: ObraData }) {
           <Input id="ft" type="date" value={fechaTerm} onChange={(e) => setFechaTerm(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="monto">Monto contratado (MXN)</Label>
-          <Input
-            id="monto"
-            type="number"
-            min={0}
-            step="0.01"
-            value={montoContratado}
-            onChange={(e) => setMontoContratado(e.target.value)}
-            placeholder="0.00"
-          />
+          <Label>Monto contratado (MXN)</Label>
+          <div className="mt-1.5 px-3 py-2 rounded-md border border-input bg-muted/40 text-sm">
+            {formatMXN(initial.monto_contratado)}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Se calcula automáticamente a partir del presupuesto autorizado y sus
+            órdenes de cambio. No es editable.
+          </p>
         </div>
       </div>
       <div className="flex justify-end">
