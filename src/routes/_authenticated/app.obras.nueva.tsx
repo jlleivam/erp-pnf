@@ -145,7 +145,7 @@ function NuevaObra() {
         fecha_inicio: fechaInicio || undefined,
         fecha_terminacion: fechaTerm || undefined,
         presupuesto_url: presupuestoUrl,
-        monto_contratado: montoContratado === "" ? null : Number(montoContratado),
+
 
         team: teamLimpio,
         comisiones: comisionesLimpias,
