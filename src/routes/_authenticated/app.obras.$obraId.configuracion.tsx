@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trash2, Plus, Check } from "lucide-react";
+import { formatMXN } from "@/lib/format";
 
 type RolObra = "director" | "residente" | "auxiliar" | "administrativo" | "supervisor";
 type TeamRow = { user_id: string; role: RolObra };
