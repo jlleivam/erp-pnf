@@ -43,7 +43,7 @@ const ROLES_OBRA = [
 
 type RolObra = "director" | "residente" | "auxiliar" | "administrativo" | "supervisor";
 type TeamRow = { user_id: string; role: RolObra };
-type ComisionRow = { user_id: string; porcentaje: number; base_calculo: "monto_contratado" | "monto_cobrado" };
+type ComisionRow = { user_id: string; porcentaje: number; base_calculo: "monto_contratado" | "monto_cobrado" | "utilidad" };
 
 function NuevaObra() {
   const navigate = useNavigate();
@@ -344,7 +344,7 @@ function NuevaObra() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setComisiones([...comisiones, { user_id: "", porcentaje: 0, base_calculo: "monto_contratado" }])
+                  setComisiones([...comisiones, { user_id: "", porcentaje: 0, base_calculo: "utilidad" }])
                 }
               >
                 <Plus className="size-3.5 mr-1" /> Agregar
@@ -394,6 +394,7 @@ function NuevaObra() {
                   >
                     <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="utilidad">Utilidad</SelectItem>
                       <SelectItem value="monto_contratado">Monto contratado</SelectItem>
                       <SelectItem value="monto_cobrado">Monto cobrado</SelectItem>
                     </SelectContent>

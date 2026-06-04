@@ -1,25 +1,14 @@
-## Objetivo
+1. Backend — `src/lib/api/obras.functions.ts`
+   - Update `crearObraSchema.comisiones[].base_calculo` enum from `["monto_contratado", "monto_cobrado"]` to include `"utilidad"`.
+   - Update `actualizarObraComisionesSchema.comisiones[].base_calculo` enum the same way.
+   - No DB migration needed: `obra_comisiones.base_calculo` is `TEXT`.
 
-La pestaña "Presupuesto" dentro de la configuración de la obra hoy solo permite subir/reemplazar un archivo `.xlsx`. Debe tener las mismas funciones del módulo de Presupuesto del dashboard de la obra: crear el presupuesto base, capturar renglones (manual o por Excel), autorizar, crear órdenes de cambio, ver vigente, etc.
+2. Frontend — `src/routes/_authenticated/app.obras.$obraId.configuracion.tsx`
+   - Update `ComisionRow.base_calculo` type to include `"utilidad"`.
+   - Add `"utilidad"` as a dropdown option in the comisiones Select (label: "Utilidad").
+   - Change the default `base_calculo` on the "Agregar" button from `"monto_contratado"` to `"utilidad"`.
 
-## Cambio
-
-En `src/routes/_authenticated/app.obras.$obraId.configuracion.tsx`:
-
-1. Reemplazar el cuerpo del `<TabsContent value="presupuesto">` por:
-   ```tsx
-   <PresupuestoModule obraId={obraId} />
-   ```
-2. Importar `PresupuestoModule` desde `@/components/presupuesto/PresupuestoModule`.
-3. Eliminar la función `PresupuestoTab` y su mutation/upload — ya no se usa.
-4. Eliminar el import de `Check` si queda huérfano (lo usaba solo `PresupuestoTab`).
-
-No se requieren cambios en server functions ni en la base de datos: el `PresupuestoModule` ya invoca `listPresupuestos`, `crearPresupuesto`, `autorizarPresupuesto`, etc., y al autorizar dispara el recálculo de `monto_contratado` que ya existe.
-
-## Archivo a modificar
-
-- `src/routes/_authenticated/app.obras.$obraId.configuracion.tsx`
-
-## Resultado
-
-Desde **Configuración de la obra → Presupuesto** el director puede crear el presupuesto base, capturar/importar renglones, autorizarlo y gestionar órdenes de cambio, con la misma UX del módulo Presupuesto del dashboard.
+3. Frontend — `src/routes/_authenticated/app.obras.nueva.tsx`
+   - Update `ComisionRow.base_calculo` type to include `"utilidad"`.
+   - Add `"utilidad"` as a dropdown option in the comisiones Select (label: "Utilidad").
+   - Change the default `base_calculo` on the "Agregar" button from `"monto_contratado"` to `"utilidad"`.
