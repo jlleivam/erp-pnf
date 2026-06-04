@@ -176,15 +176,21 @@ export function FacturacionTab() {
 
       <div className="space-y-3 border-t pt-4">
         <h3 className="text-sm font-medium">Dirección fiscal</h3>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-4 gap-4">
           <div className="sm:col-span-2">
             <Label>Calle</Label>
             <Input value={f.calle} onChange={(e) => set("calle", e.target.value)} />
           </div>
           <div>
-            <Label>Número</Label>
-            <Input value={f.numero} onChange={(e) => set("numero", e.target.value)} />
+            <Label>Núm. exterior</Label>
+            <Input value={f.numero_exterior} onChange={(e) => set("numero_exterior", e.target.value)} />
           </div>
+          <div>
+            <Label>Núm. interior</Label>
+            <Input value={f.numero_interior} onChange={(e) => set("numero_interior", e.target.value)} />
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
           <div>
             <Label>Colonia</Label>
             <Input value={f.colonia} onChange={(e) => set("colonia", e.target.value)} />
