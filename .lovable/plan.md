@@ -1,35 +1,58 @@
-# Editar configuración de obra (Director)
+# Ubicación clickeable en dashboard y PDF de OC
 
-Agregar un acceso "Configuración" dentro de la navegación de la obra (visible solo para el Director) que abra una pantalla para editar la obra ya creada.
+El campo `obras.ubicacion` ya acepta cualquier texto (string hasta 500 caracteres), así que **no hay cambios de base de datos ni de validación**. Solo cambia cómo se renderiza.
 
-## 1. Nueva ruta
-- Archivo: `src/routes/_authenticated/app.obras.$obraId.configuracion.tsx`
-- Componente: `ConfiguracionObra` que reusa el formulario de `app.obras.nueva.tsx` adaptado a modo edición, con 4 secciones en pestañas (Tabs):
-  1. **Datos generales** — nombre, unidad de negocio, cliente, número de contrato, ubicación, fechas, monto contratado.
-  2. **Presupuesto** — reemplazar archivo (sube a bucket `presupuestos`, actualiza `presupuesto_url`).
-  3. **Equipo** — agregar/quitar miembros (`obra_team`), respetando la regla de mínimo 1 Residente + 1 Administrativo + 1 Supervisor.
-  4. **Comisiones** — editar filas de `obra_comisiones` (usuario, %, base de cálculo).
-- Acceso restringido: si `useEffectiveIsDirector()` es falso → `redirect` a `/app/obras/$obraId`.
+## 1. Helper compartido
 
-## 2. Server functions nuevas en `src/lib/api/obras.functions.ts`
-- `getObraConfiguracion({ obraId })` — devuelve obra completa + team + comisiones para precargar el formulario.
-- `actualizarObra({ obraId, ...campos })` — UPDATE de campos generales y `presupuesto_url`. Valida con Zod (mismo shape que `crearObraSchema` pero todos opcionales salvo `obraId`).
-- `actualizarObraTeam({ obraId, team })` — reemplaza `obra_team` (delete + insert en transacción lógica) y valida los 3 roles mínimos.
-- `actualizarObraComisiones({ obraId, comisiones })` — reemplaza filas de `obra_comisiones`.
+Crear `src/lib/ubicacion.ts`:
 
-Todas con `requireSupabaseAuth` + chequeo de que el usuario es Director de la `company_id` de la obra (`is_director_of`).
+```ts
+export function isUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
 
-## 3. Navegación
-- En `src/components/AppShell.tsx`, dentro de `obraNavItems` (solo cuando el usuario efectivo es Director), agregar:
-  ```ts
-  { to: `/app/obras/${obraId}/configuracion`, label: "Configuración", icon: Settings }
-  ```
-  Esto lo muestra tanto en la barra inferior móvil (scroll) como en cualquier futura barra lateral de obra.
+export function buildMapsHref(ubicacion: string | null | undefined): string | null {
+  if (!ubicacion) return null;
+  const v = ubicacion.trim();
+  if (!v) return null;
+  return isUrl(v)
+    ? v
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v)}`;
+}
+```
 
-## 4. UX al guardar
-- Cada pestaña tiene su propio botón "Guardar cambios" (igual patrón que tabs de configuración global).
-- Tras éxito: `toast.success` + `queryClient.invalidateQueries(["obra-dashboard", obraId])` para refrescar header del dashboard. Permanecer en la pestaña (no redirigir).
+Esto resuelve el doble-wrap actual: si pegas `https://maps.app.goo.gl/...`, se usa tal cual; si es texto plano ("Av. Reforma 123, CDMX") se arma la búsqueda en Google Maps.
 
-## Notas técnicas
-- Reusar componentes existentes de `app.obras.nueva.tsx` extrayéndolos a `src/components/obras/ObraForm*.tsx` (DatosGenerales, EquipoEditor, ComisionesEditor, PresupuestoUploader) para evitar duplicación.
-- No se tocan tablas ni RLS: las políticas existentes de `obras`, `obra_team`, `obra_comisiones` ya permiten al director de la company.
+## 2. Dashboard de obra (`app.obras.$obraId.index.tsx`)
+
+Reemplazar la construcción manual de `mapsHref` por `buildMapsHref(obra.ubicacion)`. El render visual no cambia: sigue mostrando el texto + botones "Abrir mapa" y "Copiar". Si lo que está guardado es un URL largo, mostrar texto truncado tipo "Link de Google Maps" en lugar de la URL completa para mantener la UI limpia.
+
+## 3. PDF de OC a proveedores (`src/lib/pdf/solicitud-cotizacion-pdf.ts`)
+
+Hoy (línea 85-86) imprime `Ubicación: <texto>` como texto plano. Cambiar a:
+
+- Imprimir `Ubicación: <texto>` (o "Ver en Google Maps" si es URL).
+- Agregar un enlace clickeable usando `doc.textWithLink(...)` de jsPDF apuntando a `buildMapsHref(ubicacion)`, con estilo subrayado/color azul para que el proveedor identifique que es clickeable.
+
+Resultado: cuando el proveedor abra el PDF de la OC en cualquier visor moderno (Adobe, Preview, navegador, móvil), puede hacer click directo y se abre el mapa.
+
+## 4. Pantalla de configuración (`app.obras.$obraId.configuracion.tsx`) y alta de obra (`app.obras.nueva.tsx`)
+
+Ajustes menores en el input para guiar al director:
+- Label: "Ubicación de la obra"
+- Placeholder: "Dirección o link de Google Maps"
+- Helper text debajo: "Puedes pegar un enlace de Google Maps; aparecerá clickeable en las órdenes de compra a proveedores."
+
+## Detalles técnicos
+
+- No se toca la base de datos, ni el schema Zod, ni RLS.
+- `jsPDF.textWithLink(text, x, y, { url })` ya está disponible (la librería ya se usa para generar el PDF de cotización).
+- El helper `buildMapsHref` se reutiliza entre componente React y generador de PDF, ambos lado cliente.
+
+## Archivos a modificar
+
+- `src/lib/ubicacion.ts` (nuevo)
+- `src/routes/_authenticated/app.obras.$obraId.index.tsx`
+- `src/lib/pdf/solicitud-cotizacion-pdf.ts`
+- `src/routes/_authenticated/app.obras.$obraId.configuracion.tsx`
+- `src/routes/_authenticated/app.obras.nueva.tsx`
