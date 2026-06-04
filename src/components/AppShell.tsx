@@ -8,7 +8,7 @@ import {
   LogOut,
   ChevronDown,
   HardHat,
-  UserCog,
+
   ShieldCheck,
   Receipt,
   ClipboardList,
