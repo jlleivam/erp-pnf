@@ -158,3 +158,177 @@ export const listCompanyUsers = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+// ============================================================
+// Edición de obra (Director)
+// ============================================================
+
+async function assertDirectorDeObra(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  userId: string,
+  obraId: string
+): Promise<string> {
+  const { data: obra, error } = await supabase
+    .from("obras")
+    .select("company_id")
+    .eq("id", obraId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!obra) throw new Error("Obra no encontrada");
+
+  const { data: roleRow, error: rErr } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("company_id", obra.company_id)
+    .eq("role", "director")
+    .maybeSingle();
+  if (rErr) throw new Error(rErr.message);
+  if (!roleRow) throw new Error("Solo el Director puede editar la obra");
+  return obra.company_id as string;
+}
+
+export const getObraConfiguracion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ obraId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertDirectorDeObra(supabase, userId, data.obraId);
+
+    const { data: obra, error } = await supabase
+      .from("obras")
+      .select(
+        "id, nombre, unidad_negocio_id, cliente_id, numero_contrato, ubicacion, fecha_inicio, fecha_terminacion, presupuesto_url, monto_contratado"
+      )
+      .eq("id", data.obraId)
+      .single();
+    if (error) throw new Error(error.message);
+
+    const { data: team, error: tErr } = await supabase
+      .from("obra_team")
+      .select("user_id, role")
+      .eq("obra_id", data.obraId);
+    if (tErr) throw new Error(tErr.message);
+
+    const { data: comisiones, error: cErr } = await supabase
+      .from("obra_comisiones")
+      .select("user_id, porcentaje, base_calculo")
+      .eq("obra_id", data.obraId);
+    if (cErr) throw new Error(cErr.message);
+
+    return { obra, team: team ?? [], comisiones: comisiones ?? [] };
+  });
+
+const actualizarObraSchema = z.object({
+  obraId: z.string().uuid(),
+  nombre: z.string().trim().min(1).max(255),
+  unidad_negocio_id: z.string().uuid(),
+  cliente_id: z.string().uuid().nullable(),
+  numero_contrato: z.string().trim().max(100).nullable().optional(),
+  ubicacion: z.string().trim().max(500).nullable().optional(),
+  fecha_inicio: z.string().nullable().optional(),
+  fecha_terminacion: z.string().nullable().optional(),
+  presupuesto_url: z.string().max(1000).nullable().optional(),
+  monto_contratado: z.number().min(0).nullable().optional(),
+});
+
+export const actualizarObra = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => actualizarObraSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertDirectorDeObra(supabase, userId, data.obraId);
+
+    const { error } = await supabase
+      .from("obras")
+      .update({
+        nombre: data.nombre,
+        unidad_negocio_id: data.unidad_negocio_id,
+        cliente_id: data.cliente_id,
+        numero_contrato: data.numero_contrato ?? null,
+        ubicacion: data.ubicacion ?? null,
+        fecha_inicio: data.fecha_inicio ?? null,
+        fecha_terminacion: data.fecha_terminacion ?? null,
+        presupuesto_url: data.presupuesto_url ?? null,
+        monto_contratado: data.monto_contratado ?? null,
+      })
+      .eq("id", data.obraId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const actualizarObraTeamSchema = z.object({
+  obraId: z.string().uuid(),
+  team: z.array(
+    z.object({
+      user_id: z.string().uuid(),
+      role: z.enum(["director", "residente", "auxiliar", "administrativo", "supervisor"]),
+    })
+  ),
+});
+
+export const actualizarObraTeam = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => actualizarObraTeamSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertDirectorDeObra(supabase, userId, data.obraId);
+
+    const roles = new Set(data.team.map((m) => m.role));
+    if (!roles.has("residente") || !roles.has("administrativo") || !roles.has("supervisor")) {
+      throw new Error("Se requiere mínimo un Residente, un Administrativo y un Supervisor");
+    }
+
+    const { error: delErr } = await supabase
+      .from("obra_team")
+      .delete()
+      .eq("obra_id", data.obraId);
+    if (delErr) throw new Error(delErr.message);
+
+    if (data.team.length > 0) {
+      const { error: insErr } = await supabase
+        .from("obra_team")
+        .insert(data.team.map((m) => ({ obra_id: data.obraId, user_id: m.user_id, role: m.role })));
+      if (insErr) throw new Error(insErr.message);
+    }
+    return { ok: true };
+  });
+
+const actualizarObraComisionesSchema = z.object({
+  obraId: z.string().uuid(),
+  comisiones: z.array(
+    z.object({
+      user_id: z.string().uuid(),
+      porcentaje: z.number().min(0).max(100),
+      base_calculo: z.enum(["monto_contratado", "monto_cobrado"]),
+    })
+  ),
+});
+
+export const actualizarObraComisiones = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => actualizarObraComisionesSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertDirectorDeObra(supabase, userId, data.obraId);
+
+    const { error: delErr } = await supabase
+      .from("obra_comisiones")
+      .delete()
+      .eq("obra_id", data.obraId);
+    if (delErr) throw new Error(delErr.message);
+
+    if (data.comisiones.length > 0) {
+      const { error: insErr } = await supabase.from("obra_comisiones").insert(
+        data.comisiones.map((c) => ({
+          obra_id: data.obraId,
+          user_id: c.user_id,
+          porcentaje: c.porcentaje,
+          base_calculo: c.base_calculo,
+        }))
+      );
+      if (insErr) throw new Error(insErr.message);
+    }
+    return { ok: true };
+  });
+

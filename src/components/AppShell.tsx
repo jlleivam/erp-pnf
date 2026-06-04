@@ -129,6 +129,9 @@ export function AppShell() {
         { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel },
         { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins },
         { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo },
+        ...(director
+          ? [{ to: `/app/obras/${obraId}/configuracion`, label: "Configuración", icon: Settings } as BottomBarItem]
+          : []),
       ]
     : [];
 
