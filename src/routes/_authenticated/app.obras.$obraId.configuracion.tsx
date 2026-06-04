@@ -275,7 +275,7 @@ function PresupuestoTab({ obraId, initial }: { obraId: string; initial: ObraData
         data: {
           obraId,
           nombre: initial.nombre,
-          unidad_negocio_id: initial.unidad_negocio_id,
+          unidad_negocio_id: initial.unidad_negocio_id ?? "",
           cliente_id: initial.cliente_id,
           numero_contrato: initial.numero_contrato,
           ubicacion: initial.ubicacion,
