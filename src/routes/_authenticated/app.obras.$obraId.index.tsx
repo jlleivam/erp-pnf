@@ -31,6 +31,7 @@ import {
   ListTodo,
 } from "lucide-react";
 import { formatMXN, formatDate } from "@/lib/format";
+import { buildMapsHref, ubicacionDisplayText } from "@/lib/ubicacion";
 import { NuevaTareaDialog } from "@/components/tareas/NuevaTareaDialog";
 
 
