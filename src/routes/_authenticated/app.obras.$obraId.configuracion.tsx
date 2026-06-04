@@ -12,8 +12,7 @@ import {
 } from "@/lib/api/obras.functions";
 import { listClientes } from "@/lib/api/clientes.functions";
 import { listUnidadesNegocio } from "@/lib/api/unidades-negocio.functions";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuthStore, useEffectiveIsDirector } from "@/stores/auth";
+import { useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,8 +25,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, Check } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { formatMXN } from "@/lib/format";
+import { PresupuestoModule } from "@/components/presupuesto/PresupuestoModule";
 
 type RolObra = "director" | "residente" | "auxiliar" | "administrativo" | "supervisor";
 type TeamRow = { user_id: string; role: RolObra };
@@ -92,7 +92,7 @@ function ConfiguracionObra() {
           <DatosTab obraId={obraId} initial={cfg.data.obra} />
         </TabsContent>
         <TabsContent value="presupuesto">
-          <PresupuestoTab obraId={obraId} initial={cfg.data.obra} />
+          <PresupuestoModule obraId={obraId} />
         </TabsContent>
         <TabsContent value="equipo">
           <EquipoTab obraId={obraId} initial={cfg.data.team as TeamRow[]} />
@@ -243,86 +243,9 @@ function DatosTab({ obraId, initial }: { obraId: string; initial: ObraData }) {
 }
 
 // ============================================================
-// Presupuesto (archivo)
-// ============================================================
-
-function PresupuestoTab({ obraId, initial }: { obraId: string; initial: ObraData }) {
-  const qc = useQueryClient();
-  const profile = useAuthStore((s) => s.profile);
-  const update = useServerFn(actualizarObra);
-  const [uploading, setUploading] = useState(false);
-  const [presupuestoUrl, setPresupuestoUrl] = useState<string | null>(initial.presupuesto_url);
-
-  const m = useMutation({
-    mutationFn: update,
-    onSuccess: () => {
-      toast.success("Presupuesto actualizado");
-      qc.invalidateQueries({ queryKey: ["obra-configuracion", obraId] });
-      qc.invalidateQueries({ queryKey: ["obra-dashboard", obraId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const handleUpload = async (file: File) => {
-    if (!profile?.company_id) return;
-    setUploading(true);
-    try {
-      const path = `${profile.company_id}/${crypto.randomUUID()}-${file.name}`;
-      const { error } = await supabase.storage.from("presupuestos").upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-      });
-      if (error) throw error;
-      setPresupuestoUrl(path);
-      // Persist new path
-      m.mutate({
-        data: {
-          obraId,
-          nombre: initial.nombre,
-          unidad_negocio_id: initial.unidad_negocio_id ?? "",
-          cliente_id: initial.cliente_id,
-          numero_contrato: initial.numero_contrato,
-          ubicacion: initial.ubicacion,
-          fecha_inicio: initial.fecha_inicio,
-          fecha_terminacion: initial.fecha_terminacion,
-          presupuesto_url: path,
-        },
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <Card className="p-6 space-y-4">
-      <div>
-        <Label>Presupuesto (.xlsx)</Label>
-        <p className="text-xs text-muted-foreground mt-1">
-          Sube un archivo nuevo para reemplazar el actual.
-        </p>
-      </div>
-      {presupuestoUrl && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Check className="size-3 text-primary" /> Archivo actual cargado
-        </p>
-      )}
-      <Input
-        type="file"
-        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleUpload(f);
-        }}
-        disabled={uploading || m.isPending}
-      />
-    </Card>
-  );
-}
-
-// ============================================================
 // Equipo
 // ============================================================
+
 
 function EquipoTab({ obraId, initial }: { obraId: string; initial: TeamRow[] }) {
   const qc = useQueryClient();
