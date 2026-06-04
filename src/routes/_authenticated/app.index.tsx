@@ -19,9 +19,7 @@ function Dashboard() {
     queryKey: ["obras"],
     queryFn: () => fetchObras(),
   });
-  const roles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
-  const showAdmin = director || roles.includes("administrativo");
 
   return (
     <div className="space-y-10">
