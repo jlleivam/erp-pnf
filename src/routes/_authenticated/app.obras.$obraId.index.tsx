@@ -145,9 +145,8 @@ function ObraHeader({
     }
   };
 
-  const mapsHref = obra.ubicacion
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(obra.ubicacion)}`
-    : null;
+  const mapsHref = buildMapsHref(obra.ubicacion);
+  const ubicacionTexto = ubicacionDisplayText(obra.ubicacion);
 
   const initials = (name?: string | null) =>
     (name ?? "?")
