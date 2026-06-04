@@ -206,12 +206,7 @@ export function AppShell() {
           <div className="flex items-center gap-3">
             <NotificacionesBell />
 
-            <Button asChild variant="ghost" size="sm" className="gap-2" title="Configuración de la empresa">
-              <Link to="/app/configuracion">
-                <Settings className="size-4" />
-                <span className="hidden sm:inline">Configuración</span>
-              </Link>
-            </Button>
+
 
 
 
