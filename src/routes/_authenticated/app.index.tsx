@@ -5,9 +5,8 @@ import { listObras } from "@/lib/api/obras.functions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, HardHat, Construction } from "lucide-react";
+import { Plus, HardHat } from "lucide-react";
 import { useEffectiveIsDirector } from "@/stores/auth";
-import { CONFIG_MODULES, type ModuleEntry } from "@/lib/modules";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
@@ -23,7 +22,6 @@ function Dashboard() {
 
   return (
     <div className="space-y-10">
-      {/* Obras */}
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -72,60 +70,6 @@ function Dashboard() {
           </div>
         )}
       </section>
-
-
-
-
-      {director && (
-        <ModuleSection
-          title="Configuración"
-          description="Datos de la empresa y opciones generales."
-          modules={CONFIG_MODULES}
-        />
-      )}
     </div>
-  );
-}
-
-function ModuleSection({
-  title,
-  description,
-  modules,
-}: {
-  title: string;
-  description: string;
-  modules: ModuleEntry[];
-}) {
-  return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-        {modules.map((m) => {
-          const Icon = m.icon;
-          return (
-            <Link
-              key={`${m.to}-${m.label}`}
-              to={m.to}
-              className="group rounded-lg border border-border bg-card p-4 hover:border-primary/40 hover:shadow-sm transition-all flex flex-col gap-2"
-            >
-              <div className="flex items-center justify-between">
-                <div className="size-9 rounded-md bg-muted grid place-items-center text-muted-foreground group-hover:text-foreground transition-colors">
-                  <Icon className="size-4" />
-                </div>
-                {!m.ready && (
-                  <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0">
-                    <Construction className="size-2.5" /> Pronto
-                  </Badge>
-                )}
-              </div>
-              <p className="text-sm font-medium leading-snug">{m.label}</p>
-            </Link>
-          );
-        })}
-      </div>
-    </section>
   );
 }
