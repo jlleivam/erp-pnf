@@ -83,7 +83,23 @@ export function generarPDFSolicitudCotizacion(data: PDFData) {
   y += 12;
   doc.setFont("helvetica", "normal");
   if (data.requisicion?.obra?.ubicacion) {
-    doc.text(`Ubicación: ${data.requisicion.obra.ubicacion}`, M, y, { maxWidth: W - M * 2 });
+    const ubic = data.requisicion.obra.ubicacion as string;
+    const isLink = /^https?:\/\//i.test(ubic.trim());
+    const href = isLink
+      ? ubic.trim()
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubic.trim())}`;
+    const labelText = isLink ? "Ver en Google Maps" : ubic;
+    const prefix = "Ubicación: ";
+    doc.text(prefix, M, y);
+    const prefixWidth = doc.getTextWidth(prefix);
+    doc.setTextColor(0, 0, 238);
+    doc.textWithLink(labelText, M + prefixWidth, y, { url: href });
+    const linkWidth = doc.getTextWidth(labelText);
+    // subrayado
+    doc.setDrawColor(0, 0, 238);
+    doc.line(M + prefixWidth, y + 1, M + prefixWidth + linkWidth, y + 1);
+    doc.setTextColor(0, 0, 0);
+    doc.setDrawColor(0, 0, 0);
     y += 12;
   }
   const resNombre = data.residente?.profile?.nombre_completo;

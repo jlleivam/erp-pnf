@@ -31,6 +31,7 @@ import {
   ListTodo,
 } from "lucide-react";
 import { formatMXN, formatDate } from "@/lib/format";
+import { buildMapsHref, ubicacionDisplayText } from "@/lib/ubicacion";
 import { NuevaTareaDialog } from "@/components/tareas/NuevaTareaDialog";
 
 
@@ -145,9 +146,8 @@ function ObraHeader({
     }
   };
 
-  const mapsHref = obra.ubicacion
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(obra.ubicacion)}`
-    : null;
+  const mapsHref = buildMapsHref(obra.ubicacion);
+  const ubicacionTexto = ubicacionDisplayText(obra.ubicacion);
 
   const initials = (name?: string | null) =>
     (name ?? "?")
@@ -202,7 +202,7 @@ function ObraHeader({
         {obra.ubicacion ? (
           <div className="flex items-center gap-1.5">
             <MapPin className="size-3.5" />
-            <span>{obra.ubicacion}</span>
+            <span className="truncate max-w-[260px]">{ubicacionTexto}</span>
             <a
               href={mapsHref!}
               target="_blank"
