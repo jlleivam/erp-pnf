@@ -79,6 +79,7 @@ export function FacturacionTab() {
     onSuccess: () => {
       toast.success("Datos actualizados");
       qc.invalidateQueries({ queryKey: ["company-config"] });
+      navigate({ to: "/app" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
