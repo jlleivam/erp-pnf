@@ -61,7 +61,7 @@ function NuevaObra() {
   const [ubicacion, setUbicacion] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaTerm, setFechaTerm] = useState("");
-  const [montoContratado, setMontoContratado] = useState<string>("");
+
 
 
   // Step 2
