@@ -362,16 +362,29 @@ export const importarInsumos = createServerFn({ method: "POST" })
 
     // Crear unidades nuevas (si las hay) antes de validar
     if (data.unidadesNuevas.length > 0) {
-      const toInsert = data.unidadesNuevas.map((u) => ({
-        company_id: companyId,
-        codigo: u.codigo,
-        nombre: u.nombre,
-      }));
-      const { error: insUnidadesErr } = await supabase
+      const { data: yaExisten } = await supabase
         .from("insumo_unidades")
-        .upsert(toInsert, { onConflict: "company_id,codigo", ignoreDuplicates: true });
-      if (insUnidadesErr) throw new Error(`Error creando unidades: ${insUnidadesErr.message}`);
+        .select("codigo")
+        .eq("company_id", companyId);
+      const existentes = new Set(
+        (yaExisten ?? []).map((u: any) => String(u.codigo).toUpperCase())
+      );
+      const toInsert = data.unidadesNuevas
+        .filter((u) => !existentes.has(u.codigo.toUpperCase()))
+        .map((u) => ({
+          company_id: companyId,
+          codigo: u.codigo,
+          nombre: u.nombre,
+        }));
+      if (toInsert.length > 0) {
+        const { error: insUnidadesErr } = await supabase
+          .from("insumo_unidades")
+          .insert(toInsert);
+        if (insUnidadesErr) throw new Error(`Error creando unidades: ${insUnidadesErr.message}`);
+      }
     }
+
+
 
     // Validar que todas las unidades existan en el catálogo
     const { data: existingUnits } = await supabase
