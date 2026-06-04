@@ -34,7 +34,7 @@ type TeamRow = { user_id: string; role: RolObra };
 type ComisionRow = {
   user_id: string;
   porcentaje: number;
-  base_calculo: "monto_contratado" | "monto_cobrado";
+  base_calculo: "monto_contratado" | "monto_cobrado" | "utilidad";
 };
 
 const ROLES_OBRA: { value: RolObra; label: string }[] = [
@@ -385,7 +385,7 @@ function ComisionesTab({ obraId, initial }: { obraId: string; initial: ComisionR
           onClick={() =>
             setComisiones([
               ...comisiones,
-              { user_id: "", porcentaje: 0, base_calculo: "monto_contratado" },
+              { user_id: "", porcentaje: 0, base_calculo: "utilidad" },
             ])
           }
         >
@@ -439,6 +439,7 @@ function ComisionesTab({ obraId, initial }: { obraId: string; initial: ComisionR
             >
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="utilidad">Utilidad</SelectItem>
                 <SelectItem value="monto_contratado">Monto contratado</SelectItem>
                 <SelectItem value="monto_cobrado">Monto cobrado</SelectItem>
               </SelectContent>

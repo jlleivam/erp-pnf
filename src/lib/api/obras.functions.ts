@@ -84,7 +84,7 @@ const crearObraSchema = z.object({
       z.object({
         user_id: z.string().uuid(),
         porcentaje: z.number().min(0).max(100),
-        base_calculo: z.enum(["monto_contratado", "monto_cobrado"]),
+        base_calculo: z.enum(["monto_contratado", "monto_cobrado", "utilidad"]),
       })
     )
     .default([]),
@@ -299,7 +299,7 @@ const actualizarObraComisionesSchema = z.object({
     z.object({
       user_id: z.string().uuid(),
       porcentaje: z.number().min(0).max(100),
-      base_calculo: z.enum(["monto_contratado", "monto_cobrado"]),
+      base_calculo: z.enum(["monto_contratado", "monto_cobrado", "utilidad"]),
     })
   ),
 });
