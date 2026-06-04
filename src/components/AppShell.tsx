@@ -65,6 +65,18 @@ export function AppShell() {
   const isInsideObra = Boolean(obraId) && pathname.startsWith(`/app/obras/${obraId}`);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const fetchCfg = useServerFn(getCompanyConfig);
+  const signFn = useServerFn(getCompanyLogoSignedUrl);
+  const cfg = useQuery({ queryKey: ["company-config"], queryFn: () => fetchCfg() });
+  const logoPath = cfg.data?.logo_url ?? null;
+  const logoSigned = useQuery({
+    queryKey: ["company-logo-signed", logoPath],
+    queryFn: () => signFn({ data: { path: logoPath! } }),
+    enabled: !!logoPath,
+    staleTime: 50 * 60 * 1000,
+  });
+  const logoUrl = logoSigned.data?.url ?? null;
+
 
   const realDirector = useRealIsDirector();
   const effRoles = useEffectiveRoles();
