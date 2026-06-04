@@ -213,8 +213,16 @@ function NuevaObra() {
               <Input id="contrato" value={numeroContrato} onChange={(e) => setNumeroContrato(e.target.value)} />
             </div>
             <div>
-              <Label htmlFor="ubic">Ubicación</Label>
-              <Input id="ubic" value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} />
+              <Label htmlFor="ubic">Ubicación de la obra</Label>
+              <Input
+                id="ubic"
+                value={ubicacion}
+                onChange={(e) => setUbicacion(e.target.value)}
+                placeholder="Dirección o link de Google Maps"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Puedes pegar un enlace de Google Maps; aparecerá clickeable en las órdenes de compra a proveedores.
+              </p>
             </div>
             <div>
               <Label htmlFor="fi">Fecha de inicio</Label>
