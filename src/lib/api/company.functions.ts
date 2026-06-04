@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const SELECT =
-  "id, tipo_persona, razon_social, nombre_completo, rfc, curp, regimen_fiscal, calle, numero, colonia, municipio, estado, codigo_postal, registro_imss, registro_infonavit, moneda, zona_horaria, logo_url";
+  "id, tipo_persona, razon_social, nombre_completo, rfc, curp, regimen_fiscal, calle, numero_exterior, numero_interior, colonia, municipio, estado, codigo_postal, registro_imss, registro_infonavit, moneda, zona_horaria, logo_url";
 
 async function getMyCompanyId(supabase: any, userId: string): Promise<string> {
   const { data: profile } = await supabase
@@ -43,7 +43,8 @@ const facturacionSchema = z.object({
   curp: z.string().trim().max(18).nullable().optional(),
   regimen_fiscal: z.string().trim().max(255).nullable().optional(),
   calle: z.string().trim().max(255).nullable().optional(),
-  numero: z.string().trim().max(50).nullable().optional(),
+  numero_exterior: z.string().trim().max(50).nullable().optional(),
+  numero_interior: z.string().trim().max(50).nullable().optional(),
   colonia: z.string().trim().max(255).nullable().optional(),
   municipio: z.string().trim().max(255).nullable().optional(),
   estado: z.string().trim().max(255).nullable().optional(),

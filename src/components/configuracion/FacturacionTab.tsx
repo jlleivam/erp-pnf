@@ -33,7 +33,8 @@ export function FacturacionTab() {
     curp: "",
     regimen_fiscal: "",
     calle: "",
-    numero: "",
+    numero_exterior: "",
+    numero_interior: "",
     colonia: "",
     municipio: "",
     estado: "",
@@ -52,7 +53,8 @@ export function FacturacionTab() {
       curp: cfg.data.curp ?? "",
       regimen_fiscal: cfg.data.regimen_fiscal ?? "",
       calle: cfg.data.calle ?? "",
-      numero: cfg.data.numero ?? "",
+      numero_exterior: cfg.data.numero_exterior ?? "",
+      numero_interior: cfg.data.numero_interior ?? "",
       colonia: cfg.data.colonia ?? "",
       municipio: cfg.data.municipio ?? "",
       estado: cfg.data.estado ?? "",
@@ -92,7 +94,8 @@ export function FacturacionTab() {
             curp: f.tipo_persona === "fisica" ? f.curp.trim() || null : null,
             regimen_fiscal: f.regimen_fiscal || null,
             calle: f.calle.trim() || null,
-            numero: f.numero.trim() || null,
+            numero_exterior: f.numero_exterior.trim() || null,
+            numero_interior: f.numero_interior.trim() || null,
             colonia: f.colonia.trim() || null,
             municipio: f.municipio.trim() || null,
             estado: f.estado.trim() || null,
@@ -173,15 +176,21 @@ export function FacturacionTab() {
 
       <div className="space-y-3 border-t pt-4">
         <h3 className="text-sm font-medium">Dirección fiscal</h3>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-4 gap-4">
           <div className="sm:col-span-2">
             <Label>Calle</Label>
             <Input value={f.calle} onChange={(e) => set("calle", e.target.value)} />
           </div>
           <div>
-            <Label>Número</Label>
-            <Input value={f.numero} onChange={(e) => set("numero", e.target.value)} />
+            <Label>Núm. exterior</Label>
+            <Input value={f.numero_exterior} onChange={(e) => set("numero_exterior", e.target.value)} />
           </div>
+          <div>
+            <Label>Núm. interior</Label>
+            <Input value={f.numero_interior} onChange={(e) => set("numero_interior", e.target.value)} />
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
           <div>
             <Label>Colonia</Label>
             <Input value={f.colonia} onChange={(e) => set("colonia", e.target.value)} />

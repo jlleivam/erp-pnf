@@ -532,7 +532,8 @@ export type Database = {
           moneda: string
           municipio: string | null
           nombre_completo: string | null
-          numero: string | null
+          numero_exterior: string | null
+          numero_interior: string | null
           razon_social: string
           regimen_fiscal: string | null
           registro_imss: string | null
@@ -555,7 +556,8 @@ export type Database = {
           moneda?: string
           municipio?: string | null
           nombre_completo?: string | null
-          numero?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           razon_social: string
           regimen_fiscal?: string | null
           registro_imss?: string | null
@@ -578,7 +580,8 @@ export type Database = {
           moneda?: string
           municipio?: string | null
           nombre_completo?: string | null
-          numero?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           razon_social?: string
           regimen_fiscal?: string | null
           registro_imss?: string | null
