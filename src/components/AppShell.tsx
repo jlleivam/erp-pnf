@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Link, Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getCompanyConfig, getCompanyLogoSignedUrl } from "@/lib/api/company.functions";
 import {
   Building2,
   LayoutDashboard,
@@ -61,6 +64,18 @@ export function AppShell() {
   const obraId = params.obraId;
   const isInsideObra = Boolean(obraId) && pathname.startsWith(`/app/obras/${obraId}`);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const fetchCfg = useServerFn(getCompanyConfig);
+  const signFn = useServerFn(getCompanyLogoSignedUrl);
+  const cfg = useQuery({ queryKey: ["company-config"], queryFn: () => fetchCfg() });
+  const logoPath = cfg.data?.logo_url ?? null;
+  const logoSigned = useQuery({
+    queryKey: ["company-logo-signed", logoPath],
+    queryFn: () => signFn({ data: { path: logoPath! } }),
+    enabled: !!logoPath,
+    staleTime: 50 * 60 * 1000,
+  });
+  const logoUrl = logoSigned.data?.url ?? null;
 
 
   const realDirector = useRealIsDirector();
@@ -197,8 +212,14 @@ export function AppShell() {
         <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
             <Link to="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <Building2 className="size-5 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">ERP PNF</span>
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo empresa" className="h-8 w-auto max-w-[160px] object-contain" />
+              ) : (
+                <>
+                  <Building2 className="size-5 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">ERP PNF</span>
+                </>
+              )}
             </Link>
           </div>
 
