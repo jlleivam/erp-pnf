@@ -262,9 +262,15 @@ function InsumoPicker({
   const selected = insumos.find((x) => x.id === value);
 
   const filtered = useMemo(() => {
-    if (categoriaId === "all") return insumos;
-    if (categoriaId === "none") return insumos.filter((i) => !i.categoria);
-    return insumos.filter((i) => i.categoria?.id === categoriaId);
+    const base =
+      categoriaId === "all"
+        ? insumos
+        : categoriaId === "none"
+          ? insumos.filter((i) => !i.categoria)
+          : insumos.filter((i) => i.categoria?.id === categoriaId);
+    return [...base].sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base", numeric: true }),
+    );
   }, [insumos, categoriaId]);
 
   return (
