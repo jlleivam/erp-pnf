@@ -69,6 +69,7 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
 
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
+  const [openFechaIdx, setOpenFechaIdx] = useState<number | null>(null);
 
   const mut = useMutation({
     mutationFn: async () => {
