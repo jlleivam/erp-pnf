@@ -5,13 +5,12 @@ import {
   listEstimaciones,
   eliminarEstimacion,
 } from "@/lib/api/estimaciones.functions";
-import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
+import { calcularSemana, formatRangoSemana } from "@/lib/estimacion-utils";
 import { useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import {
   Dialog,
   DialogContent,
