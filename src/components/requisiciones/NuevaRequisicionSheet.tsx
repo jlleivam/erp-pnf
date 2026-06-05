@@ -136,6 +136,10 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                     categorias={categorias}
                     value={b.insumo_id}
                     onChange={(v) => updateBloque(i, { insumo_id: v })}
+                    disabledIds={bloques
+                      .filter((_, idx) => idx !== i)
+                      .map((x) => x.insumo_id)
+                      .filter(Boolean)}
                   />
                 </div>
 
