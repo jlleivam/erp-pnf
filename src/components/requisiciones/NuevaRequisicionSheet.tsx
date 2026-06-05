@@ -146,7 +146,7 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                       type="number"
                       min="0"
                       step="0.01"
-                      className="h-8 text-xs"
+                      className="h-8 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       value={b.cantidad}
                       onChange={(e) => updateBloque(i, { cantidad: e.target.value })}
                     />
