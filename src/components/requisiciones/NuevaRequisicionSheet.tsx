@@ -297,7 +297,13 @@ function InsumoPicker({
               </SelectContent>
             </Select>
           </div>
-          <Command>
+          <Command
+            filter={(value, search) => {
+              const norm = (s: string) =>
+                s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+              return norm(value).includes(norm(search)) ? 1 : 0;
+            }}
+          >
             <CommandInput placeholder="Buscar insumo…" className="h-9 text-xs" />
             <CommandList className="max-h-64">
               <CommandEmpty>Sin resultados.</CommandEmpty>
