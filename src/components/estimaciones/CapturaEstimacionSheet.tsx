@@ -245,14 +245,14 @@ export function CapturaEstimacionSheet({
                   </colgroup>
                   <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
                     <tr>
-                      <th className="text-left px-2 py-1.5">Clave</th>
-                      <th className="text-left px-2 py-1.5">Concepto</th>
-                      <th className="text-left px-2 py-1.5">Un.</th>
-                      <th className="text-right px-2 py-1.5">Cant. vig.</th>
-                      <th className="text-right px-2 py-1.5">Acum. previo</th>
-                      <th className="text-right px-2 py-1.5">Esta semana</th>
-                      <th className="text-right px-2 py-1.5">Importe sem.</th>
-                      <th className="text-right px-2 py-1.5">% Acum.</th>
+                      <th className="text-center px-2 py-1.5">Clave</th>
+                      <th className="text-center px-2 py-1.5">Concepto</th>
+                      <th className="text-center px-2 py-1.5">Un.</th>
+                      <th className="text-center px-2 py-1.5">Cant. vig.</th>
+                      <th className="text-center px-2 py-1.5">Acum. previo</th>
+                      <th className="text-center px-2 py-1.5">Esta semana</th>
+                      <th className="text-center px-2 py-1.5">Importe sem.</th>
+                      <th className="text-center px-2 py-1.5">% Acum.</th>
                     </tr>
                   </thead>
                   <tbody>
