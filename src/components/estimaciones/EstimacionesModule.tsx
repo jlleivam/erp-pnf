@@ -5,13 +5,12 @@ import {
   listEstimaciones,
   eliminarEstimacion,
 } from "@/lib/api/estimaciones.functions";
-import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
+import { calcularSemana, formatRangoSemana } from "@/lib/estimacion-utils";
 import { useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import {
   Dialog,
   DialogContent,
@@ -242,9 +241,7 @@ function NuevaEstimacionDialog({
   onConfirm: (semanaInicio: string) => void;
   semanasUsadas: Set<string>;
 }) {
-  const hoy = toISODate(new Date());
-  const [fecha, setFecha] = useState(hoy);
-  const semana = calcularSemana(fecha);
+  const semana = calcularSemana(new Date());
   const yaExiste = semanasUsadas.has(semana.inicio);
 
   return (
@@ -253,22 +250,13 @@ function NuevaEstimacionDialog({
         <DialogHeader>
           <DialogTitle>Nueva estimación semanal</DialogTitle>
           <DialogDescription>
-            Selecciona cualquier fecha dentro de la semana que deseas estimar. Se asignará
-            automáticamente el rango Lunes–Domingo.
+            La estimación se crea sobre la semana en curso (Lunes–Domingo).
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Fecha</Label>
-            <Input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-            />
-          </div>
           <Card className="p-3 bg-muted/30">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Semana asignada
+              Semana activa
             </p>
             <p className="mt-1 font-medium">{formatRangoSemana(semana.inicio, semana.fin)}</p>
             {yaExiste && (
@@ -288,3 +276,4 @@ function NuevaEstimacionDialog({
     </Dialog>
   );
 }
+
