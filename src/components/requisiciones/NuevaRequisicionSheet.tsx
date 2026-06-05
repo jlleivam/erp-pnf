@@ -261,11 +261,13 @@ function InsumoPicker({
   categorias,
   value,
   onChange,
+  disabledIds,
 }: {
   insumos: InsumoItem[];
   categorias: Array<{ id: string; nombre: string }>;
   value: string;
   onChange: (id: string) => void;
+  disabledIds?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [categoriaId, setCategoriaId] = useState<string>("all");
