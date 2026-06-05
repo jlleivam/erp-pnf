@@ -130,22 +130,14 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
 
                 <div className="space-y-0.5">
                   <Label className="text-[11px]">Insumo</Label>
-                  <Select
+                  <InsumoPicker
+                    insumos={insumos}
+                    categorias={categorias}
                     value={b.insumo_id}
-                    onValueChange={(v) => updateBloque(i, { insumo_id: v })}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Selecciona…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {insumos.map((ins) => (
-                        <SelectItem key={ins.id} value={ins.id}>
-                          {ins.nombre} ({ins.unidad})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(v) => updateBloque(i, { insumo_id: v })}
+                  />
                 </div>
+
 
                 <div className="grid grid-cols-[1fr_1fr_1.4fr] gap-2">
                   <div className="space-y-0.5">
