@@ -69,6 +69,7 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
 
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
+  const [openFechaIdx, setOpenFechaIdx] = useState<number | null>(null);
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -162,7 +163,10 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                   </div>
                   <div className="space-y-0.5">
                     <Label className="text-[11px]">Fecha requerida</Label>
-                    <Popover>
+                    <Popover
+                      open={openFechaIdx === i}
+                      onOpenChange={(v) => setOpenFechaIdx(v ? i : null)}
+                    >
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -181,7 +185,10 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                         <Calendar
                           mode="single"
                           selected={b.fecha_requerida}
-                          onSelect={(d) => updateBloque(i, { fecha_requerida: d ?? undefined })}
+                          onSelect={(d) => {
+                            updateBloque(i, { fecha_requerida: d ?? undefined });
+                            setOpenFechaIdx(null);
+                          }}
                           initialFocus
                           startMonth={startOfDay(new Date())}
                           disabled={{ before: startOfDay(new Date()) }}
