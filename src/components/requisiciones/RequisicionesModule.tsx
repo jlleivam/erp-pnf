@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus, FileText, ShieldCheck } from "lucide-react";
+import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
