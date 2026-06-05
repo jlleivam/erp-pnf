@@ -1,17 +1,9 @@
-Bloquear el calendario de **Fecha requerida** en la Nueva Requisición para evitar selección de fechas pasadas y navegación a meses anteriores.
+El proyecto usa `react-day-picker` v9, donde la prop `fromDate` ya no existe (fue reemplazada en la v9). Por eso el calendario sigue dejando navegar a meses pasados aunque los días estén deshabilitados.
 
-### Cambios
+### Cambio
 
-1. **`src/components/requisiciones/NuevaRequisicionSheet.tsx`**
-   - Importar `startOfDay` desde `date-fns`.
-   - Calcular la fecha de hoy a medianoche (`startOfDay(new Date())`) una vez, arriba del return del componente principal.
-   - Pasar dos nuevas props al componente `<Calendar>` dentro del bloque de fecha requerida:
-     - `fromDate={hoy}` — evita que el usuario navegue a meses anteriores (deshabilita el botón "anterior" cuando llega al mes actual).
-     - `disabled={{ before: hoy }}` — deshabilita visualmente los días anteriores a hoy, impidiendo su selección.
-   - Esto aplica a **cada bloque de insumo** que se agregue, ya que el Calendar se renderiza dentro del `.map()` de bloques.
+1. **`src/components/requisiciones/NuevaRequisicionSheet.tsx`** (bloque `<Calendar>` de Fecha requerida):
+   - Reemplazar `fromDate={startOfDay(new Date())}` por `startMonth={startOfDay(new Date())}` — esta es la prop equivalente en RDP v9 que tope la navegación al mes actual (oculta/deshabilita el chevron izquierdo cuando se está en el mes actual).
+   - Mantener `disabled={{ before: startOfDay(new Date()) }}` para que los días anteriores a hoy no sean seleccionables.
 
-### Detalle técnico
-
-El componente `<Calendar>` de shadcn/ui es un wrapper sobre `react-day-picker` y acepta todas sus props vía spread (`...props`). Las props `fromDate` y `disabled` son nativas de react-day-picker v8 y funcionan directamente.
-
-Se usa `startOfDay` para normalizar la hora a 00:00 y evitar que el día actual quede parcialmente deshabilitado por la hora del momento del render.
+Resultado: al abrir el calendario en el mes actual, la flecha izquierda queda inactiva y no se puede retroceder a meses pasados.

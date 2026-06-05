@@ -183,7 +183,7 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                           selected={b.fecha_requerida}
                           onSelect={(d) => updateBloque(i, { fecha_requerida: d ?? undefined })}
                           initialFocus
-                          fromDate={startOfDay(new Date())}
+                          startMonth={startOfDay(new Date())}
                           disabled={{ before: startOfDay(new Date()) }}
                           className={cn("p-3 pointer-events-auto")}
                         />
