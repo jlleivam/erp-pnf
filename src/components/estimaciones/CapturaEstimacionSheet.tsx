@@ -230,89 +230,115 @@ export function CapturaEstimacionSheet({
               )}
             </div>
 
-            <Card className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="text-left p-2 w-24">Clave</th>
-                    <th className="text-left p-2">Concepto</th>
-                    <th className="text-left p-2 w-16">Un.</th>
-                    <th className="text-right p-2 w-24">Cant. vig.</th>
-                    <th className="text-right p-2 w-24">Acum. previo</th>
-                    <th className="text-right p-2 w-28">Esta semana</th>
-                    <th className="text-right p-2 w-32">Importe sem.</th>
-                    <th className="text-right p-2 w-20">% Acum.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.map((r) => {
-                    const cantStr = cantidades[r.clave] ?? "";
-                    const cant = Number(cantStr || 0);
-                    const pu = Number(r.precio_unitario ?? 0);
-                    const acumPrev = Number(acumuladoPrevio[r.clave] ?? 0);
-                    const nuevoAcum = acumPrev + (Number.isFinite(cant) ? cant : 0);
-                    const cantVig = Number(r.cantidad ?? 0);
-                    const err = computed.erroresPorClave.get(r.clave);
-                    const pct = cantVig > 0 ? (nuevoAcum / cantVig) * 100 : 0;
-                    const importeSem = cant > 0 ? cant * pu : 0;
-                    return (
-                      <tr
-                        key={r.clave}
-                        className={`border-t border-border ${r.es_grupo ? "bg-muted/30 font-medium" : ""}`}
-                      >
-                        <td
-                          className="p-2 tabular-nums"
-                          style={{ paddingLeft: `${0.5 + (r.nivel - 1) * 1}rem` }}
+            <TooltipProvider delayDuration={200}>
+              <Card className="mt-4 overflow-x-auto">
+                <table className="w-full text-xs table-fixed">
+                  <colgroup>
+                    <col className="w-24" />
+                    <col />
+                    <col className="w-14" />
+                    <col className="w-20" />
+                    <col className="w-20" />
+                    <col className="w-24" />
+                    <col className="w-28" />
+                    <col className="w-16" />
+                  </colgroup>
+                  <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-2 py-1.5">Clave</th>
+                      <th className="text-left px-2 py-1.5">Concepto</th>
+                      <th className="text-left px-2 py-1.5">Un.</th>
+                      <th className="text-right px-2 py-1.5">Cant. vig.</th>
+                      <th className="text-right px-2 py-1.5">Acum. previo</th>
+                      <th className="text-right px-2 py-1.5">Esta semana</th>
+                      <th className="text-right px-2 py-1.5">Importe sem.</th>
+                      <th className="text-right px-2 py-1.5">% Acum.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRows.map((r) => {
+                      const cantStr = cantidades[r.clave] ?? "";
+                      const cant = Number(cantStr || 0);
+                      const pu = Number(r.precio_unitario ?? 0);
+                      const acumPrev = Number(acumuladoPrevio[r.clave] ?? 0);
+                      const nuevoAcum = acumPrev + (Number.isFinite(cant) ? cant : 0);
+                      const cantVig = Number(r.cantidad ?? 0);
+                      const err = computed.erroresPorClave.get(r.clave);
+                      const pct = cantVig > 0 ? (nuevoAcum / cantVig) * 100 : 0;
+                      const importeSem = cant > 0 ? cant * pu : 0;
+                      return (
+                        <tr
+                          key={r.clave}
+                          className={`border-t border-border ${r.es_grupo ? "bg-muted/30 font-medium" : ""}`}
                         >
-                          {r.clave}
-                        </td>
-                        <td className="p-2">{r.concepto}</td>
-                        <td className="p-2 text-muted-foreground">{r.unidad ?? "—"}</td>
-                        <td className="p-2 text-right tabular-nums">
-                          {r.es_grupo
-                            ? "—"
-                            : cantVig.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
-                        </td>
-                        <td className="p-2 text-right tabular-nums text-muted-foreground">
-                          {r.es_grupo
-                            ? "—"
-                            : acumPrev > 0
-                              ? acumPrev.toLocaleString("es-MX", { maximumFractionDigits: 2 })
-                              : "—"}
-                        </td>
-                        <td className="p-2 text-right">
-                          {r.es_grupo ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : (
-                            <Input
-                              type="number"
-                              inputMode="decimal"
-                              step="any"
-                              min={0}
-                              disabled={isCerrada}
-                              value={cantStr}
-                              onChange={(e) =>
-                                setCantidades((s) => ({ ...s, [r.clave]: e.target.value }))
-                              }
-                              className={`h-8 text-right tabular-nums ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                              title={err ?? ""}
-                            />
-                          )}
-                        </td>
-                        <td className="p-2 text-right tabular-nums">
-                          {r.es_grupo ? "—" : importeSem > 0 ? formatMXN(importeSem) : "—"}
-                        </td>
-                        <td
-                          className={`p-2 text-right tabular-nums ${pct > 100 ? "text-destructive font-medium" : ""}`}
-                        >
-                          {r.es_grupo ? "—" : `${pct.toFixed(0)}%`}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Card>
+                          <td
+                            className="px-2 py-1 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis"
+                            style={{ paddingLeft: `${0.5 + (r.nivel - 1) * 1}rem` }}
+                          >
+                            {r.clave}
+                          </td>
+                          <td className="px-2 py-1 max-w-0">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="truncate whitespace-nowrap overflow-hidden text-ellipsis cursor-default">
+                                  {r.concepto}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" align="start" className="max-w-md whitespace-normal">
+                                {r.concepto}
+                              </TooltipContent>
+                            </Tooltip>
+                          </td>
+                          <td className="px-2 py-1 text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                            {r.unidad ?? "—"}
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                            {r.es_grupo
+                              ? "—"
+                              : cantVig.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                            {r.es_grupo
+                              ? "—"
+                              : acumPrev > 0
+                                ? acumPrev.toLocaleString("es-MX", { maximumFractionDigits: 2 })
+                                : "—"}
+                          </td>
+                          <td className="px-2 py-1 text-right whitespace-nowrap">
+                            {r.es_grupo ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : (
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                step="any"
+                                min={0}
+                                disabled={isCerrada}
+                                value={cantStr}
+                                onChange={(e) =>
+                                  setCantidades((s) => ({ ...s, [r.clave]: e.target.value }))
+                                }
+                                className={`h-7 text-xs text-right tabular-nums ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                                title={err ?? ""}
+                              />
+                            )}
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                            {r.es_grupo ? "—" : importeSem > 0 ? formatMXN(importeSem) : "—"}
+                          </td>
+                          <td
+                            className={`px-2 py-1 text-right tabular-nums whitespace-nowrap ${pct > 100 ? "text-destructive font-medium" : ""}`}
+                          >
+                            {r.es_grupo ? "—" : `${pct.toFixed(0)}%`}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </Card>
+            </TooltipProvider>
+
 
             {!isCerrada && (
               <div className="flex gap-2 mt-4 flex-wrap justify-end sticky bottom-0 bg-background py-3">
