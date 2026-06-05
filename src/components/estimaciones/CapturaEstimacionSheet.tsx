@@ -245,14 +245,14 @@ export function CapturaEstimacionSheet({
                   </colgroup>
                   <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
                     <tr>
-                      <th className="text-left px-2 py-1.5">Clave</th>
-                      <th className="text-left px-2 py-1.5">Concepto</th>
-                      <th className="text-left px-2 py-1.5">Un.</th>
-                      <th className="text-right px-2 py-1.5">Cant. vig.</th>
-                      <th className="text-right px-2 py-1.5">Acum. previo</th>
-                      <th className="text-right px-2 py-1.5">Esta semana</th>
-                      <th className="text-right px-2 py-1.5">Importe sem.</th>
-                      <th className="text-right px-2 py-1.5">% Acum.</th>
+                      <th className="text-center px-2 py-1.5">Clave</th>
+                      <th className="text-center px-2 py-1.5">Concepto</th>
+                      <th className="text-center px-2 py-1.5">Un.</th>
+                      <th className="text-center px-2 py-1.5">Cant. vig.</th>
+                      <th className="text-center px-2 py-1.5">Acum. previo</th>
+                      <th className="text-center px-2 py-1.5">Esta semana</th>
+                      <th className="text-center px-2 py-1.5">Importe sem.</th>
+                      <th className="text-center px-2 py-1.5">% Acum.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -272,15 +272,15 @@ export function CapturaEstimacionSheet({
                           className={`border-t border-border ${r.es_grupo ? "bg-muted/30 font-medium" : ""}`}
                         >
                           <td
-                            className="px-2 py-1 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis"
+                            className="px-2 py-1 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis text-center"
                             style={{ paddingLeft: `${0.5 + (r.nivel - 1) * 1}rem` }}
                           >
                             {r.clave}
                           </td>
-                          <td className="px-2 py-1 max-w-0">
+                          <td className="px-2 py-1 max-w-0 text-left">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate whitespace-nowrap overflow-hidden text-ellipsis cursor-default">
+                                <div className="truncate whitespace-nowrap overflow-hidden text-ellipsis cursor-default text-left">
                                   {r.concepto}
                                 </div>
                               </TooltipTrigger>
@@ -289,22 +289,22 @@ export function CapturaEstimacionSheet({
                               </TooltipContent>
                             </Tooltip>
                           </td>
-                          <td className="px-2 py-1 text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                          <td className="px-2 py-1 text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis text-center">
                             {r.unidad ?? "—"}
                           </td>
-                          <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          <td className="px-2 py-1 text-center tabular-nums whitespace-nowrap">
                             {r.es_grupo
                               ? "—"
                               : cantVig.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
                           </td>
-                          <td className="px-2 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                          <td className="px-2 py-1 text-center tabular-nums text-muted-foreground whitespace-nowrap">
                             {r.es_grupo
                               ? "—"
                               : acumPrev > 0
                                 ? acumPrev.toLocaleString("es-MX", { maximumFractionDigits: 2 })
                                 : "—"}
                           </td>
-                          <td className="px-2 py-1 text-right whitespace-nowrap">
+                          <td className="px-2 py-1 text-center whitespace-nowrap">
                             {r.es_grupo ? (
                               <span className="text-muted-foreground">—</span>
                             ) : (
@@ -318,16 +318,16 @@ export function CapturaEstimacionSheet({
                                 onChange={(e) =>
                                   setCantidades((s) => ({ ...s, [r.clave]: e.target.value }))
                                 }
-                                className={`h-7 text-xs text-right tabular-nums ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                                className={`h-7 text-xs text-center tabular-nums ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
                                 title={err ?? ""}
                               />
                             )}
                           </td>
-                          <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          <td className="px-2 py-1 text-center tabular-nums whitespace-nowrap">
                             {r.es_grupo ? "—" : importeSem > 0 ? formatMXN(importeSem) : "—"}
                           </td>
                           <td
-                            className={`px-2 py-1 text-right tabular-nums whitespace-nowrap ${pct > 100 ? "text-destructive font-medium" : ""}`}
+                            className={`px-2 py-1 text-center tabular-nums whitespace-nowrap ${pct > 100 ? "text-destructive font-medium" : ""}`}
                           >
                             {r.es_grupo ? "—" : `${pct.toFixed(0)}%`}
                           </td>
