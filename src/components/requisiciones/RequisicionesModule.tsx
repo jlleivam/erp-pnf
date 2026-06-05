@@ -31,6 +31,23 @@ export function RequisicionesModule({ obraId }: Props) {
   const [openNueva, setOpenNueva] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) => {
+    setExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const formatDateShort = (d: string | Date | null | undefined) => {
+    if (!d) return "";
+    const date = typeof d === "string" ? new Date(d) : d;
+    if (isNaN(date.getTime())) return "";
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yy = String(date.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  };
 
 
   const fetchList = useServerFn(listRequisiciones);
