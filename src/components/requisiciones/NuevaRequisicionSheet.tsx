@@ -299,7 +299,7 @@ function InsumoPicker({
             )}
           >
             <span className="truncate">
-              {selected ? `${selected.nombre} (${selected.unidad})` : "Selecciona…"}
+              {selected ? selected.nombre : "Selecciona…"}
             </span>
           </Button>
         </PopoverTrigger>
