@@ -97,18 +97,6 @@ export function RequisicionesModule({ obraId }: Props) {
             const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
             const isExpanded = expandidos.has(r.id);
             const items = r.items ?? [];
-            const fechas = items
-              .map((it: any) => it.fecha_requerida)
-              .filter(Boolean)
-              .map((f: string) => new Date(f).getTime())
-              .filter((t: number) => !isNaN(t));
-            const minF = fechas.length ? new Date(Math.min(...fechas)) : null;
-            const maxF = fechas.length ? new Date(Math.max(...fechas)) : null;
-            const rangoFechas = minF && maxF
-              ? (minF.getTime() === maxF.getTime()
-                  ? formatDateShort(minF)
-                  : `${formatDateShort(minF)} – ${formatDateShort(maxF)}`)
-              : null;
             return (
               <Card
                 key={r.id}
@@ -149,9 +137,6 @@ export function RequisicionesModule({ obraId }: Props) {
                 </div>
                 {isExpanded && (
                   <div className="mt-2 pl-6 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                    {rangoFechas && (
-                      <p className="text-xs text-muted-foreground">Entrega: {rangoFechas}</p>
-                    )}
                     <div className="flex flex-wrap gap-1.5">
                       {items.slice(0, 6).map((it: any) => (
                         <span
@@ -162,6 +147,12 @@ export function RequisicionesModule({ obraId }: Props) {
                           <strong>{Number(it.cantidad)}</strong> {it.insumo?.unidad}
                           <span className="text-muted-foreground">·</span>
                           <span className="truncate max-w-[140px]">{it.insumo?.nombre}</span>
+                          {it.fecha_requerida && (
+                            <>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-muted-foreground whitespace-nowrap">{formatDateShort(it.fecha_requerida)}</span>
+                            </>
+                          )}
                         </span>
                       ))}
                       {items.length > 6 && (
