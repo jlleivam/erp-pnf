@@ -235,3 +235,116 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
     </Sheet>
   );
 }
+
+type InsumoItem = {
+  id: string;
+  nombre: string;
+  unidad: string;
+  categoria?: { id: string; nombre: string } | null;
+};
+
+function InsumoPicker({
+  insumos,
+  categorias,
+  value,
+  onChange,
+}: {
+  insumos: InsumoItem[];
+  categorias: Array<{ id: string; nombre: string }>;
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [categoriaId, setCategoriaId] = useState<string>("all");
+
+  const selected = insumos.find((x) => x.id === value);
+
+  const filtered = useMemo(() => {
+    if (categoriaId === "all") return insumos;
+    if (categoriaId === "none") return insumos.filter((i) => !i.categoria);
+    return insumos.filter((i) => i.categoria?.id === categoriaId);
+  }, [insumos, categoriaId]);
+
+  return (
+    <div className="flex items-center gap-1">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "h-8 flex-1 justify-start text-left font-normal text-xs px-2 truncate",
+              !selected && "text-muted-foreground",
+            )}
+          >
+            <span className="truncate">
+              {selected ? `${selected.nombre} (${selected.unidad})` : "Selecciona…"}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start">
+          <div className="p-2 border-b">
+            <Select value={categoriaId} onValueChange={setCategoriaId}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                <SelectItem value="none">Sin categoría</SelectItem>
+                {categorias.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Command>
+            <CommandInput placeholder="Buscar insumo…" className="h-9 text-xs" />
+            <CommandList className="max-h-64">
+              <CommandEmpty>Sin resultados.</CommandEmpty>
+              <CommandGroup>
+                {filtered.map((ins) => (
+                  <CommandItem
+                    key={ins.id}
+                    value={`${ins.nombre} ${ins.unidad} ${ins.categoria?.nombre ?? ""}`}
+                    onSelect={() => {
+                      onChange(ins.id);
+                      setOpen(false);
+                    }}
+                    className="text-xs"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 size-3.5",
+                        value === ins.id ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate">
+                        {ins.nombre} <span className="text-muted-foreground">({ins.unidad})</span>
+                      </div>
+                      {ins.categoria?.nombre && (
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {ins.categoria.nombre}
+                        </div>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-8 w-8 p-0 shrink-0"
+        onClick={() => setOpen(true)}
+        aria-label="Buscar insumo"
+      >
+        <Search className="size-3.5" />
+      </Button>
+    </div>
+  );
+}
+
