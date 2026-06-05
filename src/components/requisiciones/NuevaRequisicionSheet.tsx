@@ -304,7 +304,7 @@ function InsumoPicker({
               return norm(value).includes(norm(search)) ? 1 : 0;
             }}
           >
-            <CommandInput placeholder="Buscar insumo…" className="h-9 text-xs" />
+            <CommandInput autoFocus placeholder="Buscar insumo…" className="h-9 text-xs" />
             <CommandList className="max-h-64">
               <CommandEmpty>Sin resultados.</CommandEmpty>
               <CommandGroup>

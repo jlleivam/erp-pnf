@@ -1,16 +1,7 @@
-## Problema
-El `Command` de shadcn (cmdk) usa por defecto un filtro fuzzy que matchea letras en orden, no substrings. Por eso "arena" puntúa positivo con "Bailarina" y "Vibrador".
+En `src/components/requisiciones/NuevaRequisicionSheet.tsx`, modificar el componente `InsumoPicker` para que el `CommandInput` reciba foco automáticamente cuando el `Popover` se abre.
 
-## Solución
-En `src/components/requisiciones/NuevaRequisicionSheet.tsx`, pasar un `filter` personalizado a `<Command>` que solo devuelva 1 cuando el `value` del item **contenga** el `search` como substring, normalizando ambos a minúsculas y sin acentos.
+Opciones a evaluar:
+- Pasar `autoFocus` directamente al `CommandInput` (prop nativa de cmdk).
+- Si `autoFocus` no funciona con el render de shadcn, usar `useRef` + `useEffect` que detecte `open === true` y llame `.focus()` al input subyacente.
 
-```ts
-const normalize = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
-
-<Command filter={(value, search) =>
-  normalize(value).includes(normalize(search)) ? 1 : 0
-}>
-```
-
-Sin más cambios.
+Resultado esperado: el usuario abre el popover y el cursor ya está en el campo "Buscar insumo…", listo para escribir sin clic adicional.
