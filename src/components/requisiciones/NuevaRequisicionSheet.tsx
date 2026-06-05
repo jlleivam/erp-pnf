@@ -46,6 +46,7 @@ function emptyBloque(): Bloque {
 export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
   const qc = useQueryClient();
   const fetchInsumos = useServerFn(listInsumos);
+  const fetchCategorias = useServerFn(listCategorias);
   const crear = useServerFn(crearRequisicion);
 
   const insumosQ = useQuery({
@@ -53,7 +54,18 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
     queryFn: () => fetchInsumos({ data: { estatus: "autorizado" } }),
     enabled: open,
   });
-  const insumos = (insumosQ.data ?? []) as Array<{ id: string; nombre: string; unidad: string }>;
+  const insumos = (insumosQ.data ?? []) as Array<{
+    id: string; nombre: string; unidad: string;
+    categoria?: { id: string; nombre: string } | null;
+  }>;
+
+  const categoriasQ = useQuery({
+    queryKey: ["insumo-categorias"],
+    queryFn: () => fetchCategorias(),
+    enabled: open,
+  });
+  const categorias = (categoriasQ.data ?? []) as Array<{ id: string; nombre: string }>;
+
 
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
