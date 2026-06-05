@@ -1,13 +1,13 @@
-## Cambio solicitado
-Alinear todas las columnas de la tabla de captura de estimaciones al centro horizontalmente, excepto:
-- El encabezado de la columna **Concepto** sigue centrado.
-- El contenido (texto) de la columna **Concepto** se alinea a la **izquierda**.
+## Compactar bloque de insumo en "Nueva requisición"
 
-## Archivo a modificar
-- `src/components/estimaciones/CapturaEstimacionSheet.tsx`
+Archivo: `src/components/requisiciones/NuevaRequisicionSheet.tsx`
 
-## Detalle técnico
-- Cambiar `text-left` → `text-center` en todos los `<th>`.
-- Cambiar `text-right` → `text-center` en todos los `<th>` numéricos y en sus celdas `<td>` correspondientes.
-- En la celda `<td>` del concepto, mantener `text-left` explícito para que el texto truncado aparezca alineado a la izquierda.
-- Ajustar el `<Input>` de la columna "Esta semana" de `text-right` a `text-center`.
+### Cambios
+- Tipografía global del bloque a `text-xs`; labels `text-[11px]` y `mb-0.5`.
+- Padding del card: `p-3` → `p-2.5`; espaciado interno `space-y-3` → `space-y-2`.
+- Inputs / Select / botón de fecha con altura `h-8` y `text-xs`.
+- Una sola fila con: Cantidad, Unidad y Fecha requerida (`grid-cols-[1fr_1fr_1.4fr]`), eliminando filas separadas.
+- Nota opcional: `Textarea rows={1}` con `min-h-[32px] text-xs resize-none`, label inline más chico.
+- Header "Insumo N" + botón eliminar más compactos (botón `h-6 w-6 p-0`).
+- Espacio entre bloques `space-y-4` → `space-y-3`.
+- Sin cambios en lógica, validación ni envío.

@@ -91,34 +91,34 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
           <SheetTitle>Nueva requisición</SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-4 mt-4">
+        <div className="space-y-3 mt-4">
           {bloques.map((b, i) => {
             const insumoSel = insumos.find((x) => x.id === b.insumo_id);
             return (
-              <div key={i} className="border rounded-lg p-3 space-y-3 relative">
+              <div key={i} className="border rounded-lg p-2.5 space-y-2 relative text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">
+                  <span className="text-[11px] font-medium text-muted-foreground">
                     Insumo {i + 1}
                   </span>
                   {bloques.length > 1 && (
                     <Button
                       type="button"
-                      size="sm"
                       variant="ghost"
+                      className="h-6 w-6 p-0"
                       onClick={() => removeBloque(i)}
                     >
-                      <Trash2 className="size-4 text-destructive" />
+                      <Trash2 className="size-3.5 text-destructive" />
                     </Button>
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <Label>Insumo</Label>
+                <div className="space-y-0.5">
+                  <Label className="text-[11px]">Insumo</Label>
                   <Select
                     value={b.insumo_id}
                     onValueChange={(v) => updateBloque(i, { insumo_id: v })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs">
                       <SelectValue placeholder="Selecciona…" />
                     </SelectTrigger>
                     <SelectContent>
@@ -131,56 +131,62 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label>Cantidad</Label>
+                <div className="grid grid-cols-[1fr_1fr_1.4fr] gap-2">
+                  <div className="space-y-0.5">
+                    <Label className="text-[11px]">Cantidad</Label>
                     <Input
                       type="number"
                       min="0"
                       step="0.01"
+                      className="h-8 text-xs"
                       value={b.cantidad}
                       onChange={(e) => updateBloque(i, { cantidad: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <Label>Unidad</Label>
-                    <Input value={insumoSel?.unidad ?? ""} readOnly disabled />
+                  <div className="space-y-0.5">
+                    <Label className="text-[11px]">Unidad</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={insumoSel?.unidad ?? ""}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-[11px]">Fecha requerida</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full h-8 px-2 justify-start text-left font-normal text-xs",
+                            !b.fecha_requerida && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="size-3.5 mr-1.5" />
+                          {b.fecha_requerida
+                            ? format(b.fecha_requerida, "dd/MM/yyyy")
+                            : "Selecciona"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={b.fecha_requerida}
+                          onSelect={(d) => updateBloque(i, { fecha_requerida: d ?? undefined })}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label>Fecha requerida en obra</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !b.fecha_requerida && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="size-4 mr-2" />
-                        {b.fecha_requerida
-                          ? format(b.fecha_requerida, "dd/MM/yyyy")
-                          : "Selecciona fecha"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={b.fecha_requerida}
-                        onSelect={(d) => updateBloque(i, { fecha_requerida: d ?? undefined })}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Nota (opcional)</Label>
+                <div className="space-y-0.5">
+                  <Label className="text-[11px]">Nota (opcional)</Label>
                   <Textarea
-                    rows={2}
+                    rows={1}
+                    className="min-h-[32px] text-xs resize-none"
                     value={b.nota}
                     onChange={(e) => updateBloque(i, { nota: e.target.value })}
                   />
@@ -188,6 +194,7 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
               </div>
             );
           })}
+
 
           <Button
             type="button"
