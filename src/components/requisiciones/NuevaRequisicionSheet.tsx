@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { CalendarIcon, Plus, Trash2, Search, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -183,6 +183,8 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                           selected={b.fecha_requerida}
                           onSelect={(d) => updateBloque(i, { fecha_requerida: d ?? undefined })}
                           initialFocus
+                          fromDate={startOfDay(new Date())}
+                          disabled={{ before: startOfDay(new Date()) }}
                           className={cn("p-3 pointer-events-auto")}
                         />
                       </PopoverContent>
