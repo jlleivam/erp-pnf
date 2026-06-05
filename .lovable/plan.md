@@ -1,13 +1,21 @@
-## Compactar bloque de insumo en "Nueva requisición"
+## Selector de insumo con búsqueda y filtro por categoría
 
-Archivo: `src/components/requisiciones/NuevaRequisicionSheet.tsx`
+En `NuevaRequisicionSheet.tsx`, reemplazar el `Select` de Insumo por un patrón con lupa que abre un popover de búsqueda.
 
-### Cambios
-- Tipografía global del bloque a `text-xs`; labels `text-[11px]` y `mb-0.5`.
-- Padding del card: `p-3` → `p-2.5`; espaciado interno `space-y-3` → `space-y-2`.
-- Inputs / Select / botón de fecha con altura `h-8` y `text-xs`.
-- Una sola fila con: Cantidad, Unidad y Fecha requerida (`grid-cols-[1fr_1fr_1.4fr]`), eliminando filas separadas.
-- Nota opcional: `Textarea rows={1}` con `min-h-[32px] text-xs resize-none`, label inline más chico.
-- Header "Insumo N" + botón eliminar más compactos (botón `h-6 w-6 p-0`).
-- Espacio entre bloques `space-y-4` → `space-y-3`.
-- Sin cambios en lógica, validación ni envío.
+### UI
+- Junto al campo de Insumo: input de solo lectura mostrando el insumo seleccionado (o "Selecciona…") + botón con ícono `Search` (lupa) a la derecha.
+- Al hacer click en la lupa (o en el input), se abre un `Popover` ancho con:
+  - `Command` (shadcn): `CommandInput` para autocompletar por nombre o código.
+  - Selector de categoría arriba (chips horizontales scrollables o `Select` compacto) con opción "Todas".
+  - `CommandList` con los insumos filtrados: muestra `nombre (unidad)` y un sub-texto con la categoría.
+  - `CommandEmpty`: "Sin resultados".
+- Al seleccionar, se cierra el popover y se actualiza `b.insumo_id`.
+
+### Datos
+- Cargar `listCategorias` con `useQuery` (key `["insumo-categorias"]`) cuando el sheet está abierto.
+- `listInsumos` ya trae `categoria: { id, nombre }`; usar eso para filtrar en cliente por categoría seleccionada y por texto (nombre o código, case-insensitive).
+- Sin cambios en server functions ni en el envío de la requisición.
+
+### Archivos
+- `src/components/requisiciones/NuevaRequisicionSheet.tsx` — único cambio.
+- Usa componentes existentes: `Popover`, `Command*` (shadcn ya disponibles) y `Search` de lucide.
