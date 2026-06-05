@@ -1,30 +1,43 @@
-## Plan: Bloquear insumos ya seleccionados en el dropdown
+## Objetivo
 
-### Problema
-Actualmente el usuario puede agregar el mismo insumo dos veces en bloques distintos de una misma requisición. Se decidió que esto no debe permitirse.
+Hacer la tarjeta de requisición más compacta sin perder información: vista por defecto reducida, expandible para ver los insumos.
 
-### Solución
-Desabilitar visualmente los insumos que ya fueron seleccionados en otro bloque dentro del mismo `Command` del `InsumoPicker`.
+## Cambios en `src/components/requisiciones/RequisicionesModule.tsx`
 
-### Cambios
+### 1. Estado de expansión
+- Agregar `const [expandidos, setExpandidos] = useState<Set<string>>(new Set())` y un helper `toggleExpand(id)`.
 
-1. **`NuevaRequisicionSheet.tsx`** — Línea 134-139 (llamada a `InsumoPicker`):
-   - Agregar una nueva prop `disabledIds` que pase los `insumo_id` de los **otros bloques** (todos excepto el actual `i`).
-   - Derivado: `const usedIds = bloques.filter((_, idx) => idx !== i).map((b) => b.insumo_id).filter(Boolean)`.
+### 2. Helper de formato de fecha corta
+- Nueva función `formatDateShort(d)` que devuelve `DD/MM/YY` (ej. `07/06/26`). Se usará en los chips. `formatDate` existente se mantiene para el encabezado.
 
-2. **`InsumoPicker`** — Líneas 255-265 (props) y 326-353 (render de items):
-   - Agregar `disabledIds?: string[]` a las props.
-   - En el `.map` de `filtered.map((ins) => ...)`:
-     - Calcular `const isDisabled = disabledIds?.includes(ins.id) ?? false`.
-     - Agregar `disabled={isDisabled}` al `CommandItem`.
-     - Aplicar estilos de deshabilitado: `opacity-50 cursor-not-allowed` cuando `isDisabled`.
-     - Evitar que el `onSelect` ejecute `onChange` cuando está deshabilitado (el prop `disabled` de `CommandItem` debería manejarlo, pero validar).
-     - (Opcional pero recomendado) Mostrar un pequeño badge/texto tipo "Ya agregado" al lado del nombre del insumo deshabilitado para claridad.
+### 3. Header compacto (líneas 82–114)
+- Reducir padding del Card de `p-4` a `p-3`.
+- Una sola línea con: **folio** · fecha · `N insumos` · solicitante (separados por `·`, truncados si no caben).
+- Badge de estatus a la derecha en tamaño más pequeño (`text-[10px] px-2 py-0.5`).
+- Botón "Revisar y autorizar" (supervisor) se mantiene a la derecha pero más compacto.
+- Agregar chevron (▸/▾) clickeable a la izquierda del folio para expandir/colapsar. El click en el chevron NO abre el detalle; el click en el resto de la tarjeta sigue abriendo el detalle (`setDetalleId`).
 
-### Resultado esperado
-- Al abrir el picker de un bloque nuevo o existente, los insumos ya elegidos en otros bloques aparecerán atenuados y no serán seleccionables.
-- La UX es clara: el usuario ve que el insumo existe, pero sabe que ya lo usó.
+### 4. Chips de insumos (líneas 115–131)
+- Sólo se renderizan cuando la tarjeta está **expandida**.
+- Quitar la fecha individual del chip; en su lugar mostrar **cantidad + unidad + nombre**.
+- Agregar arriba de los chips un mini-resumen de fechas requeridas: `Entrega: 07/06/26 – 09/06/26` (rango min–max usando `formatDateShort`), o una sola fecha si todos coinciden.
+- Mantener el límite de 6 chips + `+N más`.
 
-### No incluido
-- No se valida en el backend (por ahora); la UI es la primera línea de defensa.
-- No se impide duplicados entre requisiciones distintas, solo dentro de una misma.
+### 5. Por defecto colapsada
+- Vista inicial = sólo header (1–2 líneas + badge). Click en el chevron expande para mostrar el resumen de fechas + chips de insumos.
+
+## Resultado visual
+
+```text
+Colapsada:
+▸ REQ-2026-001 · 4 jun 2026 · 4 insumos · Jose Luis Leiva           [Enviada]
+
+Expandida:
+▾ REQ-2026-001 · 4 jun 2026 · 4 insumos · Jose Luis Leiva           [Enviada]
+  Entrega: 07/06/26 – 09/06/26
+  [30 KG · Alambre recocido] [7 M3 · Arena] [25 BTO · Cemento gris] [10 PZA · Varilla 1/2"]
+```
+
+## Fuera de alcance
+- No se cambia la tabla de "histórico" (líneas 145+).
+- No se cambia el componente de detalle ni `NuevaRequisicionSheet`.

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus, FileText, ShieldCheck } from "lucide-react";
+import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,23 @@ export function RequisicionesModule({ obraId }: Props) {
   const [openNueva, setOpenNueva] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) => {
+    setExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const formatDateShort = (d: string | Date | null | undefined) => {
+    if (!d) return "";
+    const date = typeof d === "string" ? new Date(d) : d;
+    if (isNaN(date.getTime())) return "";
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yy = String(date.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  };
 
 
   const fetchList = useServerFn(listRequisiciones);
@@ -78,57 +95,81 @@ export function RequisicionesModule({ obraId }: Props) {
           {activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
             const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
+            const isExpanded = expandidos.has(r.id);
+            const items = r.items ?? [];
+            const fechas = items
+              .map((it: any) => it.fecha_requerida)
+              .filter(Boolean)
+              .map((f: string) => new Date(f).getTime())
+              .filter((t: number) => !isNaN(t));
+            const minF = fechas.length ? new Date(Math.min(...fechas)) : null;
+            const maxF = fechas.length ? new Date(Math.max(...fechas)) : null;
+            const rangoFechas = minF && maxF
+              ? (minF.getTime() === maxF.getTime()
+                  ? formatDateShort(minF)
+                  : `${formatDateShort(minF)} – ${formatDateShort(maxF)}`)
+              : null;
             return (
               <Card
                 key={r.id}
-                className="p-4 cursor-pointer hover:border-primary/40 transition-colors"
+                className="p-3 cursor-pointer hover:border-primary/40 transition-colors"
                 onClick={() => setDetalleId(r.id)}
               >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <p className="font-semibold text-foreground">{r.folio}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(r.created_at)} · {r.items?.length ?? 0} insumos
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <button
+                      type="button"
+                      className="shrink-0 p-0.5 -ml-0.5 rounded hover:bg-muted text-muted-foreground"
+                      onClick={(e) => { e.stopPropagation(); toggleExpand(r.id); }}
+                      aria-label={isExpanded ? "Colapsar" : "Expandir"}
+                    >
+                      {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                    </button>
+                    <p className="text-sm min-w-0 truncate">
+                      <span className="font-semibold text-foreground">{r.folio}</span>
+                      <span className="text-muted-foreground"> · {formatDate(r.created_at)} · {items.length} insumos{r.solicitante?.nombre_completo ? ` · ${r.solicitante.nombre_completo}` : ""}</span>
                     </p>
-                    {r.solicitante?.nombre_completo && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {r.solicitante.nombre_completo}
-                      </p>
-                    )}
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0.5`}>{meta.label}</Badge>
                     {mostrarRevisar && (
                       <Button
                         size="sm"
+                        className="h-7 px-2 text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           setCotizacion({ id: r.id, tab: "comparativa" });
                         }}
                       >
-                        <ShieldCheck className="size-4 mr-1" />
-                        Revisar y autorizar
+                        <ShieldCheck className="size-3.5 mr-1" />
+                        Revisar
                       </Button>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {(r.items ?? []).slice(0, 6).map((it: any) => (
-                    <span
-                      key={it.id}
-                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted text-foreground"
-                    >
-                      <strong>{Number(it.cantidad)}</strong> {it.insumo?.unidad}
-                      <span className="text-muted-foreground">·</span>
-                      <span className="truncate max-w-[140px]">{it.insumo?.nombre}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span className="text-muted-foreground">{formatDate(it.fecha_requerida)}</span>
-                    </span>
-                  ))}
-                  {(r.items?.length ?? 0) > 6 && (
-                    <span className="text-xs text-muted-foreground">+{r.items.length - 6} más</span>
-                  )}
-                </div>
+                {isExpanded && (
+                  <div className="mt-2 pl-6 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    {rangoFechas && (
+                      <p className="text-xs text-muted-foreground">Entrega: {rangoFechas}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.slice(0, 6).map((it: any) => (
+                        <span
+                          key={it.id}
+                          className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-muted text-foreground cursor-pointer"
+                          onClick={() => setDetalleId(r.id)}
+                        >
+                          <strong>{Number(it.cantidad)}</strong> {it.insumo?.unidad}
+                          <span className="text-muted-foreground">·</span>
+                          <span className="truncate max-w-[140px]">{it.insumo?.nombre}</span>
+                        </span>
+                      ))}
+                      {items.length > 6 && (
+                        <span className="text-xs text-muted-foreground self-center">+{items.length - 6} más</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </Card>
             );
           })}
