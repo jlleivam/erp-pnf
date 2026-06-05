@@ -97,18 +97,6 @@ export function RequisicionesModule({ obraId }: Props) {
             const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
             const isExpanded = expandidos.has(r.id);
             const items = r.items ?? [];
-            const fechas = items
-              .map((it: any) => it.fecha_requerida)
-              .filter(Boolean)
-              .map((f: string) => new Date(f).getTime())
-              .filter((t: number) => !isNaN(t));
-            const minF = fechas.length ? new Date(Math.min(...fechas)) : null;
-            const maxF = fechas.length ? new Date(Math.max(...fechas)) : null;
-            const rangoFechas = minF && maxF
-              ? (minF.getTime() === maxF.getTime()
-                  ? formatDateShort(minF)
-                  : `${formatDateShort(minF)} – ${formatDateShort(maxF)}`)
-              : null;
             return (
               <Card
                 key={r.id}
