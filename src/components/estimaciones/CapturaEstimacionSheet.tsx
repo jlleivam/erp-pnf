@@ -22,9 +22,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 import { toast } from "sonner";
 import { Save, Lock, AlertTriangle, Search } from "lucide-react";
+
 
 type VigenteRow = {
   clave: string;
