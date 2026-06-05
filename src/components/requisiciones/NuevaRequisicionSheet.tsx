@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, Search, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -17,10 +17,14 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { listInsumos } from "@/lib/api/insumos.functions";
+import { listInsumos, listCategorias } from "@/lib/api/insumos.functions";
 import { crearRequisicion } from "@/lib/api/requisiciones.functions";
+
 
 interface Props {
   obraId: string;
@@ -42,6 +46,7 @@ function emptyBloque(): Bloque {
 export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
   const qc = useQueryClient();
   const fetchInsumos = useServerFn(listInsumos);
+  const fetchCategorias = useServerFn(listCategorias);
   const crear = useServerFn(crearRequisicion);
 
   const insumosQ = useQuery({
@@ -49,7 +54,18 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
     queryFn: () => fetchInsumos({ data: { estatus: "autorizado" } }),
     enabled: open,
   });
-  const insumos = (insumosQ.data ?? []) as Array<{ id: string; nombre: string; unidad: string }>;
+  const insumos = (insumosQ.data ?? []) as Array<{
+    id: string; nombre: string; unidad: string;
+    categoria?: { id: string; nombre: string } | null;
+  }>;
+
+  const categoriasQ = useQuery({
+    queryKey: ["insumo-categorias"],
+    queryFn: () => fetchCategorias(),
+    enabled: open,
+  });
+  const categorias = (categoriasQ.data ?? []) as Array<{ id: string; nombre: string }>;
+
 
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
@@ -114,22 +130,14 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
 
                 <div className="space-y-0.5">
                   <Label className="text-[11px]">Insumo</Label>
-                  <Select
+                  <InsumoPicker
+                    insumos={insumos}
+                    categorias={categorias}
                     value={b.insumo_id}
-                    onValueChange={(v) => updateBloque(i, { insumo_id: v })}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Selecciona…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {insumos.map((ins) => (
-                        <SelectItem key={ins.id} value={ins.id}>
-                          {ins.nombre} ({ins.unidad})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(v) => updateBloque(i, { insumo_id: v })}
+                  />
                 </div>
+
 
                 <div className="grid grid-cols-[1fr_1fr_1.4fr] gap-2">
                   <div className="space-y-0.5">
@@ -227,3 +235,116 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
     </Sheet>
   );
 }
+
+type InsumoItem = {
+  id: string;
+  nombre: string;
+  unidad: string;
+  categoria?: { id: string; nombre: string } | null;
+};
+
+function InsumoPicker({
+  insumos,
+  categorias,
+  value,
+  onChange,
+}: {
+  insumos: InsumoItem[];
+  categorias: Array<{ id: string; nombre: string }>;
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [categoriaId, setCategoriaId] = useState<string>("all");
+
+  const selected = insumos.find((x) => x.id === value);
+
+  const filtered = useMemo(() => {
+    if (categoriaId === "all") return insumos;
+    if (categoriaId === "none") return insumos.filter((i) => !i.categoria);
+    return insumos.filter((i) => i.categoria?.id === categoriaId);
+  }, [insumos, categoriaId]);
+
+  return (
+    <div className="flex items-center gap-1">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "h-8 flex-1 justify-start text-left font-normal text-xs px-2 truncate",
+              !selected && "text-muted-foreground",
+            )}
+          >
+            <span className="truncate">
+              {selected ? `${selected.nombre} (${selected.unidad})` : "Selecciona…"}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start">
+          <div className="p-2 border-b">
+            <Select value={categoriaId} onValueChange={setCategoriaId}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                <SelectItem value="none">Sin categoría</SelectItem>
+                {categorias.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Command>
+            <CommandInput placeholder="Buscar insumo…" className="h-9 text-xs" />
+            <CommandList className="max-h-64">
+              <CommandEmpty>Sin resultados.</CommandEmpty>
+              <CommandGroup>
+                {filtered.map((ins) => (
+                  <CommandItem
+                    key={ins.id}
+                    value={`${ins.nombre} ${ins.unidad} ${ins.categoria?.nombre ?? ""}`}
+                    onSelect={() => {
+                      onChange(ins.id);
+                      setOpen(false);
+                    }}
+                    className="text-xs"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 size-3.5",
+                        value === ins.id ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate">
+                        {ins.nombre} <span className="text-muted-foreground">({ins.unidad})</span>
+                      </div>
+                      {ins.categoria?.nombre && (
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {ins.categoria.nombre}
+                        </div>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-8 w-8 p-0 shrink-0"
+        onClick={() => setOpen(true)}
+        aria-label="Buscar insumo"
+      >
+        <Search className="size-3.5" />
+      </Button>
+    </div>
+  );
+}
+
