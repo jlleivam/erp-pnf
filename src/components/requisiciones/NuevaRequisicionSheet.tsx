@@ -136,6 +136,10 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
                     categorias={categorias}
                     value={b.insumo_id}
                     onChange={(v) => updateBloque(i, { insumo_id: v })}
+                    disabledIds={bloques
+                      .filter((_, idx) => idx !== i)
+                      .map((x) => x.insumo_id)
+                      .filter(Boolean)}
                   />
                 </div>
 
@@ -257,11 +261,13 @@ function InsumoPicker({
   categorias,
   value,
   onChange,
+  disabledIds,
 }: {
   insumos: InsumoItem[];
   categorias: Array<{ id: string; nombre: string }>;
   value: string;
   onChange: (id: string) => void;
+  disabledIds?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [categoriaId, setCategoriaId] = useState<string>("all");
@@ -323,34 +329,47 @@ function InsumoPicker({
             <CommandList className="max-h-64">
               <CommandEmpty>Sin resultados.</CommandEmpty>
               <CommandGroup>
-                {filtered.map((ins) => (
-                  <CommandItem
-                    key={ins.id}
-                    value={`${ins.nombre} ${ins.unidad} ${ins.categoria?.nombre ?? ""}`}
-                    onSelect={() => {
-                      onChange(ins.id);
-                      setOpen(false);
-                    }}
-                    className="text-xs"
-                  >
-                    <Check
+                {filtered.map((ins) => {
+                  const isDisabled = disabledIds?.includes(ins.id) ?? false;
+                  return (
+                    <CommandItem
+                      key={ins.id}
+                      value={`${ins.nombre} ${ins.unidad} ${ins.categoria?.nombre ?? ""}`}
+                      disabled={isDisabled}
+                      onSelect={() => {
+                        if (isDisabled) return;
+                        onChange(ins.id);
+                        setOpen(false);
+                      }}
                       className={cn(
-                        "mr-2 size-3.5",
-                        value === ins.id ? "opacity-100" : "opacity-0",
+                        "text-xs",
+                        isDisabled && "opacity-50 cursor-not-allowed",
                       )}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate">
-                        {ins.nombre} <span className="text-muted-foreground">({ins.unidad})</span>
-                      </div>
-                      {ins.categoria?.nombre && (
-                        <div className="text-[10px] text-muted-foreground truncate">
-                          {ins.categoria.nombre}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 size-3.5",
+                          value === ins.id ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate">
+                          {ins.nombre} <span className="text-muted-foreground">({ins.unidad})</span>
                         </div>
+                        {ins.categoria?.nombre && (
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {ins.categoria.nombre}
+                          </div>
+                        )}
+                      </div>
+                      {isDisabled && (
+                        <span className="ml-2 text-[10px] text-muted-foreground shrink-0">
+                          Ya agregado
+                        </span>
                       )}
-                    </div>
-                  </CommandItem>
-                ))}
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             </CommandList>
           </Command>
