@@ -171,10 +171,11 @@ function AccionCell({ row, onAction }: {
 }) {
   const estatus = row.estatus as RequisicionEstatus;
   if (estatus === "enviada") {
-    return <Button size="sm" onClick={() => onAction(row, "solicitudes")}>Cotizar</Button>;
+    return <Button size="sm" onClick={() => onAction(row, "requisicion")}>Cotizar</Button>;
   }
   if (estatus === "en_cotizacion") {
-    return <Button size="sm" variant="outline" onClick={() => onAction(row, "solicitudes")}>Continuar</Button>;
+    return <Button size="sm" variant="outline" onClick={() => onAction(row, "requisicion")}>Continuar</Button>;
+
   }
   if (["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus)) {
     return <Button size="sm" variant="outline" onClick={() => onAction(row, "ocs")}>Ver OCs</Button>;
