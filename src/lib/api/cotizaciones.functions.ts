@@ -129,6 +129,7 @@ export const getCotizacionRequisicion = createServerFn({ method: "POST" })
         recibido_por_insumo: recibido,
         recepcion_completa: completa,
         ultima_recepcion_at: lastRecAt[o.id] ?? null,
+        puede_recibir: puedeRecibir,
       };
     });
 
