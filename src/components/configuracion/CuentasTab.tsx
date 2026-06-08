@@ -282,9 +282,7 @@ function CuentaFormDialog({
   const [saldoInicial, setSaldoInicial] = useState("0");
   const [notas, setNotas] = useState("");
 
-  // Sync form when opened
-  useState(() => {});
-  // reset on open change
+  // Sync form when opened or editing target changes
   const resetKey = `${open}-${editing?.id ?? "new"}`;
   // simple effect via key
   // eslint-disable-next-line react-hooks/rules-of-hooks
