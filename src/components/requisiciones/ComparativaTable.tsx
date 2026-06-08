@@ -425,6 +425,18 @@ export function ComparativaTable({
         }
       }
       if (insumos.length === 0) throw new Error("Sin líneas para este proveedor");
+
+      // Candado: ninguna línea puede superar la cantidad cotizada por el proveedor
+      const scId = solicitudByProveedor.get(proveedorId);
+      for (const l of insumos) {
+        const oferta = scId ? matrix.get(l.insumo_id)?.get(scId) : undefined;
+        if (oferta && l.cantidad > oferta.cantidad + 0.0001) {
+          const ri = reqItems.find((r) => r.insumo.id === l.insumo_id);
+          throw new Error(
+            `La cantidad asignada (${l.cantidad}) supera lo cotizado (${oferta.cantidad}) por el proveedor para ${ri?.insumo.nombre ?? "el insumo"}`,
+          );
+        }
+      }
       const paqueteExistente = paqueteByProveedor.get(proveedorId);
 
       const r = await guardarFn({
@@ -664,7 +676,7 @@ export function ComparativaTable({
                         <div className="flex flex-col gap-1.5">
                           {lista.map((a, idx) => {
                             const ofertaA = ofertas?.get(a.proveedorId);
-                            const excede = ofertaA ? a.cantidad > ofertaA.cantidad : false;
+                            
                             const provActual = opcionesDisponibles.find((sc) => sc.id === a.proveedorId);
                             const provReal = provBySolicitud.get(a.proveedorId);
                             const bloqueado = provReal ? provBloqueado(provReal) : false;
@@ -717,16 +729,21 @@ export function ComparativaTable({
                                     type="number"
                                     min="0"
                                     step="0.01"
+                                    max={ofertaA?.cantidad ?? undefined}
                                     disabled={bloqueado || !isAdmin}
-                                    className={`h-7 text-xs w-20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${excede ? "border-amber-400" : ""}`}
+                                    className="h-7 text-xs w-20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     value={a.cantidad || ""}
-                                    onChange={(e) =>
-                                      updateAsignacion(ri.insumo.id, idx, {
-                                        cantidad: Number(e.target.value) || 0,
-                                      })
-                                    }
+                                    onChange={(e) => {
+                                      const raw = Number(e.target.value) || 0;
+                                      const tope = ofertaA?.cantidad ?? Infinity;
+                                      if (raw > tope) {
+                                        toast.error(`El proveedor solo cotizó ${tope} ${unidad} de ${ri.insumo.nombre}`);
+                                      }
+                                      const clamped = Math.min(raw, tope);
+                                      updateAsignacion(ri.insumo.id, idx, { cantidad: clamped });
+                                    }}
                                   />
-                                  <span className="text-[11px] text-muted-foreground whitespace-nowrap truncate">
+                                  <span className={`text-[11px] whitespace-nowrap truncate ${ofertaA && a.cantidad >= ofertaA.cantidad ? "text-emerald-700 font-medium" : "text-muted-foreground"}`}>
                                     {unidad}
                                     {ofertaA ? ` / ${ofertaA.cantidad}` : ""}
                                   </span>
