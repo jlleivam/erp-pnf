@@ -425,6 +425,18 @@ export function ComparativaTable({
         }
       }
       if (insumos.length === 0) throw new Error("Sin líneas para este proveedor");
+
+      // Candado: ninguna línea puede superar la cantidad cotizada por el proveedor
+      const scId = solicitudByProveedor.get(proveedorId);
+      for (const l of insumos) {
+        const oferta = scId ? matrix.get(l.insumo_id)?.get(scId) : undefined;
+        if (oferta && l.cantidad > oferta.cantidad + 0.0001) {
+          const ri = reqItems.find((r) => r.insumo.id === l.insumo_id);
+          throw new Error(
+            `La cantidad asignada (${l.cantidad}) supera lo cotizado (${oferta.cantidad}) por el proveedor para ${ri?.insumo.nombre ?? "el insumo"}`,
+          );
+        }
+      }
       const paqueteExistente = paqueteByProveedor.get(proveedorId);
 
       const r = await guardarFn({
