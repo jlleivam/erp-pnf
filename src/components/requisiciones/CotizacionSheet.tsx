@@ -257,15 +257,155 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 const puedeRecibir =
                   (oc.estatus === "enviada" || oc.estatus === "recibida_parcial") && !cerrada;
                 return (
-                  <Cota key={oc.id} oc={oc} cerrada={cerrada} meta={meta} estadoPago={estadoPago}
-                    total={total} pagado={pagado} saldoPendiente={saldoPendiente}
-                    items={items} recibidoMap={recibidoMap} recepcionCompleta={recepcionCompleta}
-                    puedePagar={puedePagar} puedeRecibir={puedeRecibir} isAdmin={isAdmin} isDirector={isDirector}
-                    onEnviarSupervisor={() => enviarMut.mutate(oc.id)} enviarPending={enviarMut.isPending}
-                    onReabrir={() => reabrirMut.mutate(oc.id)} reabrirPending={reabrirMut.isPending}
-                    onEnviarProveedor={() => enviarProvMut.mutate(oc.id)} enviarProvPending={enviarProvMut.isPending}
-                    onSetTab={setTab} onInvalidate={invalidate}
-                  />
+                  <Card key={oc.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold">{oc.folio}</p>
+                          {cerrada ? (
+                            <Badge className="bg-emerald-100 text-emerald-800">Cerrada</Badge>
+                          ) : (
+                            <>
+                              <Badge className={meta?.className}>{meta?.label}</Badge>
+                              {(oc.estatus === "autorizada" || oc.estatus === "enviada" || oc.estatus === "recibida_parcial" || oc.estatus === "recibida" || estadoPago !== "pendiente") && (
+                                <Badge
+                                  className={
+                                    estadoPago === "pagado"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : estadoPago === "parcial"
+                                        ? "bg-amber-100 text-amber-800"
+                                        : "bg-slate-100 text-slate-700"
+                                  }
+                                >
+                                  {estadoPago === "pagado" ? "Pagada" : estadoPago === "parcial" ? "Pago parcial" : "Sin pago"}
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{oc.proveedor?.razon_social}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold">{mxn(total)}</p>
+                        {pagado > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Pagado {mxn(pagado)} · pend. {mxn(saldoPendiente)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border rounded-md overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Insumo</TableHead>
+                            <TableHead className="text-right">Pedido</TableHead>
+                            <TableHead className="text-right">Recibido</TableHead>
+                            <TableHead className="text-right">P. Unit</TableHead>
+                            <TableHead className="text-right">Subtotal</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {items.map((it: any) => {
+                            const pedido = Number(it.cantidad);
+                            const recibido = Number(recibidoMap[it.insumo?.id] ?? 0);
+                            const cls =
+                              recibido <= 0
+                                ? "text-muted-foreground"
+                                : recibido + 1e-6 < pedido
+                                  ? "text-amber-700"
+                                  : "text-emerald-700";
+                            return (
+                              <TableRow key={it.id}>
+                                <TableCell>{it.insumo?.nombre}</TableCell>
+                                <TableCell className="text-right">{pedido} {it.insumo?.unidad}</TableCell>
+                                <TableCell className={`text-right font-medium ${cls}`}>{recibido} {it.insumo?.unidad}</TableCell>
+                                <TableCell className="text-right">{mxn(Number(it.precio_unitario))}</TableCell>
+                                <TableCell className="text-right">{mxn(Number(it.subtotal))}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {oc.estatus === "borrador" && (
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setTab("comparativa")}>
+                          Editar en Comparativa
+                        </Button>
+                        <Button size="sm" onClick={() => enviarMut.mutate(oc.id)} disabled={enviarMut.isPending}>
+                          <Send className="size-4 mr-1" /> Enviar a supervisor
+                        </Button>
+                      </div>
+                    )}
+                    {oc.estatus === "pendiente_autorizacion" && (
+                      <p className="text-sm text-muted-foreground">
+                        Enviada al supervisor · {oc.enviada_supervisor_at ? formatDate(oc.enviada_supervisor_at) : "—"}
+                      </p>
+                    )}
+                    {oc.estatus === "autorizada" && (
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-sm flex items-center gap-1 text-emerald-700">
+                          <CheckCircle2 className="size-4" /> Autorizada {oc.autorizada_at ? `· ${formatDate(oc.autorizada_at)}` : ""}
+                        </p>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            onClick={() => enviarProvMut.mutate(oc.id)}
+                            disabled={enviarProvMut.isPending}
+                          >
+                            <Send className="size-4 mr-1" /> Marcar como enviada al proveedor
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {(oc.estatus === "enviada" || oc.estatus === "recibida_parcial" || oc.estatus === "recibida") && !cerrada && (
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-sm flex items-center gap-1 text-blue-700">
+                          <Send className="size-4" /> Enviada al proveedor {oc.enviada_proveedor_at ? `· ${formatDate(oc.enviada_proveedor_at)}` : ""}
+                        </p>
+                        {puedeRecibir && (
+                          <OCRecepcionButton ocId={oc.id} onSaved={invalidate} />
+                        )}
+                      </div>
+                    )}
+                    {cerrada && (
+                      <p className="text-sm flex items-center gap-1 text-emerald-700">
+                        <CheckCircle2 className="size-4" /> Cerrada
+                        {oc.ultima_recepcion_at ? ` · ${formatDate(oc.ultima_recepcion_at)}` : ""}
+                      </p>
+                    )}
+                    {oc.estatus === "rechazada" && (
+                      <div className="space-y-2">
+                        {oc.notas_supervisor && (
+                          <p className="text-sm text-rose-700 bg-rose-50 p-2 rounded-md">
+                            <strong>Motivo:</strong> {oc.notas_supervisor}
+                          </p>
+                        )}
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setTab("comparativa")}>
+                            Revisar en Comparativa
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => reabrirMut.mutate(oc.id)} disabled={reabrirMut.isPending}>
+                            Reabrir
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {(oc.estatus === "autorizada" || oc.estatus === "enviada" || oc.estatus === "recibida_parcial" || oc.estatus === "recibida" || pagado > 0) && (
+                      <OCPagosPanel
+                        ocId={oc.id}
+                        ocFolio={oc.folio}
+                        saldoPendiente={saldoPendiente}
+                        puedePagar={puedePagar}
+                        puedeCancelar={isDirector}
+                        onChange={invalidate}
+                      />
+                    )}
+                  </Card>
                 );
               })}
             </TabsContent>
