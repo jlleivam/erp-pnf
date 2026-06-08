@@ -384,3 +384,110 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
     </Sheet>
   );
 }
+
+function OCPagosPanel({
+  ocId, ocFolio, saldoPendiente, puedePagar, puedeCancelar, onChange,
+}: {
+  ocId: string;
+  ocFolio: string;
+  saldoPendiente: number;
+  puedePagar: boolean;
+  puedeCancelar: boolean;
+  onChange: () => void;
+}) {
+  const fetchPagos = useServerFn(listPagosOC);
+  const cancelarFn = useServerFn(cancelarPagoOC);
+  const [openDialog, setOpenDialog] = useState(false);
+  const qc = useQueryClient();
+
+  const pagosQ = useQuery({
+    queryKey: ["pagos-oc", ocId],
+    queryFn: () => fetchPagos({ data: { ocId } }),
+  });
+  const pagos: any[] = pagosQ.data ?? [];
+
+  const cancelMut = useMutation({
+    mutationFn: (pagoId: string) => cancelarFn({ data: { pagoId } }),
+    onSuccess: () => {
+      toast.success("Pago cancelado");
+      qc.invalidateQueries({ queryKey: ["pagos-oc", ocId] });
+      qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
+      onChange();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
+  return (
+    <div className="border-t pt-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold flex items-center gap-1">
+          <Wallet className="size-4" /> Pagos
+        </p>
+        {puedePagar && (
+          <Button size="sm" onClick={() => setOpenDialog(true)}>
+            Registrar pago
+          </Button>
+        )}
+      </div>
+
+      {pagos.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Sin pagos registrados.</p>
+      ) : (
+        <div className="border rounded-md overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Cuenta</TableHead>
+                <TableHead>Método</TableHead>
+                <TableHead>Ref.</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+                {puedeCancelar && <TableHead></TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pagos.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>{formatDate(p.fecha)}</TableCell>
+                  <TableCell>{p.cuenta?.nombre}</TableCell>
+                  <TableCell className="capitalize">{p.metodo}</TableCell>
+                  <TableCell className="text-xs">{p.referencia ?? "—"}</TableCell>
+                  <TableCell className="text-right font-medium">{mxn(Number(p.monto))}</TableCell>
+                  {puedeCancelar && (
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Cancelar pago"
+                        onClick={() => {
+                          if (confirm("¿Cancelar este pago? Se revertirá el saldo de la cuenta y de la OC.")) {
+                            cancelMut.mutate(p.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="size-4 text-rose-600" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <RegistrarPagoOCDialog
+        ocId={ocId}
+        ocFolio={ocFolio}
+        saldoPendiente={saldoPendiente}
+        open={openDialog}
+        onOpenChange={setOpenDialog}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["pagos-oc", ocId] });
+          qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
+          onChange();
+        }}
+      />
+    </div>
+  );
+}
