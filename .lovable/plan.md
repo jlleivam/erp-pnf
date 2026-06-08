@@ -1,23 +1,59 @@
-# Garantizar que "Vista: <Rol>" se comporte exactamente como ese rol
+# Módulo Tesorería (Corporativo)
 
-## Estado actual
+Conectar el item ya existente "Tesorería" de la barra lateral (`/app/admin/tesoreria`, visible para director y administrativo) con un módulo real que liste las cuentas de la empresa y permita ver el detalle de saldos y movimientos.
 
-El toggle ya está conectado a `useEffectiveRoles()`, que devuelve **solo el rol simulado** cuando un director está actuando como otro perfil. Casi todos los módulos (`RequisicionesModule`, `ComparativaTable`, `CajaChicaModule`, `GasolinasModule`, `RentasModule`, `CatalogoInsumosModule`) ya gatean su UI con esos roles efectivos, así que respetan la simulación.
+## Backend
 
-La única fuga que existía era el botón **Registrar recepción** en `CotizacionSheet`, que se gateaba con `oc.puede_recibir` calculado en el backend con los roles **reales** del usuario. Eso ya quedó corregido en el cambio anterior — ahora usa `roles.includes("director") || roles.includes("residente")` desde `useEffectiveRoles`.
+Ya existe todo lo necesario en `src/lib/api/cuentas.functions.ts`:
 
-## Limpieza pendiente para evitar reincidencias
+- `listCuentas` — devuelve todas las cuentas de la empresa (activas e inactivas), accesible para director y administrativo.
+- `listMovimientos({ cuentaId, from?, to? })` — devuelve movimientos de una cuenta filtrables por rango de fechas.
 
-1. **`src/lib/api/cotizaciones.functions.ts`**: ya no se consume `puede_recibir` desde el cliente, pero sigue siendo enviado en la respuesta de `getCotizacionRequisicion`. Eliminar:
-   - El cálculo de `puedeRecibir` (consulta a `user_roles` + `obra_team` para residente).
-   - El campo `puede_recibir` del objeto de cada OC.
+No se requieren cambios de base de datos ni nuevos endpoints.
 
-   El backend `registrarRecepcion` en `almacen.functions.ts` mantiene su validación estricta con roles reales (director o residente de la obra), así que la seguridad no se debilita: la simulación afecta solo a la UI, y si por error un administrativo simulado intentara invocar el endpoint, seguiría siendo rechazado.
+## Frontend
 
-2. **Auditoría rápida (sin cambios)**: confirmar que ningún otro componente lee flags de permiso devueltos por el backend para mostrar/ocultar acciones. Ya verifiqué que `puede_recibir` era el único; el resto del gating se hace en el cliente con `useEffectiveRoles`.
+### Nuevo componente `src/components/tesoreria/TesoreriaModule.tsx`
+
+Vista única con dos paneles:
+
+1. **Lista de cuentas activas** (panel izquierdo / arriba en móvil)
+   - Cards de cuentas con `activa = true`, ordenadas por nombre.
+   - Cada card muestra: nombre, tipo (`Bancaria` / `Caja fuerte`), banco + últimos 4 dígitos de la cuenta, saldo actual destacado en MXN, moneda si es distinta a MXN.
+   - Toggle/colapsable "Ver cuentas inactivas" para listar también las cerradas (mismo formato, atenuadas).
+   - KPI superior: **saldo total** sumando todas las cuentas activas (agrupado por moneda si existe alguna no-MXN; por ahora todas son MXN).
+   - Selección de una cuenta abre el detalle.
+
+2. **Detalle de cuenta seleccionada** (panel derecho / Sheet en móvil)
+   - Encabezado: nombre, tipo, banco/clabe/numero (enmascarado salvo últimos 4), saldo inicial, saldo actual.
+   - Filtros de movimientos: rango de fechas (default últimos 30 días) y tipo (ingreso/egreso/todos).
+   - Tabla de movimientos: fecha · concepto · referencia · origen (badge) · ingreso · egreso · saldo corrido.
+     - Saldo corrido se calcula en cliente: partir del saldo actual, recorrer los movimientos en orden descendente y revertir cada uno para obtener el saldo de cada renglón.
+   - Totales del rango filtrado: ingresos, egresos, neto.
+   - Botón "Exportar CSV" del rango filtrado (cliente, sin endpoint nuevo).
+
+### Nueva ruta `src/routes/_authenticated/app.admin.tesoreria.tsx`
+
+Ruta dedicada (más específica gana sobre `app.admin.$`). Carga `TesoreriaModule`. Verifica vía `useEffectiveRoles` que el usuario sea `director` o `administrativo`; si no, redirige a `/app`.
+
+### Read shape
+
+- `cuentasQuery` con `useSuspenseQuery` precargada en el loader vía `ensureQueryData(listCuentasOptions)`.
+- `movimientosQuery` por cuenta seleccionada usando `useQuery` (no suspense — el panel ya está montado y solo cambia al elegir cuenta).
+- Mutaciones no aplican en este módulo (solo lectura).
+
+### Notificaciones
+
+Ninguna nueva.
+
+## Permisos
+
+- UI: `useEffectiveRoles().includes('director' | 'administrativo')`. El residente y otros roles no ven el item en la barra (ya configurado en `src/lib/modules.ts`) y la ruta los redirige si lo intentan abrir directo.
+- Backend: las funciones ya validan rol director/administrativo en `ensureRole`.
 
 ## Fuera de alcance
 
-- No se altera la lógica de `assumedRole` ni el componente del toggle.
-- No se cambian las validaciones de seguridad del backend (siguen usando roles reales — esto es intencional, defensa en profundidad).
-- No se elimina aún el toggle de la app; el usuario lo retirará más adelante.
+- No se agrega creación/edición de cuentas (sigue viviendo en Configuración → Cuentas).
+- No se agregan traspasos entre cuentas, conciliación bancaria, ni ajustes manuales.
+- No se cambia el módulo de Cuentas por pagar ni el flujo de pagos de OC.
+- No se renombra el item de la barra (sigue como "Tesorería"). Si prefieres que diga "Corporativo" lo cambiamos en una iteración posterior.

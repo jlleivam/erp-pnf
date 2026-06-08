@@ -4,6 +4,8 @@ import { NominaAdminPanel } from "@/components/nomina/NominaAdminPanel";
 import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
 import { CuentasPorPagarModule } from "@/components/pagos/CuentasPorPagarModule";
+import { TesoreriaModule } from "@/components/tesoreria/TesoreriaModule";
+import { useEffectiveRoles } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
   requisiciones: "Requisiciones",
@@ -33,10 +35,33 @@ export const Route = createFileRoute("/_authenticated/app/admin/$")({
 function AdminModule() {
   const { _splat } = Route.useParams();
   const slug = (_splat ?? "").split("/")[0];
+  const roles = useEffectiveRoles();
   if (slug === "nomina") return <NominaAdminPanel />;
   if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   if (slug === "caja-chica") return <CajaChicaModule scope="admin" />;
   if (slug === "cuentas-por-pagar") return <CuentasPorPagarModule />;
+  if (slug === "tesoreria") {
+    if (!roles.includes("director") && !roles.includes("administrativo")) {
+      return (
+        <ModulePlaceholder
+          title="Tesorería"
+          description="No tienes permisos para ver este módulo."
+        />
+      );
+    }
+    return (
+      <div className="space-y-6">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight">Tesorería</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Cuentas activas de la empresa, saldos y movimientos.
+          </p>
+        </header>
+        <TesoreriaModule />
+      </div>
+    );
+  }
   const title = LABELS[slug] ?? "Módulo administrativo";
   return <ModulePlaceholder title={title} description="Módulo administrativo" />;
 }
+
