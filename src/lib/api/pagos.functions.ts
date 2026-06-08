@@ -72,7 +72,7 @@ export const registrarPagoOC = createServerFn({ method: "POST" })
     const total = Number(oc.total);
     const pagado = Number(oc.monto_pagado);
     const pendiente = +(total - pagado).toFixed(2);
-    if (data.monto > pendiente + 0.001) {
+    if (data.monto > pendiente + 0.01) {
       throw new Error(`El monto (${data.monto}) excede el saldo pendiente (${pendiente})`);
     }
 
