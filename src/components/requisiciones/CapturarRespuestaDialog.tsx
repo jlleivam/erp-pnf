@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Plus, Trash2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -31,14 +32,22 @@ type DraftItem = {
   nota: string;
 };
 
+type ExtraCharge = { id: string; concepto: string; monto: number };
+
 const IVA_RATE = 0.16;
+const EXTRAS_MARKER = "[Cargos prorrateados]";
 const noSpinner =
   "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
+function newExtraId() {
+  return Math.random().toString(36).slice(2, 10);
+}
 
 export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisicionId }: Props) {
   const qc = useQueryClient();
   const fn = useServerFn(capturarRespuesta);
   const [items, setItems] = useState<DraftItem[]>([]);
+  const [extras, setExtras] = useState<ExtraCharge[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -53,28 +62,83 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
         nota: it.nota ?? "",
       }))
     );
+    setExtras([]);
   }, [open, solicitud]);
 
-  const { subtotal, iva, total } = useMemo(() => {
-    const sub = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
-    const i = sub * IVA_RATE;
-    return { subtotal: sub, iva: i, total: sub + i };
-  }, [items]);
+  const subtotalBase = useMemo(
+    () => items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0),
+    [items]
+  );
+  const extrasTotal = useMemo(
+    () => extras.reduce((s, e) => s + (Number(e.monto) || 0), 0),
+    [extras]
+  );
+  const subtotal = subtotalBase + extrasTotal;
+  const iva = subtotal * IVA_RATE;
+  const total = subtotal + iva;
+
+  const update = (idx: number, patch: Partial<DraftItem>) => {
+    setItems((arr) => arr.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  };
+
+  const addExtra = () =>
+    setExtras((arr) => [...arr, { id: newExtraId(), concepto: "", monto: 0 }]);
+  const updateExtra = (id: string, patch: Partial<ExtraCharge>) =>
+    setExtras((arr) => arr.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  const removeExtra = (id: string) =>
+    setExtras((arr) => arr.filter((e) => e.id !== id));
+
+  const validExtras = extras.filter(
+    (e) => e.concepto.trim() !== "" && Number(e.monto) > 0
+  );
+  const validExtrasTotal = validExtras.reduce((s, e) => s + Number(e.monto), 0);
+  const canSave =
+    items.length > 0 &&
+    (validExtras.length === 0 || subtotalBase > 0);
 
   const mut = useMutation({
-    mutationFn: () =>
-      fn({
+    mutationFn: async () => {
+      if (validExtras.length > 0 && subtotalBase <= 0) {
+        throw new Error("Captura primero los precios para poder prorratear los cargos");
+      }
+
+      const itemsOut = items.map((it) => {
+        const importeBase = it.cantidad * it.precio_unitario;
+        let precioFinal = it.precio_unitario;
+        if (validExtrasTotal > 0 && subtotalBase > 0 && it.cantidad > 0) {
+          const peso = importeBase / subtotalBase;
+          const delta = (validExtrasTotal * peso) / it.cantidad;
+          precioFinal = it.precio_unitario + delta;
+        }
+        return {
+          insumo_id: it.insumo_id,
+          cantidad: it.cantidad,
+          precio_unitario: precioFinal,
+          disponible: precioFinal > 0,
+          nota: it.nota || null,
+        };
+      });
+
+      // Construir notas preservando lo previo (antes del marcador)
+      const prev: string = solicitud.notas ?? "";
+      const beforeMarker = prev.split(EXTRAS_MARKER)[0]?.trimEnd() ?? "";
+      let notasOut: string | null = beforeMarker || null;
+      if (validExtras.length > 0) {
+        const lines = validExtras
+          .map((e) => `${e.concepto.trim()}: ${formatMXN(Number(e.monto))}`)
+          .join("\n");
+        const block = `${EXTRAS_MARKER}\n${lines}`;
+        notasOut = beforeMarker ? `${beforeMarker}\n\n${block}` : block;
+      }
+
+      return fn({
         data: {
           solicitudId: solicitud.id,
-          items: items.map((it) => ({
-            insumo_id: it.insumo_id,
-            cantidad: it.cantidad,
-            precio_unitario: it.precio_unitario,
-            disponible: it.precio_unitario > 0,
-            nota: it.nota || null,
-          })),
+          items: itemsOut,
+          notas: notasOut,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Cotización registrada");
       qc.invalidateQueries({ queryKey: ["solicitudes", requisicionId] });
@@ -83,10 +147,6 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
     },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
-
-  const update = (idx: number, patch: Partial<DraftItem>) => {
-    setItems((arr) => arr.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,7 +165,7 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
           </div>
         </DialogHeader>
 
-        <div className="max-h-[55vh] overflow-y-auto border rounded-md">
+        <div className="max-h-[45vh] overflow-y-auto border rounded-md">
           <Table>
             <TableHeader>
               <TableRow>
@@ -167,9 +227,77 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
           </Table>
         </div>
 
+        {/* Cargos adicionales */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Cargos adicionales</p>
+              <p className="text-xs text-muted-foreground">
+                Se prorratean entre los insumos al guardar (flete, seguro, maniobras…).
+              </p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={addExtra}>
+              <Plus className="size-4 mr-1" /> Agregar cargo
+            </Button>
+          </div>
+
+          {extras.length > 0 && (
+            <div className="space-y-2">
+              {extras.map((e) => (
+                <div key={e.id} className="flex items-center gap-2">
+                  <Input
+                    placeholder="Concepto (ej. Flete)"
+                    value={e.concepto}
+                    onChange={(ev) => updateExtra(e.id, { concepto: ev.target.value })}
+                    className="flex-1"
+                  />
+                  <div className="relative w-40">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className={`pl-6 ${noSpinner}`}
+                      value={e.monto || ""}
+                      onChange={(ev) => updateExtra(e.id, { monto: Number(ev.target.value) || 0 })}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeExtra(e.id)}
+                    aria-label="Eliminar cargo"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {validExtras.length > 0 && subtotalBase <= 0 && (
+            <p className="text-xs text-destructive">
+              Captura primero los precios de los insumos para poder prorratear los cargos.
+            </p>
+          )}
+        </div>
+
         <div className="flex justify-end">
-          <div className="w-64 space-y-1 text-sm">
+          <div className="w-72 space-y-1 text-sm">
             <div className="flex justify-between">
+              <span className="text-muted-foreground">Subtotal insumos</span>
+              <span className="tabular-nums">{formatMXN(subtotalBase)}</span>
+            </div>
+            {extrasTotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Cargos adicionales</span>
+                <span className="tabular-nums">{formatMXN(extrasTotal)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t pt-1">
               <span className="text-muted-foreground">Subtotal</span>
               <span className="tabular-nums">{formatMXN(subtotal)}</span>
             </div>
@@ -186,7 +314,7 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !canSave}>
             Guardar respuesta
           </Button>
         </DialogFooter>
