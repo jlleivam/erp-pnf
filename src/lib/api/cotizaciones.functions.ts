@@ -295,8 +295,8 @@ export const enviarOCASupervisor = createServerFn({ method: "POST" })
     // Notificar a supervisores de la empresa
     try {
       const { data: sups } = await supabase
-        .from("user_roles").select("user_id").eq("company_id", companyId).eq("role", "supervisor");
-      const destinatarios = Array.from(new Set((sups ?? []).map((s: any) => s.user_id as string)));
+        .from("user_roles").select("user_id").eq("company_id", companyId).in("role", ["supervisor", "director"]);
+      const destinatarios = Array.from(new Set((sups ?? []).map((s: any) => s.user_id as string).filter((u) => u !== userId)));
       if (destinatarios.length > 0) {
         const { data: req } = await supabase
           .from("requisiciones").select("folio").eq("id", oc.requisicion_id).maybeSingle();
@@ -370,8 +370,8 @@ export const autorizarOC = createServerFn({ method: "POST" })
     // Notificar a administrativos de la empresa
     try {
       const { data: admins } = await supabase
-        .from("user_roles").select("user_id").eq("company_id", companyId).eq("role", "administrativo");
-      const destinatarios = Array.from(new Set((admins ?? []).map((a: any) => a.user_id as string)));
+        .from("user_roles").select("user_id").eq("company_id", companyId).in("role", ["administrativo", "director"]);
+      const destinatarios = Array.from(new Set((admins ?? []).map((a: any) => a.user_id as string).filter((u) => u !== userId)));
       if (destinatarios.length > 0) {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(

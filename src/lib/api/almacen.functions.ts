@@ -290,9 +290,9 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
         .from("user_roles")
         .select("user_id, role")
         .eq("company_id", companyId)
-        .in("role", ["administrativo", "supervisor"]);
+        .in("role", ["administrativo", "supervisor", "director"]);
       const destinatarios = Array.from(
-        new Set((roles ?? []).map((r: any) => r.user_id as string))
+        new Set((roles ?? []).map((r: any) => r.user_id as string).filter((u) => u !== userId))
       );
       if (destinatarios.length > 0) {
         const titulo = completa
