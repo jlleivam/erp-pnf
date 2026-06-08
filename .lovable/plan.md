@@ -1,61 +1,43 @@
-# Notificaciones del flujo de Requisiciones
+## Objetivo
 
-Se reutiliza la tabla `notificaciones` y el patrón ya existente (insert vía `supabaseAdmin`, link a la ruta correspondiente, campana `NotificacionesBell` ya conectada).
+En el bloque "Seguimiento" del detalle de la requisición, mostrar **quién** completó cada paso y **a qué hora** (fecha + hora), no solo la fecha.
 
-## Destinatarios
+## Estado actual
 
-- **Administrativos** y **Supervisores**: usuarios con ese `role` en `user_roles` para la `company_id` de la obra.
-- **Residentes**: usuarios en `obra_team` con `role = 'residente'` para la obra (mismo patrón que ya usa `enviarOCAProveedor`).
+La UI ya soporta mostrar el responsable (`step.porField` → `cotizacion_responsable`, `autorizacion_responsable`, `oc_responsable`, `completada_responsable`) y la fecha (`step.atField`). El problema es doble:
 
-Si no hay destinatarios, simplemente no se inserta nada (no error).
+1. **Faltan datos**: las transiciones de estatus solo escriben las columnas `*_at` (cotizacion_at, autorizacion_at, oc_at, completada_at), pero **nunca escriben las columnas `*_por`**, por lo que el responsable siempre llega `null` excepto en "Requisición enviada" (que sí guarda `creado_por`).
+2. **Solo se muestra la fecha**: `formatDate` no incluye la hora.
 
-## Cambios por evento
+## Cambios
 
-### 1. Residente envía requisición → Administrativos
-**Archivo:** `src/lib/api/requisiciones.functions.ts` → `crearRequisicion`
-Después del insert exitoso de `requisicion_insumos`, notificar a todos los administrativos de la empresa.
-- tipo: `requisicion_enviada`
-- título: `Nueva requisición ${folio}`
-- mensaje: `${solicitante} envió una nueva requisición de la obra ${obra}.`
-- link: `/app/admin/requisiciones`
+### 1. Guardar el responsable en cada transición
 
-### 2. Administrativo envía OC al supervisor → Supervisores
-**Archivo:** `src/lib/api/cotizaciones.functions.ts` → `enviarOCASupervisor`
-Tras el update a `pendiente_autorizacion`, notificar a supervisores de la empresa (filtrados por obra si están en `obra_team`, si no hay supervisores asignados, a todos los supervisores de la empresa).
-- tipo: `oc_pendiente_autorizacion`
-- título: `OC ${folio} pendiente de autorizar`
-- mensaje: `Hay una OC esperando tu autorización (req. ${reqFolio}).`
-- link: `/app/supervisor/requisiciones`
+En `src/lib/api/cotizaciones.functions.ts`:
+- `recalcEstatusRequisicion(supabase, requisicionId)` → agregar parámetro `userId` y al construir el `patch`, incluir el `*_por` correspondiente:
+  - `en_cotizacion` → `cotizacion_por = userId`
+  - `pendiente_autorizacion` → `autorizacion_por = userId`
+  - `oc_generada` → `oc_por = userId`
+  - `completada` → `completada_por = userId`
+- Actualizar las ~9 llamadas internas para pasar `userId` (ya disponible en cada `.handler` vía `context`).
 
-### 3. Supervisor autoriza OC → Administrativos
-**Archivo:** `src/lib/api/cotizaciones.functions.ts` → `autorizarOC`
-- tipo: `oc_autorizada`
-- título: `OC ${folio} autorizada`
-- mensaje: `La OC fue autorizada. Puedes enviarla al proveedor.`
-- link: `/app/admin/requisiciones`
+En `src/lib/api/solicitudes-cotizacion.functions.ts`:
+- Misma actualización: pasar `userId` a su `recalcEstatusRequisicion` y al `update` directo de la línea 34 (`cotizacion_at` + `cotizacion_por`).
 
-### 4. Administrativo envía OC al proveedor → Residente
-**Ya implementado** en `enviarOCAProveedor`. Sin cambios.
+En `src/lib/api/almacen.functions.ts` (línea 334):
+- En el `update` que marca la requisición como completada, agregar `completada_por: userId`.
 
-### 5. Residente registra recepción en almacén → Supervisor + Administrativo
-**Archivo:** `src/lib/api/almacen.functions.ts` → `registrarRecepcion`
-Actualmente solo notifica a administrativos y **solo cuando la OC queda completamente recibida**. Cambios:
-- Notificar en **cada** recepción (parcial o completa), no solo al completarse.
-- Agregar a los **supervisores** como destinatarios (además de administrativos).
-- Diferenciar el título/mensaje según `nuevoEstatus`:
-  - `recibida_parcial`: `OC ${folio} con recepción parcial`
-  - `recibida`: `OC ${folio} recibida completa`
-- link: `/app/obras/${obraId}/almacen-obra`
+No se requieren cambios de esquema: las columnas `cotizacion_por`, `autorizacion_por`, `oc_por`, `completada_por` ya existen en `requisiciones` (de hecho `getRequisicion` ya las lee y resuelve a nombres).
 
-## Detalles técnicos
+### 2. Mostrar fecha + hora en el timeline
 
-- Insertar siempre vía `supabaseAdmin` (igual que el código existente) para evitar problemas de RLS al notificar a otros usuarios.
-- Envolver cada insert en try/catch con `console.error` — un fallo de notificación no debe romper la acción principal (mismo patrón que `enviarOCAProveedor`).
-- Deduplicar destinatarios con `Array.from(new Set(...))` por si un usuario tiene varios roles.
-- Para el residente solicitante en el mensaje de la #1, hacer un lookup ligero a `profiles.nombre_completo`; si no se encuentra, omitir el nombre.
+En `src/lib/format.ts`:
+- Añadir helper `formatDateTime(d)` con formato `es-MX` que incluya día, mes corto, año, hora y minutos (ej. `8 jun 2026, 14:32`).
 
-## Fuera de alcance
+En `src/components/requisiciones/RequisicionDetalleSheet.tsx`:
+- Reemplazar `formatDate(at)` por `formatDateTime(at)` solo dentro del bloque de Seguimiento (línea 133). El resto del archivo sigue usando `formatDate`.
 
-- Email / push notifications (solo notificaciones in-app).
-- Cambios de UI en la campana (`NotificacionesBell` ya muestra todo lo que se inserte).
-- Reglas de preferencia por usuario (todos los destinatarios reciben siempre).
+## Alcance fuera del plan
+
+- No se rellenan datos históricos: las requisiciones ya transicionadas antes de este cambio seguirán sin responsable en pasos intermedios (solo lo verán las nuevas a partir de este cambio).
+- No se modifica la lógica de notificaciones ni el esquema de BD.
