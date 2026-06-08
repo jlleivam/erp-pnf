@@ -111,7 +111,7 @@ export const crearSolicitud = createServerFn({ method: "POST" })
       .from("cotizacion_solicitud_insumos").insert(rows);
     if (itemsErr) throw new Error(itemsErr.message);
 
-    await recalcEstatusRequisicion(supabase, data.requisicionId);
+    await recalcEstatusRequisicion(supabase, data.requisicionId, userId);
     return { id: nueva.id, folio: folioRow };
   });
 
