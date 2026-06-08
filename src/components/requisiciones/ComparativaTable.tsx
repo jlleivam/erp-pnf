@@ -533,8 +533,8 @@ export function ComparativaTable({
       )}
 
       {!sinRecibidas && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-1.5">
+          <p className="text-xs text-muted-foreground">
             <strong className="text-foreground">{insumosAsignados}</strong> de <strong className="text-foreground">{reqItems.length}</strong> insumos asignados
             {" · "}
             <strong className="text-foreground">{insumosCubiertos}</strong> totalmente cubiertos
@@ -551,33 +551,33 @@ export function ComparativaTable({
       {!sinRecibidas && (
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="text-xs [&_th]:h-8 [&_th]:py-1 [&_th]:px-2 [&_td]:py-1.5 [&_td]:px-2">
             <TableHeader>
               <TableRow>
-                <TableHead rowSpan={2} className="min-w-[180px] align-bottom">Insumo</TableHead>
+                <TableHead rowSpan={2} className="min-w-[140px] align-bottom">Insumo</TableHead>
                 <TableHead rowSpan={2} className="text-right align-bottom">Cant. requerida</TableHead>
                 {recibidas.map((sc) => (
                   <TableHead
                     key={sc.id}
                     colSpan={3}
-                    className="text-center border-l min-w-[280px]"
+                    className="text-center border-l min-w-[210px]"
                   >
                     <div className="flex flex-col items-center">
                       <span className="font-semibold">{sc.proveedor?.razon_social ?? "—"}</span>
-                      <span className="text-xs text-muted-foreground font-normal">{sc.folio}</span>
+                      <span className="text-[11px] text-muted-foreground font-normal">{sc.folio}</span>
                     </div>
                   </TableHead>
                 ))}
-                <TableHead rowSpan={2} className="text-center align-bottom border-l w-[240px] min-w-[220px]">
+                <TableHead rowSpan={2} className="text-center align-bottom border-l w-[180px] min-w-[170px]">
                   Asignar a
                 </TableHead>
               </TableRow>
               <TableRow>
                 {recibidas.map((sc) => (
                   <Fragment key={sc.id}>
-                    <TableHead className="text-right text-xs border-l">Cant.</TableHead>
-                    <TableHead className="text-right text-xs">P.U.</TableHead>
-                    <TableHead className="text-right text-xs">Importe</TableHead>
+                    <TableHead className="text-right text-[11px] py-0.5 border-l">Cant.</TableHead>
+                    <TableHead className="text-right text-[11px] py-0.5">P.U.</TableHead>
+                    <TableHead className="text-right text-[11px] py-0.5">Importe</TableHead>
                   </Fragment>
                 ))}
               </TableRow>
