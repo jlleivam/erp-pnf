@@ -1,42 +1,41 @@
 ## Objetivo
 
-En la comparativa, impedir que el administrativo asigne a un proveedor una **cantidad** (y por tanto un **importe**) mayor al que ese proveedor cotizó para cada insumo. Hoy solo se muestra un borde ámbar de aviso, pero el sistema sí deja capturar más y permite enviar la OC.
+Reducir la densidad visual del cuadro comparativo (`ComparativaTable.tsx`) sin cambiar lógica ni columnas. En la captura se ve mucho espacio vertical entre filas, headers altos y columnas anchas.
 
-## Regla de candado
+## Cambios visuales en `src/components/requisiciones/ComparativaTable.tsx`
 
-Por cada línea `insumo × proveedor`:
-- Cantidad cotizada disponible = `oferta.cantidad` (lo que el proveedor puso al capturar la respuesta).
-- Precio unitario = `oferta.precio` (fijo, no editable acá).
-- **Cantidad máxima asignable = `oferta.cantidad`**.
-- **Importe máximo = `oferta.cantidad × oferta.precio`** (consecuencia directa del candado de cantidad, ya que el precio es fijo).
+Todo restringido a clases Tailwind, sin tocar handlers, asignaciones, validaciones ni mutaciones.
 
-No se introduce un candado "monetario" adicional separado: el precio ya está bloqueado en la matriz de ofertas, así que limitando la cantidad queda limitado el importe automáticamente.
+1. **Tabla densa** — envolver `<Table>` con una clase `text-xs` y reducir altura/padding de celdas:
+   - Agregar a `<Table>` (línea ~542) la prop `className="text-xs [&_th]:h-8 [&_th]:py-1 [&_td]:py-1.5 [&_td]:px-2 [&_th]:px-2"`.
 
-## Cambios en `src/components/requisiciones/ComparativaTable.tsx`
+2. **Anchos mínimos más estrechos**:
+   - `min-w-[180px]` (Insumo) → `min-w-[140px]`.
+   - `min-w-[280px]` por proveedor (header colSpan=3) → `min-w-[210px]`.
+   - Columna "Asignar a" `w-[240px] min-w-[220px]` → `w-[180px] min-w-[170px]`.
 
-1. **Input de cantidad por línea** (alrededor de la línea 716):
-   - Agregar `max={ofertaA?.cantidad ?? undefined}` al `<Input type="number">`.
-   - En `onChange`, clamp: `cantidad = Math.min(Number(e.target.value) || 0, ofertaA?.cantidad ?? Infinity)`.
-   - Mostrar siempre el ayudante `{cantidad} / {ofertaA.cantidad} {unidad}` (ya existe el sufijo `/ ${ofertaA.cantidad}`).
-   - Si el usuario intenta exceder, mostrar toast: *"El proveedor solo cotizó X {unidad}"*.
-   - Cambiar el estilo `excede` (borde ámbar) → ya no aplica porque queda imposible exceder; se quita esa variante.
+3. **Headers de subcolumnas** (`Cant.`, `P.U.`, `Importe`): ya son `text-xs`; reducir padding con `py-0.5`.
 
-2. **Cambio de proveedor en el Select** (línea 680): al hacer `onValueChange`, la nueva cantidad ya se trunca con `Math.min(a.cantidad, o.cantidad)` — está bien, pero asegurar que también respeta el restante. Sin cambios funcionales, solo verificar.
+4. **Celda de Insumo**: quitar `font-medium` no, mantener; cambiar `text-sm` → `text-xs` y permitir wrap normal (sin cambios extra, ya wrappea).
 
-3. **Auto-asignación "mejor precio"** (`tomarMejorPrecio`, línea 261): ya respeta `o.cantidad` con `Math.min(faltante, o.cantidad)`. Sin cambios.
+5. **Total ofertado** (tfoot): `text-sm` → `text-xs`, mantener `font-semibold`.
 
-4. **Validación al enviar OC** (mutación `enviarMut`, línea 395):
-   - Antes de llamar a `guardarFn`, recorrer `insumos` y verificar que `cantidad ≤ oferta.cantidad` para cada línea.
-   - Si alguna excede (por datos heredados de paquetes guardados previos al candado), abortar con `toast.error("La cantidad asignada supera lo cotizado por el proveedor para {insumo}")`.
+6. **Asignar a — tarjetas internas**:
+   - `border rounded p-1` → `border rounded p-1 gap-0.5` (ya tiene `gap-1`, bajamos a `0.5`).
+   - Select trigger `h-7` → `h-6 text-[11px]`.
+   - Input cantidad `h-7 w-20` → `h-6 w-16 text-[11px]`.
+   - Botón eliminar `h-7 w-7` → `h-6 w-6` (icono `size-3`).
+   - Botón "+ Proveedor" y "Tomar mejor precio" `h-7` → `h-6 text-[11px]`.
+   - Helper de cantidad asignada: `text-xs` → `text-[11px]`.
 
-5. **Indicador visual de tope alcanzado** (opcional menor): cuando `a.cantidad === ofertaA.cantidad`, mostrar el helper en color `text-emerald-700` para indicar que se asignó todo lo cotizado.
+7. **Indicadores arriba de la tabla** (insumos asignados / cubiertos): bajar de `text-sm` → `text-xs` y reducir gap del contenedor a `gap-1.5`.
 
 ## Fuera de alcance
 
-- No se valida en el backend (`guardarPaquete`) en este cambio — el candado vive en la UI del administrativo. Si lo quieres también server-side, lo agregamos en una iteración posterior.
-- No se tocan paquetes ya guardados con cantidades fuera de tope; solo se bloquea la edición/envío posterior.
-- No se modifica el flujo de cotizaciones ni la captura de respuesta del proveedor.
+- No cambia la estructura de columnas (sigue habiendo Cant. / P.U. / Importe por proveedor).
+- No cambia lógica de candado, asignaciones, OC, ni el resumen por proveedor.
+- No se introduce un modo "compacto vs cómodo" con toggle — es un cambio de densidad fijo.
 
-## Pregunta abierta
+## Riesgo
 
-¿Quieres que también valide en **servidor** (en `guardarPaquete` de `src/lib/api/cotizaciones.functions.ts`) que ninguna línea exceda lo cotizado por el proveedor? Es más robusto pero implica tocar lógica de backend. Si no respondes, lo dejo solo en la UI.
+Mínimo. Son ajustes de clases utilitarias; si alguna celda queda demasiado apretada en datos largos (p.ej. razón social), el `truncate` ya existente lo maneja.

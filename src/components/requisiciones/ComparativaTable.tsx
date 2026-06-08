@@ -533,8 +533,8 @@ export function ComparativaTable({
       )}
 
       {!sinRecibidas && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-1.5">
+          <p className="text-xs text-muted-foreground">
             <strong className="text-foreground">{insumosAsignados}</strong> de <strong className="text-foreground">{reqItems.length}</strong> insumos asignados
             {" · "}
             <strong className="text-foreground">{insumosCubiertos}</strong> totalmente cubiertos
@@ -551,33 +551,33 @@ export function ComparativaTable({
       {!sinRecibidas && (
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="text-xs [&_th]:h-8 [&_th]:py-1 [&_th]:px-2 [&_td]:py-1.5 [&_td]:px-2">
             <TableHeader>
               <TableRow>
-                <TableHead rowSpan={2} className="min-w-[180px] align-bottom">Insumo</TableHead>
+                <TableHead rowSpan={2} className="min-w-[140px] align-bottom">Insumo</TableHead>
                 <TableHead rowSpan={2} className="text-right align-bottom">Cant. requerida</TableHead>
                 {recibidas.map((sc) => (
                   <TableHead
                     key={sc.id}
                     colSpan={3}
-                    className="text-center border-l min-w-[280px]"
+                    className="text-center border-l min-w-[210px]"
                   >
                     <div className="flex flex-col items-center">
                       <span className="font-semibold">{sc.proveedor?.razon_social ?? "—"}</span>
-                      <span className="text-xs text-muted-foreground font-normal">{sc.folio}</span>
+                      <span className="text-[11px] text-muted-foreground font-normal">{sc.folio}</span>
                     </div>
                   </TableHead>
                 ))}
-                <TableHead rowSpan={2} className="text-center align-bottom border-l w-[240px] min-w-[220px]">
+                <TableHead rowSpan={2} className="text-center align-bottom border-l w-[180px] min-w-[170px]">
                   Asignar a
                 </TableHead>
               </TableRow>
               <TableRow>
                 {recibidas.map((sc) => (
                   <Fragment key={sc.id}>
-                    <TableHead className="text-right text-xs border-l">Cant.</TableHead>
-                    <TableHead className="text-right text-xs">P.U.</TableHead>
-                    <TableHead className="text-right text-xs">Importe</TableHead>
+                    <TableHead className="text-right text-[11px] py-0.5 border-l">Cant.</TableHead>
+                    <TableHead className="text-right text-[11px] py-0.5">P.U.</TableHead>
+                    <TableHead className="text-right text-[11px] py-0.5">Importe</TableHead>
                   </Fragment>
                 ))}
               </TableRow>
@@ -628,8 +628,8 @@ export function ComparativaTable({
 
                 return (
                   <TableRow key={ri.id}>
-                    <TableCell className="font-medium text-sm">{ri.insumo.nombre}</TableCell>
-                    <TableCell className="text-right text-sm whitespace-nowrap">
+                    <TableCell className="font-medium">{ri.insumo.nombre}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
                       {cantReq} {unidad}
                     </TableCell>
                     {recibidas.map((sc) => {
@@ -653,30 +653,30 @@ export function ComparativaTable({
                       const ring = isAsignado ? "ring-2 ring-inset ring-primary/40" : "";
                       return (
                         <Fragment key={sc.id}>
-                          <TableCell className={`text-right text-sm tabular-nums border-l whitespace-nowrap ${cantClass} ${ring}`}>
+                          <TableCell className={`text-right tabular-nums border-l whitespace-nowrap ${cantClass} ${ring}`}>
                             {cantOf} {unidad}
                           </TableCell>
                           <TableCell
-                            className={`text-right text-sm tabular-nums ${
+                            className={`text-right tabular-nums ${
                               isMin ? "bg-emerald-50 text-emerald-800 font-semibold" : ""
                             } ${ring}`}
                           >
                             {mxn(oferta.precio)}
                           </TableCell>
-                          <TableCell className={`text-right text-sm tabular-nums ${ring}`}>
+                          <TableCell className={`text-right tabular-nums ${ring}`}>
                             {mxn(importe)}
                           </TableCell>
                         </Fragment>
                       );
                     })}
-                    <TableCell className="border-l align-top w-[240px] min-w-[220px]">
+                    <TableCell className="border-l align-top w-[180px] min-w-[170px]">
                       {opcionesDisponibles.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">Sin ofertas</span>
+                        <span className="text-[11px] text-muted-foreground">Sin ofertas</span>
                       ) : (
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1">
                           {lista.map((a, idx) => {
                             const ofertaA = ofertas?.get(a.proveedorId);
-                            
+
                             const provActual = opcionesDisponibles.find((sc) => sc.id === a.proveedorId);
                             const provReal = provBySolicitud.get(a.proveedorId);
                             const bloqueado = provReal ? provBloqueado(provReal) : false;
@@ -684,7 +684,7 @@ export function ComparativaTable({
                               (sc) => sc.id === a.proveedorId || !asignadosSc.has(sc.id),
                             );
                             return (
-                              <div key={idx} className={`flex flex-col gap-1 border rounded p-1 ${bloqueado ? "opacity-60 bg-muted/40" : ""}`}>
+                              <div key={idx} className={`flex flex-col gap-0.5 border rounded p-1 ${bloqueado ? "opacity-60 bg-muted/40" : ""}`}>
                                 <div className="flex items-center gap-1">
                                   <Select
                                     value={a.proveedorId}
@@ -696,7 +696,7 @@ export function ComparativaTable({
                                       updateAsignacion(ri.insumo.id, idx, { proveedorId: v, cantidad: nuevaCant });
                                     }}
                                   >
-                                    <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
+                                    <SelectTrigger className="h-6 text-[11px] flex-1 min-w-0 px-1.5">
                                       <span className="truncate flex items-center gap-1">
                                         {bloqueado && <Lock className="size-3" />}
                                         {provActual?.proveedor?.razon_social ?? "—"}
@@ -717,7 +717,7 @@ export function ComparativaTable({
                                     <Button
                                       size="icon"
                                       variant="ghost"
-                                      className="h-7 w-7 shrink-0"
+                                      className="h-6 w-6 shrink-0"
                                       onClick={() => removeAsignacion(ri.insumo.id, idx)}
                                     >
                                       <X className="size-3" />
@@ -731,7 +731,7 @@ export function ComparativaTable({
                                     step="0.01"
                                     max={ofertaA?.cantidad ?? undefined}
                                     disabled={bloqueado || !isAdmin}
-                                    className="h-7 text-xs w-20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="h-6 text-[11px] w-16 px-1.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     value={a.cantidad || ""}
                                     onChange={(e) => {
                                       const raw = Number(e.target.value) || 0;
@@ -756,7 +756,7 @@ export function ComparativaTable({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs px-2"
+                              className="h-6 text-[11px] px-2"
                               onClick={handleAdd}
                             >
                               <Plus className="size-3 mr-1" />
@@ -768,7 +768,7 @@ export function ComparativaTable({
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 text-xs justify-start px-2"
+                              className="h-6 text-[11px] justify-start px-2"
                               onClick={() => tomarMejorPrecio(ri)}
                             >
                               <Sparkles className="size-3 mr-1" />
@@ -777,7 +777,7 @@ export function ComparativaTable({
                           )}
 
                           {lista.length > 0 && (
-                            <p className={`text-xs font-medium tabular-nums ${estadoColor}`}>
+                            <p className={`text-[11px] font-medium tabular-nums ${estadoColor}`}>
                               {sumaAsignada} / {cantReq} {unidad}
                               {sumaAsignada < cantReq && ` (faltan ${(cantReq - sumaAsignada).toFixed(2)})`}
                               {sumaAsignada > cantReq && ` (sobran ${(sumaAsignada - cantReq).toFixed(2)})`}
@@ -792,7 +792,7 @@ export function ComparativaTable({
             </TableBody>
             <tfoot className="border-t bg-muted/30">
               <TableRow>
-                <TableCell className="font-semibold text-sm" colSpan={2}>
+                <TableCell className="font-semibold" colSpan={2}>
                   Total ofertado
                 </TableCell>
                 {recibidas.map((sc) => (
