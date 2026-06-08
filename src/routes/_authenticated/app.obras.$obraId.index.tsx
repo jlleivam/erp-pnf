@@ -165,17 +165,17 @@ function ObraHeader({
       {/* Línea 1: título + cliente + contrato + avatares */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight truncate">{obra.nombre}</h1>
           {obra.unidad_negocio && (
             <Badge variant="secondary" className="text-xs">
               {obra.unidad_negocio.nombre}
             </Badge>
           )}
           <span className="text-sm text-muted-foreground">
-            · {obra.cliente?.razon_social ?? "Sin cliente"}
+            {obra.cliente?.razon_social ?? "Sin cliente"}
             {obra.numero_contrato && ` · ${obra.numero_contrato}`}
           </span>
         </div>
+
 
         {team.length > 0 && (
           <div className="flex -space-x-2">
