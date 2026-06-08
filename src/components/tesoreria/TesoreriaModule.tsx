@@ -328,7 +328,7 @@ export function TesoreriaModule() {
                   type="date"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
-                  className="h-8 w-[140px]"
+                  className="h-8 w-[160px] text-xs px-2"
                 />
               </div>
               <div className="flex flex-col">
@@ -339,7 +339,7 @@ export function TesoreriaModule() {
                   type="date"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
-                  className="h-8 w-[140px]"
+                  className="h-8 w-[160px] text-xs px-2"
                 />
               </div>
               <div className="flex flex-col">
