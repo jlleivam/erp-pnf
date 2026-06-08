@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { capturarRespuesta } from "@/lib/api/solicitudes-cotizacion.functions";
+import { formatMXN } from "@/lib/pdf/solicitud-cotizacion-pdf";
 
 interface Props {
   solicitud: any;
@@ -29,6 +30,10 @@ type DraftItem = {
   disponible: boolean;
   nota: string;
 };
+
+const IVA_RATE = 0.16;
+const noSpinner =
+  "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
 export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisicionId }: Props) {
   const qc = useQueryClient();
@@ -49,6 +54,12 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
       }))
     );
   }, [open, solicitud]);
+
+  const { subtotal, iva, total } = useMemo(() => {
+    const sub = items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
+    const i = sub * IVA_RATE;
+    return { subtotal: sub, iva: i, total: sub + i };
+  }, [items]);
 
   const mut = useMutation({
     mutationFn: () =>
@@ -81,58 +92,96 @@ export function CapturarRespuestaDialog({ solicitud, open, onOpenChange, requisi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Capturar cotización · {solicitud.folio}</DialogTitle>
-          <DialogDescription>
-            Captura el precio que respondió {solicitud.proveedor?.razon_social ?? "el proveedor"} para cada insumo.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle>Cotización</DialogTitle>
+              <DialogDescription>
+                {solicitud.proveedor?.razon_social ?? "Proveedor"}
+              </DialogDescription>
+            </div>
+            <div className="text-xs text-muted-foreground whitespace-nowrap mr-6">
+              Folio · {solicitud.folio}
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="max-h-[60vh] overflow-y-auto border rounded-md">
+        <div className="max-h-[55vh] overflow-y-auto border rounded-md">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Insumo</TableHead>
-                <TableHead className="w-28">Cantidad</TableHead>
+                <TableHead className="w-24">Cantidad</TableHead>
                 <TableHead className="w-32">P. Unitario</TableHead>
+                <TableHead className="w-28 text-right">Importe</TableHead>
                 <TableHead>Nota</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((it, idx) => (
-                <TableRow key={it.insumo_id}>
-                  <TableCell className="text-sm">
-                    {it.nombre}
-                    {it.unidad && <span className="text-muted-foreground ml-1">({it.unidad})</span>}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={it.cantidad || ""}
-                      onChange={(e) => update(idx, { cantidad: Number(e.target.value) || 0 })}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={it.precio_unitario || ""}
-                      onChange={(e) => update(idx, { precio_unitario: Number(e.target.value) || 0 })}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={it.nota}
-                      placeholder="—"
-                      onChange={(e) => update(idx, { nota: e.target.value })}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
+              {items.map((it, idx) => {
+                const importe = it.cantidad * it.precio_unitario;
+                return (
+                  <TableRow key={it.insumo_id}>
+                    <TableCell className="text-sm">
+                      {it.nombre}
+                      {it.unidad && <span className="text-muted-foreground ml-1">({it.unidad})</span>}
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className={noSpinner}
+                        value={it.cantidad || ""}
+                        onChange={(e) => update(idx, { cantidad: Number(e.target.value) || 0 })}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
+                          $
+                        </span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className={`pl-6 ${noSpinner}`}
+                          value={it.precio_unitario || ""}
+                          onChange={(e) => update(idx, { precio_unitario: Number(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">
+                      {formatMXN(importe)}
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        value={it.nota}
+                        placeholder="—"
+                        onChange={(e) => update(idx, { nota: e.target.value })}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="flex justify-end">
+          <div className="w-64 space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="tabular-nums">{formatMXN(subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">IVA (16%)</span>
+              <span className="tabular-nums">{formatMXN(iva)}</span>
+            </div>
+            <div className="flex justify-between border-t pt-1 font-semibold text-base">
+              <span>Total</span>
+              <span className="tabular-nums">{formatMXN(total)}</span>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
