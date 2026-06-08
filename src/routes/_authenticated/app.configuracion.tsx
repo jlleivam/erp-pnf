@@ -54,6 +54,7 @@ function Configuracion() {
           <TabsTrigger value="configuracion">Configuración</TabsTrigger>
           <TabsTrigger value="identidad">Identidad</TabsTrigger>
           <TabsTrigger value="equipo">Equipo</TabsTrigger>
+          <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
           <TabsTrigger value="documentacion">Documentación</TabsTrigger>
         </TabsList>
 
