@@ -215,7 +215,7 @@ export const crearRequisicion = createServerFn({ method: "POST" })
         const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
           destinatarios.map((uid) => ({
             user_id: uid,
-            company_id: profile.company_id,
+            company_id: companyId,
             obra_id: data.obraId,
             tipo: "requisicion_enviada",
             titulo: `Nueva requisición ${req.folio}`,
