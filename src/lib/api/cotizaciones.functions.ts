@@ -77,7 +77,42 @@ export const getCotizacionRequisicion = createServerFn({ method: "POST" })
       .order("created_at", { ascending: true });
     if (ocsErr) throw new Error(ocsErr.message);
 
-    return { requisicion: req, paquetes: paquetes ?? [], ocs: ocs ?? [] };
+    // Recepciones por OC para mostrar cantidad recibida por insumo
+    const ocIds = (ocs ?? []).map((o: any) => o.id);
+    const recByOc: Record<string, Record<string, number>> = {};
+    const lastRecAt: Record<string, string | null> = {};
+    if (ocIds.length > 0) {
+      const { data: recs } = await supabase
+        .from("almacen_recepciones")
+        .select("id, oc_id, fecha, partidas:almacen_recepcion_partidas(insumo_id, cantidad)")
+        .in("oc_id", ocIds);
+      for (const r of (recs ?? []) as any[]) {
+        const map = (recByOc[r.oc_id] ??= {});
+        for (const p of (r.partidas ?? []) as any[]) {
+          map[p.insumo_id] = (map[p.insumo_id] ?? 0) + Number(p.cantidad);
+        }
+        const prev = lastRecAt[r.oc_id];
+        if (!prev || (r.fecha && r.fecha > prev)) lastRecAt[r.oc_id] = r.fecha ?? prev ?? null;
+      }
+    }
+    const ocsEnriquecidas = (ocs ?? []).map((o: any) => {
+      const recibido = recByOc[o.id] ?? {};
+      const items = o.paquete?.items ?? [];
+      let completa = items.length > 0;
+      for (const it of items) {
+        const ped = Number(it.cantidad);
+        const rec = Number(recibido[it.insumo?.id] ?? 0);
+        if (rec + 1e-6 < ped) { completa = false; break; }
+      }
+      return {
+        ...o,
+        recibido_por_insumo: recibido,
+        recepcion_completa: completa,
+        ultima_recepcion_at: lastRecAt[o.id] ?? null,
+      };
+    });
+
+    return { requisicion: req, paquetes: paquetes ?? [], ocs: ocsEnriquecidas };
   });
 
 export const listProveedores = createServerFn({ method: "POST" })
