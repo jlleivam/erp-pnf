@@ -142,10 +142,11 @@ export function RequisicionesModule({ obraId }: Props) {
                         </TableCell>
                         <TableCell className="text-right">
                           {estatus === "enviada" && (
-                            <Button size="sm" onClick={() => setCotizacion({ id: r.id, tab: "solicitudes" })}>Cotizar</Button>
+                            <Button size="sm" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
                           )}
                           {estatus === "en_cotizacion" && (
-                            <Button size="sm" variant="outline" onClick={() => setCotizacion({ id: r.id, tab: "solicitudes" })}>Continuar</Button>
+                            <Button size="sm" variant="outline" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
+
                           )}
                           {["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && (
                             <Button size="sm" variant="outline" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
