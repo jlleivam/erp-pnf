@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { getRequisicion, cancelarRequisicion } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, TIMELINE_STEPS, type RequisicionEstatus } from "./constants";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth";
 
 interface Props {
@@ -130,7 +130,7 @@ export function RequisicionDetalleSheet({ id, open, onOpenChange }: Props) {
                       </p>
                       {at && (
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(at)}
+                          {formatDateTime(at)}
                           {responsable && ` · ${responsable}`}
                         </p>
                       )}

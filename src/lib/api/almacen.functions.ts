@@ -331,7 +331,7 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
     if (ocList.length > 0 && (paquetes ?? []).length > 0) {
       if (ocList.every((o) => o.estatus === "recibida" || o.estatus === "pagada")) {
         await supabase.from("requisiciones")
-          .update({ estatus: "completada", completada_at: new Date().toISOString() })
+          .update({ estatus: "completada", completada_at: new Date().toISOString(), completada_por: userId })
           .eq("id", oc.requisicion_id);
       }
     }

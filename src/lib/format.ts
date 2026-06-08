@@ -20,6 +20,25 @@ export function formatDate(d: string | null | undefined): string {
   }
 }
 
+export function formatDateTime(d: string | null | undefined): string {
+  if (!d) return "—";
+  try {
+    const dt = new Date(d);
+    const fecha = dt.toLocaleDateString("es-MX", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+    const hora = dt.toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${fecha}, ${hora}`;
+  } catch {
+    return d;
+  }
+}
+
 export type EstadoDoc = "ok" | "por_vencer" | "vencido" | "sin_documento";
 
 export function estadoVencimiento(
