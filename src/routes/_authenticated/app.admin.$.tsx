@@ -36,6 +36,7 @@ function AdminModule() {
   if (slug === "nomina") return <NominaAdminPanel />;
   if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   if (slug === "caja-chica") return <CajaChicaModule scope="admin" />;
+  if (slug === "cuentas-por-pagar") return <CuentasPorPagarModule />;
   const title = LABELS[slug] ?? "Módulo administrativo";
   return <ModulePlaceholder title={title} description="Módulo administrativo" />;
 }
