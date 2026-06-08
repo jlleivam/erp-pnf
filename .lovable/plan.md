@@ -1,28 +1,49 @@
-## Problema
 
-Cuando un usuario con rol **administrativo** entra a una obra y abre el módulo de Requisiciones, ve la vista del residente (tarjetas, sin acción "Cotizar") y un botón "Nueva". Debería ver la vista administrativa (tabla con columna Acción → Cotizar / Continuar / Ver OCs) pero filtrada únicamente a esa obra, y sin poder crear requisiciones nuevas.
+## Objetivo
 
-## Cambios
+Rediseñar `CapturarRespuestaDialog` para que se vea y funcione como una cotización real, de modo que el monto capturado coincida exactamente con el documento del proveedor.
 
-### 1. `src/components/requisiciones/RequisicionesModule.tsx`
+## Cambios en `src/components/requisiciones/CapturarRespuestaDialog.tsx`
 
-- Detectar si el usuario es **administrativo** (o director actuando como administrativo) usando `useEffectiveRoles()`.
-- Quitar `"administrativo"` de la lista `puedeCrear` → el botón "Nueva" desaparece para administrativos. Residente, PM, auxiliar y director siguen pudiendo crear.
-- Cuando el usuario es administrativo (no residente), renderizar la **misma tabla** que `app.admin.requisiciones.tsx`: columnas Folio, Solicitante, # insumos, Fecha más próxima, Estatus, Acción (Cotizar / Continuar / Ver OCs vía `CotizacionSheet`). Se omite la columna "Obra" porque ya estamos dentro de una obra.
-- Para esa tabla se reutilizan los componentes internos `FechaProximaCell` y `AccionCell` — los moveré a un archivo compartido `src/components/requisiciones/AdminRequisicionesTable.tsx` para evitar duplicación, y tanto `RequisicionesModule` como `app.admin.requisiciones.tsx` lo consumirán.
-- El listado sigue usando `listRequisiciones({ obraId })` (ya filtra por obra); solo cambia la presentación.
-- Residentes/PM/auxiliares conservan la vista de tarjetas compactas/expandibles actual.
+### Encabezado
+- Título: **"Cotización"** (en lugar de "Capturar cotización · folio").
+- Subtítulo con datos del proveedor: razón social del proveedor en grande + folio SC a la derecha. Mantener la línea descriptiva pero más enfocada al formato cotización.
 
-### 2. `src/routes/_authenticated/app.admin.requisiciones.tsx`
+### Tabla de insumos
+Columnas (en este orden):
+1. **Insumo** (nombre + unidad)
+2. **Cantidad** (input numérico)
+3. **P. Unitario** (input con prefijo `$` visible dentro del campo)
+4. **Importe** (calculado: `cantidad × precio_unitario`, solo lectura, formato MXN, alineado a la derecha)
+5. **Nota** (opcional)
 
-- Refactor menor: usar el componente compartido `AdminRequisicionesTable` para no duplicar `FechaProximaCell` / `AccionCell` / la estructura de tabla.
+Ajustes de UX en los inputs:
+- Quitar las flechitas (spinners) de los inputs numéricos: agregar clase utilitaria global o inline `[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`.
+- Prefijo `$` para P. Unitario (con un wrapper `relative` y un `<span>` posicionado a la izquierda dentro del input, padding-left para el texto).
+- Importe siempre formateado con `formatMXN`.
 
-## Notas
+### Totales (debajo de la tabla)
+Bloque alineado a la derecha con tres líneas tabulares:
+- **Subtotal:** suma de importes
+- **IVA (16%):** subtotal × 0.16
+- **Total:** subtotal + IVA — en negritas, ligeramente más grande
 
-- No se tocan permisos a nivel server (las server fns ya validan acceso por obra).
-- No se cambia el flujo de director: director sigue viendo tarjetas + botón Nueva en la obra (es la vista de operación). Si en el futuro quieres que el director también vea la tabla admin dentro de la obra, se puede agregar un toggle.
-- El sub-sheet `CotizacionSheet` ya existe y maneja Cotizar/Continuar/Ver OCs.
+Cálculo en vivo con `useMemo` sobre `items`.
 
-## Pregunta abierta
+### Footer
+Mantener `Cancelar` y `Guardar respuesta` (sin cambios funcionales). El total mostrado debe coincidir con `calcularTotalSC` actual (que usa subtotal sin IVA). 
 
-¿El **director** dentro de una obra debe seguir viendo la vista de tarjetas (como hoy), o también prefieres que vea la tabla administrativa cuando entra desde "Vista: Administrativo"? Por defecto dejo la vista actual del director sin cambios y solo activo la tabla admin para el rol `administrativo`.
+**Pregunta abierta:** el cálculo actual `calcularTotalSC` suma `cantidad × precio_unitario` (subtotal sin IVA). El total mostrado en la lista de SCs y en el PDF ¿debe seguir siendo subtotal, o también incluir IVA? Por consistencia con "asegurar que el monto coincida con la cotización del proveedor", propongo:
+- Guardar `precio_unitario` tal cual (sin IVA, como ya se hace).
+- El "Total" mostrado en el diálogo es informativo (subtotal + IVA 16%) para que el usuario verifique contra la cotización en papel del proveedor.
+- No cambiar el modelo de datos ni `calcularTotalSC` ni el PDF en este turno.
+
+Si prefieres que el total con IVA también se refleje en la tarjeta de la SC y en el comparativo, lo agrego como paso siguiente.
+
+## Archivos a tocar
+- `src/components/requisiciones/CapturarRespuestaDialog.tsx` (único cambio)
+
+## Fuera de alcance
+- PDF de solicitud de cotización (`solicitud-cotizacion-pdf.ts`).
+- `ComparativaTable`, lista de SCs en `SolicitudesTab`.
+- Esquema de BD.
