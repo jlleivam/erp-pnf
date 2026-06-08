@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { listCuentas } from "@/lib/api/cuentas.functions";
 import { registrarPagoOC } from "@/lib/api/pagos.functions";
-import { formatMoneda } from "@/lib/format";
+import { formatMXN } from "@/lib/format";
 
 type Cuenta = {
   id: string;
