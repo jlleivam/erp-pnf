@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, FileText, Send } from "lucide-react";
+import { CheckCircle2, FileText, Send, Wallet, Trash2 } from "lucide-react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
@@ -17,6 +17,8 @@ import { formatDate } from "@/lib/format";
 import {
   getCotizacionRequisicion, listProveedores, enviarOCASupervisor, reabrirOC, enviarOCAProveedor,
 } from "@/lib/api/cotizaciones.functions";
+import { listPagosOC, cancelarPagoOC } from "@/lib/api/pagos.functions";
+import { RegistrarPagoOCDialog } from "@/components/pagos/RegistrarPagoOCDialog";
 
 import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
 import { SolicitudesTab } from "./SolicitudesTab";
@@ -112,6 +114,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
   });
 
   const isAdmin = roles.includes("director") || roles.includes("administrativo");
+  const isDirector = roles.includes("director");
 
 
   if (!open) return null;
@@ -239,17 +242,45 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
               {ocs.map((oc) => {
                 const meta = OC_BADGE[oc.estatus];
                 const items = oc.paquete?.items ?? [];
+                const total = Number(oc.total);
+                const pagado = Number(oc.monto_pagado ?? 0);
+                const saldoPendiente = +(total - pagado).toFixed(2);
+                const estadoPago: "pendiente" | "parcial" | "pagado" = oc.estado_pago ?? "pendiente";
+                const puedePagar =
+                  isAdmin &&
+                  (oc.estatus === "autorizada" || oc.estatus === "enviada") &&
+                  estadoPago !== "pagado";
                 return (
                   <Card key={oc.id} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold">{oc.folio}</p>
                           <Badge className={meta?.className}>{meta?.label}</Badge>
+                          {(oc.estatus === "autorizada" || oc.estatus === "enviada" || estadoPago !== "pendiente") && (
+                            <Badge
+                              className={
+                                estadoPago === "pagado"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : estadoPago === "parcial"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-slate-100 text-slate-700"
+                              }
+                            >
+                              {estadoPago === "pagado" ? "Pagada" : estadoPago === "parcial" ? "Pago parcial" : "Sin pago"}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">{oc.proveedor?.razon_social}</p>
                       </div>
-                      <p className="text-lg font-semibold">{mxn(Number(oc.total))}</p>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold">{mxn(total)}</p>
+                        {pagado > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Pagado {mxn(pagado)} · pend. {mxn(saldoPendiente)}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="border rounded-md overflow-x-auto">
@@ -332,6 +363,17 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                         </div>
                       </div>
                     )}
+
+                    {(oc.estatus === "autorizada" || oc.estatus === "enviada" || pagado > 0) && (
+                      <OCPagosPanel
+                        ocId={oc.id}
+                        ocFolio={oc.folio}
+                        saldoPendiente={saldoPendiente}
+                        puedePagar={puedePagar}
+                        puedeCancelar={isDirector}
+                        onChange={invalidate}
+                      />
+                    )}
                   </Card>
                 );
               })}
@@ -340,5 +382,112 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function OCPagosPanel({
+  ocId, ocFolio, saldoPendiente, puedePagar, puedeCancelar, onChange,
+}: {
+  ocId: string;
+  ocFolio: string;
+  saldoPendiente: number;
+  puedePagar: boolean;
+  puedeCancelar: boolean;
+  onChange: () => void;
+}) {
+  const fetchPagos = useServerFn(listPagosOC);
+  const cancelarFn = useServerFn(cancelarPagoOC);
+  const [openDialog, setOpenDialog] = useState(false);
+  const qc = useQueryClient();
+
+  const pagosQ = useQuery({
+    queryKey: ["pagos-oc", ocId],
+    queryFn: () => fetchPagos({ data: { ocId } }),
+  });
+  const pagos: any[] = pagosQ.data ?? [];
+
+  const cancelMut = useMutation({
+    mutationFn: (pagoId: string) => cancelarFn({ data: { pagoId } }),
+    onSuccess: () => {
+      toast.success("Pago cancelado");
+      qc.invalidateQueries({ queryKey: ["pagos-oc", ocId] });
+      qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
+      onChange();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
+  return (
+    <div className="border-t pt-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold flex items-center gap-1">
+          <Wallet className="size-4" /> Pagos
+        </p>
+        {puedePagar && (
+          <Button size="sm" onClick={() => setOpenDialog(true)}>
+            Registrar pago
+          </Button>
+        )}
+      </div>
+
+      {pagos.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Sin pagos registrados.</p>
+      ) : (
+        <div className="border rounded-md overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Cuenta</TableHead>
+                <TableHead>Método</TableHead>
+                <TableHead>Ref.</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+                {puedeCancelar && <TableHead></TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pagos.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>{formatDate(p.fecha)}</TableCell>
+                  <TableCell>{p.cuenta?.nombre}</TableCell>
+                  <TableCell className="capitalize">{p.metodo}</TableCell>
+                  <TableCell className="text-xs">{p.referencia ?? "—"}</TableCell>
+                  <TableCell className="text-right font-medium">{mxn(Number(p.monto))}</TableCell>
+                  {puedeCancelar && (
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Cancelar pago"
+                        onClick={() => {
+                          if (confirm("¿Cancelar este pago? Se revertirá el saldo de la cuenta y de la OC.")) {
+                            cancelMut.mutate(p.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="size-4 text-rose-600" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <RegistrarPagoOCDialog
+        ocId={ocId}
+        ocFolio={ocFolio}
+        saldoPendiente={saldoPendiente}
+        open={openDialog}
+        onOpenChange={setOpenDialog}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["pagos-oc", ocId] });
+          qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
+          onChange();
+        }}
+      />
+    </div>
   );
 }

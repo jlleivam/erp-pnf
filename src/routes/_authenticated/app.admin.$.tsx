@@ -3,6 +3,7 @@ import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { NominaAdminPanel } from "@/components/nomina/NominaAdminPanel";
 import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
+import { CuentasPorPagarModule } from "@/components/pagos/CuentasPorPagarModule";
 
 const LABELS: Record<string, string> = {
   requisiciones: "Requisiciones",
@@ -35,6 +36,7 @@ function AdminModule() {
   if (slug === "nomina") return <NominaAdminPanel />;
   if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   if (slug === "caja-chica") return <CajaChicaModule scope="admin" />;
+  if (slug === "cuentas-por-pagar") return <CuentasPorPagarModule />;
   const title = LABELS[slug] ?? "Módulo administrativo";
   return <ModulePlaceholder title={title} description="Módulo administrativo" />;
 }

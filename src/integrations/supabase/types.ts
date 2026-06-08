@@ -2605,11 +2605,14 @@ export type Database = {
           enviada_proveedor_at: string | null
           enviada_proveedor_por: string | null
           enviada_supervisor_at: string | null
+          estado_pago: string
           estatus: Database["public"]["Enums"]["oc_estatus"]
           folio: string
           id: string
+          monto_pagado: number
           notas_supervisor: string | null
           obra_id: string
+          pagada_at: string | null
           paquete_id: string
           proveedor_id: string
           rechazada_at: string | null
@@ -2626,11 +2629,14 @@ export type Database = {
           enviada_proveedor_at?: string | null
           enviada_proveedor_por?: string | null
           enviada_supervisor_at?: string | null
+          estado_pago?: string
           estatus?: Database["public"]["Enums"]["oc_estatus"]
           folio: string
           id?: string
+          monto_pagado?: number
           notas_supervisor?: string | null
           obra_id: string
+          pagada_at?: string | null
           paquete_id: string
           proveedor_id: string
           rechazada_at?: string | null
@@ -2647,11 +2653,14 @@ export type Database = {
           enviada_proveedor_at?: string | null
           enviada_proveedor_por?: string | null
           enviada_supervisor_at?: string | null
+          estado_pago?: string
           estatus?: Database["public"]["Enums"]["oc_estatus"]
           folio?: string
           id?: string
+          monto_pagado?: number
           notas_supervisor?: string | null
           obra_id?: string
+          pagada_at?: string | null
           paquete_id?: string
           proveedor_id?: string
           rechazada_at?: string | null
@@ -2693,6 +2702,85 @@ export type Database = {
             columns: ["requisicion_id"]
             isOneToOne: false
             referencedRelation: "requisiciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos: {
+        Row: {
+          cancelado_at: string | null
+          cancelado_por: string | null
+          company_id: string
+          concepto: string | null
+          creado_por: string | null
+          created_at: string
+          cuenta_id: string
+          cuenta_movimiento_id: string | null
+          fecha: string
+          id: string
+          metodo: string
+          monto: number
+          notas: string | null
+          origen_id: string
+          origen_tipo: string
+          referencia: string | null
+        }
+        Insert: {
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          company_id: string
+          concepto?: string | null
+          creado_por?: string | null
+          created_at?: string
+          cuenta_id: string
+          cuenta_movimiento_id?: string | null
+          fecha?: string
+          id?: string
+          metodo: string
+          monto: number
+          notas?: string | null
+          origen_id: string
+          origen_tipo: string
+          referencia?: string | null
+        }
+        Update: {
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          company_id?: string
+          concepto?: string | null
+          creado_por?: string | null
+          created_at?: string
+          cuenta_id?: string
+          cuenta_movimiento_id?: string | null
+          fecha?: string
+          id?: string
+          metodo?: string
+          monto?: number
+          notas?: string | null
+          origen_id?: string
+          origen_tipo?: string
+          referencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_cuenta_movimiento_id_fkey"
+            columns: ["cuenta_movimiento_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_movimientos"
             referencedColumns: ["id"]
           },
         ]
