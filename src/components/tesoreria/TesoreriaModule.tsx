@@ -1,13 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Landmark,
-  Wallet,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Download,
-} from "lucide-react";
+import { Landmark, Wallet, Download } from "lucide-react";
 import { listCuentas, listMovimientos } from "@/lib/api/cuentas.functions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatMXN, formatDate } from "@/lib/format";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { formatMXN } from "@/lib/format";
 
 type Cuenta = {
   id: string;
@@ -77,6 +77,19 @@ function isoToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const shortDateFmt = new Intl.DateTimeFormat("es-MX", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+});
+
+function formatDateShort(iso: string): string {
+  // iso = YYYY-MM-DD; evitar shift por timezone
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return shortDateFmt.format(new Date(y, m - 1, d));
+}
+
 export function TesoreriaModule() {
   const fetchCuentas = useServerFn(listCuentas);
   const fetchMovs = useServerFn(listMovimientos);
@@ -98,6 +111,7 @@ export function TesoreriaModule() {
   const activas = cuentas.filter((c) => c.activa);
   const inactivas = cuentas.filter((c) => !c.activa);
   const totalActivas = activas.reduce((s, c) => s + Number(c.saldo_actual), 0);
+  const visibles = showInactivas ? [...activas, ...inactivas] : activas;
 
   const selected = useMemo(
     () => cuentas.find((c) => c.id === selectedId) ?? null,
@@ -118,27 +132,18 @@ export function TesoreriaModule() {
     (m) => tipoFiltro === "todos" || m.tipo === tipoFiltro
   );
 
-  // Saldo corrido: parte del saldo_actual y revierte movimientos desc → asc
   const saldosCorridos = useMemo(() => {
     if (!selected) return [] as number[];
-    // movsRaw viene ordenado por fecha DESC; saldo del primer renglón = saldo_actual
-    const result: number[] = [];
-    let running = Number(selected.saldo_actual);
-    // Pero el filtro por tipo puede ocultar renglones. Calculamos sobre movsRaw
-    // y luego mapeamos por id.
     const map = new Map<string, number>();
+    let running = Number(selected.saldo_actual);
     for (const m of movsRaw) {
       map.set(m.id, running);
-      // revertir: el siguiente (más antiguo) tuvo el saldo previo a este mov
       running =
         m.tipo === "ingreso"
           ? running - Number(m.monto)
           : running + Number(m.monto);
     }
-    for (const m of movs) {
-      result.push(map.get(m.id) ?? 0);
-    }
-    return result;
+    return movs.map((m) => map.get(m.id) ?? 0);
   }, [movs, movsRaw, selected]);
 
   const totales = useMemo(() => {
@@ -192,315 +197,291 @@ export function TesoreriaModule() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* KPI total */}
-      <Card className="p-5 bg-gradient-to-br from-primary/5 to-transparent">
-        <p className="text-sm text-muted-foreground">
-          Saldo total · cuentas activas
-        </p>
-        <p className="text-3xl font-semibold tracking-tight mt-1">
-          {formatMXN(totalActivas)}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {activas.length} cuenta{activas.length === 1 ? "" : "s"} activa
-          {activas.length === 1 ? "" : "s"}
-        </p>
-      </Card>
+    <TooltipProvider delayDuration={200}>
+      <div className="space-y-3">
+        {/* KPI compacto */}
+        <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border bg-muted/30">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Landmark className="size-4" />
+            <span>Saldo total · cuentas activas</span>
+            <span className="text-xs">
+              ({activas.length} cuenta{activas.length === 1 ? "" : "s"})
+            </span>
+          </div>
+          <span className="text-base font-semibold tracking-tight">
+            {formatMXN(totalActivas)}
+          </span>
+        </div>
 
-      <div className="grid lg:grid-cols-[360px_1fr] gap-6">
-        {/* Lista de cuentas */}
-        <div className="space-y-3">
+        {/* Chips de cuentas */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {cuentasQ.isLoading && (
-            <Card className="p-4 text-sm text-muted-foreground">
-              Cargando cuentas…
-            </Card>
+            <span className="text-xs text-muted-foreground">Cargando…</span>
           )}
           {!cuentasQ.isLoading && activas.length === 0 && (
-            <Card className="p-6 border-dashed text-center">
-              <Wallet className="size-8 mx-auto text-muted-foreground" />
-              <p className="text-sm mt-2">No hay cuentas activas</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Crea cuentas desde Configuración → Cuentas.
-              </p>
-            </Card>
+            <span className="text-xs text-muted-foreground">
+              No hay cuentas activas
+            </span>
           )}
-          {activas.map((c) => (
-            <CuentaCard
-              key={c.id}
-              cuenta={c}
-              selected={selectedId === c.id}
-              onClick={() => setSelectedId(c.id)}
-            />
-          ))}
-
-          {inactivas.length > 0 && (
-            <>
+          {visibles.map((c) => {
+            const isSel = selectedId === c.id;
+            return (
               <button
+                key={c.id}
                 type="button"
-                className="text-xs text-muted-foreground hover:text-foreground underline w-full text-left"
-                onClick={() => setShowInactivas((v) => !v)}
+                onClick={() => setSelectedId(c.id)}
+                className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm transition ${
+                  isSel
+                    ? "border-primary bg-primary/5 text-foreground"
+                    : "border-border hover:border-primary/40"
+                } ${!c.activa ? "opacity-60" : ""}`}
               >
-                {showInactivas ? "Ocultar" : "Ver"} cuentas inactivas (
-                {inactivas.length})
+                {c.tipo === "bancaria" ? (
+                  <Landmark className="size-3.5 text-muted-foreground" />
+                ) : (
+                  <Wallet className="size-3.5 text-muted-foreground" />
+                )}
+                <span className="font-medium">{c.nombre}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatMXN(Number(c.saldo_actual))}
+                </span>
+                {!c.activa && (
+                  <Badge variant="secondary" className="ml-1 text-[10px] py-0">
+                    inactiva
+                  </Badge>
+                )}
               </button>
-              {showInactivas &&
-                inactivas.map((c) => (
-                  <CuentaCard
-                    key={c.id}
-                    cuenta={c}
-                    selected={selectedId === c.id}
-                    onClick={() => setSelectedId(c.id)}
-                    dimmed
-                  />
-                ))}
-            </>
+            );
+          })}
+          {inactivas.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowInactivas((v) => !v)}
+              className="shrink-0 px-3 py-1.5 rounded-full border border-dashed text-xs text-muted-foreground hover:text-foreground"
+            >
+              {showInactivas ? "Ocultar" : `+${inactivas.length}`} inactivas
+            </button>
           )}
         </div>
 
         {/* Detalle */}
-        <div>
-          {!selected && (
-            <Card className="p-10 text-center border-dashed">
-              <Landmark className="size-10 mx-auto text-muted-foreground" />
-              <p className="text-sm mt-3">
-                Selecciona una cuenta para ver sus movimientos
-              </p>
-            </Card>
-          )}
-          {selected && (
-            <Card className="p-5 space-y-5">
-              <header className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg font-semibold">{selected.nombre}</h2>
-                    <Badge variant="secondary" className="capitalize">
-                      {selected.tipo === "bancaria" ? "Bancaria" : "Caja fuerte"}
-                    </Badge>
-                    {!selected.activa && (
-                      <Badge className="bg-slate-100 text-slate-700">
-                        Inactiva
-                      </Badge>
-                    )}
-                  </div>
-                  {selected.tipo === "bancaria" && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {[selected.banco, last4(selected.numero_cuenta) && `····${last4(selected.numero_cuenta)}`]
-                        .filter(Boolean)
-                        .join(" · ")}
-                      {selected.clabe && ` · CLABE ····${last4(selected.clabe)}`}
-                    </p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Saldo actual</p>
-                  <p className="text-2xl font-semibold">
-                    {formatMXN(Number(selected.saldo_actual))}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Inicial: {formatMXN(Number(selected.saldo_inicial))}
-                  </p>
-                </div>
-              </header>
-
-              {/* Filtros */}
-              <div className="grid sm:grid-cols-4 gap-3">
-                <div>
-                  <Label className="text-xs">Desde</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Hasta</Label>
-                  <Input
-                    type="date"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Tipo</Label>
-                  <Select
-                    value={tipoFiltro}
-                    onValueChange={(v) =>
-                      setTipoFiltro(v as "todos" | "ingreso" | "egreso")
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      <SelectItem value="ingreso">Ingresos</SelectItem>
-                      <SelectItem value="egreso">Egresos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={exportCSV}
-                    disabled={movs.length === 0}
-                  >
-                    <Download className="size-4 mr-1" /> CSV
-                  </Button>
-                </div>
+        {!selected && (
+          <Card className="p-10 text-center border-dashed">
+            <Landmark className="size-8 mx-auto text-muted-foreground" />
+            <p className="text-sm mt-3">
+              Selecciona una cuenta para ver sus movimientos
+            </p>
+          </Card>
+        )}
+        {selected && (
+          <Card className="p-4 space-y-3">
+            {/* Header cuenta */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <h2 className="text-base font-semibold truncate">
+                  {selected.nombre}
+                </h2>
+                <Badge variant="secondary" className="capitalize text-xs">
+                  {selected.tipo === "bancaria" ? "Bancaria" : "Caja fuerte"}
+                </Badge>
+                {!selected.activa && (
+                  <Badge className="bg-slate-100 text-slate-700 text-xs">
+                    Inactiva
+                  </Badge>
+                )}
+                {selected.tipo === "bancaria" && (
+                  <span className="text-xs text-muted-foreground">
+                    {[
+                      selected.banco,
+                      last4(selected.numero_cuenta) &&
+                        `····${last4(selected.numero_cuenta)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                )}
               </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-right cursor-help">
+                    <p className="text-[10px] text-muted-foreground leading-none">
+                      Saldo actual
+                    </p>
+                    <p className="text-lg font-semibold leading-tight">
+                      {formatMXN(Number(selected.saldo_actual))}
+                    </p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Saldo inicial: {formatMXN(Number(selected.saldo_inicial))}
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
-              {/* Totales del rango */}
-              <div className="grid grid-cols-3 gap-3">
-                <Card className="p-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <ArrowDownCircle className="size-3.5 text-emerald-600" />
-                    Ingresos
-                  </div>
-                  <p className="text-base font-semibold mt-1">
+            {/* Filtros + export en una fila */}
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex flex-col">
+                <Label className="text-[10px] text-muted-foreground">
+                  Desde
+                </Label>
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="h-8 w-[140px]"
+                />
+              </div>
+              <div className="flex flex-col">
+                <Label className="text-[10px] text-muted-foreground">
+                  Hasta
+                </Label>
+                <Input
+                  type="date"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="h-8 w-[140px]"
+                />
+              </div>
+              <div className="flex flex-col">
+                <Label className="text-[10px] text-muted-foreground">
+                  Tipo
+                </Label>
+                <Select
+                  value={tipoFiltro}
+                  onValueChange={(v) =>
+                    setTipoFiltro(v as "todos" | "ingreso" | "egreso")
+                  }
+                >
+                  <SelectTrigger className="h-8 w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="ingreso">Ingresos</SelectItem>
+                    <SelectItem value="egreso">Egresos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={exportCSV}
+                disabled={movs.length === 0}
+              >
+                <Download className="size-3.5 mr-1" /> CSV
+              </Button>
+
+              {/* Totales inline */}
+              <div className="ml-auto flex items-center gap-3 text-xs">
+                <span>
+                  <span className="text-muted-foreground">Ingresos </span>
+                  <span className="font-medium text-emerald-700">
                     {formatMXN(totales.ingresos)}
-                  </p>
-                </Card>
-                <Card className="p-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <ArrowUpCircle className="size-3.5 text-rose-600" />
-                    Egresos
-                  </div>
-                  <p className="text-base font-semibold mt-1">
+                  </span>
+                </span>
+                <span className="text-muted-foreground">·</span>
+                <span>
+                  <span className="text-muted-foreground">Egresos </span>
+                  <span className="font-medium text-rose-600">
                     {formatMXN(totales.egresos)}
-                  </p>
-                </Card>
-                <Card className="p-3">
-                  <p className="text-xs text-muted-foreground">Neto</p>
-                  <p
-                    className={`text-base font-semibold mt-1 ${totales.neto < 0 ? "text-rose-600" : "text-emerald-700"}`}
+                  </span>
+                </span>
+                <span className="text-muted-foreground">·</span>
+                <span>
+                  <span className="text-muted-foreground">Neto </span>
+                  <span
+                    className={`font-semibold ${totales.neto < 0 ? "text-rose-600" : "text-emerald-700"}`}
                   >
                     {formatMXN(totales.neto)}
-                  </p>
-                </Card>
+                  </span>
+                </span>
               </div>
-
-              {/* Tabla */}
-              <div className="border rounded-md overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Concepto</TableHead>
-                      <TableHead>Ref.</TableHead>
-                      <TableHead>Origen</TableHead>
-                      <TableHead className="text-right">Ingreso</TableHead>
-                      <TableHead className="text-right">Egreso</TableHead>
-                      <TableHead className="text-right">Saldo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movsQ.isLoading && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center text-sm text-muted-foreground py-6"
-                        >
-                          Cargando movimientos…
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {!movsQ.isLoading && movs.length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center text-sm text-muted-foreground py-6"
-                        >
-                          Sin movimientos en este rango.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {movs.map((m, i) => (
-                      <TableRow key={m.id}>
-                        <TableCell className="whitespace-nowrap">
-                          {formatDate(m.fecha)}
-                        </TableCell>
-                        <TableCell className="max-w-[260px] truncate">
-                          {m.concepto ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {m.referencia ?? "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {ORIGEN_LABEL[m.origen] ?? m.origen}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-emerald-700">
-                          {m.tipo === "ingreso" ? formatMXN(Number(m.monto)) : ""}
-                        </TableCell>
-                        <TableCell className="text-right text-rose-600">
-                          {m.tipo === "egreso" ? formatMXN(Number(m.monto)) : ""}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatMXN(saldosCorridos[i] ?? 0)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CuentaCard({
-  cuenta,
-  selected,
-  onClick,
-  dimmed,
-}: {
-  cuenta: Cuenta;
-  selected: boolean;
-  onClick: () => void;
-  dimmed?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left transition ${dimmed ? "opacity-60" : ""}`}
-    >
-      <Card
-        className={`p-4 hover:border-primary/50 ${
-          selected ? "border-primary ring-1 ring-primary/30" : ""
-        }`}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {cuenta.tipo === "bancaria" ? (
-              <Landmark className="size-4 text-muted-foreground shrink-0" />
-            ) : (
-              <Wallet className="size-4 text-muted-foreground shrink-0" />
-            )}
-            <div className="min-w-0">
-              <p className="font-medium truncate">{cuenta.nombre}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {cuenta.tipo === "bancaria"
-                  ? [cuenta.banco, last4(cuenta.numero_cuenta) && `····${last4(cuenta.numero_cuenta)}`]
-                      .filter(Boolean)
-                      .join(" · ") || "Bancaria"
-                  : "Caja fuerte"}
-              </p>
             </div>
-          </div>
-        </div>
-        <p className="text-lg font-semibold mt-2">
-          {formatMXN(Number(cuenta.saldo_actual))}
-        </p>
-        {cuenta.moneda && cuenta.moneda !== "MXN" && (
-          <p className="text-xs text-muted-foreground">{cuenta.moneda}</p>
+
+            {/* Tabla */}
+            <div className="border rounded-md overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center h-9">Fecha</TableHead>
+                    <TableHead className="text-left h-9">Concepto</TableHead>
+                    <TableHead className="text-center h-9">Ingreso</TableHead>
+                    <TableHead className="text-center h-9">Egreso</TableHead>
+                    <TableHead className="text-center h-9">Saldo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {movsQ.isLoading && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center text-sm text-muted-foreground py-6"
+                      >
+                        Cargando movimientos…
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!movsQ.isLoading && movs.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center text-sm text-muted-foreground py-6"
+                      >
+                        Sin movimientos en este rango.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {movs.map((m, i) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="text-center whitespace-nowrap py-1.5 text-sm tabular-nums">
+                        {formatDateShort(m.fecha)}
+                      </TableCell>
+                      <TableCell className="text-left py-1.5 text-sm max-w-[200px]">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="truncate cursor-help">
+                              {m.concepto ?? "—"}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <div className="space-y-1">
+                              <p className="text-xs">
+                                {m.concepto ?? "Sin concepto"}
+                              </p>
+                              <p className="text-[10px] opacity-80">
+                                Origen: {ORIGEN_LABEL[m.origen] ?? m.origen}
+                              </p>
+                              {m.referencia && (
+                                <p className="text-[10px] opacity-80">
+                                  Ref: {m.referencia}
+                                </p>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 text-sm text-emerald-700 tabular-nums">
+                        {m.tipo === "ingreso"
+                          ? formatMXN(Number(m.monto))
+                          : ""}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 text-sm text-rose-600 tabular-nums">
+                        {m.tipo === "egreso"
+                          ? formatMXN(Number(m.monto))
+                          : ""}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 text-sm font-medium tabular-nums">
+                        {formatMXN(saldosCorridos[i] ?? 0)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
         )}
-      </Card>
-    </button>
+      </div>
+    </TooltipProvider>
   );
 }
