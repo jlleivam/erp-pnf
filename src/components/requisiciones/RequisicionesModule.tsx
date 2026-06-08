@@ -93,7 +93,73 @@ export function RequisicionesModule({ obraId }: Props) {
               <p className="text-sm text-muted-foreground">Sin requisiciones activas</p>
             </Card>
           )}
-          {activas.map((r: any) => {
+
+          {isAdministrativo && activas.length > 0 && (
+            <Card className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Folio</TableHead>
+                    <TableHead className="hidden sm:table-cell">Solicitante</TableHead>
+                    <TableHead className="hidden md:table-cell text-right"># insumos</TableHead>
+                    <TableHead>Fecha más próxima</TableHead>
+                    <TableHead>Estatus</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activas.map((r: any) => {
+                    const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+                    const items = r.items ?? [];
+                    const fechas = items
+                      .map((it: any) => it.fecha_requerida)
+                      .filter(Boolean)
+                      .map((d: string) => new Date(d).getTime());
+                    const minF = fechas.length > 0 ? Math.min(...fechas) : null;
+                    const urgent = minF !== null && Math.ceil((minF - Date.now()) / 86400000) <= 3;
+                    const estatus = r.estatus as RequisicionEstatus;
+                    return (
+                      <TableRow key={r.id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium cursor-pointer" onClick={() => setDetalleId(r.id)}>
+                          {r.folio}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                          {r.solicitante?.nombre_completo ?? "—"}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-right">{items.length}</TableCell>
+                        <TableCell>
+                          {minF === null ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-sm whitespace-nowrap">{formatDate(new Date(minF).toISOString())}</span>
+                              {urgent && <Badge className="bg-rose-100 text-rose-800 w-fit">Urgente</Badge>}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {estatus === "enviada" && (
+                            <Button size="sm" onClick={() => setCotizacion({ id: r.id, tab: "solicitudes" })}>Cotizar</Button>
+                          )}
+                          {estatus === "en_cotizacion" && (
+                            <Button size="sm" variant="outline" onClick={() => setCotizacion({ id: r.id, tab: "solicitudes" })}>Continuar</Button>
+                          )}
+                          {["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && (
+                            <Button size="sm" variant="outline" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+
+          {!isAdministrativo && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
             const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
             const isExpanded = expandidos.has(r.id);
@@ -167,6 +233,7 @@ export function RequisicionesModule({ obraId }: Props) {
           })}
 
         </TabsContent>
+
 
         <TabsContent value="historial" className="mt-4">
           <Card className="overflow-x-auto">
