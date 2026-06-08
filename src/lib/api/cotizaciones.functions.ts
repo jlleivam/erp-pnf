@@ -72,7 +72,7 @@ export const getCotizacionRequisicion = createServerFn({ method: "POST" })
 
     const { data: ocs, error: ocsErr } = await supabase
       .from("ordenes_compra")
-      .select("id, paquete_id, folio, estatus, total, enviada_supervisor_at, enviada_proveedor_at, autorizada_at, rechazada_at, notas_supervisor, created_at, proveedor:terceros(id, razon_social)")
+      .select("id, paquete_id, folio, estatus, total, monto_pagado, estado_pago, pagada_at, enviada_supervisor_at, enviada_proveedor_at, autorizada_at, rechazada_at, notas_supervisor, created_at, proveedor:terceros(id, razon_social), paquete:cotizacion_paquetes(id, numero, items:cotizacion_paquete_insumos(id, cantidad, precio_unitario, subtotal, insumo:insumos(id, nombre, unidad)))")
       .eq("requisicion_id", data.requisicionId)
       .order("created_at", { ascending: true });
     if (ocsErr) throw new Error(ocsErr.message);
