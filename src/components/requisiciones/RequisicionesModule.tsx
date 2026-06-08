@@ -98,13 +98,13 @@ export function RequisicionesModule({ obraId }: Props) {
             <Card className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Folio</TableHead>
-                    <TableHead className="hidden sm:table-cell">Solicitante</TableHead>
-                    <TableHead className="hidden md:table-cell text-right"># insumos</TableHead>
-                    <TableHead>Fecha más próxima</TableHead>
-                    <TableHead>Estatus</TableHead>
-                    <TableHead className="text-right">Acción</TableHead>
+                  <TableRow className="h-8">
+                    <TableHead className="py-1 text-xs">Folio</TableHead>
+                    <TableHead className="hidden sm:table-cell py-1 text-xs">Solicitante</TableHead>
+                    <TableHead className="hidden md:table-cell text-right py-1 text-xs"># insumos</TableHead>
+                    <TableHead className="py-1 text-xs">Fecha más próxima</TableHead>
+                    <TableHead className="py-1 text-xs">Estatus</TableHead>
+                    <TableHead className="text-right py-1 text-xs">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -119,37 +119,36 @@ export function RequisicionesModule({ obraId }: Props) {
                     const urgent = minF !== null && Math.ceil((minF - Date.now()) / 86400000) <= 3;
                     const estatus = r.estatus as RequisicionEstatus;
                     return (
-                      <TableRow key={r.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium cursor-pointer" onClick={() => setDetalleId(r.id)}>
+                      <TableRow key={r.id} className="hover:bg-muted/50 h-9">
+                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => setDetalleId(r.id)}>
                           {r.folio}
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                        <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
                           {r.solicitante?.nombre_completo ?? "—"}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-right">{items.length}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell text-right py-1 text-sm">{items.length}</TableCell>
+                        <TableCell className="py-1">
                           {minF === null ? (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground text-sm">—</span>
                           ) : (
-                            <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-sm whitespace-nowrap">{formatDate(new Date(minF).toISOString())}</span>
-                              {urgent && <Badge className="bg-rose-100 text-rose-800 w-fit">Urgente</Badge>}
+                              {urgent && <Badge className="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0 h-4">Urgente</Badge>}
                             </div>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
+                        <TableCell className="py-1">
+                          <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0 h-5`}>{meta.label}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right py-1">
                           {estatus === "enviada" && (
-                            <Button size="sm" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
+                            <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
                           )}
                           {estatus === "en_cotizacion" && (
-                            <Button size="sm" variant="outline" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
-
+                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
                           )}
                           {["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && (
-                            <Button size="sm" variant="outline" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
+                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
                           )}
                         </TableCell>
                       </TableRow>
