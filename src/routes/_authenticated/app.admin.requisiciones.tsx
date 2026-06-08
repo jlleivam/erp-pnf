@@ -153,14 +153,14 @@ function FechaProximaCell({ rowId, fetchDetalle }: { rowId: string; fetchDetalle
     .map((it: any) => it.fecha_requerida)
     .filter(Boolean)
     .map((d: string) => new Date(d).getTime());
-  if (fechas.length === 0) return <span className="text-muted-foreground">—</span>;
+  if (fechas.length === 0) return <span className="text-muted-foreground text-sm">—</span>;
   const min = Math.min(...fechas);
   const diff = Math.ceil((min - Date.now()) / (1000 * 60 * 60 * 24));
   const urgent = diff <= 3;
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex items-center gap-1.5">
       <span className="text-sm whitespace-nowrap">{formatDate(new Date(min).toISOString())}</span>
-      {urgent && <Badge className="bg-rose-100 text-rose-800 w-fit">Urgente</Badge>}
+      {urgent && <Badge className="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0 h-4">Urgente</Badge>}
     </div>
   );
 }
@@ -171,14 +171,13 @@ function AccionCell({ row, onAction }: {
 }) {
   const estatus = row.estatus as RequisicionEstatus;
   if (estatus === "enviada") {
-    return <Button size="sm" onClick={() => onAction(row, "requisicion")}>Cotizar</Button>;
+    return <Button size="sm" className="h-6 px-2 text-xs" onClick={() => onAction(row, "requisicion")}>Cotizar</Button>;
   }
   if (estatus === "en_cotizacion") {
-    return <Button size="sm" variant="outline" onClick={() => onAction(row, "requisicion")}>Continuar</Button>;
-
+    return <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => onAction(row, "requisicion")}>Continuar</Button>;
   }
   if (["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus)) {
-    return <Button size="sm" variant="outline" onClick={() => onAction(row, "ocs")}>Ver OCs</Button>;
+    return <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => onAction(row, "ocs")}>Ver OCs</Button>;
   }
   return null;
 }
@@ -209,38 +208,38 @@ function RequisicionesTable({
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Folio</TableHead>
-              <TableHead>Obra</TableHead>
-              <TableHead className="hidden sm:table-cell">Solicitante</TableHead>
-              <TableHead className="hidden md:table-cell text-right">Insumos</TableHead>
-              <TableHead>Fecha más próxima</TableHead>
-              <TableHead>Estatus</TableHead>
-              <TableHead className="text-right">Acción</TableHead>
+            <TableRow className="h-8">
+              <TableHead className="py-1 text-xs">Folio</TableHead>
+              <TableHead className="py-1 text-xs">Obra</TableHead>
+              <TableHead className="hidden sm:table-cell py-1 text-xs">Solicitante</TableHead>
+              <TableHead className="hidden md:table-cell text-right py-1 text-xs">Insumos</TableHead>
+              <TableHead className="py-1 text-xs">Fecha más próxima</TableHead>
+              <TableHead className="py-1 text-xs">Estatus</TableHead>
+              <TableHead className="text-right py-1 text-xs">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((r) => {
               const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
               return (
-                <TableRow key={r.id} className="hover:bg-muted/50">
-                  <TableCell className="font-medium cursor-pointer" onClick={() => onRowClick(r.id)}>
+                <TableRow key={r.id} className="hover:bg-muted/50 h-9">
+                  <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => onRowClick(r.id)}>
                     {r.folio}
                   </TableCell>
-                  <TableCell className="max-w-[160px] truncate">{r.obra?.nombre ?? "—"}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                  <TableCell className="py-1 max-w-[160px] truncate text-sm">{r.obra?.nombre ?? "—"}</TableCell>
+                  <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
                     {r.solicitante ?? "—"}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-right">{r.insumos_count}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell text-right py-1 text-sm">{r.insumos_count}</TableCell>
+                  <TableCell className="py-1">
                     <FechaProximaCell rowId={r.id} fetchDetalle={fetchDetalle} />
                   </TableCell>
-                  <TableCell>
-                    <Badge className={meta?.badge ?? ""} variant="secondary">
+                  <TableCell className="py-1">
+                    <Badge className={`${meta?.badge ?? ""} text-[10px] px-2 py-0 h-5`} variant="secondary">
                       {meta?.label ?? r.estatus}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right py-1">
                     <AccionCell row={r} onAction={onAction} />
                   </TableCell>
                 </TableRow>
