@@ -49,7 +49,7 @@ export function RegistrarPagoOCDialog({
   });
 
   const cuentas: Cuenta[] = useMemo(
-    () => (cuentasQ.data ?? []).filter((c: Cuenta) => c.activa),
+    () => (cuentasQ.data ?? []).filter((c: { tipo: string; activa: boolean }) => c.activa),
     [cuentasQ.data],
   );
 
@@ -113,7 +113,7 @@ export function RegistrarPagoOCDialog({
         <div className="space-y-3">
           <div className="rounded-md border bg-muted/30 p-3 text-sm flex justify-between">
             <span className="text-muted-foreground">Saldo pendiente de la OC</span>
-            <span className="font-semibold">{formatMoneda(saldoPendiente)}</span>
+            <span className="font-semibold">{formatMXN(saldoPendiente)}</span>
           </div>
 
           <div>
@@ -128,14 +128,14 @@ export function RegistrarPagoOCDialog({
                 )}
                 {cuentas.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.nombre} · {c.tipo === "bancaria" ? (c.banco ?? "Banco") : "Caja fuerte"} · {formatMoneda(Number(c.saldo_actual))}
+                    {c.nombre} · {c.tipo === "bancaria" ? (c.banco ?? "Banco") : "Caja fuerte"} · {formatMXN(Number(c.saldo_actual))}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {cuentaSel && excedeCuenta && (
               <p className="text-xs text-rose-600 mt-1">
-                El monto excede el saldo disponible de la cuenta ({formatMoneda(Number(cuentaSel.saldo_actual))})
+                El monto excede el saldo disponible de la cuenta ({formatMXN(Number(cuentaSel.saldo_actual))})
               </p>
             )}
           </div>
