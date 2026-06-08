@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/cotizaciones.functions";
 import { listPagosOC, cancelarPagoOC } from "@/lib/api/pagos.functions";
 import { RegistrarPagoOCDialog } from "@/components/pagos/RegistrarPagoOCDialog";
+import { RecepcionDialog } from "@/components/almacen/RecepcionDialog";
 
 import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
 import { SolicitudesTab } from "./SolicitudesTab";
