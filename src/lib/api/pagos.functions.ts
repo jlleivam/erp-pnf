@@ -221,7 +221,7 @@ export const cancelarPagoOC = createServerFn({ method: "POST" })
     if (oc) {
       const nuevoPagado = +(Number(oc.monto_pagado) - Number(pago.monto)).toFixed(2);
       const total = Number(oc.total);
-      const nuevoEstado = nuevoPagado <= 0.001 ? "pendiente" : (nuevoPagado >= total - 0.001 ? "pagado" : "parcial");
+      const nuevoEstado = nuevoPagado <= 0.01 ? "pendiente" : (nuevoPagado >= total - 0.01 ? "pagado" : "parcial");
       await supabaseAdmin.from("ordenes_compra").update({
         monto_pagado: Math.max(0, nuevoPagado),
         estado_pago: nuevoEstado,
