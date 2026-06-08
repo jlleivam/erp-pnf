@@ -70,8 +70,7 @@ export function CuentasTab() {
   const [detalle, setDetalle] = useState<Cuenta | null>(null);
 
   const crearMut = useMutation({
-    mutationFn: (input: Parameters<typeof crearCuenta>[0]["data"]) =>
-      crearFn({ data: input }),
+    mutationFn: (input: FormValues) => crearFn({ data: input }),
     onSuccess: () => {
       toast.success("Cuenta creada");
       qc.invalidateQueries({ queryKey: ["cuentas"] });
@@ -81,8 +80,14 @@ export function CuentasTab() {
   });
 
   const editarMut = useMutation({
-    mutationFn: (input: Parameters<typeof actualizarCuenta>[0]["data"]) =>
-      actualizarFn({ data: input }),
+    mutationFn: (input: {
+      id: string;
+      nombre: string;
+      banco: string | null;
+      numero_cuenta: string | null;
+      clabe: string | null;
+      notas: string | null;
+    }) => actualizarFn({ data: input }),
     onSuccess: () => {
       toast.success("Cuenta actualizada");
       qc.invalidateQueries({ queryKey: ["cuentas"] });
