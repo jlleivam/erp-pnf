@@ -255,6 +255,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                   (oc.estatus === "autorizada" || oc.estatus === "enviada" || oc.estatus === "recibida_parcial" || oc.estatus === "recibida") &&
                   estadoPago !== "pagado";
                 const puedeRecibir =
+                  !!oc.puede_recibir &&
                   (oc.estatus === "enviada" || oc.estatus === "recibida_parcial") && !cerrada;
                 return (
                   <Card key={oc.id} className="p-4 space-y-3">
