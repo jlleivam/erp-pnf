@@ -717,16 +717,21 @@ export function ComparativaTable({
                                     type="number"
                                     min="0"
                                     step="0.01"
+                                    max={ofertaA?.cantidad ?? undefined}
                                     disabled={bloqueado || !isAdmin}
-                                    className={`h-7 text-xs w-20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${excede ? "border-amber-400" : ""}`}
+                                    className="h-7 text-xs w-20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     value={a.cantidad || ""}
-                                    onChange={(e) =>
-                                      updateAsignacion(ri.insumo.id, idx, {
-                                        cantidad: Number(e.target.value) || 0,
-                                      })
-                                    }
+                                    onChange={(e) => {
+                                      const raw = Number(e.target.value) || 0;
+                                      const tope = ofertaA?.cantidad ?? Infinity;
+                                      if (raw > tope) {
+                                        toast.error(`El proveedor solo cotizó ${tope} ${unidad} de ${ri.insumo.nombre}`);
+                                      }
+                                      const clamped = Math.min(raw, tope);
+                                      updateAsignacion(ri.insumo.id, idx, { cantidad: clamped });
+                                    }}
                                   />
-                                  <span className="text-[11px] text-muted-foreground whitespace-nowrap truncate">
+                                  <span className={`text-[11px] whitespace-nowrap truncate ${ofertaA && a.cantidad >= ofertaA.cantidad ? "text-emerald-700 font-medium" : "text-muted-foreground"}`}>
                                     {unidad}
                                     {ofertaA ? ` / ${ofertaA.cantidad}` : ""}
                                   </span>
