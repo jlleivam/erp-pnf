@@ -130,7 +130,7 @@ export function RequisicionDetalleSheet({ id, open, onOpenChange }: Props) {
                       </p>
                       {at && (
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(at)}
+                          {formatDateTime(at)}
                           {responsable && ` · ${responsable}`}
                         </p>
                       )}
