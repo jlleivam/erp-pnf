@@ -49,7 +49,7 @@ export function RegistrarPagoOCDialog({
   });
 
   const cuentas: Cuenta[] = useMemo(
-    () => (cuentasQ.data ?? []).filter((c: { tipo: string; activa: boolean }) => c.activa),
+    () => ((cuentasQ.data ?? []) as unknown as Cuenta[]).filter((c) => c.activa),
     [cuentasQ.data],
   );
 
