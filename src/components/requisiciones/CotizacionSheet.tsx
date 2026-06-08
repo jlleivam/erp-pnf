@@ -522,3 +522,28 @@ function OCPagosPanel({
     </div>
   );
 }
+
+function OCRecepcionButton({ ocId, onSaved }: { ocId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+        Registrar recepción
+      </Button>
+      {open && (
+        <RecepcionDialog
+          ocId={ocId}
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o);
+            if (!o) {
+              qc.invalidateQueries({ queryKey: ["almacen"] });
+              onSaved();
+            }
+          }}
+        />
+      )}
+    </>
+  );
+}
