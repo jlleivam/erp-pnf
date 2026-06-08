@@ -114,6 +114,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
   });
 
   const isAdmin = roles.includes("director") || roles.includes("administrativo");
+  const isDirector = roles.includes("director");
 
 
   if (!open) return null;
