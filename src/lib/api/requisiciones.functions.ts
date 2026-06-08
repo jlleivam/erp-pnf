@@ -158,6 +158,7 @@ export const crearRequisicion = createServerFn({ method: "POST" })
     const { data: profile } = await supabase
       .from("profiles").select("company_id").eq("id", userId).maybeSingle();
     if (!profile?.company_id) throw new Error("Sin empresa asociada");
+    const companyId = profile.company_id;
 
     const { data: folioData, error: folioErr } = await supabase
       .rpc("siguiente_folio_requisicion", { _company_id: profile.company_id });
