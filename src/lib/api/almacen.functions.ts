@@ -199,7 +199,14 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
     if (!["enviada", "recibida_parcial"].includes(oc.estatus)) {
       throw new Error("La OC no está disponible para recepción");
     }
-    await assertObraAccess(supabase, userId, oc.obra_id, companyId, roles);
+    if (!roles.includes("director")) {
+      const { data: member } = await supabase
+        .from("obra_team").select("id")
+        .eq("obra_id", oc.obra_id).eq("user_id", userId).eq("role", "residente").maybeSingle();
+      if (!member) {
+        throw new Error("Solo el director o el residente de la obra pueden registrar recepciones");
+      }
+    }
 
     const semana = await getOrCreateSemanaAbierta(supabase, companyId, oc.obra_id);
 
