@@ -242,17 +242,45 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
               {ocs.map((oc) => {
                 const meta = OC_BADGE[oc.estatus];
                 const items = oc.paquete?.items ?? [];
+                const total = Number(oc.total);
+                const pagado = Number(oc.monto_pagado ?? 0);
+                const saldoPendiente = +(total - pagado).toFixed(2);
+                const estadoPago: "pendiente" | "parcial" | "pagado" = oc.estado_pago ?? "pendiente";
+                const puedePagar =
+                  isAdmin &&
+                  (oc.estatus === "autorizada" || oc.estatus === "enviada") &&
+                  estadoPago !== "pagado";
                 return (
                   <Card key={oc.id} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold">{oc.folio}</p>
                           <Badge className={meta?.className}>{meta?.label}</Badge>
+                          {(oc.estatus === "autorizada" || oc.estatus === "enviada" || estadoPago !== "pendiente") && (
+                            <Badge
+                              className={
+                                estadoPago === "pagado"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : estadoPago === "parcial"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-slate-100 text-slate-700"
+                              }
+                            >
+                              {estadoPago === "pagado" ? "Pagada" : estadoPago === "parcial" ? "Pago parcial" : "Sin pago"}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">{oc.proveedor?.razon_social}</p>
                       </div>
-                      <p className="text-lg font-semibold">{mxn(Number(oc.total))}</p>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold">{mxn(total)}</p>
+                        {pagado > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Pagado {mxn(pagado)} · pend. {mxn(saldoPendiente)}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="border rounded-md overflow-x-auto">
@@ -334,6 +362,17 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                           </Button>
                         </div>
                       </div>
+                    )}
+
+                    {(oc.estatus === "autorizada" || oc.estatus === "enviada" || pagado > 0) && (
+                      <OCPagosPanel
+                        ocId={oc.id}
+                        ocFolio={oc.folio}
+                        saldoPendiente={saldoPendiente}
+                        puedePagar={puedePagar}
+                        puedeCancelar={isDirector}
+                        onChange={invalidate}
+                      />
                     )}
                   </Card>
                 );
