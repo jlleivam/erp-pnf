@@ -198,9 +198,9 @@ export const crearRequisicion = createServerFn({ method: "POST" })
         .from("user_roles")
         .select("user_id")
         .eq("company_id", profile.company_id)
-        .eq("role", "administrativo");
+        .in("role", ["administrativo", "director"]);
       const destinatarios = Array.from(
-        new Set((admins ?? []).map((a: any) => a.user_id as string))
+        new Set((admins ?? []).map((a: any) => a.user_id as string).filter((u) => u !== userId))
       );
       if (destinatarios.length > 0) {
         const [{ data: solicitanteProfile }, { data: obra }] = await Promise.all([
