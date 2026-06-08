@@ -802,6 +802,128 @@ export type Database = {
           },
         ]
       }
+      cuenta_movimientos: {
+        Row: {
+          company_id: string
+          concepto: string | null
+          creado_por: string | null
+          created_at: string
+          cuenta_id: string
+          fecha: string
+          id: string
+          monto: number
+          origen: string
+          origen_id: string | null
+          referencia: string | null
+          tipo: string
+        }
+        Insert: {
+          company_id: string
+          concepto?: string | null
+          creado_por?: string | null
+          created_at?: string
+          cuenta_id: string
+          fecha?: string
+          id?: string
+          monto: number
+          origen: string
+          origen_id?: string | null
+          referencia?: string | null
+          tipo: string
+        }
+        Update: {
+          company_id?: string
+          concepto?: string | null
+          creado_por?: string | null
+          created_at?: string
+          cuenta_id?: string
+          fecha?: string
+          id?: string
+          monto?: number
+          origen?: string
+          origen_id?: string | null
+          referencia?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuenta_movimientos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuenta_movimientos_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cuentas: {
+        Row: {
+          activa: boolean
+          banco: string | null
+          clabe: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          moneda: string
+          nombre: string
+          notas: string | null
+          numero_cuenta: string | null
+          saldo_actual: number
+          saldo_inicial: number
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          activa?: boolean
+          banco?: string | null
+          clabe?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          moneda?: string
+          nombre: string
+          notas?: string | null
+          numero_cuenta?: string | null
+          saldo_actual?: number
+          saldo_inicial?: number
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          activa?: boolean
+          banco?: string | null
+          clabe?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          moneda?: string
+          nombre?: string
+          notas?: string | null
+          numero_cuenta?: string | null
+          saldo_actual?: number
+          saldo_inicial?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuentas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insumo_categorias: {
         Row: {
           company_id: string

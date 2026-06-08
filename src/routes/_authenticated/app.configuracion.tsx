@@ -8,6 +8,7 @@ import { EquipoModule } from "@/components/equipo/EquipoModule";
 import { FacturacionTab, type FacturacionTabHandle } from "@/components/configuracion/FacturacionTab";
 import { ConfiguracionTab, type ConfiguracionTabHandle } from "@/components/configuracion/ConfiguracionTab";
 import { IdentidadTab } from "@/components/configuracion/IdentidadTab";
+import { CuentasTab } from "@/components/configuracion/CuentasTab";
 import { useEffectiveIsDirector } from "@/stores/auth";
 
 export const Route = createFileRoute("/_authenticated/app/configuracion")({
@@ -53,6 +54,7 @@ function Configuracion() {
           <TabsTrigger value="configuracion">Configuración</TabsTrigger>
           <TabsTrigger value="identidad">Identidad</TabsTrigger>
           <TabsTrigger value="equipo">Equipo</TabsTrigger>
+          <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
           <TabsTrigger value="documentacion">Documentación</TabsTrigger>
         </TabsList>
 
@@ -88,6 +90,15 @@ function Configuracion() {
             <CardHeader><CardTitle>Equipo de la empresa</CardTitle></CardHeader>
             <CardContent>
               <EquipoModule />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cuentas" className="mt-4">
+          <Card>
+            <CardHeader><CardTitle>Cuentas bancarias y caja fuerte</CardTitle></CardHeader>
+            <CardContent>
+              <CuentasTab />
             </CardContent>
           </Card>
         </TabsContent>
