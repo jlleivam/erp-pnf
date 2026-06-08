@@ -136,8 +136,12 @@ export const registrarPagoOC = createServerFn({ method: "POST" })
 
     // 5. Update OC
     const nuevoPagado = +(pagado + data.monto).toFixed(2);
-    const nuevoEstado = nuevoPagado >= total - 0.001 ? "pagado" : "parcial";
-    const updateOC: Record<string, unknown> = {
+    const nuevoEstado: "parcial" | "pagado" = nuevoPagado >= total - 0.001 ? "pagado" : "parcial";
+    const updateOC: {
+      monto_pagado: number;
+      estado_pago: "parcial" | "pagado";
+      pagada_at?: string;
+    } = {
       monto_pagado: nuevoPagado,
       estado_pago: nuevoEstado,
     };
