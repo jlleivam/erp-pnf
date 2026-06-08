@@ -1,55 +1,23 @@
-# Tres correcciones en OC
+# Garantizar que "Vista: <Rol>" se comporte exactamente como ese rol
 
-## 1. Administrativo no debe ver "Registrar recepción"
+## Estado actual
 
-**Causa**: el backend (`getCotizacionRequisicion`) calcula `puede_recibir` con los roles **reales** del usuario. Cuando el director simula ser administrativo, sus roles reales siguen siendo `director`, así que el backend devuelve `puede_recibir=true` y el botón aparece.
+El toggle ya está conectado a `useEffectiveRoles()`, que devuelve **solo el rol simulado** cuando un director está actuando como otro perfil. Casi todos los módulos (`RequisicionesModule`, `ComparativaTable`, `CajaChicaModule`, `GasolinasModule`, `RentasModule`, `CatalogoInsumosModule`) ya gatean su UI con esos roles efectivos, así que respetan la simulación.
 
-**Fix**: en `src/components/requisiciones/CotizacionSheet.tsx`, dejar de usar `oc.puede_recibir` para mostrar el botón. En su lugar gatear por `useEffectiveRoles()`:
+La única fuga que existía era el botón **Registrar recepción** en `CotizacionSheet`, que se gateaba con `oc.puede_recibir` calculado en el backend con los roles **reales** del usuario. Eso ya quedó corregido en el cambio anterior — ahora usa `roles.includes("director") || roles.includes("residente")` desde `useEffectiveRoles`.
 
-```ts
-const puedeRecibirUI = roles.includes("director") || roles.includes("residente");
-const puedeRecibir =
-  puedeRecibirUI &&
-  (oc.estatus === "enviada" || oc.estatus === "recibida_parcial") &&
-  !cerrada;
-```
+## Limpieza pendiente para evitar reincidencias
 
-El backend (`registrarRecepcion`) ya valida estrictamente (director real o residente real de la obra), así que la seguridad no cambia.
+1. **`src/lib/api/cotizaciones.functions.ts`**: ya no se consume `puede_recibir` desde el cliente, pero sigue siendo enviado en la respuesta de `getCotizacionRequisicion`. Eliminar:
+   - El cálculo de `puedeRecibir` (consulta a `user_roles` + `obra_team` para residente).
+   - El campo `puede_recibir` del objeto de cada OC.
 
-## 2. OC pagada al 100% sigue mostrando "Registrar pago"
+   El backend `registrarRecepcion` en `almacen.functions.ts` mantiene su validación estricta con roles reales (director o residente de la obra), así que la seguridad no se debilita: la simulación afecta solo a la UI, y si por error un administrativo simulado intentara invocar el endpoint, seguiría siendo rechazado.
 
-**Causa**: `ordenes_compra.total` se guarda con precisión completa (ej. `2301.7241379310344`) pero los pagos se capturan a 2 decimales (`2301.72`). En `registrarPagoOC` se compara `nuevoPagado >= total - 0.001`, y la diferencia real es `~0.004 > 0.001`, por lo que `estado_pago` se queda en `parcial` y el UI sigue mostrando "Registrar pago".
-
-**Fix (código)** en `src/lib/api/pagos.functions.ts`, función `registrarPagoOC`:
-- Subir la tolerancia a **1 centavo** (`0.01`):
-  - `if (data.monto > pendiente + 0.01)` (línea 75)
-  - `nuevoPagado >= total - 0.01 ? "pagado" : "parcial"` (línea 139)
-- Lo mismo en `cancelarPagoOC` si compara con `0.001`.
-
-**Fix (datos)**: migración de backfill para OCs ya afectadas:
-
-```sql
-UPDATE public.ordenes_compra
-SET estado_pago = 'pagado',
-    pagada_at = COALESCE(pagada_at, now())
-WHERE estado_pago = 'parcial'
-  AND monto_pagado >= ROUND(total::numeric, 2) - 0.01;
-```
-
-## 3. Badge dice "Pago parcial" cuando se pagó en una sola exhibición
-
-**Misma causa que 2**. Una vez que `estado_pago` quede en `pagado`, el badge cambia automáticamente a "Pagada" (la UI ya tiene esa lógica).
-
-Adicional en UI: en `CotizacionSheet`, cuando `pagado + 0.01 >= total` mostrar "Pagada" aunque el campo aún dijera `parcial` (red de seguridad para registros viejos):
-
-```ts
-const fullyPaid = estadoPago === "pagado" || pagado + 0.01 >= total;
-```
-
-Usar `fullyPaid` para el badge y para `puedePagar`.
+2. **Auditoría rápida (sin cambios)**: confirmar que ningún otro componente lee flags de permiso devueltos por el backend para mostrar/ocultar acciones. Ya verifiqué que `puede_recibir` era el único; el resto del gating se hace en el cliente con `useEffectiveRoles`.
 
 ## Fuera de alcance
 
-- No se cambia `assertObraAccess` ni los permisos de almacén/movimientos.
-- No se altera el cálculo de saldos por proveedor.
-- No se cambia la captura/redondeo de `total` al generar la OC (cualquier OC nueva se cierra correctamente con la tolerancia de 1 centavo).
+- No se altera la lógica de `assumedRole` ni el componente del toggle.
+- No se cambian las validaciones de seguridad del backend (siguen usando roles reales — esto es intencional, defensa en profundidad).
+- No se elimina aún el toggle de la app; el usuario lo retirará más adelante.
