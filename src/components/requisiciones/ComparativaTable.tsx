@@ -676,7 +676,7 @@ export function ComparativaTable({
                         <div className="flex flex-col gap-1.5">
                           {lista.map((a, idx) => {
                             const ofertaA = ofertas?.get(a.proveedorId);
-                            const excede = ofertaA ? a.cantidad > ofertaA.cantidad : false;
+                            
                             const provActual = opcionesDisponibles.find((sc) => sc.id === a.proveedorId);
                             const provReal = provBySolicitud.get(a.proveedorId);
                             const bloqueado = provReal ? provBloqueado(provReal) : false;
