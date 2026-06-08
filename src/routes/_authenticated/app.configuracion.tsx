@@ -8,6 +8,7 @@ import { EquipoModule } from "@/components/equipo/EquipoModule";
 import { FacturacionTab, type FacturacionTabHandle } from "@/components/configuracion/FacturacionTab";
 import { ConfiguracionTab, type ConfiguracionTabHandle } from "@/components/configuracion/ConfiguracionTab";
 import { IdentidadTab } from "@/components/configuracion/IdentidadTab";
+import { CuentasTab } from "@/components/configuracion/CuentasTab";
 import { useEffectiveIsDirector } from "@/stores/auth";
 
 export const Route = createFileRoute("/_authenticated/app/configuracion")({
