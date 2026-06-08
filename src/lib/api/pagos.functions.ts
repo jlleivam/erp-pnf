@@ -72,7 +72,7 @@ export const registrarPagoOC = createServerFn({ method: "POST" })
     const total = Number(oc.total);
     const pagado = Number(oc.monto_pagado);
     const pendiente = +(total - pagado).toFixed(2);
-    if (data.monto > pendiente + 0.001) {
+    if (data.monto > pendiente + 0.01) {
       throw new Error(`El monto (${data.monto}) excede el saldo pendiente (${pendiente})`);
     }
 
@@ -136,7 +136,7 @@ export const registrarPagoOC = createServerFn({ method: "POST" })
 
     // 5. Update OC
     const nuevoPagado = +(pagado + data.monto).toFixed(2);
-    const nuevoEstado: "parcial" | "pagado" = nuevoPagado >= total - 0.001 ? "pagado" : "parcial";
+    const nuevoEstado: "parcial" | "pagado" = nuevoPagado >= total - 0.01 ? "pagado" : "parcial";
     const updateOC: {
       monto_pagado: number;
       estado_pago: "parcial" | "pagado";
@@ -221,7 +221,7 @@ export const cancelarPagoOC = createServerFn({ method: "POST" })
     if (oc) {
       const nuevoPagado = +(Number(oc.monto_pagado) - Number(pago.monto)).toFixed(2);
       const total = Number(oc.total);
-      const nuevoEstado = nuevoPagado <= 0.001 ? "pendiente" : (nuevoPagado >= total - 0.001 ? "pagado" : "parcial");
+      const nuevoEstado = nuevoPagado <= 0.01 ? "pendiente" : (nuevoPagado >= total - 0.01 ? "pagado" : "parcial");
       await supabaseAdmin.from("ordenes_compra").update({
         monto_pagado: Math.max(0, nuevoPagado),
         estado_pago: nuevoEstado,

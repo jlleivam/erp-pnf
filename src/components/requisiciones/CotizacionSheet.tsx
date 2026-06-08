@@ -245,7 +245,9 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 const total = Number(oc.total);
                 const pagado = Number(oc.monto_pagado ?? 0);
                 const saldoPendiente = +(total - pagado).toFixed(2);
-                const estadoPago: "pendiente" | "parcial" | "pagado" = oc.estado_pago ?? "pendiente";
+                const estadoPagoRaw: "pendiente" | "parcial" | "pagado" = oc.estado_pago ?? "pendiente";
+                const fullyPaid = estadoPagoRaw === "pagado" || (pagado > 0 && pagado + 0.01 >= total);
+                const estadoPago: "pendiente" | "parcial" | "pagado" = fullyPaid ? "pagado" : estadoPagoRaw;
                 const recibidoMap: Record<string, number> = oc.recibido_por_insumo ?? {};
                 const recepcionCompleta: boolean = !!oc.recepcion_completa;
                 const cerrada = recepcionCompleta && estadoPago === "pagado";
@@ -253,9 +255,10 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 const puedePagar =
                   isAdmin &&
                   (oc.estatus === "autorizada" || oc.estatus === "enviada" || oc.estatus === "recibida_parcial" || oc.estatus === "recibida") &&
-                  estadoPago !== "pagado";
+                  !fullyPaid;
+                const puedeRecibirRol = roles.includes("director") || roles.includes("residente");
                 const puedeRecibir =
-                  !!oc.puede_recibir &&
+                  puedeRecibirRol &&
                   (oc.estatus === "enviada" || oc.estatus === "recibida_parcial") && !cerrada;
                 return (
                   <Card key={oc.id} className="p-4 space-y-3">
