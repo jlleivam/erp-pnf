@@ -22,9 +22,10 @@ interface Props { obraId: string }
 
 export function RequisicionesModule({ obraId }: Props) {
   const roles = useEffectiveRoles();
-  const puedeCrear = isDirector(roles) || roles.some((r) =>
-    ["pm", "auxiliar", "administrativo", "residente"].includes(r as string)
-  );
+  const isAdministrativo = roles.includes("administrativo");
+  const puedeCrear = !isAdministrativo && (isDirector(roles) || roles.some((r) =>
+    ["pm", "auxiliar", "residente"].includes(r as string)
+  ));
   const isSupervisor = isDirector(roles) || roles.includes("supervisor");
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
