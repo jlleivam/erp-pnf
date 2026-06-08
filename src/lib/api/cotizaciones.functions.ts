@@ -18,7 +18,7 @@ function assertAdmin(roles: string[]) {
   }
 }
 
-async function recalcEstatusRequisicion(supabase: any, requisicionId: string) {
+async function recalcEstatusRequisicion(supabase: any, requisicionId: string, userId?: string) {
   const { data: paquetes } = await supabase
     .from("cotizacion_paquetes").select("id").eq("requisicion_id", requisicionId);
   const { data: ocs } = await supabase
@@ -40,11 +40,12 @@ async function recalcEstatusRequisicion(supabase: any, requisicionId: string) {
     nuevo = "en_cotizacion";
   }
   if (!nuevo) return;
+  const nowIso = new Date().toISOString();
   const patch: any = { estatus: nuevo };
-  if (nuevo === "en_cotizacion") patch.cotizacion_at = new Date().toISOString();
-  if (nuevo === "pendiente_autorizacion") patch.autorizacion_at = new Date().toISOString();
-  if (nuevo === "oc_generada") patch.oc_at = new Date().toISOString();
-  if (nuevo === "completada") patch.completada_at = new Date().toISOString();
+  if (nuevo === "en_cotizacion") { patch.cotizacion_at = nowIso; if (userId) patch.cotizacion_por = userId; }
+  if (nuevo === "pendiente_autorizacion") { patch.autorizacion_at = nowIso; if (userId) patch.autorizacion_por = userId; }
+  if (nuevo === "oc_generada") { patch.oc_at = nowIso; if (userId) patch.oc_por = userId; }
+  if (nuevo === "completada") { patch.completada_at = nowIso; if (userId) patch.completada_por = userId; }
   await supabase.from("requisiciones").update(patch).eq("id", requisicionId);
 }
 
