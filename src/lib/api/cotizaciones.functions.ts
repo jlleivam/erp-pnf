@@ -191,7 +191,7 @@ export const guardarPaquete = createServerFn({ method: "POST" })
       if (insErr) throw new Error(insErr.message);
     }
 
-    await recalcEstatusRequisicion(supabase, data.requisicionId);
+    await recalcEstatusRequisicion(supabase, data.requisicionId, userId);
     return { id: paqueteId };
   });
 
@@ -211,7 +211,7 @@ export const eliminarPaquete = createServerFn({ method: "POST" })
     if (oc) await supabase.from("ordenes_compra").delete().eq("id", oc.id);
     const { error } = await supabase.from("cotizacion_paquetes").delete().eq("id", data.paqueteId);
     if (error) throw new Error(error.message);
-    await recalcEstatusRequisicion(supabase, paquete.requisicion_id);
+    await recalcEstatusRequisicion(supabase, paquete.requisicion_id, userId);
     return { ok: true };
   });
 
@@ -245,7 +245,7 @@ export const generarOC = createServerFn({ method: "POST" })
         .update({ total, estatus: "borrador", rechazada_at: null, rechazada_por: null, notas_supervisor: null })
         .eq("id", existing.id);
       if (updErr) throw new Error(updErr.message);
-      await recalcEstatusRequisicion(supabase, paquete.requisicion_id);
+      await recalcEstatusRequisicion(supabase, paquete.requisicion_id, userId);
       return { id: existing.id };
     }
 
@@ -272,7 +272,7 @@ export const generarOC = createServerFn({ method: "POST" })
       })
       .select("id").single();
     if (insErr) throw new Error(insErr.message);
-    await recalcEstatusRequisicion(supabase, paquete.requisicion_id);
+    await recalcEstatusRequisicion(supabase, paquete.requisicion_id, userId);
     return { id: nueva.id };
   });
 
@@ -321,7 +321,7 @@ export const enviarOCASupervisor = createServerFn({ method: "POST" })
       console.error("[notificaciones] oc_pendiente error", e?.message);
     }
 
-    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id, userId);
     return { ok: true };
   });
 
@@ -341,7 +341,7 @@ export const reabrirOC = createServerFn({ method: "POST" })
       .update({ estatus: "borrador", enviada_supervisor_at: null })
       .eq("id", data.ocId);
     if (error) throw new Error(error.message);
-    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id, userId);
     return { ok: true };
   });
 
@@ -394,7 +394,7 @@ export const autorizarOC = createServerFn({ method: "POST" })
       console.error("[notificaciones] oc_autorizada error", e?.message);
     }
 
-    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id, userId);
     return { ok: true };
   });
 
@@ -421,7 +421,7 @@ export const rechazarOC = createServerFn({ method: "POST" })
       })
       .eq("id", data.ocId);
     if (error) throw new Error(error.message);
-    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id, userId);
     return { ok: true };
   });
 
@@ -496,7 +496,7 @@ export const enviarOCAProveedor = createServerFn({ method: "POST" })
       if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
     }
 
-    await recalcEstatusRequisicion(supabase, oc.requisicion_id);
+    await recalcEstatusRequisicion(supabase, oc.requisicion_id, userId);
     return { ok: true };
   });
 
