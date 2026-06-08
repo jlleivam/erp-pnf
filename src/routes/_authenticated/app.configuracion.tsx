@@ -94,6 +94,15 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="cuentas" className="mt-4">
+          <Card>
+            <CardHeader><CardTitle>Cuentas bancarias y caja fuerte</CardTitle></CardHeader>
+            <CardContent>
+              <CuentasTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="documentacion" className="mt-4">
           <Card>
             <CardHeader><CardTitle>Documentación de la empresa</CardTitle></CardHeader>
