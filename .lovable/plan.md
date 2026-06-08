@@ -1,41 +1,61 @@
-## Objetivo
+# Notificaciones del flujo de Requisiciones
 
-Reducir la densidad visual del cuadro comparativo (`ComparativaTable.tsx`) sin cambiar lógica ni columnas. En la captura se ve mucho espacio vertical entre filas, headers altos y columnas anchas.
+Se reutiliza la tabla `notificaciones` y el patrón ya existente (insert vía `supabaseAdmin`, link a la ruta correspondiente, campana `NotificacionesBell` ya conectada).
 
-## Cambios visuales en `src/components/requisiciones/ComparativaTable.tsx`
+## Destinatarios
 
-Todo restringido a clases Tailwind, sin tocar handlers, asignaciones, validaciones ni mutaciones.
+- **Administrativos** y **Supervisores**: usuarios con ese `role` en `user_roles` para la `company_id` de la obra.
+- **Residentes**: usuarios en `obra_team` con `role = 'residente'` para la obra (mismo patrón que ya usa `enviarOCAProveedor`).
 
-1. **Tabla densa** — envolver `<Table>` con una clase `text-xs` y reducir altura/padding de celdas:
-   - Agregar a `<Table>` (línea ~542) la prop `className="text-xs [&_th]:h-8 [&_th]:py-1 [&_td]:py-1.5 [&_td]:px-2 [&_th]:px-2"`.
+Si no hay destinatarios, simplemente no se inserta nada (no error).
 
-2. **Anchos mínimos más estrechos**:
-   - `min-w-[180px]` (Insumo) → `min-w-[140px]`.
-   - `min-w-[280px]` por proveedor (header colSpan=3) → `min-w-[210px]`.
-   - Columna "Asignar a" `w-[240px] min-w-[220px]` → `w-[180px] min-w-[170px]`.
+## Cambios por evento
 
-3. **Headers de subcolumnas** (`Cant.`, `P.U.`, `Importe`): ya son `text-xs`; reducir padding con `py-0.5`.
+### 1. Residente envía requisición → Administrativos
+**Archivo:** `src/lib/api/requisiciones.functions.ts` → `crearRequisicion`
+Después del insert exitoso de `requisicion_insumos`, notificar a todos los administrativos de la empresa.
+- tipo: `requisicion_enviada`
+- título: `Nueva requisición ${folio}`
+- mensaje: `${solicitante} envió una nueva requisición de la obra ${obra}.`
+- link: `/app/admin/requisiciones`
 
-4. **Celda de Insumo**: quitar `font-medium` no, mantener; cambiar `text-sm` → `text-xs` y permitir wrap normal (sin cambios extra, ya wrappea).
+### 2. Administrativo envía OC al supervisor → Supervisores
+**Archivo:** `src/lib/api/cotizaciones.functions.ts` → `enviarOCASupervisor`
+Tras el update a `pendiente_autorizacion`, notificar a supervisores de la empresa (filtrados por obra si están en `obra_team`, si no hay supervisores asignados, a todos los supervisores de la empresa).
+- tipo: `oc_pendiente_autorizacion`
+- título: `OC ${folio} pendiente de autorizar`
+- mensaje: `Hay una OC esperando tu autorización (req. ${reqFolio}).`
+- link: `/app/supervisor/requisiciones`
 
-5. **Total ofertado** (tfoot): `text-sm` → `text-xs`, mantener `font-semibold`.
+### 3. Supervisor autoriza OC → Administrativos
+**Archivo:** `src/lib/api/cotizaciones.functions.ts` → `autorizarOC`
+- tipo: `oc_autorizada`
+- título: `OC ${folio} autorizada`
+- mensaje: `La OC fue autorizada. Puedes enviarla al proveedor.`
+- link: `/app/admin/requisiciones`
 
-6. **Asignar a — tarjetas internas**:
-   - `border rounded p-1` → `border rounded p-1 gap-0.5` (ya tiene `gap-1`, bajamos a `0.5`).
-   - Select trigger `h-7` → `h-6 text-[11px]`.
-   - Input cantidad `h-7 w-20` → `h-6 w-16 text-[11px]`.
-   - Botón eliminar `h-7 w-7` → `h-6 w-6` (icono `size-3`).
-   - Botón "+ Proveedor" y "Tomar mejor precio" `h-7` → `h-6 text-[11px]`.
-   - Helper de cantidad asignada: `text-xs` → `text-[11px]`.
+### 4. Administrativo envía OC al proveedor → Residente
+**Ya implementado** en `enviarOCAProveedor`. Sin cambios.
 
-7. **Indicadores arriba de la tabla** (insumos asignados / cubiertos): bajar de `text-sm` → `text-xs` y reducir gap del contenedor a `gap-1.5`.
+### 5. Residente registra recepción en almacén → Supervisor + Administrativo
+**Archivo:** `src/lib/api/almacen.functions.ts` → `registrarRecepcion`
+Actualmente solo notifica a administrativos y **solo cuando la OC queda completamente recibida**. Cambios:
+- Notificar en **cada** recepción (parcial o completa), no solo al completarse.
+- Agregar a los **supervisores** como destinatarios (además de administrativos).
+- Diferenciar el título/mensaje según `nuevoEstatus`:
+  - `recibida_parcial`: `OC ${folio} con recepción parcial`
+  - `recibida`: `OC ${folio} recibida completa`
+- link: `/app/obras/${obraId}/almacen-obra`
+
+## Detalles técnicos
+
+- Insertar siempre vía `supabaseAdmin` (igual que el código existente) para evitar problemas de RLS al notificar a otros usuarios.
+- Envolver cada insert en try/catch con `console.error` — un fallo de notificación no debe romper la acción principal (mismo patrón que `enviarOCAProveedor`).
+- Deduplicar destinatarios con `Array.from(new Set(...))` por si un usuario tiene varios roles.
+- Para el residente solicitante en el mensaje de la #1, hacer un lookup ligero a `profiles.nombre_completo`; si no se encuentra, omitir el nombre.
 
 ## Fuera de alcance
 
-- No cambia la estructura de columnas (sigue habiendo Cant. / P.U. / Importe por proveedor).
-- No cambia lógica de candado, asignaciones, OC, ni el resumen por proveedor.
-- No se introduce un modo "compacto vs cómodo" con toggle — es un cambio de densidad fijo.
-
-## Riesgo
-
-Mínimo. Son ajustes de clases utilitarias; si alguna celda queda demasiado apretada en datos largos (p.ej. razón social), el `truncate` ya existente lo maneja.
+- Email / push notifications (solo notificaciones in-app).
+- Cambios de UI en la campana (`NotificacionesBell` ya muestra todo lo que se inserte).
+- Reglas de preferencia por usuario (todos los destinatarios reciben siempre).
