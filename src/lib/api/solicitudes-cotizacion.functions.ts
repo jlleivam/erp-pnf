@@ -18,7 +18,7 @@ function assertAdmin(roles: string[]) {
   }
 }
 
-async function recalcEstatusRequisicion(supabase: any, requisicionId: string) {
+async function recalcEstatusRequisicion(supabase: any, requisicionId: string, userId?: string) {
   // Reusar regla: si hay SC y aún no hay paquetes/OCs, requisición → en_cotizacion
   const { data: req } = await supabase
     .from("requisiciones").select("estatus").eq("id", requisicionId).maybeSingle();
@@ -29,10 +29,9 @@ async function recalcEstatusRequisicion(supabase: any, requisicionId: string) {
     .select("id", { count: "exact", head: true })
     .eq("requisicion_id", requisicionId);
   if ((count ?? 0) > 0) {
-    await supabase
-      .from("requisiciones")
-      .update({ estatus: "en_cotizacion", cotizacion_at: new Date().toISOString() })
-      .eq("id", requisicionId);
+    const patch: any = { estatus: "en_cotizacion", cotizacion_at: new Date().toISOString() };
+    if (userId) patch.cotizacion_por = userId;
+    await supabase.from("requisiciones").update(patch).eq("id", requisicionId);
   }
 }
 
