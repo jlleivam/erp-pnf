@@ -200,9 +200,10 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
       throw new Error("La OC no está disponible para recepción");
     }
     if (!roles.includes("director")) {
-      const { data: obra } = await supabase
-        .from("obras").select("residente_id").eq("id", oc.obra_id).maybeSingle();
-      if (!obra || obra.residente_id !== userId) {
+      const { data: member } = await supabase
+        .from("obra_team").select("id")
+        .eq("obra_id", oc.obra_id).eq("user_id", userId).eq("role", "residente").maybeSingle();
+      if (!member) {
         throw new Error("Solo el director o el residente de la obra pueden registrar recepciones");
       }
     }
