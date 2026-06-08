@@ -55,7 +55,27 @@ export const getCotizacionRequisicion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ requisicionId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    // Roles del usuario en la company (para gating de recepción)
+    const { data: req0 } = await supabase
+      .from("requisiciones").select("company_id, obra_id").eq("id", data.requisicionId).maybeSingle();
+    const companyId = req0?.company_id as string | undefined;
+    const obraId = req0?.obra_id as string | undefined;
+    let isDirector = false;
+    let isResidente = false;
+    if (companyId) {
+      const { data: rolesRows } = await supabase
+        .from("user_roles").select("role").eq("user_id", userId).eq("company_id", companyId);
+      isDirector = (rolesRows ?? []).some((r: any) => r.role === "director");
+    }
+    if (!isDirector && obraId) {
+      const { data: member } = await supabase
+        .from("obra_team").select("id")
+        .eq("obra_id", obraId).eq("user_id", userId).eq("role", "residente").maybeSingle();
+      isResidente = !!member;
+    }
+    const puedeRecibir = isDirector || isResidente;
+
     const { data: req, error: reqErr } = await supabase
       .from("requisiciones")
       .select("id, folio, obra_id, company_id, estatus, notas, items:requisicion_insumos(id, cantidad, fecha_requerida, insumo:insumos(id, nombre, unidad))")
