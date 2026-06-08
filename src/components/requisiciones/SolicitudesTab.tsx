@@ -322,9 +322,6 @@ function NuevaSolicitudForm({
 
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-        <Button variant="outline" onClick={() => mut.mutate({ descargarPDF: false })} disabled={mut.isPending}>
-          Guardar borrador
-        </Button>
         <Button onClick={() => mut.mutate({ descargarPDF: false })} disabled={mut.isPending}>
           Guardar solicitud
         </Button>
