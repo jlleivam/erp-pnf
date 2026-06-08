@@ -1,43 +1,28 @@
-## Objetivo
+## Problema
 
-Hacer la tarjeta de requisición más compacta sin perder información: vista por defecto reducida, expandible para ver los insumos.
+Cuando un usuario con rol **administrativo** entra a una obra y abre el módulo de Requisiciones, ve la vista del residente (tarjetas, sin acción "Cotizar") y un botón "Nueva". Debería ver la vista administrativa (tabla con columna Acción → Cotizar / Continuar / Ver OCs) pero filtrada únicamente a esa obra, y sin poder crear requisiciones nuevas.
 
-## Cambios en `src/components/requisiciones/RequisicionesModule.tsx`
+## Cambios
 
-### 1. Estado de expansión
-- Agregar `const [expandidos, setExpandidos] = useState<Set<string>>(new Set())` y un helper `toggleExpand(id)`.
+### 1. `src/components/requisiciones/RequisicionesModule.tsx`
 
-### 2. Helper de formato de fecha corta
-- Nueva función `formatDateShort(d)` que devuelve `DD/MM/YY` (ej. `07/06/26`). Se usará en los chips. `formatDate` existente se mantiene para el encabezado.
+- Detectar si el usuario es **administrativo** (o director actuando como administrativo) usando `useEffectiveRoles()`.
+- Quitar `"administrativo"` de la lista `puedeCrear` → el botón "Nueva" desaparece para administrativos. Residente, PM, auxiliar y director siguen pudiendo crear.
+- Cuando el usuario es administrativo (no residente), renderizar la **misma tabla** que `app.admin.requisiciones.tsx`: columnas Folio, Solicitante, # insumos, Fecha más próxima, Estatus, Acción (Cotizar / Continuar / Ver OCs vía `CotizacionSheet`). Se omite la columna "Obra" porque ya estamos dentro de una obra.
+- Para esa tabla se reutilizan los componentes internos `FechaProximaCell` y `AccionCell` — los moveré a un archivo compartido `src/components/requisiciones/AdminRequisicionesTable.tsx` para evitar duplicación, y tanto `RequisicionesModule` como `app.admin.requisiciones.tsx` lo consumirán.
+- El listado sigue usando `listRequisiciones({ obraId })` (ya filtra por obra); solo cambia la presentación.
+- Residentes/PM/auxiliares conservan la vista de tarjetas compactas/expandibles actual.
 
-### 3. Header compacto (líneas 82–114)
-- Reducir padding del Card de `p-4` a `p-3`.
-- Una sola línea con: **folio** · fecha · `N insumos` · solicitante (separados por `·`, truncados si no caben).
-- Badge de estatus a la derecha en tamaño más pequeño (`text-[10px] px-2 py-0.5`).
-- Botón "Revisar y autorizar" (supervisor) se mantiene a la derecha pero más compacto.
-- Agregar chevron (▸/▾) clickeable a la izquierda del folio para expandir/colapsar. El click en el chevron NO abre el detalle; el click en el resto de la tarjeta sigue abriendo el detalle (`setDetalleId`).
+### 2. `src/routes/_authenticated/app.admin.requisiciones.tsx`
 
-### 4. Chips de insumos (líneas 115–131)
-- Sólo se renderizan cuando la tarjeta está **expandida**.
-- Quitar la fecha individual del chip; en su lugar mostrar **cantidad + unidad + nombre**.
-- Agregar arriba de los chips un mini-resumen de fechas requeridas: `Entrega: 07/06/26 – 09/06/26` (rango min–max usando `formatDateShort`), o una sola fecha si todos coinciden.
-- Mantener el límite de 6 chips + `+N más`.
+- Refactor menor: usar el componente compartido `AdminRequisicionesTable` para no duplicar `FechaProximaCell` / `AccionCell` / la estructura de tabla.
 
-### 5. Por defecto colapsada
-- Vista inicial = sólo header (1–2 líneas + badge). Click en el chevron expande para mostrar el resumen de fechas + chips de insumos.
+## Notas
 
-## Resultado visual
+- No se tocan permisos a nivel server (las server fns ya validan acceso por obra).
+- No se cambia el flujo de director: director sigue viendo tarjetas + botón Nueva en la obra (es la vista de operación). Si en el futuro quieres que el director también vea la tabla admin dentro de la obra, se puede agregar un toggle.
+- El sub-sheet `CotizacionSheet` ya existe y maneja Cotizar/Continuar/Ver OCs.
 
-```text
-Colapsada:
-▸ REQ-2026-001 · 4 jun 2026 · 4 insumos · Jose Luis Leiva           [Enviada]
+## Pregunta abierta
 
-Expandida:
-▾ REQ-2026-001 · 4 jun 2026 · 4 insumos · Jose Luis Leiva           [Enviada]
-  Entrega: 07/06/26 – 09/06/26
-  [30 KG · Alambre recocido] [7 M3 · Arena] [25 BTO · Cemento gris] [10 PZA · Varilla 1/2"]
-```
-
-## Fuera de alcance
-- No se cambia la tabla de "histórico" (líneas 145+).
-- No se cambia el componente de detalle ni `NuevaRequisicionSheet`.
+¿El **director** dentro de una obra debe seguir viendo la vista de tarjetas (como hoy), o también prefieres que vea la tabla administrativa cuando entra desde "Vista: Administrativo"? Por defecto dejo la vista actual del director sin cambios y solo activo la tabla admin para el rol `administrativo`.
