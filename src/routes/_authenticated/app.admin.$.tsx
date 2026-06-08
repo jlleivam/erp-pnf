@@ -3,6 +3,7 @@ import { ModulePlaceholder } from "@/components/ModulePlaceholder";
 import { NominaAdminPanel } from "@/components/nomina/NominaAdminPanel";
 import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
+import { CuentasPorPagarModule } from "@/components/pagos/CuentasPorPagarModule";
 
 const LABELS: Record<string, string> = {
   requisiciones: "Requisiciones",
