@@ -445,7 +445,6 @@ function CuentaFormDialog({
 
 // Helper: re-run a callback whenever `key` changes.
 function useResetForm(key: string, cb: () => void) {
-  const { useEffect, useRef } = require("react") as typeof import("react");
   const last = useRef<string | null>(null);
   useEffect(() => {
     if (last.current !== key) {
