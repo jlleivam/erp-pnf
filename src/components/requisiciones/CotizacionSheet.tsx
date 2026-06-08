@@ -17,6 +17,8 @@ import { formatDate } from "@/lib/format";
 import {
   getCotizacionRequisicion, listProveedores, enviarOCASupervisor, reabrirOC, enviarOCAProveedor,
 } from "@/lib/api/cotizaciones.functions";
+import { listPagosOC, cancelarPagoOC } from "@/lib/api/pagos.functions";
+import { RegistrarPagoOCDialog } from "@/components/pagos/RegistrarPagoOCDialog";
 
 import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
 import { SolicitudesTab } from "./SolicitudesTab";
