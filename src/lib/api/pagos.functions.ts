@@ -10,7 +10,7 @@ async function getCtx(supabase: any, userId: string) {
   const { data: roles } = await supabase
     .from("user_roles").select("role")
     .eq("user_id", userId).eq("company_id", profile.company_id);
-  const roleSet = new Set((roles ?? []).map((r: { role: string }) => r.role));
+  const roleSet = new Set<string>((roles ?? []).map((r: { role: string }) => r.role));
   return { companyId: profile.company_id as string, roles: roleSet };
 }
 
