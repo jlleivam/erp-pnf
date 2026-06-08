@@ -202,6 +202,7 @@ export const capturarRespuesta = createServerFn({ method: "POST" })
     z.object({
       solicitudId: z.string().uuid(),
       items: z.array(RespuestaInput).min(1),
+      notas: z.string().nullable().optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
@@ -228,9 +229,11 @@ export const capturarRespuesta = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
     }
 
+    const scPatch: any = { estatus: "recibida", recibida_at: new Date().toISOString() };
+    if (data.notas !== undefined) scPatch.notas = data.notas;
     const { error: updErr } = await supabase
       .from("cotizacion_solicitudes")
-      .update({ estatus: "recibida", recibida_at: new Date().toISOString() })
+      .update(scPatch)
       .eq("id", data.solicitudId);
     if (updErr) throw new Error(updErr.message);
     return { ok: true };
