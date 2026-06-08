@@ -158,6 +158,7 @@ export const crearRequisicion = createServerFn({ method: "POST" })
     const { data: profile } = await supabase
       .from("profiles").select("company_id").eq("id", userId).maybeSingle();
     if (!profile?.company_id) throw new Error("Sin empresa asociada");
+    const companyId = profile.company_id;
 
     const { data: folioData, error: folioErr } = await supabase
       .rpc("siguiente_folio_requisicion", { _company_id: profile.company_id });
@@ -190,6 +191,45 @@ export const crearRequisicion = createServerFn({ method: "POST" })
       await supabase.from("requisiciones").delete().eq("id", req.id);
       throw new Error(itemsErr.message);
     }
+
+    // Notificar a administrativos de la empresa
+    try {
+      const { data: admins } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", profile.company_id)
+        .eq("role", "administrativo");
+      const destinatarios = Array.from(
+        new Set((admins ?? []).map((a: any) => a.user_id as string))
+      );
+      if (destinatarios.length > 0) {
+        const [{ data: solicitanteProfile }, { data: obra }] = await Promise.all([
+          supabase.from("profiles").select("nombre_completo").eq("id", userId).maybeSingle(),
+          supabase.from("obras").select("nombre").eq("id", data.obraId).maybeSingle(),
+        ]);
+        const quien = solicitanteProfile?.nombre_completo
+          ? `${solicitanteProfile.nombre_completo} envió`
+          : "Se envió";
+        const dondeStr = obra?.nombre ? ` de la obra ${obra.nombre}` : "";
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
+          destinatarios.map((uid) => ({
+            user_id: uid,
+            company_id: companyId,
+            obra_id: data.obraId,
+            tipo: "requisicion_enviada",
+            titulo: `Nueva requisición ${req.folio}`,
+            mensaje: `${quien} una nueva requisición${dondeStr}.`,
+            link: `/app/admin/requisiciones`,
+            requisicion_id: req.id,
+          })),
+        );
+        if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] requisicion_enviada error", e?.message);
+    }
+
     return { id: req.id, folio: req.folio };
   });
 

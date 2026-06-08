@@ -280,10 +280,10 @@ export const enviarOCASupervisor = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
+    const { companyId, roles } = await getCtx(supabase, userId);
     assertAdmin(roles);
     const { data: oc } = await supabase
-      .from("ordenes_compra").select("id, requisicion_id, estatus").eq("id", data.ocId).maybeSingle();
+      .from("ordenes_compra").select("id, folio, requisicion_id, obra_id, estatus").eq("id", data.ocId).maybeSingle();
     if (!oc) throw new Error("OC no encontrada");
     if (oc.estatus !== "borrador") throw new Error("La OC ya fue enviada");
     const { error } = await supabase
@@ -291,6 +291,35 @@ export const enviarOCASupervisor = createServerFn({ method: "POST" })
       .update({ estatus: "pendiente_autorizacion", enviada_supervisor_at: new Date().toISOString() })
       .eq("id", data.ocId);
     if (error) throw new Error(error.message);
+
+    // Notificar a supervisores de la empresa
+    try {
+      const { data: sups } = await supabase
+        .from("user_roles").select("user_id").eq("company_id", companyId).eq("role", "supervisor");
+      const destinatarios = Array.from(new Set((sups ?? []).map((s: any) => s.user_id as string)));
+      if (destinatarios.length > 0) {
+        const { data: req } = await supabase
+          .from("requisiciones").select("folio").eq("id", oc.requisicion_id).maybeSingle();
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
+          destinatarios.map((uid) => ({
+            user_id: uid,
+            company_id: companyId,
+            obra_id: oc.obra_id,
+            tipo: "oc_pendiente_autorizacion",
+            titulo: `OC ${oc.folio} pendiente de autorizar`,
+            mensaje: `Hay una OC esperando tu autorización${req?.folio ? ` (req. ${req.folio})` : ""}.`,
+            link: `/app/supervisor/requisiciones`,
+            requisicion_id: oc.requisicion_id,
+            oc_id: oc.id,
+          })),
+        );
+        if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] oc_pendiente error", e?.message);
+    }
+
     await recalcEstatusRequisicion(supabase, oc.requisicion_id);
     return { ok: true };
   });
@@ -326,10 +355,10 @@ export const autorizarOC = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
+    const { companyId, roles } = await getCtx(supabase, userId);
     assertSupervisor(roles);
     const { data: oc } = await supabase
-      .from("ordenes_compra").select("id, requisicion_id, estatus").eq("id", data.ocId).maybeSingle();
+      .from("ordenes_compra").select("id, folio, requisicion_id, obra_id, estatus").eq("id", data.ocId).maybeSingle();
     if (!oc) throw new Error("OC no encontrada");
     if (oc.estatus !== "pendiente_autorizacion") throw new Error("La OC no está pendiente de autorización");
     const { error } = await supabase
@@ -337,6 +366,33 @@ export const autorizarOC = createServerFn({ method: "POST" })
       .update({ estatus: "autorizada", autorizada_at: new Date().toISOString(), autorizada_por: userId })
       .eq("id", data.ocId);
     if (error) throw new Error(error.message);
+
+    // Notificar a administrativos de la empresa
+    try {
+      const { data: admins } = await supabase
+        .from("user_roles").select("user_id").eq("company_id", companyId).eq("role", "administrativo");
+      const destinatarios = Array.from(new Set((admins ?? []).map((a: any) => a.user_id as string)));
+      if (destinatarios.length > 0) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
+          destinatarios.map((uid) => ({
+            user_id: uid,
+            company_id: companyId,
+            obra_id: oc.obra_id,
+            tipo: "oc_autorizada",
+            titulo: `OC ${oc.folio} autorizada`,
+            mensaje: `La OC fue autorizada. Puedes enviarla al proveedor.`,
+            link: `/app/admin/requisiciones`,
+            requisicion_id: oc.requisicion_id,
+            oc_id: oc.id,
+          })),
+        );
+        if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] oc_autorizada error", e?.message);
+    }
+
     await recalcEstatusRequisicion(supabase, oc.requisicion_id);
     return { ok: true };
   });

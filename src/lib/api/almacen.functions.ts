@@ -284,31 +284,43 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
       .update({ estatus: nuevoEstatus })
       .eq("id", oc.id);
 
-    // Notificar al administrativo si quedó totalmente recibida
-    if (completa) {
-      const { data: admins } = await supabase
+    // Notificar a administrativos y supervisores en cada recepción
+    try {
+      const { data: roles } = await supabase
         .from("user_roles")
-        .select("user_id")
+        .select("user_id, role")
         .eq("company_id", companyId)
-        .eq("role", "administrativo");
-      const destinatarios = (admins ?? []).map((a: any) => a.user_id as string);
+        .in("role", ["administrativo", "supervisor"]);
+      const destinatarios = Array.from(
+        new Set((roles ?? []).map((r: any) => r.user_id as string))
+      );
       if (destinatarios.length > 0) {
+        const titulo = completa
+          ? `OC ${oc.folio} recibida completa`
+          : `OC ${oc.folio} con recepción parcial`;
+        const mensaje = completa
+          ? `El material de la OC ${oc.folio} fue recibido en su totalidad en el almacén de la obra.`
+          : `Se registró una recepción parcial de la OC ${oc.folio} en el almacén de la obra.`;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await supabaseAdmin.from("notificaciones").insert(
+        const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
           destinatarios.map((uid) => ({
             user_id: uid,
             company_id: companyId,
             obra_id: oc.obra_id,
-            tipo: "oc_recibida",
-            titulo: `OC ${oc.folio} recibida`,
-            mensaje: `El material de la OC ${oc.folio} fue recibido en el almacén de la obra.`,
+            tipo: completa ? "oc_recibida" : "oc_recibida_parcial",
+            titulo,
+            mensaje,
             link: `/app/obras/${oc.obra_id}/almacen-obra`,
             requisicion_id: oc.requisicion_id,
             oc_id: oc.id,
           })),
         );
+        if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
       }
+    } catch (e: any) {
+      console.error("[notificaciones] recepcion error", e?.message);
     }
+
 
     // Recalcular estatus requisición (puede pasar a completada)
     const { data: paquetes } = await supabase
