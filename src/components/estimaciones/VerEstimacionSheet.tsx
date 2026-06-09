@@ -5,6 +5,7 @@ import { formatRangoSemana } from "@/lib/estimacion-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 
 export function VerEstimacionSheet({
