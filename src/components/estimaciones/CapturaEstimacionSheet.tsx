@@ -70,8 +70,9 @@ export function CapturaEstimacionSheet({
   const vigente = (q.data?.vigente ?? []) as VigenteRow[];
   const acumuladoPrevio = (q.data?.acumuladoPrevio ?? {}) as Record<string, number>;
   const estimacion = q.data?.estimacion;
-  const isCerrada = estimacion?.estatus === "cerrada";
   const semana = calcularSemana(semanaInicio);
+  const semanaActual = calcularSemana(new Date()).inicio;
+  const soloLectura = semanaInicio !== semanaActual;
 
   // Calcular validaciones y totales en cliente
   const computed = useMemo(() => {
