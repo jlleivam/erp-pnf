@@ -29,7 +29,9 @@ type Nomina = {
   estatus: "borrador" | "cerrada";
   monto_total: number;
   cerrada_at: string | null;
+  trabajadores_count: number;
 };
+
 
 export function NominaModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
