@@ -1,26 +1,47 @@
 ## Objetivo
 
-Aplicar al visualizador de estimación (`VerEstimacionSheet`) el mismo diseño compacto que ya usa `VigenteTable` en el presupuesto vigente, para que el concepto se trunque (con tooltip) en una sola línea y las filas no crezcan verticalmente.
+En el módulo de Estimaciones:
+- Quitar el botón **Continuar borrador** del header (y la tarjeta de KPI "Borrador actual" queda como informativa).
+- Mantener todas las acciones por fila en la tabla.
+- Solo permitir **Editar** el borrador cuya semana coincide con la semana en curso. Borradores de semanas pasadas quedan en solo lectura (Ver + Eliminar para director).
 
-## Cambio
+## Cambios
 
-### `src/components/estimaciones/VerEstimacionSheet.tsx`
+### `src/components/estimaciones/EstimacionesModule.tsx`
 
-Reemplazar la tabla actual (`text-sm`, sin `table-fixed`, concepto con wrap) por el mismo patrón de `VigenteTable`:
+1. **Header**: quitar el bloque `borrador ? Continuar borrador : Nueva estimación`. Dejar siempre el botón **Nueva estimación**. (`NuevaEstimacionDialog` ya detecta si la semana actual ya tiene estimación y reusa el borrador existente, así que el flujo sigue funcionando.)
 
-- `<table className="w-full text-xs table-fixed">` con `<colgroup>`:
-  - Clave: `w-20`
-  - Concepto: flex
-  - Unidad: `w-16`
-  - Cant. ejec.: `w-24`
-  - PU: `w-24`
-  - Importe: `w-28`
-- `<thead>` con `bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground`, celdas `px-2 py-1.5`.
-- Celdas del cuerpo `px-2 py-1`, `tabular-nums`, `whitespace-nowrap` para columnas numéricas.
-- Columna Concepto envuelta en `<TooltipProvider delayDuration={200}>` + `<Tooltip>` con `truncate whitespace-nowrap overflow-hidden text-ellipsis cursor-default`; el contenido completo aparece en el `TooltipContent` (`max-w-md whitespace-normal`).
-- `td` de Concepto con `max-w-0` para forzar el truncado dentro de `table-fixed`.
-- Sin cambios en datos ni en server functions: sigue mostrando `renglon_clave`, `concepto`, `unidad`, `cantidad_ejecutada`, `pu_vigente`, `importe_ejecutado`.
+2. **Calcular la semana vigente** una sola vez con `const semanaActual = calcularSemana(new Date()).inicio;`.
 
-No se reutiliza `VigenteTable` porque las columnas y el origen de los datos son distintos (no hay grupos, ni `origen`, ni cantidades modificadas en una estimación); se replica solo el estilo.
+3. **Acciones por fila** en la tabla:
+   - **Ver** siempre.
+   - **Editar**: solo si `e.estatus === "borrador" && e.semana_inicio === semanaActual`.
+   - **Eliminar** (director): solo si `e.estatus === "borrador"` (cualquier semana — sigue como hoy).
+   - Para borradores de semanas pasadas, junto al badge "Borrador" mostrar tooltip / texto pequeño "Semana cerrada — no editable" o simplemente omitir el botón Editar.
 
-Sin cambios en otros archivos.
+4. **KPI "Borrador actual"**: se mantiene tal cual (sigue mostrando el borrador si existe). No es accionable.
+
+5. **Sin cambios** en server functions ni en `CapturaEstimacionSheet` ni en validaciones del backend (el bloqueo es solo de UI; si el usuario tuviera una URL directa, el backend sigue aceptando ediciones — el usuario solicitó solo cambiar la UI).
+
+## Detalles técnicos
+
+```tsx
+const semanaActual = calcularSemana(new Date()).inicio;
+const esEditable = (e: Estimacion) =>
+  e.estatus === "borrador" && e.semana_inicio === semanaActual;
+
+// en la celda Acciones:
+<Button size="sm" variant="outline" onClick={() => setViewing(e.id)}>
+  <FileText className="size-4 mr-1" /> Ver
+</Button>
+{esEditable(e) && (
+  <Button size="sm" onClick={() => setEditing(e.semana_inicio)}>Editar</Button>
+)}
+{e.estatus === "borrador" && director && (
+  <Button size="sm" variant="ghost" onClick={() => setToDelete(e)}>
+    <Trash2 className="size-4" />
+  </Button>
+)}
+```
+
+Sin cambios de schema, datos o backend.
