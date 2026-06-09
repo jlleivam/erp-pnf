@@ -239,7 +239,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         </Card>
       </div>
 
-      <Tabs defaultValue="base">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="base">Base</TabsTrigger>
           <TabsTrigger value="adendas">Órdenes de cambio ({adendas.length})</TabsTrigger>
