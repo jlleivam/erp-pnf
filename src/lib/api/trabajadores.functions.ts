@@ -219,6 +219,44 @@ export const crearTrabajador = createServerFn({ method: "POST" })
       .select(SELECT_FULL)
       .single();
     if (error) throw new Error(error.message);
+
+    // Notificar a administradores/director si es una solicitud pendiente
+    if (estatus_autorizacion === "pendiente") {
+      try {
+        const { data: admins } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("company_id", companyId)
+          .in("role", ["administrativo", "director"]);
+        const destinatarios = Array.from(
+          new Set((admins ?? []).map((a: any) => a.user_id as string).filter((u) => u !== userId)),
+        );
+        if (destinatarios.length > 0) {
+          const { data: solicitanteProfile } = await supabase
+            .from("profiles")
+            .select("nombre_completo")
+            .eq("id", userId)
+            .maybeSingle();
+          const quien = solicitanteProfile?.nombre_completo ?? "Un residente";
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
+            destinatarios.map((uid) => ({
+              user_id: uid,
+              company_id: companyId,
+              obra_id: null,
+              tipo: "trabajador_alta_solicitada",
+              titulo: "Solicitud de alta de trabajador",
+              mensaje: `${quien} solicitó dar de alta a ${data.nombre_completo}. Completa su registro y alta ante el IMSS.`,
+              link: "/app/admin/trabajadores",
+            })),
+          );
+          if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
+        }
+      } catch (e: any) {
+        console.error("[notificaciones] trabajador_alta_solicitada error", e?.message);
+      }
+    }
+
     return trabajador;
   });
 
