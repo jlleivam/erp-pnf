@@ -283,12 +283,16 @@ export function CapturaPresupuestoSheet({
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const errs = erroresPorClave.get(r.clave.trim()) ?? [];
-                    const importe = importePorClave.get(r.clave.trim()) ?? 0;
+                    const claveTrim = r.clave.trim();
+                    const errs = erroresPorClave.get(claveTrim) ?? [];
+                    const importe = importePorClave.get(claveTrim) ?? 0;
+                    const esPadre = claveTrim !== "" && clavesPadre.has(claveTrim);
                     return (
                       <tr
                         key={r._id}
-                        className={`border-t border-border ${errs.length ? "bg-destructive/5" : ""}`}
+                        className={`border-t border-border ${
+                          errs.length ? "bg-destructive/5" : esPadre ? "bg-accent/40 font-medium" : ""
+                        }`}
                       >
                         <td className="p-1">
                           <Input
@@ -308,39 +312,54 @@ export function CapturaPresupuestoSheet({
                           {errs.length > 0 && (
                             <p className="text-xs text-destructive mt-1">{errs.join(" · ")}</p>
                           )}
+                          {esPadre && errs.length === 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Partida — suma de sus conceptos
+                            </p>
+                          )}
                         </td>
-                        <td className="p-1">
-                          <Input
-                            value={r.unidad ?? ""}
-                            onChange={(e) => updateRow(r._id, { unidad: e.target.value })}
-                            placeholder="m2"
-                            className="h-8"
-                          />
-                        </td>
-                        <td className="p-1">
-                          <Input
-                            type="number"
-                            value={r.cantidad ?? ""}
-                            onChange={(e) =>
-                              updateRow(r._id, {
-                                cantidad: e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                            className="h-8 text-right"
-                          />
-                        </td>
-                        <td className="p-1">
-                          <Input
-                            type="number"
-                            value={r.precio_unitario ?? ""}
-                            onChange={(e) =>
-                              updateRow(r._id, {
-                                precio_unitario: e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                            className="h-8 text-right"
-                          />
-                        </td>
+                        {esPadre ? (
+                          <>
+                            <td className="p-2 text-center text-muted-foreground">—</td>
+                            <td className="p-2 text-center text-muted-foreground">—</td>
+                            <td className="p-2 text-center text-muted-foreground">—</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="p-1">
+                              <Input
+                                value={r.unidad ?? ""}
+                                onChange={(e) => updateRow(r._id, { unidad: e.target.value })}
+                                placeholder="m2"
+                                className="h-8"
+                              />
+                            </td>
+                            <td className="p-1">
+                              <Input
+                                type="number"
+                                value={r.cantidad ?? ""}
+                                onChange={(e) =>
+                                  updateRow(r._id, {
+                                    cantidad: e.target.value === "" ? null : Number(e.target.value),
+                                  })
+                                }
+                                className="h-8 text-right"
+                              />
+                            </td>
+                            <td className="p-1">
+                              <Input
+                                type="number"
+                                value={r.precio_unitario ?? ""}
+                                onChange={(e) =>
+                                  updateRow(r._id, {
+                                    precio_unitario: e.target.value === "" ? null : Number(e.target.value),
+                                  })
+                                }
+                                className="h-8 text-right"
+                              />
+                            </td>
+                          </>
+                        )}
                         <td className="p-2 text-right tabular-nums">
                           {formatMXN(importe)}
                         </td>
