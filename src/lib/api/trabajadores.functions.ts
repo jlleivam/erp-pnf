@@ -249,7 +249,7 @@ export const crearTrabajador = createServerFn({ method: "POST" })
               tipo: "trabajador_alta_solicitada",
               titulo: "Solicitud de alta de trabajador",
               mensaje: `${quien} solicitó dar de alta a ${data.nombre_completo}. Completa su registro y alta ante el IMSS.`,
-              link: "/app/admin/trabajadores",
+              link: `/app/catalogos/trabajadores?tab=pendientes&id=${trabajador.id}`,
             })),
           );
           if (notifErr) console.error("[notificaciones] insert failed", notifErr.message);
