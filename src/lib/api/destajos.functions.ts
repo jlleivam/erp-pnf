@@ -604,6 +604,21 @@ export const autorizarPresupuestoDestajo = createServerFn({ method: "POST" })
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
     await recalcDestajoTotal(supabase, p.destajo_id);
+
+    if (p.tipo === "adenda") {
+      try {
+        await notifyResidenteOC(supabase, {
+          residenteId: p.enviado_por,
+          actorUserId: userId,
+          obraId: d0!.obra_id,
+          tipo: "oc_destajo_autorizada",
+          link: `/app/obras/${d0!.obra_id}`,
+        });
+      } catch (e: any) {
+        console.error("[notificaciones] oc_destajo_autorizada error", e?.message);
+      }
+    }
+
     return { ok: true };
   });
 
