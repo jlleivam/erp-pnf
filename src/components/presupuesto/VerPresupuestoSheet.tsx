@@ -56,11 +56,19 @@ export function VerPresupuestoSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 flex-wrap">
             {presupuesto?.nombre ?? "Presupuesto"}
-            {presupuesto && (
-              <Badge variant={presupuesto.estatus === "autorizado" ? "default" : "secondary"}>
-                {presupuesto.estatus === "autorizado" ? "Autorizado" : "Borrador"}
-              </Badge>
-            )}
+            {presupuesto && (() => {
+              const e = presupuesto.estatus as
+                | "borrador" | "solicitada" | "autorizado" | "rechazada";
+              const label =
+                e === "autorizado" ? "Autorizado" :
+                e === "solicitada" ? "Solicitada" :
+                e === "rechazada" ? "Rechazada" : "Borrador";
+              const variant =
+                e === "autorizado" ? "default" :
+                e === "rechazada" ? "destructive" :
+                e === "solicitada" ? "outline" : "secondary";
+              return <Badge variant={variant as any}>{label}</Badge>;
+            })()}
             <span className="ml-auto text-base font-semibold">
               {presupuesto &&
                 (esOC ? `Δ ${formatMXN(presupuesto.monto_total)}` : formatMXN(presupuesto.monto_total))}
