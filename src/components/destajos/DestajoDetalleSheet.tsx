@@ -202,8 +202,7 @@ export function DestajoDetalleSheet({
               <TabsContent value="trabajadores" className="mt-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-muted-foreground">
-                    Trabajadores asignados al destajo. Aparecen bloqueados en la nómina
-                    semanal de la obra (su pago va por estimación del destajo).
+                    Trabajadores asignados al destajo.
                   </p>
                   <Button size="sm" onClick={() => setAsignar(true)}>
                     <Users className="size-4 mr-1" /> Gestionar asignación
