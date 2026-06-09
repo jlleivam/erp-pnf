@@ -127,7 +127,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
                   <td className="p-3">{formatRangoSemana(n.semana_inicio, n.semana_fin)}</td>
                   <td className="p-3">
                     <Badge variant={n.estatus === "cerrada" ? "default" : "secondary"}>
-                      {n.estatus === "cerrada" ? "Cerrada" : "Borrador"}
+                      {n.estatus === "cerrada" ? "Cerrada" : "Activa"}
                     </Badge>
                   </td>
                   <td className="p-3 text-right tabular-nums font-medium">
