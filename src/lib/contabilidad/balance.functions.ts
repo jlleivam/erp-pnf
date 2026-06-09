@@ -78,7 +78,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .from("ordenes_compra")
         .select("total, monto_pagado, estatus, estado_pago")
         .eq("company_id", companyId)
-        .in("estatus", ["autorizada", "enviada_proveedor"])
+        .in("estatus", ["autorizada", "enviada", "recibida_parcial", "recibida"])
         .neq("estado_pago", "pagado"),
       // Destajistas por pagar: estimaciones cerradas
       supabase
@@ -109,7 +109,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .from("caja_chica_reembolsos")
         .select("monto_aprobado, estatus")
         .eq("company_id", companyId)
-        .in("estatus", ["aprobado", "enviado_admin"]),
+        .in("estatus", ["enviado_admin"]),
       // Pagos por origen para descontar de pasivos
       supabase
         .from("pagos")
