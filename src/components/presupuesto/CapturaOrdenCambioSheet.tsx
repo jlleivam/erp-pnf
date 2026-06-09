@@ -71,7 +71,7 @@ export function CapturaOrdenCambioSheet({
   });
 
   const presupuesto = presQ.data?.presupuesto;
-  const yaAutorizado = presupuesto?.estatus === "autorizado";
+  const yaAutorizado = presupuesto?.estatus !== "borrador";
   const vigente = (vigQ.data?.vigente ?? []) as VigenteNode[];
   const vigenteMap = useMemo(() => {
     const m = new Map<string, VigenteNode>();
