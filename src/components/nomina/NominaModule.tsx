@@ -73,47 +73,48 @@ export function NominaModule({ obraId }: { obraId: string }) {
   const borrador = nominas.find((n) => n.estatus === "borrador");
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Nómina</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl font-semibold tracking-tight">Nómina</h1>
+          <p className="text-xs text-muted-foreground">
             Asignación de trabajadores y asistencia semanal (Lun–Dom).
           </p>
         </div>
         <div className="flex gap-2">
           {canEdit && (
-            <Button onClick={() => setOpenNueva(true)}>
+            <Button size="sm" onClick={() => setOpenNueva(true)}>
               <Plus className="size-4 mr-1" /> Nueva semana
             </Button>
           )}
         </div>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Pagado acumulado</p>
-          <p className="mt-2 text-xl font-semibold">{formatMXN(totalPagado)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Semanas cerradas</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card className="p-3">
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Pagado acumulado</p>
+          <p className="mt-1 text-lg font-semibold">{formatMXN(totalPagado)}</p>
+          <p className="text-[11px] text-muted-foreground">Semanas cerradas</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Semanas cerradas</p>
-          <p className="mt-2 text-xl font-semibold">
+        <Card className="p-3">
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Semanas cerradas</p>
+          <p className="mt-1 text-lg font-semibold">
             {nominas.filter((n) => n.estatus === "cerrada").length}
           </p>
         </Card>
-        <Card className="p-4 border-primary/30 bg-primary/5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Nómina activa</p>
-          <p className="mt-2 text-xl font-semibold">
+        <Card className="p-3 border-primary/30 bg-primary/5">
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Nómina activa</p>
+          <p className="mt-1 text-lg font-semibold">
             {borrador ? formatMXN(Number(borrador.monto_total)) : "—"}
           </p>
           {borrador && (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[11px] text-muted-foreground">
               {formatRangoSemana(borrador.semana_inicio, borrador.semana_fin)}
             </p>
           )}
         </Card>
       </div>
+
 
       {listQ.isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
