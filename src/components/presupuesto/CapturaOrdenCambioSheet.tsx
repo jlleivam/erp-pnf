@@ -212,6 +212,7 @@ export function CapturaOrdenCambioSheet({
   // ====== Pickers ======
   const [pickMod, setPickMod] = useState(false);
   const [pickDel, setPickDel] = useState(false);
+  const [showVigente, setShowVigente] = useState(false);
 
   const addMod = (n: VigenteNode) => {
     if (mods.some((m) => m.clave === n.clave)) {
