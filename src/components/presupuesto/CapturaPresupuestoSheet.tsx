@@ -312,11 +312,6 @@ export function CapturaPresupuestoSheet({
                           {errs.length > 0 && (
                             <p className="text-xs text-destructive mt-1">{errs.join(" · ")}</p>
                           )}
-                          {esPadre && errs.length === 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Partida — suma de sus conceptos
-                            </p>
-                          )}
                         </td>
                         {esPadre ? (
                           <>
