@@ -375,7 +375,7 @@ export function CatalogoTrabajadoresModule() {
                             className="text-emerald-700"
                           >
                             <CheckCircle2 className="size-4 mr-2" />
-                            Autorizar
+                            Registrar
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => setEditing(r)}>
