@@ -718,6 +718,12 @@ export function CapturaOrdenCambioSheet({
             multi
           />
         )}
+        <VigenteViewerDialog
+          open={showVigente}
+          onClose={() => setShowVigente(false)}
+          vigente={vigente as any[]}
+          total={vigQ.data?.montoTotal}
+        />
       </SheetContent>
     </Sheet>
   );
