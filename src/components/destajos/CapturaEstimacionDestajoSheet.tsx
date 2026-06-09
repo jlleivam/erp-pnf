@@ -122,8 +122,28 @@ export function CapturaEstimacionDestajoSheet({
         );
       }
     }
-    return { totalSemana, totalAcum, totalVigente, erroresPorClave };
-  }, [vigente, cantidades, acumuladoPrevio]);
+    const bruto = totalSemana;
+    const amortizacion = Math.min(
+      terminos.anticipo_saldo,
+      bruto * (terminos.anticipo_pct / 100),
+    );
+    const retencion = bruto * (terminos.fondo_garantia_pct / 100);
+    const fondoDisponible = terminos.fondo_saldo_prev + retencion;
+    const liberacionNum = Math.min(Number(liberacionFondo || 0), fondoDisponible);
+    const neto = bruto - amortizacion - retencion + liberacionNum;
+    return {
+      totalSemana,
+      totalAcum,
+      totalVigente,
+      erroresPorClave,
+      bruto,
+      amortizacion,
+      retencion,
+      liberacion: liberacionNum,
+      fondoDisponible,
+      neto,
+    };
+  }, [vigente, cantidades, acumuladoPrevio, terminos, liberacionFondo]);
 
   const visibleRows = useMemo(() => {
     const f = filter.trim().toLowerCase();
