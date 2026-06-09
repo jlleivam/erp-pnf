@@ -154,27 +154,24 @@ export function DestajosModule({ obraId }: { obraId: string }) {
                   : 0;
                 return (
                   <tr key={d.id} className="border-t border-border">
-                    <td className="p-3 tabular-nums">{d.numero}</td>
-                    <td className="p-3">
-                      <p className="font-medium">{d.nombre}</p>
-                      {d.descripcion && (
-                        <p className="text-xs text-muted-foreground">{d.descripcion}</p>
-                      )}
+                    <td className="py-2 px-3 tabular-nums">{d.numero}</td>
+                    <td className="py-2 px-3">
+                      <p className="font-medium truncate" title={d.descripcion ?? undefined}>{d.nombre}</p>
                     </td>
-                    <td className="p-3">{d.destajista_nombre}</td>
-                    <td className="p-3">
-                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]}>
+                    <td className="py-2 px-3 whitespace-nowrap">{d.destajista_nombre}</td>
+                    <td className="py-2 px-3">
+                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]} className="whitespace-nowrap">
                         {ESTATUS_LABEL[d.estatus_base]}
                       </Badge>
                     </td>
-                    <td className="p-3 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
-                    <td className="p-3 text-right tabular-nums">
+                    <td className="py-2 px-3 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
+                    <td className="py-2 px-3 text-right tabular-nums">
                       {formatMXN(d.pagado_acumulado)}
                       {d.monto_total > 0 && (
                         <div className="text-xs text-muted-foreground">{pct.toFixed(0)}%</div>
                       )}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="py-2 px-3 text-right">
                       <div className="flex gap-2 justify-end">
                         <Button size="sm" variant="outline" onClick={() => setViewingId(d.id)}>
                           <Eye className="size-4 mr-1" /> Abrir
