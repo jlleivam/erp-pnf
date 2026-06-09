@@ -1146,6 +1146,66 @@ export type Database = {
           },
         ]
       }
+      obra_destajo_anticipos: {
+        Row: {
+          company_id: string
+          creado_por: string
+          created_at: string
+          destajo_id: string
+          fecha: string
+          id: string
+          metodo_pago: string | null
+          monto: number
+          pagado: boolean
+          pagado_at: string | null
+          referencia: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          creado_por: string
+          created_at?: string
+          destajo_id: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          pagado?: boolean
+          pagado_at?: string | null
+          referencia?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          destajo_id?: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          pagado?: boolean
+          pagado_at?: string | null
+          referencia?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_destajo_anticipos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_destajo_anticipos_destajo_id_fkey"
+            columns: ["destajo_id"]
+            isOneToOne: true
+            referencedRelation: "obra_destajos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_destajo_estimacion_renglones: {
         Row: {
           cantidad_ejecutada: number
@@ -1195,6 +1255,7 @@ export type Database = {
       }
       obra_destajo_estimaciones: {
         Row: {
+          amortizacion_anticipo: number
           cerrada_at: string | null
           cerrada_por: string | null
           company_id: string
@@ -1203,13 +1264,17 @@ export type Database = {
           destajo_id: string
           estatus: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id: string
+          liberacion_fondo: number
+          monto_neto: number
           monto_total: number
           numero: number
+          retencion_fondo: number
           semana_fin: string
           semana_inicio: string
           updated_at: string
         }
         Insert: {
+          amortizacion_anticipo?: number
           cerrada_at?: string | null
           cerrada_por?: string | null
           company_id: string
@@ -1218,13 +1283,17 @@ export type Database = {
           destajo_id: string
           estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id?: string
+          liberacion_fondo?: number
+          monto_neto?: number
           monto_total?: number
           numero?: number
+          retencion_fondo?: number
           semana_fin: string
           semana_inicio: string
           updated_at?: string
         }
         Update: {
+          amortizacion_anticipo?: number
           cerrada_at?: string | null
           cerrada_por?: string | null
           company_id?: string
@@ -1233,8 +1302,11 @@ export type Database = {
           destajo_id?: string
           estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id?: string
+          liberacion_fondo?: number
+          monto_neto?: number
           monto_total?: number
           numero?: number
+          retencion_fondo?: number
           semana_fin?: string
           semana_inicio?: string
           updated_at?: string
@@ -1436,12 +1508,15 @@ export type Database = {
       }
       obra_destajos: {
         Row: {
+          anticipo_monto: number
+          anticipo_pct: number
           company_id: string
           creado_por: string
           created_at: string
           descripcion: string | null
           destajista_id: string
           estatus: Database["public"]["Enums"]["destajo_doc_estatus"]
+          fondo_garantia_pct: number
           id: string
           monto_total: number
           nombre: string
@@ -1450,12 +1525,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          anticipo_monto?: number
+          anticipo_pct?: number
           company_id: string
           creado_por: string
           created_at?: string
           descripcion?: string | null
           destajista_id: string
           estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          fondo_garantia_pct?: number
           id?: string
           monto_total?: number
           nombre: string
@@ -1464,12 +1542,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          anticipo_monto?: number
+          anticipo_pct?: number
           company_id?: string
           creado_por?: string
           created_at?: string
           descripcion?: string | null
           destajista_id?: string
           estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          fondo_garantia_pct?: number
           id?: string
           monto_total?: number
           nombre?: string
