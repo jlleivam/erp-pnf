@@ -362,7 +362,7 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
     const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
     const { data: pres } = await supabase
       .from("obra_presupuestos")
-      .select("obra_id, tipo, estatus")
+      .select("obra_id, tipo, estatus, enviado_por")
       .eq("id", data.id)
       .single();
     if (!pres) throw new Error("Presupuesto no encontrado");
@@ -383,6 +383,20 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    try {
+      await notifyResidenteOC(supabase, {
+        residenteId: pres.enviado_por,
+        actorUserId: userId,
+        obraId: pres.obra_id,
+        tipo: "oc_presupuesto_rechazada",
+        link: `/app/obras/${pres.obra_id}/presupuesto`,
+        motivo: data.motivo,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] oc_presupuesto_rechazada error", e?.message);
+    }
+
     return { ok: true };
   });
 
