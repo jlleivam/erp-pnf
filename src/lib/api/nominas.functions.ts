@@ -17,16 +17,19 @@ async function getAccess(supabase: any, userId: string, obraId: string) {
   const isAdmin = roleSet.has("administrativo");
 
   const { data: team } = await supabase
-    .from("obra_team").select("id")
-    .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
-  const isObraMember = !!team;
+    .from("obra_team").select("role")
+    .eq("obra_id", obraId).eq("user_id", userId);
+  const teamRoles = new Set((team ?? []).map((t: any) => t.role));
+  const isObraResidente = teamRoles.has("residente");
+  const isObraMember = (team ?? []).length > 0;
 
   return {
     companyId,
     isDirector,
     isAdmin,
     isObraMember,
-    canEdit: isDirector || isAdmin || isObraMember,
+    isObraResidente,
+    canEdit: isDirector || isObraResidente,
   };
 }
 
