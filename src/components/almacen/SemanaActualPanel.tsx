@@ -87,38 +87,36 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
         </Card>
 
         <Card>
-          <div className="overflow-x-auto">
-            <Table className="text-sm">
-              <TableHeader>
+          <Table className="text-xs w-full table-fixed">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[10px] uppercase tracking-wide py-1.5 px-1.5 w-[26%]">Insumo</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[16%]">Proveedor</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[7%]">Ud</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[11%]">PU</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[8%]">Ini</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[8%]">Rec</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[14%]">Util</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[10%]">Final</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((m: any) => (
+                <MovRow
+                  key={m.id}
+                  mov={m}
+                  onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
+                />
+              ))}
+              {items.length === 0 && (
                 <TableRow>
-                  <TableHead className="text-xs uppercase tracking-wide py-1.5 px-2">Insumo</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Proveedor</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Unidad</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">PU</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Inv. inicial</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Recibido</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Utilizado</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Inv. final</TableHead>
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    Aún no hay material en el almacén esta semana. Registra recepciones desde la pestaña "Por recibir".
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((m: any) => (
-                  <MovRow
-                    key={m.id}
-                    mov={m}
-                    onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
-                  />
-                ))}
-                {items.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                      Aún no hay material en el almacén esta semana. Registra recepciones desde la pestaña "Por recibir".
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              )}
+            </TableBody>
+          </Table>
         </Card>
 
         <AlertDialog open={cerrarOpen} onOpenChange={setCerrarOpen}>
@@ -159,27 +157,27 @@ function MovRow({ mov, onSave }: { mov: any; onSave: (utilizado: number) => void
 
   return (
     <TableRow>
-      <TableCell className="py-1.5 px-2 whitespace-nowrap">
+      <TableCell className="py-1.5 px-1.5">
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="truncate max-w-[180px] block cursor-default">{insumoNombre}</span>
+            <span className="truncate block cursor-default">{insumoNombre}</span>
           </TooltipTrigger>
           <TooltipContent side="top">{insumoNombre}</TooltipContent>
         </Tooltip>
       </TableCell>
-      <TableCell className="py-1.5 px-2 text-center text-muted-foreground whitespace-nowrap">
+      <TableCell className="py-1.5 px-1 text-center text-muted-foreground">
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="truncate max-w-[140px] inline-block align-middle cursor-default">{proveedor}</span>
+            <span className="truncate block cursor-default">{proveedor}</span>
           </TooltipTrigger>
           <TooltipContent side="top">{proveedor}</TooltipContent>
         </Tooltip>
       </TableCell>
-      <TableCell className="py-1.5 px-2 text-center text-muted-foreground whitespace-nowrap">{mov.insumo?.unidad ?? "—"}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{formatMXN(Number(mov.precio_unitario))}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{Number(mov.inv_inicial)}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{Number(mov.recibido)}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center whitespace-nowrap">
+      <TableCell className="py-1.5 px-1 text-center text-muted-foreground">{mov.insumo?.unidad ?? "—"}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center tabular-nums truncate">{formatMXN(Number(mov.precio_unitario))}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center tabular-nums">{Number(mov.inv_inicial)}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center tabular-nums">{Number(mov.recibido)}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center">
         <Input
           type="number"
           step="0.01"
@@ -192,10 +190,10 @@ function MovRow({ mov, onSave }: { mov: any; onSave: (utilizado: number) => void
             if (n === Number(mov.utilizado)) return;
             onSave(n);
           }}
-          className={`h-7 w-20 text-center mx-auto tabular-nums ${overflow ? "border-rose-500" : ""}`}
+          className={`h-7 w-full max-w-[64px] px-1 text-center mx-auto tabular-nums ${overflow ? "border-rose-500" : ""}`}
         />
       </TableCell>
-      <TableCell className={`py-1.5 px-2 text-center tabular-nums font-medium whitespace-nowrap ${final < 0 ? "text-rose-600" : ""}`}>
+      <TableCell className={`py-1.5 px-1 text-center tabular-nums font-medium ${final < 0 ? "text-rose-600" : ""}`}>
         {final}
       </TableCell>
     </TableRow>
