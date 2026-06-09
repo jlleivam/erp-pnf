@@ -343,6 +343,64 @@ export function CapturaEstimacionDestajoSheet({
               </table>
             </Card>
 
+            {(terminos.anticipo_pct > 0 || terminos.fondo_garantia_pct > 0) && (
+              <Card className="mt-4 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Cálculo de pago de la semana
+                </p>
+                <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2">
+                  <Row label="Bruto (producción semana)" value={formatMXN(computed.bruto)} />
+                  {terminos.anticipo_pct > 0 && (
+                    <Row
+                      label={`(−) Amortización anticipo ${terminos.anticipo_pct}%`}
+                      value={`−${formatMXN(computed.amortizacion)}`}
+                      hint={`Saldo anticipo antes: ${formatMXN(terminos.anticipo_saldo)}`}
+                    />
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && (
+                    <Row
+                      label={`(−) Retención fondo ${terminos.fondo_garantia_pct}%`}
+                      value={`−${formatMXN(computed.retencion)}`}
+                    />
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && !isCerrada && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-xs flex-1">
+                        (+) Liberar fondo en esta semana
+                      </span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min={0}
+                        max={computed.fondoDisponible}
+                        value={liberacionFondo}
+                        onChange={(e) => setLiberacionFondo(e.target.value)}
+                        className="h-8 w-32 text-right tabular-nums"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && isCerrada && computed.liberacion > 0 && (
+                    <Row
+                      label="(+) Liberación fondo"
+                      value={`+${formatMXN(computed.liberacion)}`}
+                    />
+                  )}
+                </div>
+                <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
+                  <span>Neto a pagar</span>
+                  <span className="tabular-nums">{formatMXN(computed.neto)}</span>
+                </div>
+                {terminos.fondo_garantia_pct > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fondo disponible al cierre: {formatMXN(computed.fondoDisponible - computed.liberacion)}
+                  </p>
+                )}
+              </Card>
+            )}
+
+
             {!isCerrada && (
               <div className="flex gap-2 mt-4 flex-wrap justify-end sticky bottom-0 bg-background py-3">
                 <Button
