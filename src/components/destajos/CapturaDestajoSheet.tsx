@@ -99,6 +99,11 @@ export function CapturaDestajoSheet({
     return m;
   }, [calc]);
 
+  const clavesPadre = useMemo(
+    () => calcularClavesPadre(rows.map((r) => r.clave)),
+    [rows],
+  );
+
   const guardar = useServerFn(guardarRenglonesDestajo);
   const guardarM = useMutation({
     mutationFn: guardar,
