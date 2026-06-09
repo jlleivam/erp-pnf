@@ -582,9 +582,40 @@ async function recalcDestajoTotal(supabase: any, destajoId: string) {
   const { base, baseRenglones, ocsRenglones } = await loadDestajoBaseYOcs(supabase, destajoId);
   if (!base) return 0;
   const { montoTotal } = reconstruirVigente(baseRenglones, ocsRenglones);
-  await supabase.from("obra_destajos").update({ monto_total: montoTotal }).eq("id", destajoId);
+  // Recomputar anticipo_monto basado en el % vigente y el nuevo monto total
+  const { data: d0 } = await supabase
+    .from("obra_destajos").select("anticipo_pct").eq("id", destajoId).maybeSingle();
+  const anticipoPct = Number(d0?.anticipo_pct ?? 0);
+  const anticipoMonto = montoTotal * (anticipoPct / 100);
+  await supabase
+    .from("obra_destajos")
+    .update({ monto_total: montoTotal, anticipo_monto: anticipoMonto })
+    .eq("id", destajoId);
   return montoTotal;
 }
+
+async function ensureAnticipoRecord(supabase: any, destajoId: string, userId: string) {
+  const { data: destajo } = await supabase
+    .from("obra_destajos")
+    .select("id, company_id, anticipo_monto")
+    .eq("id", destajoId).single();
+  if (!destajo) return;
+  const monto = Number(destajo.anticipo_monto ?? 0);
+  if (monto <= 0) return;
+  const { data: existing } = await supabase
+    .from("obra_destajo_anticipos").select("id, pagado, monto").eq("destajo_id", destajoId).maybeSingle();
+  if (!existing) {
+    await supabase.from("obra_destajo_anticipos").insert({
+      destajo_id: destajoId,
+      company_id: destajo.company_id,
+      monto,
+      creado_por: userId,
+    });
+  } else if (!existing.pagado && Number(existing.monto) !== monto) {
+    await supabase.from("obra_destajo_anticipos").update({ monto }).eq("id", existing.id);
+  }
+}
+
 
 export const enviarPresupuestoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
