@@ -303,7 +303,7 @@ export const getDestajoPresupuesto = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: presupuesto, error } = await supabase
       .from("obra_destajo_presupuestos")
-      .select("*, obra_destajos!inner(id, obra_id, company_id, destajista_id, nombre, numero)")
+      .select("*, obra_destajos!inner(id, obra_id, company_id, destajista_id, nombre, numero, anticipo_pct, anticipo_monto, fondo_garantia_pct, trabajadores:destajista_id(id, nombre_completo, puesto))")
       .eq("id", data.id).single();
     if (error) throw new Error(error.message);
     const { data: renglones } = await supabase
