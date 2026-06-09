@@ -106,6 +106,12 @@ export function CapturaPresupuestoSheet({
     return m;
   }, [calc]);
 
+  // Claves padre (partidas que tienen al menos un hijo)
+  const clavesPadre = useMemo(
+    () => calcularClavesPadre(rows.map((r) => r.clave)),
+    [rows],
+  );
+
   const guardar = useServerFn(guardarRenglones);
   const guardarM = useMutation({
     mutationFn: guardar,
