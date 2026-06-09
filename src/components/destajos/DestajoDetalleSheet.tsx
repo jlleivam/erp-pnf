@@ -573,26 +573,83 @@ function TerminosTab({
               </p>
             )}
             {anticipoRegistro && (
-              <p className="text-xs mt-1">
+              <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
                 {anticipoRegistro.pagado ? (
                   <Badge>Pagado</Badge>
+                ) : anticipoRegistro.solicitado_at ? (
+                  <>
+                    <Badge variant="secondary">Solicitado</Badge>
+                    <span className="text-muted-foreground">
+                      el {new Date(anticipoRegistro.solicitado_at).toLocaleDateString("es-MX")}
+                    </span>
+                  </>
                 ) : (
-                  <Badge variant="secondary">Pendiente de pago</Badge>
+                  <Badge variant="outline">Por solicitar</Badge>
                 )}
+              </div>
+            )}
+            {anticipoRegistro?.solicitud_notas && (
+              <p className="text-xs text-muted-foreground mt-1 italic">
+                "{anticipoRegistro.solicitud_notas}"
               </p>
             )}
           </div>
           {anticipoMonto > 0 && anticipoRegistro && !anticipoRegistro.pagado && (
-            <Button
-              size="sm"
-              disabled={marcarM.isPending}
-              onClick={() => marcarM.mutate({ data: { destajoId: destajo.id } })}
-            >
-              Marcar pagado
-            </Button>
+            <div className="flex gap-2">
+              {!anticipoRegistro.solicitado_at ? (
+                <Button
+                  size="sm"
+                  disabled={!canEdit}
+                  onClick={() => setSolicitOpen(true)}
+                >
+                  Solicitar pago
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={cancelarM.isPending}
+                  onClick={() => cancelarM.mutate({ data: { destajoId: destajo.id } })}
+                >
+                  Cancelar solicitud
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </Card>
+
+      <Dialog open={solicitOpen} onOpenChange={setSolicitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Solicitar pago de anticipo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border bg-muted/30 p-3 text-sm flex justify-between">
+              <span className="text-muted-foreground">Monto del anticipo</span>
+              <span className="font-semibold">{formatMXN(anticipoMonto)}</span>
+            </div>
+            <div>
+              <Label className="text-sm">Notas para administrativo (opcional)</Label>
+              <Textarea
+                value={solicitNotas}
+                onChange={(e) => setSolicitNotas(e.target.value)}
+                rows={3}
+                placeholder="Detalles, urgencia, etc."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSolicitOpen(false)}>Cancelar</Button>
+            <Button
+              disabled={solicitarM.isPending}
+              onClick={() => solicitarM.mutate({ data: { destajoId: destajo.id, notas: solicitNotas.trim() || undefined } })}
+            >
+              {solicitarM.isPending ? "Enviando…" : "Enviar solicitud"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card className="p-4">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">Fondo de garantía</p>
