@@ -5,7 +5,7 @@ import {
   getSubcontratoPresupuesto,
   guardarRenglonesSubcontrato,
 } from "@/lib/api/subcontratos.functions";
-import { procesarRenglones, type RenglonInput } from "@/lib/presupuesto-utils";
+import { procesarRenglones, calcularClavesPadre, type RenglonInput } from "@/lib/presupuesto-utils";
 import {
   Sheet,
   SheetContent,
