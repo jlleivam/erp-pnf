@@ -104,34 +104,28 @@ export function DestajosModule({ obraId }: { obraId: string }) {
   const activos = destajos.filter((d) => d.estatus_base === "autorizado").length;
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Destajos</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Subcontratación a trabajadores propios con presupuesto, órdenes de cambio
-            y estimaciones semanales de avance.
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)}>
+    <div className="space-y-4">
+      <header className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-xl font-semibold tracking-tight">Destajos</h1>
+        <Button size="sm" onClick={() => setCreating(true)}>
           <Plus className="size-4 mr-1" /> Nuevo destajo
         </Button>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Contratado vigente</p>
-          <p className="mt-2 text-xl font-semibold">{formatMXN(contratado)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Pagado acumulado</p>
-          <p className="mt-2 text-xl font-semibold">{formatMXN(pagado)}</p>
-        </Card>
-        <Card className="p-4 border-primary/30 bg-primary/5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Destajos activos</p>
-          <p className="mt-2 text-xl font-semibold">{activos}</p>
-        </Card>
-      </div>
+      <Card className="flex divide-x divide-border">
+        <div className="flex-1 p-3">
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Contratado vigente</p>
+          <p className="mt-0.5 text-base font-semibold tabular-nums">{formatMXN(contratado)}</p>
+        </div>
+        <div className="flex-1 p-3">
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Pagado acumulado</p>
+          <p className="mt-0.5 text-base font-semibold tabular-nums">{formatMXN(pagado)}</p>
+        </div>
+        <div className="flex-1 p-3 bg-primary/5">
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Destajos activos</p>
+          <p className="mt-0.5 text-base font-semibold tabular-nums">{activos}</p>
+        </div>
+      </Card>
 
       {listQ.isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
@@ -160,27 +154,24 @@ export function DestajosModule({ obraId }: { obraId: string }) {
                   : 0;
                 return (
                   <tr key={d.id} className="border-t border-border">
-                    <td className="p-3 tabular-nums">{d.numero}</td>
-                    <td className="p-3">
-                      <p className="font-medium">{d.nombre}</p>
-                      {d.descripcion && (
-                        <p className="text-xs text-muted-foreground">{d.descripcion}</p>
-                      )}
+                    <td className="py-2 px-3 tabular-nums">{d.numero}</td>
+                    <td className="py-2 px-3">
+                      <p className="font-medium truncate" title={d.descripcion ?? undefined}>{d.nombre}</p>
                     </td>
-                    <td className="p-3">{d.destajista_nombre}</td>
-                    <td className="p-3">
-                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]}>
+                    <td className="py-2 px-3 whitespace-nowrap">{d.destajista_nombre}</td>
+                    <td className="py-2 px-3">
+                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]} className="whitespace-nowrap">
                         {ESTATUS_LABEL[d.estatus_base]}
                       </Badge>
                     </td>
-                    <td className="p-3 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
-                    <td className="p-3 text-right tabular-nums">
+                    <td className="py-2 px-3 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
+                    <td className="py-2 px-3 text-right tabular-nums">
                       {formatMXN(d.pagado_acumulado)}
                       {d.monto_total > 0 && (
                         <div className="text-xs text-muted-foreground">{pct.toFixed(0)}%</div>
                       )}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="py-2 px-3 text-right">
                       <div className="flex gap-2 justify-end">
                         <Button size="sm" variant="outline" onClick={() => setViewingId(d.id)}>
                           <Eye className="size-4 mr-1" /> Abrir
