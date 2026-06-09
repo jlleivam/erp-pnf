@@ -64,6 +64,7 @@ export function CapturaEstimacionDestajoSheet({
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
   const [confirmCierre, setConfirmCierre] = useState(false);
+  const [liberacionFondo, setLiberacionFondo] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
 
   if (!initialized && q.data?.capturados) {
