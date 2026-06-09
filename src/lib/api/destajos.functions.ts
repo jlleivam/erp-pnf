@@ -688,6 +688,11 @@ export const autorizarPresupuestoDestajo = createServerFn({ method: "POST" })
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
     await recalcDestajoTotal(supabase, p.destajo_id);
+    // Si es el presupuesto base autorizado, generar registro de anticipo
+    if (p.tipo === "base") {
+      await ensureAnticipoRecord(supabase, p.destajo_id, userId);
+    }
+
 
     const link = `/app/obras/${d0!.obra_id}/destajos?destajo=${p.destajo_id}`;
     try {
