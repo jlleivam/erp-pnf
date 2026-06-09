@@ -71,7 +71,7 @@ export function TrabajadorDetalle({
   const autorizarM = useMutation({
     mutationFn: autorizar,
     onSuccess: () => {
-      toast.success("Trabajador autorizado");
+      toast.success("Trabajador registrado");
       qc.invalidateQueries({ queryKey: ["trabajador", trabajadorId] });
       qc.invalidateQueries({ queryKey: ["trabajadores"] });
     },
