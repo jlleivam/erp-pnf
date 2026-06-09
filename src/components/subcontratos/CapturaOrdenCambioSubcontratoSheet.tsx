@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Eye } from "lucide-react";
+import { VigenteViewerDialog } from "@/components/presupuesto/VigenteViewerDialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
 
