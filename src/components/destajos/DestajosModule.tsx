@@ -70,6 +70,21 @@ export function DestajosModule({ obraId }: { obraId: string }) {
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Destajo | null>(null);
 
+  // Abrir automáticamente el destajo indicado en ?destajo=<id> (notificación).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("destajo");
+    if (id) {
+      setViewingId(id);
+      params.delete("destajo");
+      const qs = params.toString();
+      const url = window.location.pathname + (qs ? `?${qs}` : "");
+      window.history.replaceState({}, "", url);
+    }
+  }, []);
+
+
   const remove = useServerFn(eliminarDestajo);
   const removeM = useMutation({
     mutationFn: remove,
