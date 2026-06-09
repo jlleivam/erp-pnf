@@ -1,25 +1,45 @@
 # Problema
 
-Al hacer click en la notificación "OC autorizada" navega a `/app/obras/{id}/presupuesto`, pero no abre directamente la OC autorizada. El usuario debe encontrarla manualmente en la pestaña de Órdenes de cambio.
+En los sheets con clave WBS (presupuesto, OC presupuesto, subcontrato, OC subcontrato, destajo, OC destajo, estimación), aunque el sistema detecta los renglones padre y suma sus hijos, los inputs de Unidad, Cantidad y PU siguen visibles y editables en los renglones padre. Esto confunde y permite capturar datos que serán ignorados.
 
 # Cambios
 
-**1. `src/lib/api/presupuestos.functions.ts`** — incluir el id de la OC y el tab en el `link` de las notificaciones de OC autorizada/rechazada para que la UI pueda abrir el sheet directamente:
+**1. `src/lib/presupuesto-utils.ts`** — exponer un helper puro para que la UI pueda saber, en tiempo real (sin necesidad de pasar la validación completa), qué claves son padre:
 
-- En `autorizarPresupuesto` (≈ línea 289):  
-  `link: \`/app/obras/${pres.obra_id}/presupuesto?tab=adendas&ver=${data.id}\``
-- En `rechazarPresupuesto` (≈ línea 393): mismo formato.
+```ts
+export function calcularClavesPadre(claves: string[]): Set<string> {
+  const set = new Set<string>();
+  for (const c of claves) {
+    const p = parentDeClave(c.trim());
+    if (p) set.add(p);
+  }
+  return set;
+}
+```
 
-**2. `src/components/presupuesto/PresupuestoModule.tsx`** — leer los search params `tab` y `ver` al montar y aplicar:
+**2. En cada sheet de captura WBS**, calcular `clavesPadre` con `useMemo` a partir de las filas actuales y, para cada fila cuya `clave` esté en ese set:
 
-- Importar `useSearch` y `useNavigate` de `@tanstack/react-router`.
-- Cambiar `<Tabs defaultValue="base">` por un Tabs controlado con `value={tab}` y `onValueChange` que actualice el search param.
-- Al detectar `ver` en los search params, hacer `setViewing(ver)` en un `useEffect` y luego limpiar el param (`navigate({ search: (prev) => ({ ...prev, ver: undefined }) })`) para que cerrar el sheet no lo vuelva a abrir.
-- Inicializar `tab` desde el search param (default `"base"`).
+- Renderizar los inputs de **Unidad**, **Cantidad** y **PU** como celdas de sólo lectura (texto "—" centrado en muted-foreground), no como `<Input disabled>`.
+- Aplicar una clase de fila distintiva: `bg-muted/40 font-medium` para diferenciarla de los conceptos hoja.
+- Mantener editables Clave y Concepto, y el botón de eliminar.
+- La columna Importe sigue mostrando la suma de hijos como hoy.
 
-Como la ruta es un splat (`app.obras.$obraId.$.tsx`) sin `validateSearch`, usar `useSearch({ strict: false })` para leer y `useNavigate()` para escribir; los valores se tipan como `string | undefined`.
+Archivos a modificar (misma lógica, copy-paste del patrón):
+
+- `src/components/presupuesto/CapturaPresupuestoSheet.tsx`
+- `src/components/presupuesto/CapturaOrdenCambioSheet.tsx`
+- `src/components/subcontratos/CapturaSubcontratoSheet.tsx`
+- `src/components/subcontratos/CapturaOrdenCambioSubcontratoSheet.tsx`
+- `src/components/destajos/CapturaDestajoSheet.tsx`
+- `src/components/destajos/CapturaOrdenCambioDestajoSheet.tsx`
+- `src/components/estimaciones/CapturaEstimacionSheet.tsx` (sólo si la fila padre permite capturar cantidad estimada — la cantidad de un padre también es la suma de sus hijos)
+- `src/components/destajos/CapturaEstimacionDestajoSheet.tsx`
+- `src/components/subcontratos/CapturaEstimacionSubcontratoSheet.tsx`
+
+En las estimaciones (donde el usuario sólo captura cantidad ejecutada de la semana, no PU), la regla es: si la clave es padre, mostrar la cantidad como suma de hijos en sólo lectura y no permitir captura.
 
 # Sin cambios
 
-- No se tocan tablas ni notificaciones ya existentes (los nuevos enlaces aplican a notificaciones creadas a partir de este cambio).
-- El comportamiento al entrar al módulo sin search params permanece igual.
+- Validación, cálculo de importes y persistencia en backend no cambian (ya soportan `es_grupo`).
+- No se tocan tablas ni migraciones.
+- Los inputs de Clave y Concepto siguen editables para poder convertir una partida en hoja simplemente borrando sus hijos.
