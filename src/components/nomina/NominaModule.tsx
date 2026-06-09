@@ -183,7 +183,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar nómina?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará el borrador de la semana{" "}
+              Se eliminará la nómina activa de la semana{" "}
               {toDelete && formatRangoSemana(toDelete.semana_inicio, toDelete.semana_fin)} con toda
               su asistencia capturada. No se puede deshacer.
             </AlertDialogDescription>
