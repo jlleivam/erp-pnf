@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   CheckCircle2,
+  MoreHorizontal,
   Pencil,
   Plus,
   Search,
@@ -24,13 +25,11 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,10 +47,6 @@ import {
 } from "@/lib/api/trabajadores.functions";
 import { useEffectiveRoles } from "@/stores/auth";
 import {
-  DOCS_BADGE,
-  DOCS_LABEL,
-  IMSS_BADGE,
-  IMSS_LABEL,
   PUESTOS,
   PUESTO_LABEL,
   mascararCurp,
@@ -72,30 +67,28 @@ type Row = {
   documentos_estado: "al_dia" | "por_vencer" | "vencido_o_faltante";
 };
 
-function MetricCard({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: number | string;
-  tone?: "default" | "success" | "danger" | "warning";
-}) {
-  const toneCls =
-    tone === "success"
-      ? "text-emerald-700"
-      : tone === "danger"
-        ? "text-rose-700"
-        : tone === "warning"
-          ? "text-amber-700"
-          : "text-foreground";
-  return (
-    <Card className="p-4">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`text-2xl font-semibold mt-1 ${toneCls}`}>{value}</div>
-    </Card>
-  );
-}
+const IMSS_DOT: Record<Row["imss_estatus"], string> = {
+  alta_activa: "bg-emerald-500",
+  sin_alta: "bg-rose-500",
+  en_tramite: "bg-amber-500",
+  baja: "bg-muted-foreground",
+};
+const IMSS_SHORT: Record<Row["imss_estatus"], string> = {
+  alta_activa: "Alta",
+  sin_alta: "Sin alta",
+  en_tramite: "Trámite",
+  baja: "Baja",
+};
+const DOCS_DOT: Record<Row["documentos_estado"], string> = {
+  al_dia: "bg-emerald-500",
+  por_vencer: "bg-amber-500",
+  vencido_o_faltante: "bg-rose-500",
+};
+const DOCS_SHORT: Record<Row["documentos_estado"], string> = {
+  al_dia: "Al día",
+  por_vencer: "Por vencer",
+  vencido_o_faltante: "Vencido",
+};
 
 function Avatar({ name }: { name: string }) {
   const initials = name
@@ -105,7 +98,7 @@ function Avatar({ name }: { name: string }) {
     .map((n) => n[0]?.toUpperCase())
     .join("");
   return (
-    <div className="size-9 rounded-full bg-[#0f1e3d] text-white grid place-items-center text-xs font-medium shrink-0">
+    <div className="size-8 rounded-full bg-[#0f1e3d] text-white grid place-items-center text-[11px] font-medium shrink-0">
       {initials || "?"}
     </div>
   );
@@ -143,7 +136,6 @@ export function CatalogoTrabajadoresModule() {
 
   const rows: Row[] = (listQ.data ?? []) as Row[];
 
-
   const stats = useMemo(() => {
     const total = rows.length;
     const altaActiva = rows.filter((r) => r.imss_estatus === "alta_activa").length;
@@ -174,74 +166,81 @@ export function CatalogoTrabajadoresModule() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="space-y-3">
+      {/* Header compacto */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h2 className="text-xl font-semibold tracking-tight">Trabajadores</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Personal de obra, IMSS y documentación.
-          </p>
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+            <span>{stats.total} en total</span>
+            <span>·</span>
+            <span className="text-emerald-700">{stats.altaActiva} alta activa</span>
+            {stats.sinAlta > 0 && (
+              <>
+                <span>·</span>
+                <button
+                  onClick={() => setImssFiltro("sin_alta")}
+                  className="inline-flex items-center gap-1 text-rose-700 hover:underline"
+                >
+                  <AlertTriangle className="size-3" />
+                  {stats.sinAlta} sin IMSS
+                </button>
+              </>
+            )}
+            {stats.pendientes > 0 && (
+              <>
+                <span>·</span>
+                <span className="text-amber-700">{stats.pendientes} por autorizar</span>
+              </>
+            )}
+          </div>
         </div>
-        {canRequest && (
-          <Button
-            onClick={() => setCreating(true)}
-            className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90"
-          >
-            <Plus className="size-4 mr-1" />
-            {canManage ? "Nuevo trabajador" : "Solicitar alta"}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+              <TabsList className="h-8">
+                <TabsTrigger value="todos" className="text-xs h-6 px-2">Todos</TabsTrigger>
+                <TabsTrigger value="pendientes" className="text-xs h-6 px-2">
+                  Pendientes
+                  {stats.pendientes > 0 && (
+                    <Badge className="ml-1.5 h-4 px-1 bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px]">
+                      {stats.pendientes}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {canRequest && (
+            <Button
+              size="sm"
+              onClick={() => setCreating(true)}
+              className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90 h-8"
+            >
+              <Plus className="size-3.5 mr-1" />
+              {canManage ? "Nuevo" : "Solicitar alta"}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {stats.sinAlta > 0 && (
-        <Card className="bg-rose-50 border-rose-200 p-4 flex items-center gap-3">
-          <AlertTriangle className="size-5 text-rose-600 shrink-0" />
-          <p className="text-sm text-rose-900">
-            <strong>{stats.sinAlta}</strong> trabajador{stats.sinAlta === 1 ? "" : "es"}{" "}
-            sin alta en el IMSS. Regulariza para evitar contingencias.
-          </p>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total trabajadores" value={stats.total} />
-        <MetricCard label="Alta activa" value={stats.altaActiva} tone="success" />
-        <MetricCard label="Sin alta IMSS" value={stats.sinAlta} tone="danger" />
-        <MetricCard label="Pendientes autorización" value={stats.pendientes} tone="warning" />
-      </div>
-
-      {canManage && (
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList>
-            <TabsTrigger value="todos">Todos</TabsTrigger>
-            <TabsTrigger value="pendientes">
-              Pendientes de autorización
-              {stats.pendientes > 0 && (
-                <Badge className="ml-2 bg-amber-100 text-amber-800 hover:bg-amber-100">
-                  {stats.pendientes}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
-
-      <Card className="p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-64">
-          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      {/* Filtros delgados */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre, CURP o NSS…"
+            placeholder="Buscar nombre, CURP o NSS…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-sm"
           />
         </div>
         <Select value={imssFiltro} onValueChange={(v) => setImssFiltro(v as typeof imssFiltro)}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-36 h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos los estatus IMSS</SelectItem>
+            <SelectItem value="todos">Todos los IMSS</SelectItem>
             <SelectItem value="alta_activa">Alta activa</SelectItem>
             <SelectItem value="sin_alta">Sin alta</SelectItem>
             <SelectItem value="en_tramite">En trámite</SelectItem>
@@ -252,7 +251,7 @@ export function CatalogoTrabajadoresModule() {
           value={puestoFiltro}
           onValueChange={(v) => setPuestoFiltro(v as TrabajadorPuesto | "todos")}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-36 h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -264,121 +263,141 @@ export function CatalogoTrabajadoresModule() {
             ))}
           </SelectContent>
         </Select>
-      </Card>
+      </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Trabajador</TableHead>
-              <TableHead>Puesto</TableHead>
-              <TableHead>IMSS</TableHead>
-              <TableHead>Documentos</TableHead>
-              <TableHead>Estatus</TableHead>
-              {canManage && <TableHead className="w-40 text-right">Acciones</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {listQ.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5} className="text-sm text-muted-foreground">
-                  Cargando…
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canManage ? 6 : 5}>
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <Users className="size-10 text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">Sin trabajadores</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {canRequest
-                        ? "Da de alta el primer trabajador para empezar."
-                        : "Aún no hay trabajadores registrados."}
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((r) => (
-                <TableRow
-                  key={r.id}
-                  className="cursor-pointer"
-                  onClick={() => setDetalleId(r.id)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar name={r.nombre_completo} />
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{r.nombre_completo}</div>
-                        <div className="text-xs text-muted-foreground font-mono">
-                          {mascararCurp(r.curp)}
-                        </div>
-                      </div>
+      {/* Lista protagonista */}
+      <Card className="overflow-hidden">
+        {/* Header de columnas */}
+        <div className="hidden sm:grid grid-cols-[1fr_110px_90px_90px_90px_40px] gap-3 px-3 py-2 border-b bg-muted/30 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+          <div>Trabajador</div>
+          <div className="hidden md:block">Puesto</div>
+          <div>IMSS</div>
+          <div className="hidden lg:block">Docs</div>
+          <div>Estatus</div>
+          <div></div>
+        </div>
+
+        {listQ.isLoading ? (
+          <div className="px-3 py-6 text-sm text-muted-foreground">Cargando…</div>
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <Users className="size-8 text-muted-foreground mb-2" />
+            <p className="text-sm font-medium">Sin trabajadores</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {canRequest
+                ? "Da de alta el primer trabajador para empezar."
+                : "Aún no hay trabajadores registrados."}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {rows.map((r) => (
+              <li
+                key={r.id}
+                onClick={() => setDetalleId(r.id)}
+                className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_110px_90px_90px_90px_40px] gap-3 items-center px-3 py-2.5 hover:bg-muted/40 cursor-pointer transition-colors"
+              >
+                {/* Trabajador */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Avatar name={r.nombre_completo} />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate leading-tight">
+                      {r.nombre_completo}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-sm">{r.puesto ? PUESTO_LABEL[r.puesto] : "—"}</TableCell>
-                  <TableCell>
-                    <Badge className={IMSS_BADGE[r.imss_estatus]} variant="secondary">
-                      {IMSS_LABEL[r.imss_estatus]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={DOCS_BADGE[r.documentos_estado]}
-                      variant="secondary"
-                    >
-                      {DOCS_LABEL[r.documentos_estado]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {r.estatus_autorizacion === "autorizado" ? (
-                      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                        Autorizado
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                        Pendiente
-                      </Badge>
-                    )}
-                  </TableCell>
-                  {canManage && (
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      {r.estatus_autorizacion === "pendiente" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Autorizar"
-                          onClick={() => autM.mutate({ data: { id: r.id } })}
-                          disabled={autM.isPending}
-                          className="text-emerald-600 hover:text-emerald-700"
-                        >
-                          <CheckCircle2 className="size-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setEditing(r)}
-                        title="Editar"
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setToDelete(r)}
-                        title="Eliminar"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </TableCell>
+                    <div className="text-[11px] text-muted-foreground truncate leading-tight">
+                      <span className="md:hidden">
+                        {r.puesto ? PUESTO_LABEL[r.puesto] : "Sin puesto"} ·{" "}
+                      </span>
+                      <span className="font-mono">{mascararCurp(r.curp)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Puesto (md+) */}
+                <div className="hidden md:block text-xs text-foreground/80 truncate">
+                  {r.puesto ? PUESTO_LABEL[r.puesto] : "—"}
+                </div>
+
+                {/* IMSS (sm+) */}
+                <div className="hidden sm:flex items-center gap-1.5 text-xs whitespace-nowrap">
+                  <span className={`size-1.5 rounded-full ${IMSS_DOT[r.imss_estatus]}`} />
+                  {IMSS_SHORT[r.imss_estatus]}
+                </div>
+
+                {/* Docs (lg+) */}
+                <div className="hidden lg:flex items-center gap-1.5 text-xs whitespace-nowrap">
+                  <span
+                    className={`size-1.5 rounded-full ${DOCS_DOT[r.documentos_estado]}`}
+                  />
+                  {DOCS_SHORT[r.documentos_estado]}
+                </div>
+
+                {/* Estatus (sm+) */}
+                <div className="hidden sm:block">
+                  {r.estatus_autorizacion === "autorizado" ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700">
+                      <span className="size-1.5 rounded-full bg-emerald-500" />
+                      Autorizado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
+                      <span className="size-1.5 rounded-full bg-amber-500" />
+                      Pendiente
+                    </span>
                   )}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                </div>
+
+                {/* Acciones */}
+                <div
+                  className="flex items-center justify-end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {canManage ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-7">
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {r.estatus_autorizacion === "pendiente" && (
+                          <DropdownMenuItem
+                            onClick={() => autM.mutate({ data: { id: r.id } })}
+                            disabled={autM.isPending}
+                            className="text-emerald-700"
+                          >
+                            <CheckCircle2 className="size-4 mr-2" />
+                            Autorizar
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => setEditing(r)}>
+                          <Pencil className="size-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setToDelete(r)}
+                          className="text-rose-700"
+                        >
+                          <Trash2 className="size-4 mr-2" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <div className="sm:hidden flex items-center gap-1.5">
+                      <span
+                        className={`size-1.5 rounded-full ${IMSS_DOT[r.imss_estatus]}`}
+                      />
+                      <span className="text-[11px] text-muted-foreground">
+                        {IMSS_SHORT[r.imss_estatus]}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       {(creating || editing) && (
