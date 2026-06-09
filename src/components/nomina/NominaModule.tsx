@@ -71,15 +71,9 @@ export function NominaModule({ obraId }: { obraId: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          {borrador ? (
-            <Button onClick={() => setEditing({ semanaInicio: borrador.semana_inicio })}>
-              Continuar borrador
-            </Button>
-          ) : (
-            <Button onClick={() => setOpenNueva(true)}>
-              <Plus className="size-4 mr-1" /> Nueva semana
-            </Button>
-          )}
+          <Button onClick={() => setOpenNueva(true)}>
+            <Plus className="size-4 mr-1" /> Nueva semana
+          </Button>
         </div>
       </header>
 
@@ -96,7 +90,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
           </p>
         </Card>
         <Card className="p-4 border-primary/30 bg-primary/5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Borrador actual</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Nómina activa</p>
           <p className="mt-2 text-xl font-semibold">
             {borrador ? formatMXN(Number(borrador.monto_total)) : "—"}
           </p>
@@ -133,7 +127,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
                   <td className="p-3">{formatRangoSemana(n.semana_inicio, n.semana_fin)}</td>
                   <td className="p-3">
                     <Badge variant={n.estatus === "cerrada" ? "default" : "secondary"}>
-                      {n.estatus === "cerrada" ? "Cerrada" : "Borrador"}
+                      {n.estatus === "cerrada" ? "Cerrada" : "Activa"}
                     </Badge>
                   </td>
                   <td className="p-3 text-right tabular-nums font-medium">
@@ -189,7 +183,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar nómina?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará el borrador de la semana{" "}
+              Se eliminará la nómina activa de la semana{" "}
               {toDelete && formatRangoSemana(toDelete.semana_inicio, toDelete.semana_fin)} con toda
               su asistencia capturada. No se puede deshacer.
             </AlertDialogDescription>
