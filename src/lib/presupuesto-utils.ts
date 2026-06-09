@@ -179,7 +179,11 @@ export type OCInput = {
 };
 
 export type VigenteNode = RenglonBase & {
-  origen: "base" | "modificada" | "agregada";
+  origen: "base" | "modificada" | "agregada" | "eliminada";
+  cantidad_base?: number | null;
+  pu_base?: number | null;
+  cantidad_modificada?: boolean;
+  pu_modificado?: boolean;
 };
 
 /**
@@ -199,6 +203,10 @@ export function reconstruirVigente(
     precio_unitario: number | null;
     origen: "base" | "modificada" | "agregada";
     eliminada: boolean;
+    cantidad_base?: number | null;
+    pu_base?: number | null;
+    cantidad_modificada?: boolean;
+    pu_modificado?: boolean;
   };
   const hojas = new Map<string, Hoja>();
 
@@ -233,8 +241,20 @@ export function reconstruirVigente(
       } else if (m.tipo_movimiento === "modificacion") {
         const h = hojas.get(m.clave);
         if (h && !h.eliminada) {
-          h.cantidad = m.cantidad;
-          h.precio_unitario = m.precio_unitario;
+          if (h.origen === "base") {
+            h.cantidad_base = h.cantidad;
+            h.pu_base = h.precio_unitario;
+          }
+          const newCant = m.cantidad;
+          const newPU = m.precio_unitario;
+          if (Number(newCant ?? 0) !== Number(h.cantidad_base ?? 0)) {
+            h.cantidad_modificada = true;
+          }
+          if (Number(newPU ?? 0) !== Number(h.pu_base ?? 0)) {
+            h.pu_modificado = true;
+          }
+          h.cantidad = newCant;
+          h.precio_unitario = newPU;
           if (m.concepto) h.concepto = m.concepto;
           if (m.unidad !== undefined) h.unidad = m.unidad;
           if (h.origen === "base") h.origen = "modificada";
@@ -243,10 +263,10 @@ export function reconstruirVigente(
     }
   }
 
-  // Construir nodos hoja vivos + reconstruir grupos
-  const hojasVivas = [...hojas.values()].filter((h) => !h.eliminada);
+  // Construir nodos: incluir TODAS las hojas (vivas y eliminadas) para mostrarlas
+  const todasHojas = [...hojas.values()];
   const todasClaves = new Set<string>();
-  for (const h of hojasVivas) {
+  for (const h of todasHojas) {
     let c: string | null = h.clave;
     while (c) {
       todasClaves.add(c);
@@ -285,10 +305,14 @@ export function reconstruirVigente(
     }
   }
 
-  // Calcular importes (hojas primero, luego grupos)
+  // Calcular importes (hojas primero, luego grupos). Las eliminadas aportan 0.
   const importes = new Map<string, number>();
-  for (const h of hojasVivas) {
-    importes.set(h.clave, Number(h.cantidad ?? 0) * Number(h.precio_unitario ?? 0));
+  for (const h of todasHojas) {
+    if (h.eliminada) {
+      importes.set(h.clave, 0);
+    } else {
+      importes.set(h.clave, Number(h.cantidad ?? 0) * Number(h.precio_unitario ?? 0));
+    }
   }
   const clavesOrdNivelDesc = [...todasClaves].sort(
     (a, b) => nivelDeClave(b) - nivelDeClave(a),
@@ -320,6 +344,20 @@ export function reconstruirVigente(
       };
     }
     const h = hojas.get(clave)!;
+    if (h.eliminada) {
+      return {
+        clave,
+        concepto: h.concepto,
+        unidad: h.unidad,
+        cantidad: 0,
+        precio_unitario: h.precio_unitario,
+        importe: 0,
+        es_grupo: false,
+        nivel: nivelDeClave(clave),
+        parent_clave: parentDeClave(clave),
+        origen: "eliminada",
+      };
+    }
     return {
       clave,
       concepto: h.concepto,
@@ -331,6 +369,10 @@ export function reconstruirVigente(
       nivel: nivelDeClave(clave),
       parent_clave: parentDeClave(clave),
       origen: h.origen,
+      cantidad_base: h.cantidad_base,
+      pu_base: h.pu_base,
+      cantidad_modificada: h.cantidad_modificada,
+      pu_modificado: h.pu_modificado,
     };
   });
 
