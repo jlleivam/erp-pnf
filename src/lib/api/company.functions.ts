@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const SELECT =
-  "id, tipo_persona, razon_social, nombre_completo, rfc, curp, regimen_fiscal, calle, numero_exterior, numero_interior, colonia, municipio, estado, codigo_postal, registro_imss, registro_infonavit, moneda, zona_horaria, logo_url";
+  "id, tipo_persona, razon_social, nombre_completo, rfc, curp, regimen_fiscal, calle, numero_exterior, numero_interior, colonia, municipio, estado, codigo_postal, registro_imss, registro_infonavit, moneda, zona_horaria, logo_url, capital_social";
 
 async function getMyCompanyId(supabase: any, userId: string): Promise<string> {
   const { data: profile } = await supabase
