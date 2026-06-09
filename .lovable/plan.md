@@ -1,25 +1,23 @@
-## Rediseño compacto del módulo Almacén de obra
+## Bug: Requisiciones aparecen en Activas y en Historial
 
-Foco: dar protagonismo a la tabla del almacén, con un insumo por renglón (sin wrap) y todas las columnas centradas excepto "Insumo".
+### Causa
+En `src/lib/api/requisiciones.functions.ts`:
+- `soloActivas: true` → excluye `completada`/`rechazada` ✅
+- `soloActivas: false` (Historial) → **no aplica ningún filtro**, devuelve TODAS incluyendo las activas ❌
 
-### Cambios en `SemanaActualPanel.tsx`
+Por eso `REQ-2026-001` (estatus `oc_generada` = activa) aparece tanto en "Activas" como en "Historial".
 
-1. **Header de semana más compacto**
-   - Reducir card superior: `p-3`, tipografía `text-sm`, badge más pequeño.
-   - Botón "Cerrar semana" en tamaño `sm`.
-   - Totales (Valor recibido / utilizado) se mueven al header derecho, junto al botón, en una sola línea — desaparece la barra inferior de la tabla.
+### Definición correcta
+- **Activas**: estatus distinto a `completada` y `rechazada`.
+- **Historial**: estatus `completada` o `rechazada` únicamente.
 
-2. **Tabla densa, una fila por insumo**
-   - Header: `text-xs uppercase tracking-wide`, padding `py-1.5 px-2`.
-   - Celdas: `py-1.5 px-2`, `text-sm`, `whitespace-nowrap`.
-   - Columna Insumo: `text-left`, `truncate max-w-[180px]` envuelto en `Tooltip` con el nombre completo (igual patrón que requisiciones).
-   - Resto de columnas (Proveedor, Unidad, PU, Inv. inicial, Recibido, Utilizado, Inv. final): `text-center` con `tabular-nums` en numéricas.
-   - Proveedor: también `truncate max-w-[140px]` + Tooltip para evitar wrap de "Aceros Alcalde".
-   - Input de Utilizado: `h-7 w-20 text-center mx-auto` (más chico, centrado en la celda).
-   - `TooltipProvider` envolviendo el panel.
+### Cambio
+Reemplazar el parámetro booleano por un filtro explícito `scope: "activas" | "historial"` (o, más simple, agregar la rama `else` que filtre a `in (completada, rechazada)` cuando `soloActivas === false`).
 
-3. **Sin cambios funcionales**
-   - Lógica de guardado, mutaciones, cierre de semana, totales y validaciones permanecen idénticas.
+Opción mínima elegida: en `listRequisiciones`, cuando `soloActivas` sea `false` **explícitamente**, filtrar `estatus in ('completada','rechazada')`. Si es `undefined`, no filtra (retrocompat).
 
-### Archivo afectado
-- `src/components/almacen/SemanaActualPanel.tsx`
+### Archivos
+- `src/lib/api/requisiciones.functions.ts` — agregar rama `else if (data.soloActivas === false)` que aplique `.in("estatus", ["completada","rechazada"])` en ambas funciones (`listRequisiciones` y la admin version línea 79).
+- `src/components/requisiciones/RequisicionesModule.tsx` — sin cambios (ya envía `soloActivas:false` para historial).
+
+Sin cambios de UI ni de esquema.
