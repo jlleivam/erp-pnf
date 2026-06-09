@@ -139,7 +139,7 @@ export function CapturaDestajoSheet({
       <SheetContent side="right" className="w-full sm:max-w-5xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {presupuesto?.nombre ?? "Presupuesto de destajo"}
+            Presupuesto base
             {presupuesto && (
               <Badge className="ml-2" variant="outline">
                 {presupuesto.estatus}
