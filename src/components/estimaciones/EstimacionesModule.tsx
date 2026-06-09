@@ -156,21 +156,19 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
                       <Button size="sm" variant="outline" onClick={() => setViewing(e.id)}>
                         <FileText className="size-4 mr-1" /> Ver
                       </Button>
-                      {e.estatus === "borrador" && (
-                        <>
-                          <Button size="sm" onClick={() => setEditing(e.semana_inicio)}>
-                            Editar
-                          </Button>
-                          {director && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setToDelete(e)}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          )}
-                        </>
+                      {esEditable(e) && (
+                        <Button size="sm" onClick={() => setEditing(e.semana_inicio)}>
+                          Editar
+                        </Button>
+                      )}
+                      {e.estatus === "borrador" && director && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setToDelete(e)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
                       )}
                     </div>
                   </td>
