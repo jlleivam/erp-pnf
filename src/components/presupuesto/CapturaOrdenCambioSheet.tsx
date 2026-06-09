@@ -242,7 +242,15 @@ export function CapturaOrdenCambioSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 flex-wrap">
             {presupuesto?.nombre ?? "Orden de cambio"}
-            {yaAutorizado && <Badge className="ml-2">Autorizada</Badge>}
+            {presupuesto && presupuesto.estatus !== "borrador" && (
+              <Badge className="ml-2">
+                {presupuesto.estatus === "autorizado"
+                  ? "Autorizada"
+                  : presupuesto.estatus === "solicitada"
+                  ? "Solicitada"
+                  : "Rechazada"}
+              </Badge>
+            )}
           </SheetTitle>
           <SheetDescription>
             Captura las modificaciones, adiciones y eliminaciones sobre el presupuesto
