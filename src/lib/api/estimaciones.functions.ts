@@ -153,12 +153,11 @@ export const getOrCreateBorrador = createServerFn({ method: "POST" })
       capturados.set(r.renglon_clave, Number(r.cantidad_ejecutada ?? 0));
     }
 
-    // Acumulado previo: cantidades de semanas cerradas anteriores
+    // Acumulado previo: cantidades de semanas anteriores a la vigente
     const { data: prevs } = await supabase
       .from("obra_estimaciones")
       .select("id")
       .eq("obra_id", data.obraId)
-      .eq("estatus", "cerrada")
       .lt("semana_inicio", semana.inicio);
     const prevIds = (prevs ?? []).map((p: any) => p.id);
 
