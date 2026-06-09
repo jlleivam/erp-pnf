@@ -527,11 +527,24 @@ function TerminosTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const marcar = useServerFn(marcarAnticipoPagado);
-  const marcarM = useMutation({
-    mutationFn: marcar,
+  const solicitar = useServerFn(solicitarPagoAnticipoDestajo);
+  const cancelar = useServerFn(cancelarSolicitudAnticipoDestajo);
+  const [solicitNotas, setSolicitNotas] = useState<string>("");
+  const [solicitOpen, setSolicitOpen] = useState(false);
+  const solicitarM = useMutation({
+    mutationFn: solicitar,
     onSuccess: () => {
-      toast.success("Anticipo marcado como pagado");
+      toast.success("Solicitud de pago enviada");
+      setSolicitOpen(false);
+      setSolicitNotas("");
+      qc.invalidateQueries({ queryKey: ["destajo-anticipo", destajo?.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const cancelarM = useMutation({
+    mutationFn: cancelar,
+    onSuccess: () => {
+      toast.success("Solicitud cancelada");
       qc.invalidateQueries({ queryKey: ["destajo-anticipo", destajo?.id] });
     },
     onError: (e: Error) => toast.error(e.message),
