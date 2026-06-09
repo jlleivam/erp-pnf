@@ -269,7 +269,15 @@ export function CapturaOrdenCambioSheet({
         ) : (
           <div className="mt-6 space-y-4">
             {/* Resumen */}
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center justify-end gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowVigente(true)}
+                className="mr-auto"
+              >
+                <Eye className="size-4 mr-1" /> Ver vigente
+              </Button>
               {calc.errores.length > 0 ? (
                 <Badge variant="destructive" className="gap-1">
                   <AlertCircle className="size-3" />
