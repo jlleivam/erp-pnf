@@ -71,15 +71,9 @@ export function NominaModule({ obraId }: { obraId: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          {borrador ? (
-            <Button onClick={() => setEditing({ semanaInicio: borrador.semana_inicio })}>
-              Continuar borrador
-            </Button>
-          ) : (
-            <Button onClick={() => setOpenNueva(true)}>
-              <Plus className="size-4 mr-1" /> Nueva semana
-            </Button>
-          )}
+          <Button onClick={() => setOpenNueva(true)}>
+            <Plus className="size-4 mr-1" /> Nueva semana
+          </Button>
         </div>
       </header>
 
