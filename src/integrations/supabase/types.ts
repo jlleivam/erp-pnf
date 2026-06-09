@@ -3425,7 +3425,11 @@ export type Database = {
         | "pagada"
         | "recibida_parcial"
         | "recibida"
-      presupuesto_estatus: "borrador" | "autorizado"
+      presupuesto_estatus:
+        | "borrador"
+        | "autorizado"
+        | "solicitada"
+        | "rechazada"
       presupuesto_movimiento:
         | "renglon"
         | "modificacion"
@@ -3654,7 +3658,12 @@ export const Constants = {
         "recibida_parcial",
         "recibida",
       ],
-      presupuesto_estatus: ["borrador", "autorizado"],
+      presupuesto_estatus: [
+        "borrador",
+        "autorizado",
+        "solicitada",
+        "rechazada",
+      ],
       presupuesto_movimiento: [
         "renglon",
         "modificacion",
