@@ -664,14 +664,14 @@ export function CapturaOrdenCambioSheet({
               <Button
                 disabled={
                   guardarM.isPending ||
-                  autorizarM.isPending ||
+                  solicitarM.isPending ||
                   calc.errores.length > 0 ||
                   yaAutorizado ||
                   input.length === 0
                 }
                 onClick={() => handleGuardar(true)}
               >
-                Guardar y autorizar
+                Guardar y solicitar autorización
               </Button>
             </div>
           </div>
