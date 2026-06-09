@@ -287,6 +287,7 @@ export function AppShell() {
             { to: "/app", label: "Obras", icon: HardHat, exact: true },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
+            { to: "/app/admin/contabilidad", label: "Contabilidad", icon: Scale },
             { to: "/app/admin/gastos-oficina", label: "Gastos", icon: Receipt },
           ] satisfies BottomBarItem[]}
         />
