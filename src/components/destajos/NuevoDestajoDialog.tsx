@@ -107,19 +107,32 @@ export function NuevoDestajoDialog({
         <div className="space-y-3">
           <div>
             <Label>Destajista</Label>
-            <Select value={destajistaId} onValueChange={setDestajistaId}>
-              <SelectTrigger>
-                <SelectValue placeholder={trabsQ.isLoading ? "Cargando…" : "Selecciona un trabajador"} />
-              </SelectTrigger>
-              <SelectContent>
-                {trabajadores.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.nombre_completo}
-                    {t.puesto ? ` · ${t.puesto}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <Select value={destajistaId} onValueChange={setDestajistaId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={trabsQ.isLoading ? "Cargando…" : "Selecciona un trabajador"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {trabajadores.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nombre_completo}
+                        {t.puesto ? ` · ${t.puesto}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setNuevoTrabajadorOpen(true)}
+              >
+                <Plus className="size-4 mr-1" />
+                {canManage ? "Nuevo" : "Solicitar alta"}
+              </Button>
+            </div>
             {trabajadores.length === 0 && !trabsQ.isLoading && (
               <p className="text-xs text-muted-foreground mt-1">
                 No hay trabajadores autorizados disponibles.
