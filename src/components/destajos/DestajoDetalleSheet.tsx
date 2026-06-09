@@ -203,6 +203,12 @@ export function DestajoDetalleSheet({
                 ))}
               </TabsContent>
 
+              <TabsContent value="terminos" className="mt-4">
+                <TerminosTab destajo={destajo} canEdit={!q.isLoading} onChanged={refresh} />
+              </TabsContent>
+
+
+
               <TabsContent value="trabajadores" className="mt-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-muted-foreground">
