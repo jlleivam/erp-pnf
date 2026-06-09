@@ -605,22 +605,22 @@ export const autorizarPresupuestoDestajo = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     await recalcDestajoTotal(supabase, p.destajo_id);
 
-    if (p.tipo === "adenda") {
-      try {
-        await notifyResidenteOC(supabase, {
-          residenteId: p.enviado_por,
-          actorUserId: userId,
-          obraId: d0!.obra_id,
-          tipo: "oc_destajo_autorizada",
-          link: `/app/obras/${d0!.obra_id}`,
-        });
-      } catch (e: any) {
-        console.error("[notificaciones] oc_destajo_autorizada error", e?.message);
-      }
+    const link = `/app/obras/${d0!.obra_id}/destajos?destajo=${p.destajo_id}`;
+    try {
+      await notifyResidenteOC(supabase, {
+        residenteId: p.enviado_por,
+        actorUserId: userId,
+        obraId: d0!.obra_id,
+        tipo: p.tipo === "adenda" ? "oc_destajo_autorizada" : "destajo_autorizado",
+        link,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] destajo autorizado error", e?.message);
     }
 
     return { ok: true };
   });
+
 
 export const rechazarPresupuestoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
