@@ -1019,7 +1019,38 @@ export const getOrCreateEstimacionDestajo = createServerFn({ method: "POST" })
       }
     }
 
-    return { estimacion, vigente, hasBase, capturados, acumuladoPrevio };
+    // Saldos para mostrar amortización/retención sugeridas
+    const { data: cerradas } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("amortizacion_anticipo, retencion_fondo, liberacion_fondo")
+      .eq("destajo_id", data.destajoId).eq("estatus", "cerrada");
+    const amortAcumPrev = (cerradas ?? []).reduce(
+      (s: number, r: any) => s + Number(r.amortizacion_anticipo ?? 0), 0,
+    );
+    const fondoRetenidoPrev = (cerradas ?? []).reduce(
+      (s: number, r: any) => s + Number(r.retencion_fondo ?? 0), 0,
+    );
+    const fondoLiberadoPrev = (cerradas ?? []).reduce(
+      (s: number, r: any) => s + Number(r.liberacion_fondo ?? 0), 0,
+    );
+
+    return {
+      estimacion,
+      vigente,
+      hasBase,
+      capturados,
+      acumuladoPrevio,
+      terminos: {
+        anticipo_pct: Number(d0.anticipo_pct ?? 0),
+        anticipo_monto: Number(d0.anticipo_monto ?? 0),
+        fondo_garantia_pct: Number(d0.fondo_garantia_pct ?? 0),
+        anticipo_amortizado_prev: amortAcumPrev,
+        anticipo_saldo: Math.max(0, Number(d0.anticipo_monto ?? 0) - amortAcumPrev),
+        fondo_retenido_prev: fondoRetenidoPrev,
+        fondo_liberado_prev: fondoLiberadoPrev,
+        fondo_saldo_prev: Math.max(0, fondoRetenidoPrev - fondoLiberadoPrev),
+      },
+    };
   });
 
 export const guardarEstimacionDestajo = createServerFn({ method: "POST" })
