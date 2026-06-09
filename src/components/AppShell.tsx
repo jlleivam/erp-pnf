@@ -12,8 +12,8 @@ import {
   LogOut,
   ChevronDown,
   HardHat,
-
-  ShieldCheck,
+  FileText,
+  Wallet,
   Receipt,
   ClipboardList,
   Users,
