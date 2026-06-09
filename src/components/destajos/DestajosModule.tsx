@@ -45,7 +45,7 @@ type Destajo = {
 
 const ESTATUS_LABEL: Record<Destajo["estatus"], string> = {
   borrador: "Borrador",
-  enviado: "Pendiente autorización",
+  enviado: "Por autorizar",
   autorizado: "Autorizado",
   rechazado: "Rechazado",
 };
