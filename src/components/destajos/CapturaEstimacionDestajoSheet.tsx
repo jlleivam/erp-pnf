@@ -77,6 +77,25 @@ export function CapturaEstimacionDestajoSheet({
   const vigente = (q.data?.vigente ?? []) as VigenteRow[];
   const acumuladoPrevio = (q.data?.acumuladoPrevio ?? {}) as Record<string, number>;
   const estimacion = q.data?.estimacion as any;
+  const terminos = (q.data?.terminos ?? {
+    anticipo_pct: 0,
+    anticipo_monto: 0,
+    fondo_garantia_pct: 0,
+    anticipo_amortizado_prev: 0,
+    anticipo_saldo: 0,
+    fondo_retenido_prev: 0,
+    fondo_liberado_prev: 0,
+    fondo_saldo_prev: 0,
+  }) as {
+    anticipo_pct: number;
+    anticipo_monto: number;
+    fondo_garantia_pct: number;
+    anticipo_amortizado_prev: number;
+    anticipo_saldo: number;
+    fondo_retenido_prev: number;
+    fondo_liberado_prev: number;
+    fondo_saldo_prev: number;
+  };
   const isCerrada = estimacion?.estatus === "cerrada";
   const semana = calcularSemana(semanaInicio);
 
