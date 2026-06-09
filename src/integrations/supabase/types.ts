@@ -1159,6 +1159,9 @@ export type Database = {
           pagado: boolean
           pagado_at: string | null
           referencia: string | null
+          solicitado_at: string | null
+          solicitado_por: string | null
+          solicitud_notas: string | null
           updated_at: string
         }
         Insert: {
@@ -1173,6 +1176,9 @@ export type Database = {
           pagado?: boolean
           pagado_at?: string | null
           referencia?: string | null
+          solicitado_at?: string | null
+          solicitado_por?: string | null
+          solicitud_notas?: string | null
           updated_at?: string
         }
         Update: {
@@ -1187,6 +1193,9 @@ export type Database = {
           pagado?: boolean
           pagado_at?: string | null
           referencia?: string | null
+          solicitado_at?: string | null
+          solicitado_por?: string | null
+          solicitud_notas?: string | null
           updated_at?: string
         }
         Relationships: [

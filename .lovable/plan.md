@@ -1,40 +1,99 @@
 ## Objetivo
 
-En la pestaña "Presupuesto" del `DestajoDetalleSheet`, mostrar **inline y en solo vista** los conceptos (renglones WBS) del presupuesto base —y de cada orden de cambio— sin tener que abrir el editor. Imita el estilo del presupuesto base del módulo Presupuesto (tabla agrupada por clave, padres en negritas, importe por renglón, total).
+Introducir el flujo de **solicitud de pago de anticipo de destajo**. Hoy el residente puede marcar directamente el anticipo como pagado; queremos que:
+
+1. El residente **solicite el pago** del anticipo (no lo marque pagado).
+2. La solicitud aparezca al **administrativo** en **Cuentas por pagar**, en una nueva sección dedicada a anticipos de destajo.
+3. El administrativo sea quien registre el pago efectivo (marcar pagado / liquidar contra una cuenta).
+
+Esta es la base sobre la que después se podrán colgar otras solicitudes (estimaciones de destajo, etc.) con el mismo patrón.
 
 ## Cambios
 
-### Nuevo componente: `src/components/destajos/RenglonesDestajoView.tsx`
+### 1. Base de datos — migración
 
-Componente de solo lectura que:
+Tabla `obra_destajo_anticipos`: agregar columnas de estado de solicitud.
 
-- Recibe `presupuestoDestajoId: string` y opcional `tipo: "base" | "adenda"`.
-- Llama a `getDestajoPresupuesto` (ya existente) vía `useServerFn` + `useQuery`.
-- Procesa los renglones con `procesarRenglones` (de `@/lib/presupuesto-utils`) para que los grupos padre sumen automáticamente, igual que en `CapturaDestajoSheet`.
-- Renderiza una `Card` con tabla compacta (sin inputs, sin botón eliminar):
-  - Columnas: Clave, Concepto, Unidad, Cantidad, PU, Importe.
-  - Filas padre con `bg-accent/40 font-medium` y `—` en unidad/cantidad/PU (mismo patrón que la captura).
-  - Para OC (`tipo === "adenda"`) muestra una columna extra "Tipo" con badge `modificación / adición / eliminación` y formatea importes negativos en `text-destructive`.
-- Pie de la tabla: Total alineado a la derecha.
-- Estados:
-  - `isLoading`: skeleton/línea "Cargando…".
-  - Sin renglones: card vacía "Aún no hay renglones capturados."
+- `solicitado_at timestamptz null`
+- `solicitado_por uuid null references auth.users(id)`
+- `solicitud_notas text null`
 
-### Integración en `DestajoDetalleSheet.tsx`
+Estado derivado en el cliente:
+- `pagado = true` → **Pagado**
+- `solicitado_at not null && !pagado` → **Solicitado** (pendiente en CxP)
+- `else` → **Por solicitar**
 
-En `PresupuestoCard`:
+Sólo permitir solicitar cuando:
+- el destajo tiene `presupuesto base autorizado`
+- `anticipo_monto > 0`
+- `pagado = false`
+- `solicitado_at IS NULL` (no se ha solicitado aún)
 
-- Aceptar nueva prop opcional `children?: ReactNode` y renderizarla después de los botones de acción, dentro de la misma `Card`, separada por un `border-t` con padding superior.
+(No se agregan policies nuevas: las existentes ya permiten al residente/director leer y actualizar; el administrativo es director o tiene acceso por company.)
 
-En el `TabsContent value="presupuesto"`:
+### 2. Server functions (`src/lib/api/destajos.functions.ts`)
 
-- Debajo del `PresupuestoCard` del base (dentro de él como `children`) montar `<RenglonesDestajoView presupuestoDestajoId={base.id} tipo="base" />`.
-- Igual para cada adenda: pasar `<RenglonesDestajoView presupuestoDestajoId={oc.id} tipo="adenda" />` como `children`.
+- **`solicitarPagoAnticipoDestajo({ destajoId, notas? })`**
+  - Verifica que el usuario sea residente de la obra o director de la empresa.
+  - Verifica precondiciones (presupuesto base autorizado, anticipo_monto > 0, no pagado, no solicitado).
+  - Actualiza `obra_destajo_anticipos` con `solicitado_at = now()`, `solicitado_por = userId`, `solicitud_notas`.
+  - Genera notificación dirigida a usuarios con rol `administrativo` / `director`:
+    `"Solicitud de pago de anticipo · {destajo.numero} {destajista.nombre} · {formatMXN(monto)}"` con link a Cuentas por pagar.
 
-Sin cambios al backend, ni a la edición. Los botones "Editar / Solicitar autorización / Autorizar / Rechazar / Reabrir / Ver detalle" siguen funcionando igual.
+- **`cancelarSolicitudAnticipoDestajo({ destajoId })`** (opcional, recomendable)
+  - Sólo el residente que solicitó o el director, mientras no esté pagado.
+  - Limpia `solicitado_at`, `solicitado_por`, `solicitud_notas`.
+
+- **`listAnticiposDestajoPendientes()`**
+  - Para administrativo/director. Devuelve solicitudes con `solicitado_at not null` y `pagado = false` de la empresa actual.
+  - Join con `obra_destajos`, `obras`, y trabajador (destajista) para mostrar contexto.
+
+- `marcarAnticipoPagado` existente: añadirle prerequisito de `solicitado_at not null` (no se puede pagar sin solicitud previa). Mantener el resto del comportamiento (registrar `pagado_at`, opcionalmente cuenta_id/metodo si se decide).
+
+### 3. UI Residente — `DestajoDetalleSheet` (pestaña Términos)
+
+En la tarjeta de Anticipo:
+- Si el anticipo está **por solicitar** y `canEdit` (residente o director): mostrar botón **"Solicitar pago de anticipo"** que abre un mini-diálogo con campo opcional de notas.
+- Si está **solicitado**: badge `Solicitado` + fecha + nombre de quien solicitó + (si es el solicitante o director) botón discreto "Cancelar solicitud".
+- Si está **pagado**: el badge `Pagado` actual.
+- **Eliminar** el botón directo "Marcar pagado" de esta vista (esa acción ahora vive en Cuentas por pagar).
+
+### 4. UI Administrativo — `CuentasPorPagarModule`
+
+Convertir el módulo a **pestañas** (`Tabs`):
+- Pestaña **Proveedores (OC)** — el contenido actual sin cambios.
+- Pestaña **Anticipos de destajo** — nueva:
+  - Tabla: Obra · Destajo · Destajista · Monto · Solicitado el · Solicitado por · acción.
+  - Acción **"Registrar pago"** → diálogo que reutiliza el mismo patrón que `RegistrarPagoOCDialog` (cuenta, método, fecha, referencia) y al confirmar invoca `marcarAnticipoPagado` (lo extenderemos para aceptar `cuentaId`, `metodo`, `fecha`, `referencia` y crear el `cuenta_movimiento` correspondiente, igual que `pagos.functions.ts` ya hace para OC).
+  - Total de la pestaña en el header.
+
+### 5. Notificaciones
+
+Reutilizar `notificaciones` con tipo `anticipo_destajo_solicitado` apuntando al destajo y a la sección Cuentas por pagar. (Si el destinatario está viendo CxP, además se invalida la query.)
 
 ## Notas técnicas
 
-- Para evitar duplicar lógica de presentación, el componente nuevo es muy ligero (≈80 líneas) y reutiliza `procesarRenglones` y `calcularClavesPadre` ya disponibles.
-- No se reabre el `CapturaDestajoSheet` por defecto; el usuario sigue pudiendo entrar a editar con el botón "Editar" / "Ver detalle".
-- El total se toma de `procesarRenglones(...).montoTotal` (consistente con la captura) y debe coincidir con `p.monto_total` ya mostrado en el header de la tarjeta.
+- Los anticipos no pasan por `ordenes_compra`, por lo que en la pestaña de CxP **no** se agregarán a los saldos por proveedor; quedan en un listado propio. El "Pendiente total" del header pasará a ser un total combinado (OC + anticipos) o se mostrará un total por pestaña — me inclino por **total por pestaña** para no mezclar conceptos.
+- `marcarAnticipoPagado` al registrar el pago real:
+  - inserta `pagos` (`origen_tipo = 'anticipo_destajo'`, `origen_id = anticipo.id`),
+  - inserta `cuenta_movimientos` egreso ligado al pago,
+  - actualiza `cuentas.saldo_actual`,
+  - setea `obra_destajo_anticipos.pagado = true, pagado_at = now(), metodo_pago, referencia`.
+- Validaciones de cuenta idénticas a OC (caja_fuerte → efectivo, bancaria → no efectivo, cuenta activa).
+- No se tocan los renglones del presupuesto ni el cálculo de amortización; el saldo a amortizar sigue siendo `anticipo_monto`.
+
+## Flujo resultante
+
+```text
+Residente (Términos del destajo)
+   └── Solicitar pago de anticipo  ──►  notificación a administrativo
+                                            │
+                                            ▼
+Administrativo (Cuentas por pagar → Anticipos de destajo)
+   └── Registrar pago (cuenta, método, referencia)
+            │
+            ▼
+   anticipo.pagado = true, pago + movimiento de cuenta creados
+```
+
+¿Procedo a implementarlo así?
