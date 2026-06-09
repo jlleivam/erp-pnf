@@ -234,35 +234,8 @@ export function AppShell() {
 
 
 
-            {realDirector && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    Vista: {assumedRole ? ROLE_LABELS[assumedRole] : "Director"}
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Asumir rol</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => switchRole(null)}>
-                    Director (mi rol)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("residente")}>
-                    Residente
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("administrativo")}>
-                    Administrativo
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("supervisor")}>
-                    Supervisor
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("auxiliar")}>
-                    Auxiliar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DevUserSwitcher />
+
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
