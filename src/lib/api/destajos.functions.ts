@@ -35,6 +35,18 @@ async function isMemberObra(supabase: any, userId: string, obraId: string) {
   return !!data;
 }
 
+async function getObraRole(supabase: any, userId: string, obraId: string) {
+  const { data } = await supabase
+    .from("obra_team").select("role")
+    .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
+  const role = (data?.role ?? null) as string | null;
+  return {
+    isResidente: role === "residente",
+    isSupervisor: role === "supervisor",
+    role,
+  };
+}
+
 // ============================================================
 // CRUD DESTAJOS
 // ============================================================
