@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -64,25 +64,23 @@ export function NuevoDestajoDialog({
   const [fondoOn, setFondoOn] = useState(false);
   const [fondoPct, setFondoPct] = useState<string>("");
   const [nuevoTrabajadorOpen, setNuevoTrabajadorOpen] = useState(false);
-  const [idsPrevios, setIdsPrevios] = useState<Set<string> | null>(null);
+  const idsPreviosRef = useRef<Set<string> | null>(null);
 
   // Detecta un trabajador recién creado y lo pre-selecciona (solo si el usuario puede autorizar altas).
   useEffect(() => {
     const idsActuales = new Set<string>(trabajadores.map((t) => t.id));
-    if (idsPrevios === null) {
-      setIdsPrevios(idsActuales);
+    if (idsPreviosRef.current === null) {
+      idsPreviosRef.current = idsActuales;
       return;
     }
-    if (!canManage) {
-      setIdsPrevios(idsActuales);
-      return;
+    if (canManage) {
+      const nuevos = trabajadores.filter((t) => !idsPreviosRef.current!.has(t.id));
+      if (nuevos.length > 0) {
+        setDestajistaId((prev) => (prev ? prev : nuevos[0].id));
+      }
     }
-    const nuevos = trabajadores.filter((t) => !idsPrevios.has(t.id));
-    if (nuevos.length > 0) {
-      if (!destajistaId) setDestajistaId(nuevos[0].id);
-      setIdsPrevios(idsActuales);
-    }
-  }, [trabajadores, idsPrevios, canManage, destajistaId]);
+    idsPreviosRef.current = idsActuales;
+  }, [trabajadores, canManage]);
 
   const crear = useServerFn(crearDestajo);
   const m = useMutation({

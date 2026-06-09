@@ -1,20 +1,16 @@
-## Objetivo
+## Bug
 
-En el diálogo **Nuevo destajo**, agregar un botón **"Solicitar alta"** (o **"Nuevo"** si el usuario tiene permisos) a la derecha del selector de Destajista, con el mismo comportamiento que el que ya existe en Captura de Nómina.
+`Maximum update depth exceeded` en `NuevoDestajoDialog`. El `useEffect` de pre-selección hace `setIdsPrevios(new Set(...))` con una referencia nueva en cada render (rama `!canManage` y también cuando hay nuevos), provocando bucle infinito porque React compara por referencia.
 
-## Cambios
+## Arreglo
 
-**Archivo:** `src/components/destajos/NuevoDestajoDialog.tsx`
+Archivo: `src/components/destajos/NuevoDestajoDialog.tsx`
 
-1. Reestructurar el campo "Destajista" en un layout flex: el Select ocupa el ancho disponible y a la derecha se agrega un botón con ícono `+` ("Nuevo" para roles que pueden gestionar trabajadores, "Solicitar alta" para residentes).
-2. Importar y montar `TrabajadorFormDialog` (mismo componente usado en `CapturaNominaSheet`), controlado por un estado local `trabajadorDialogOpen`.
-3. Determinar `canManage` con la misma lógica de roles que se usa en nómina (admin/supervisor pueden crear directo; residente envía solicitud de alta).
-4. Tras crear/solicitar exitosamente:
-   - Invalidar/recargar la lista de trabajadores que alimenta el dropdown.
-   - Si fue alta directa (canManage), preseleccionar al trabajador recién creado en el campo Destajista.
-   - Si fue solicitud, mostrar toast y mantener el flujo (el destajista aparecerá cuando se apruebe).
+1. Reemplazar el `Set` en estado por una `useRef<Set<string> | null>(null)` — los refs no disparan renders, eliminando el ciclo.
+2. En el `useEffect`:
+   - Primera corrida (ref null): inicializar el ref con los ids actuales y salir.
+   - Si `canManage` y hay ids nuevos respecto al ref: pre-seleccionar el primero (solo si no hay `destajistaId` ya elegido) y actualizar el ref.
+   - Si `!canManage`: solo actualizar el ref, sin `setState`.
+3. Mantener dependencias mínimas: `[trabajadores, canManage]` (sin `idsPrevios` ni `destajistaId` para evitar re-disparos).
 
-## Notas
-
-- No se modifica lógica de negocio del destajo ni el esquema de BD.
-- Solo cambia el diálogo `NuevoDestajoDialog.tsx`; se reutiliza `TrabajadorFormDialog` tal cual.
+Sin cambios de UI ni de lógica adicional.
