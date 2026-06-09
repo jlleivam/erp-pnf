@@ -1,13 +1,44 @@
-# Tooltip en el concepto truncado del `ConceptoPicker`
+## Objetivo
 
-En la lista del selector de conceptos (botón "Seleccionar concepto…" dentro de la captura de OC) el concepto se trunca con `…` y no hay manera de ver el texto completo.
+Cuando un Residente envía una OC a autorización (presupuesto, destajo o subcontrato), notificar al/los Supervisor(es) de la obra para que la revisen.
 
-## Cambio
+## Alcance
 
-En `src/components/presupuesto/CapturaOrdenCambioSheet.tsx`, dentro del componente `ConceptoPicker`:
+Tres server functions ya existentes que cambian la OC a estado "enviada/solicitada":
 
-- Envolver el `<span className="flex-1 truncate">{h.concepto}</span>` con `Tooltip` (de `@/components/ui/tooltip`) que muestre el concepto completo al pasar el cursor / al hacer focus.
-- Envolver la lista en un único `TooltipProvider delayDuration={200}` para no repetirlo por fila.
-- Importar `Tooltip`, `TooltipContent`, `TooltipProvider`, `TooltipTrigger`.
+- `solicitarAutorizacionPresupuesto` en `src/lib/api/presupuestos.functions.ts`
+- `enviarPresupuestoDestajo` en `src/lib/api/destajos.functions.ts` (solo cuando `tipo === "adenda"`)
+- `enviarPresupuestoSubcontrato` en `src/lib/api/subcontratos.functions.ts` (solo cuando `tipo === "adenda"`)
 
-Sin cambios en datos ni en el resto del flujo.
+Después del `update` exitoso al estatus enviado, insertar notificaciones siguiendo el mismo patrón usado en `requisiciones.functions.ts` / `caja-chica.functions.ts` (insert con `supabaseAdmin` dentro de try/catch para no romper la operación).
+
+## Destinatarios
+
+- Todos los miembros de `obra_team` con `role = 'supervisor'` de la obra correspondiente, excluyendo a `userId` (el solicitante).
+- No incluimos directores por defecto — pueden ver el listado. (Confirmar si se desea agregarlos.)
+
+## Contenido de la notificación
+
+Por cada destinatario:
+
+- `tipo`: `"oc_presupuesto_solicitada"` / `"oc_destajo_solicitada"` / `"oc_subcontrato_solicitada"`
+- `titulo`: `"Nueva OC por autorizar"` (incluyendo nombre del destajo/subcontrato o folio/nombre de la OC cuando esté disponible)
+- `mensaje`: `"{Residente} solicitó autorización de una OC en la obra {obra.nombre}."`
+- `link`: ruta actual donde el supervisor revisa OCs:
+  - Presupuesto: `/app/obras/{obra_id}` (sección Presupuesto/OC) — confirmar ruta exacta al implementar.
+  - Destajo: `/app/obras/{obra_id}` (sección Destajos) o el detalle del destajo.
+  - Subcontrato: análogo a destajo.
+- `company_id`, `obra_id` poblados.
+
+## Detalles técnicos
+
+- Reusar el patrón de `requisiciones.functions.ts` líneas 240–268: cargar `profiles` del solicitante, `obras.nombre`, hacer `supabaseAdmin.from("notificaciones").insert([...])`.
+- Envolver en `try/catch` y solo `console.error` en falla — la solicitud no debe fallar si la notificación tropieza.
+- En destajo/subcontrato: solo notificar cuando `p.tipo === "adenda"` (cuando es base, no es OC).
+- No hay cambios en esquema: `notificaciones` ya tiene `obra_id`, `tipo`, `titulo`, `mensaje`, `link`.
+
+## Fuera de alcance
+
+- No se tocan UI ni `NotificacionesBell` (ya consume `listMisNotificaciones`).
+- No se notifica en rechazo/autorización (puede hacerse después si se desea).
+- No se agregan emails ni push.
