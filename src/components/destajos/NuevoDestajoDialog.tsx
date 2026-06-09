@@ -241,6 +241,17 @@ export function NuevoDestajoDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {nuevoTrabajadorOpen && (
+        <TrabajadorFormDialog
+          open
+          canManage={canManage}
+          obraId={obraId}
+          onClose={() => {
+            setNuevoTrabajadorOpen(false);
+            trabsQ.refetch();
+          }}
+        />
+      )}
     </Dialog>
   );
 }
