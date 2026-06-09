@@ -167,7 +167,7 @@ export function CatalogoTrabajadoresModule() {
   const autM = useMutation({
     mutationFn: autorizar,
     onSuccess: () => {
-      toast.success("Trabajador autorizado");
+      toast.success("Trabajador registrado");
       qc.invalidateQueries({ queryKey: ["trabajadores"] });
     },
     onError: (e: Error) => toast.error(e.message),
