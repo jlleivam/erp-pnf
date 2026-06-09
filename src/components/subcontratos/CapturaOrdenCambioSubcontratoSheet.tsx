@@ -67,6 +67,7 @@ export function CapturaOrdenCambioSubcontratoSheet({
   });
 
   const [rows, setRows] = useState<RowDraft[]>([emptyRow()]);
+  const [showVigente, setShowVigente] = useState(false);
 
   useEffect(() => {
     if (data?.renglones && data.renglones.length > 0) {
