@@ -59,7 +59,7 @@ export const listDestajos = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: destajos, error } = await supabase
       .from("obra_destajos")
-      .select("id, obra_id, destajista_id, numero, nombre, descripcion, estatus, monto_total, created_at")
+      .select("id, obra_id, destajista_id, numero, nombre, descripcion, estatus, monto_total, anticipo_pct, anticipo_monto, fondo_garantia_pct, created_at")
       .eq("obra_id", data.obraId)
       .order("numero", { ascending: true });
     if (error) throw new Error(error.message);
@@ -148,6 +148,8 @@ export const crearDestajo = createServerFn({ method: "POST" })
       destajistaId: z.string().uuid(),
       nombre: z.string().trim().min(1).max(255),
       descripcion: z.string().trim().max(1000).optional(),
+      anticipoPct: z.number().min(0).max(100).optional(),
+      fondoGarantiaPct: z.number().min(0).max(100).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -162,6 +164,9 @@ export const crearDestajo = createServerFn({ method: "POST" })
       .order("numero", { ascending: false }).limit(1).maybeSingle();
     const numero = (maxRow?.numero ?? 0) + 1;
 
+    const anticipoPct = Number(data.anticipoPct ?? 0);
+    const fondoPct = Number(data.fondoGarantiaPct ?? 0);
+
     const { data: created, error } = await supabase
       .from("obra_destajos")
       .insert({
@@ -171,6 +176,9 @@ export const crearDestajo = createServerFn({ method: "POST" })
         numero,
         nombre: data.nombre,
         descripcion: data.descripcion ?? null,
+        anticipo_pct: anticipoPct,
+        anticipo_monto: 0, // se calcula al autorizar la base con monto_total final
+        fondo_garantia_pct: fondoPct,
         creado_por: userId,
       })
       .select("id").single();
@@ -209,6 +217,51 @@ export const crearDestajo = createServerFn({ method: "POST" })
 
     return { id: created.id as string, presupuestoBaseId: presBase.id as string };
   });
+
+export const actualizarTerminosDestajo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      destajoId: z.string().uuid(),
+      anticipoPct: z.number().min(0).max(100),
+      fondoGarantiaPct: z.number().min(0).max(100),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: d0 } = await supabase
+      .from("obra_destajos").select("obra_id, monto_total").eq("id", data.destajoId).single();
+    if (!d0) throw new Error("Destajo no encontrado");
+    const { isDirector } = await getRoles(supabase, userId);
+    const member = await isMemberObra(supabase, userId, d0.obra_id);
+    if (!isDirector && !member) throw new Error("Sin permisos");
+
+    // Si ya hay anticipo registrado (pagado), no permitir cambiar el %
+    const { data: ant } = await supabase
+      .from("obra_destajo_anticipos").select("id, pagado").eq("destajo_id", data.destajoId).maybeSingle();
+    if (ant?.pagado) throw new Error("El anticipo ya fue marcado como pagado; no se pueden modificar los términos");
+
+    const anticipoMonto = Number(d0.monto_total ?? 0) * (data.anticipoPct / 100);
+    const { error } = await supabase
+      .from("obra_destajos")
+      .update({
+        anticipo_pct: data.anticipoPct,
+        anticipo_monto: anticipoMonto,
+        fondo_garantia_pct: data.fondoGarantiaPct,
+      })
+      .eq("id", data.destajoId);
+    if (error) throw new Error(error.message);
+
+    // Sincronizar monto del registro de anticipo si existe (no pagado)
+    if (ant && !ant.pagado) {
+      await supabase
+        .from("obra_destajo_anticipos")
+        .update({ monto: anticipoMonto })
+        .eq("id", ant.id);
+    }
+    return { ok: true };
+  });
+
 
 
 export const eliminarDestajo = createServerFn({ method: "POST" })
@@ -529,9 +582,40 @@ async function recalcDestajoTotal(supabase: any, destajoId: string) {
   const { base, baseRenglones, ocsRenglones } = await loadDestajoBaseYOcs(supabase, destajoId);
   if (!base) return 0;
   const { montoTotal } = reconstruirVigente(baseRenglones, ocsRenglones);
-  await supabase.from("obra_destajos").update({ monto_total: montoTotal }).eq("id", destajoId);
+  // Recomputar anticipo_monto basado en el % vigente y el nuevo monto total
+  const { data: d0 } = await supabase
+    .from("obra_destajos").select("anticipo_pct").eq("id", destajoId).maybeSingle();
+  const anticipoPct = Number(d0?.anticipo_pct ?? 0);
+  const anticipoMonto = montoTotal * (anticipoPct / 100);
+  await supabase
+    .from("obra_destajos")
+    .update({ monto_total: montoTotal, anticipo_monto: anticipoMonto })
+    .eq("id", destajoId);
   return montoTotal;
 }
+
+async function ensureAnticipoRecord(supabase: any, destajoId: string, userId: string) {
+  const { data: destajo } = await supabase
+    .from("obra_destajos")
+    .select("id, company_id, anticipo_monto")
+    .eq("id", destajoId).single();
+  if (!destajo) return;
+  const monto = Number(destajo.anticipo_monto ?? 0);
+  if (monto <= 0) return;
+  const { data: existing } = await supabase
+    .from("obra_destajo_anticipos").select("id, pagado, monto").eq("destajo_id", destajoId).maybeSingle();
+  if (!existing) {
+    await supabase.from("obra_destajo_anticipos").insert({
+      destajo_id: destajoId,
+      company_id: destajo.company_id,
+      monto,
+      creado_por: userId,
+    });
+  } else if (!existing.pagado && Number(existing.monto) !== monto) {
+    await supabase.from("obra_destajo_anticipos").update({ monto }).eq("id", existing.id);
+  }
+}
+
 
 export const enviarPresupuestoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -604,6 +688,11 @@ export const autorizarPresupuestoDestajo = createServerFn({ method: "POST" })
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
     await recalcDestajoTotal(supabase, p.destajo_id);
+    // Si es el presupuesto base autorizado, generar registro de anticipo
+    if (p.tipo === "base") {
+      await ensureAnticipoRecord(supabase, p.destajo_id, userId);
+    }
+
 
     const link = `/app/obras/${d0!.obra_id}/destajos?destajo=${p.destajo_id}`;
     try {
@@ -870,7 +959,9 @@ export const getOrCreateEstimacionDestajo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: d0 } = await supabase
-      .from("obra_destajos").select("obra_id, company_id").eq("id", data.destajoId).single();
+      .from("obra_destajos")
+      .select("obra_id, company_id, anticipo_pct, anticipo_monto, fondo_garantia_pct")
+      .eq("id", data.destajoId).single();
     if (!d0) throw new Error("Destajo no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
     const member = await isMemberObra(supabase, userId, d0.obra_id);
@@ -928,7 +1019,38 @@ export const getOrCreateEstimacionDestajo = createServerFn({ method: "POST" })
       }
     }
 
-    return { estimacion, vigente, hasBase, capturados, acumuladoPrevio };
+    // Saldos para mostrar amortización/retención sugeridas
+    const { data: cerradas } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("amortizacion_anticipo, retencion_fondo, liberacion_fondo")
+      .eq("destajo_id", data.destajoId).eq("estatus", "cerrada");
+    const amortAcumPrev = (cerradas ?? []).reduce(
+      (s: number, r: any) => s + Number(r.amortizacion_anticipo ?? 0), 0,
+    );
+    const fondoRetenidoPrev = (cerradas ?? []).reduce(
+      (s: number, r: any) => s + Number(r.retencion_fondo ?? 0), 0,
+    );
+    const fondoLiberadoPrev = (cerradas ?? []).reduce(
+      (s: number, r: any) => s + Number(r.liberacion_fondo ?? 0), 0,
+    );
+
+    return {
+      estimacion,
+      vigente,
+      hasBase,
+      capturados,
+      acumuladoPrevio,
+      terminos: {
+        anticipo_pct: Number(d0.anticipo_pct ?? 0),
+        anticipo_monto: Number(d0.anticipo_monto ?? 0),
+        fondo_garantia_pct: Number(d0.fondo_garantia_pct ?? 0),
+        anticipo_amortizado_prev: amortAcumPrev,
+        anticipo_saldo: Math.max(0, Number(d0.anticipo_monto ?? 0) - amortAcumPrev),
+        fondo_retenido_prev: fondoRetenidoPrev,
+        fondo_liberado_prev: fondoLiberadoPrev,
+        fondo_saldo_prev: Math.max(0, fondoRetenidoPrev - fondoLiberadoPrev),
+      },
+    };
   });
 
 export const guardarEstimacionDestajo = createServerFn({ method: "POST" })
@@ -1018,7 +1140,12 @@ export const guardarEstimacionDestajo = createServerFn({ method: "POST" })
 
 export const cerrarEstimacionDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      liberacionFondo: z.number().min(0).optional(),
+    }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: est } = await supabase
@@ -1026,7 +1153,9 @@ export const cerrarEstimacionDestajo = createServerFn({ method: "POST" })
     if (!est) throw new Error("No encontrada");
     if (est.estatus !== "borrador") throw new Error("Ya cerrada");
     const { data: d0 } = await supabase
-      .from("obra_destajos").select("obra_id").eq("id", est.destajo_id).single();
+      .from("obra_destajos")
+      .select("id, obra_id, anticipo_pct, anticipo_monto, fondo_garantia_pct")
+      .eq("id", est.destajo_id).single();
     const { isDirector } = await getRoles(supabase, userId);
     const member = await isMemberObra(supabase, userId, d0!.obra_id);
     if (!isDirector && !member) throw new Error("Sin permisos");
@@ -1035,13 +1164,120 @@ export const cerrarEstimacionDestajo = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("estimacion_id", data.id);
     if (!count) throw new Error("Estimación sin cantidades");
+
+    const bruto = Number(est.monto_total ?? 0);
+    const anticipoPct = Number(d0!.anticipo_pct ?? 0);
+    const fondoPct = Number(d0!.fondo_garantia_pct ?? 0);
+    const anticipoMonto = Number(d0!.anticipo_monto ?? 0);
+
+    // Saldo pendiente del anticipo = anticipo_monto - SUM(amortizacion_anticipo) en estimaciones cerradas previas
+    const { data: prevAmort } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("amortizacion_anticipo")
+      .eq("destajo_id", est.destajo_id)
+      .eq("estatus", "cerrada")
+      .neq("id", data.id);
+    const amortAcum = (prevAmort ?? []).reduce((s: number, r: any) => s + Number(r.amortizacion_anticipo ?? 0), 0);
+    const saldoAnticipo = Math.max(0, anticipoMonto - amortAcum);
+    const amortizacion = Math.min(saldoAnticipo, bruto * (anticipoPct / 100));
+
+    const retencion = bruto * (fondoPct / 100);
+
+    // Validar liberación del fondo: no exceder fondo retenido neto acumulado
+    const { data: prevFondo } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("retencion_fondo, liberacion_fondo")
+      .eq("destajo_id", est.destajo_id)
+      .eq("estatus", "cerrada")
+      .neq("id", data.id);
+    const fondoAcumPrev = (prevFondo ?? []).reduce(
+      (s: number, r: any) => s + Number(r.retencion_fondo ?? 0) - Number(r.liberacion_fondo ?? 0),
+      0,
+    );
+    const fondoDisponible = Math.max(0, fondoAcumPrev + retencion);
+    const liberacion = Math.min(Number(data.liberacionFondo ?? 0), fondoDisponible);
+
+    const neto = bruto - amortizacion - retencion + liberacion;
+
     const { error } = await supabase
       .from("obra_destajo_estimaciones")
-      .update({ estatus: "cerrada", cerrada_at: new Date().toISOString(), cerrada_por: userId })
+      .update({
+        estatus: "cerrada",
+        cerrada_at: new Date().toISOString(),
+        cerrada_por: userId,
+        amortizacion_anticipo: amortizacion,
+        retencion_fondo: retencion,
+        liberacion_fondo: liberacion,
+        monto_neto: neto,
+      })
       .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true, bruto, amortizacion, retencion, liberacion, neto };
+  });
+
+export const getDestajoAnticipo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ destajoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: anticipo } = await supabase
+      .from("obra_destajo_anticipos")
+      .select("*")
+      .eq("destajo_id", data.destajoId)
+      .maybeSingle();
+    // Saldo pendiente del anticipo
+    const { data: ests } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("amortizacion_anticipo, retencion_fondo, liberacion_fondo")
+      .eq("destajo_id", data.destajoId)
+      .eq("estatus", "cerrada");
+    const amortAcum = (ests ?? []).reduce((s: number, r: any) => s + Number(r.amortizacion_anticipo ?? 0), 0);
+    const fondoRetenido = (ests ?? []).reduce((s: number, r: any) => s + Number(r.retencion_fondo ?? 0), 0);
+    const fondoLiberado = (ests ?? []).reduce((s: number, r: any) => s + Number(r.liberacion_fondo ?? 0), 0);
+    return {
+      anticipo: anticipo ?? null,
+      anticipoAmortizado: amortAcum,
+      fondoRetenido,
+      fondoLiberado,
+      fondoSaldo: Math.max(0, fondoRetenido - fondoLiberado),
+    };
+  });
+
+export const marcarAnticipoPagado = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      destajoId: z.string().uuid(),
+      fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      metodoPago: z.string().trim().max(50).optional(),
+      referencia: z.string().trim().max(255).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: d0 } = await supabase
+      .from("obra_destajos").select("obra_id").eq("id", data.destajoId).single();
+    if (!d0) throw new Error("Destajo no encontrado");
+    const { isDirector } = await getRoles(supabase, userId);
+    const member = await isMemberObra(supabase, userId, d0.obra_id);
+    if (!isDirector && !member) throw new Error("Sin permisos");
+    const { data: existing } = await supabase
+      .from("obra_destajo_anticipos").select("id").eq("destajo_id", data.destajoId).maybeSingle();
+    if (!existing) throw new Error("No hay anticipo registrado");
+    const { error } = await supabase
+      .from("obra_destajo_anticipos")
+      .update({
+        pagado: true,
+        pagado_at: new Date().toISOString(),
+        fecha: data.fecha ?? new Date().toISOString().slice(0, 10),
+        metodo_pago: data.metodoPago ?? null,
+        referencia: data.referencia ?? null,
+      })
+      .eq("id", existing.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const eliminarEstimacionDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

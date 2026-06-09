@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 export function NuevoDestajoDialog({
@@ -52,6 +53,10 @@ export function NuevoDestajoDialog({
   const [destajistaId, setDestajistaId] = useState<string>("");
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
+  const [anticipoOn, setAnticipoOn] = useState(false);
+  const [anticipoPct, setAnticipoPct] = useState<string>("");
+  const [fondoOn, setFondoOn] = useState(false);
+  const [fondoPct, setFondoPct] = useState<string>("");
 
   const crear = useServerFn(crearDestajo);
   const m = useMutation({
@@ -111,6 +116,68 @@ export function NuevoDestajoDialog({
               placeholder="Alcance general del destajo…"
             />
           </div>
+
+          <div className="border-t pt-3 space-y-3">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              Términos económicos
+            </p>
+
+            <div className="flex items-start gap-3">
+              <Switch checked={anticipoOn} onCheckedChange={setAnticipoOn} className="mt-1" />
+              <div className="flex-1">
+                <Label className="text-sm">Requiere anticipo</Label>
+                <p className="text-xs text-muted-foreground">
+                  Se amortizará proporcionalmente al avance de cada estimación.
+                </p>
+                {anticipoOn && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min={0}
+                      max={100}
+                      value={anticipoPct}
+                      onChange={(e) => setAnticipoPct(e.target.value)}
+                      placeholder="Ej. 20"
+                      className="w-24"
+                    />
+                    <span className="text-sm text-muted-foreground">% del contrato</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Switch checked={fondoOn} onCheckedChange={setFondoOn} className="mt-1" />
+              <div className="flex-1">
+                <Label className="text-sm">Aplicar fondo de garantía</Label>
+                <p className="text-xs text-muted-foreground">
+                  Se retendrá este % de cada estimación; podrás liberarlo parcialmente.
+                </p>
+                {fondoOn && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min={0}
+                      max={100}
+                      value={fondoPct}
+                      onChange={(e) => setFondoPct(e.target.value)}
+                      placeholder="Ej. 5"
+                      className="w-24"
+                    />
+                    <span className="text-sm text-muted-foreground">% por estimación</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              El monto del anticipo se calculará al autorizar el presupuesto base.
+            </p>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -125,6 +192,8 @@ export function NuevoDestajoDialog({
                   destajistaId,
                   nombre: nombre.trim(),
                   descripcion: descripcion.trim() || undefined,
+                  anticipoPct: anticipoOn ? Number(anticipoPct || 0) : 0,
+                  fondoGarantiaPct: fondoOn ? Number(fondoPct || 0) : 0,
                 },
               })
             }

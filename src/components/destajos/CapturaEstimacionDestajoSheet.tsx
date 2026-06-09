@@ -64,6 +64,7 @@ export function CapturaEstimacionDestajoSheet({
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
   const [confirmCierre, setConfirmCierre] = useState(false);
+  const [liberacionFondo, setLiberacionFondo] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
 
   if (!initialized && q.data?.capturados) {
@@ -76,6 +77,25 @@ export function CapturaEstimacionDestajoSheet({
   const vigente = (q.data?.vigente ?? []) as VigenteRow[];
   const acumuladoPrevio = (q.data?.acumuladoPrevio ?? {}) as Record<string, number>;
   const estimacion = q.data?.estimacion as any;
+  const terminos = (q.data?.terminos ?? {
+    anticipo_pct: 0,
+    anticipo_monto: 0,
+    fondo_garantia_pct: 0,
+    anticipo_amortizado_prev: 0,
+    anticipo_saldo: 0,
+    fondo_retenido_prev: 0,
+    fondo_liberado_prev: 0,
+    fondo_saldo_prev: 0,
+  }) as {
+    anticipo_pct: number;
+    anticipo_monto: number;
+    fondo_garantia_pct: number;
+    anticipo_amortizado_prev: number;
+    anticipo_saldo: number;
+    fondo_retenido_prev: number;
+    fondo_liberado_prev: number;
+    fondo_saldo_prev: number;
+  };
   const isCerrada = estimacion?.estatus === "cerrada";
   const semana = calcularSemana(semanaInicio);
 
@@ -102,8 +122,28 @@ export function CapturaEstimacionDestajoSheet({
         );
       }
     }
-    return { totalSemana, totalAcum, totalVigente, erroresPorClave };
-  }, [vigente, cantidades, acumuladoPrevio]);
+    const bruto = totalSemana;
+    const amortizacion = Math.min(
+      terminos.anticipo_saldo,
+      bruto * (terminos.anticipo_pct / 100),
+    );
+    const retencion = bruto * (terminos.fondo_garantia_pct / 100);
+    const fondoDisponible = terminos.fondo_saldo_prev + retencion;
+    const liberacionNum = Math.min(Number(liberacionFondo || 0), fondoDisponible);
+    const neto = bruto - amortizacion - retencion + liberacionNum;
+    return {
+      totalSemana,
+      totalAcum,
+      totalVigente,
+      erroresPorClave,
+      bruto,
+      amortizacion,
+      retencion,
+      liberacion: liberacionNum,
+      fondoDisponible,
+      neto,
+    };
+  }, [vigente, cantidades, acumuladoPrevio, terminos, liberacionFondo]);
 
   const visibleRows = useMemo(() => {
     const f = filter.trim().toLowerCase();
@@ -303,6 +343,64 @@ export function CapturaEstimacionDestajoSheet({
               </table>
             </Card>
 
+            {(terminos.anticipo_pct > 0 || terminos.fondo_garantia_pct > 0) && (
+              <Card className="mt-4 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Cálculo de pago de la semana
+                </p>
+                <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2">
+                  <Row label="Bruto (producción semana)" value={formatMXN(computed.bruto)} />
+                  {terminos.anticipo_pct > 0 && (
+                    <Row
+                      label={`(−) Amortización anticipo ${terminos.anticipo_pct}%`}
+                      value={`−${formatMXN(computed.amortizacion)}`}
+                      hint={`Saldo anticipo antes: ${formatMXN(terminos.anticipo_saldo)}`}
+                    />
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && (
+                    <Row
+                      label={`(−) Retención fondo ${terminos.fondo_garantia_pct}%`}
+                      value={`−${formatMXN(computed.retencion)}`}
+                    />
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && !isCerrada && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-xs flex-1">
+                        (+) Liberar fondo en esta semana
+                      </span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min={0}
+                        max={computed.fondoDisponible}
+                        value={liberacionFondo}
+                        onChange={(e) => setLiberacionFondo(e.target.value)}
+                        className="h-8 w-32 text-right tabular-nums"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && isCerrada && computed.liberacion > 0 && (
+                    <Row
+                      label="(+) Liberación fondo"
+                      value={`+${formatMXN(computed.liberacion)}`}
+                    />
+                  )}
+                </div>
+                <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
+                  <span>Neto a pagar</span>
+                  <span className="tabular-nums">{formatMXN(computed.neto)}</span>
+                </div>
+                {terminos.fondo_garantia_pct > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fondo disponible al cierre: {formatMXN(computed.fondoDisponible - computed.liberacion)}
+                  </p>
+                )}
+              </Card>
+            )}
+
+
             {!isCerrada && (
               <div className="flex gap-2 mt-4 flex-wrap justify-end sticky bottom-0 bg-background py-3">
                 <Button
@@ -337,7 +435,15 @@ export function CapturaEstimacionDestajoSheet({
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => estimacion && cerrarM.mutate({ data: { id: estimacion.id } })}
+                onClick={() =>
+                  estimacion &&
+                  cerrarM.mutate({
+                    data: {
+                      id: estimacion.id,
+                      liberacionFondo: Number(liberacionFondo || 0),
+                    },
+                  })
+                }
               >
                 Cerrar semana
               </AlertDialogAction>
@@ -365,5 +471,17 @@ function StatCard({
         {value}
       </p>
     </Card>
+  );
+}
+
+function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground text-xs">
+        {label}
+        {hint && <span className="block text-[10px]">{hint}</span>}
+      </span>
+      <span className="tabular-nums">{value}</span>
+    </div>
   );
 }
