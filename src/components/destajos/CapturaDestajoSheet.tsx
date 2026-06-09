@@ -139,7 +139,7 @@ export function CapturaDestajoSheet({
       <SheetContent side="right" className="w-full sm:max-w-5xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {presupuesto?.nombre ?? "Presupuesto de destajo"}
+            Presupuesto base
             {presupuesto && (
               <Badge className="ml-2" variant="outline">
                 {presupuesto.estatus}
@@ -155,6 +155,27 @@ export function CapturaDestajoSheet({
           <p className="text-sm text-muted-foreground mt-6">Cargando…</p>
         ) : (
           <div className="mt-6 space-y-4">
+            {presupuesto?.obra_destajos && (
+              <Card className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Destajo</p>
+                  <p className="text-sm font-medium">
+                    {presupuesto.obra_destajos.numero ? `#${presupuesto.obra_destajos.numero} · ` : ""}
+                    {presupuesto.obra_destajos.nombre}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Destajista</p>
+                  <p className="text-sm font-medium">
+                    {presupuesto.obra_destajos.trabajadores?.nombre_completo ?? "—"}
+                    {presupuesto.obra_destajos.trabajadores?.puesto
+                      ? ` · ${presupuesto.obra_destajos.trabajadores.puesto}`
+                      : ""}
+                  </p>
+                </div>
+              </Card>
+            )}
+
             <div className="flex items-center gap-2 flex-wrap">
               {editable && (
                 <Button size="sm" variant="ghost" onClick={addRow}>
@@ -288,6 +309,64 @@ export function CapturaDestajoSheet({
                 </tbody>
               </table>
             </Card>
+
+            {presupuesto?.obra_destajos && (() => {
+              const aPct = Number(presupuesto.obra_destajos.anticipo_pct ?? 0);
+              const fPct = Number(presupuesto.obra_destajos.fondo_garantia_pct ?? 0);
+              const sinErrores = calc.errores.length === 0;
+              const aMonto = sinErrores ? (calc.montoTotal * aPct) / 100 : null;
+              const fMonto = sinErrores ? (calc.montoTotal * fPct) / 100 : null;
+              if (aPct === 0 && fPct === 0) {
+                return (
+                  <Card className="p-3">
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+                      Condiciones del destajo
+                    </p>
+                    <p className="text-sm text-muted-foreground">Sin anticipo ni fondo de garantía.</p>
+                  </Card>
+                );
+              }
+              return (
+                <Card className="p-3 space-y-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Condiciones del destajo
+                  </p>
+                  {aPct > 0 && (
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">Anticipo</p>
+                        <p className="text-xs text-muted-foreground">
+                          Se calcula sobre el total y se amortiza con cada estimación. Monto definitivo al autorizar.
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm tabular-nums">{aPct}%</p>
+                        <p className="text-sm font-medium tabular-nums">
+                          {aMonto === null ? "—" : formatMXN(aMonto)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {fPct > 0 && (
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">Fondo de garantía</p>
+                        <p className="text-xs text-muted-foreground">
+                          Se retiene de cada estimación; el monto mostrado es el acumulado al 100% del contrato.
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm tabular-nums">{fPct}%</p>
+                        <p className="text-sm font-medium tabular-nums">
+                          {fMonto === null ? "—" : formatMXN(fMonto)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              );
+            })()}
+
 
             <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background py-3">
               <Button variant="outline" onClick={onClose}>Cerrar</Button>
