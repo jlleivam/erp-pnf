@@ -329,9 +329,14 @@ function PresupuestoCard({
           {p.descripcion && (
             <p className="text-xs text-muted-foreground mt-1">{p.descripcion}</p>
           )}
-          {p.estatus === "rechazado" && p.rechazo_motivo && (
-            <p className="text-xs text-destructive mt-1">Motivo: {p.rechazo_motivo}</p>
-          )}
+          {((p.estatus === "rechazado") ||
+            (p.tipo === "base" && p.estatus === "borrador" && p.rechazo_motivo)) &&
+            p.rechazo_motivo && (
+              <p className="text-xs text-destructive mt-1">
+                Rechazado · Motivo: {p.rechazo_motivo}
+              </p>
+            )}
+
         </div>
         <div className="text-right">
           <p className={`text-lg font-semibold ${esOC && Number(p.monto_total) < 0 ? "text-destructive" : ""}`}>
