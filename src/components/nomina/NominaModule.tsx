@@ -90,7 +90,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
           </p>
         </Card>
         <Card className="p-4 border-primary/30 bg-primary/5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Borrador actual</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Nómina activa</p>
           <p className="mt-2 text-xl font-semibold">
             {borrador ? formatMXN(Number(borrador.monto_total)) : "—"}
           </p>
