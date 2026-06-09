@@ -148,6 +148,8 @@ export const crearDestajo = createServerFn({ method: "POST" })
       destajistaId: z.string().uuid(),
       nombre: z.string().trim().min(1).max(255),
       descripcion: z.string().trim().max(1000).optional(),
+      anticipoPct: z.number().min(0).max(100).optional(),
+      fondoGarantiaPct: z.number().min(0).max(100).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -162,6 +164,9 @@ export const crearDestajo = createServerFn({ method: "POST" })
       .order("numero", { ascending: false }).limit(1).maybeSingle();
     const numero = (maxRow?.numero ?? 0) + 1;
 
+    const anticipoPct = Number(data.anticipoPct ?? 0);
+    const fondoPct = Number(data.fondoGarantiaPct ?? 0);
+
     const { data: created, error } = await supabase
       .from("obra_destajos")
       .insert({
@@ -171,6 +176,9 @@ export const crearDestajo = createServerFn({ method: "POST" })
         numero,
         nombre: data.nombre,
         descripcion: data.descripcion ?? null,
+        anticipo_pct: anticipoPct,
+        anticipo_monto: 0, // se calcula al autorizar la base con monto_total final
+        fondo_garantia_pct: fondoPct,
         creado_por: userId,
       })
       .select("id").single();
@@ -209,6 +217,51 @@ export const crearDestajo = createServerFn({ method: "POST" })
 
     return { id: created.id as string, presupuestoBaseId: presBase.id as string };
   });
+
+export const actualizarTerminosDestajo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      destajoId: z.string().uuid(),
+      anticipoPct: z.number().min(0).max(100),
+      fondoGarantiaPct: z.number().min(0).max(100),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: d0 } = await supabase
+      .from("obra_destajos").select("obra_id, monto_total").eq("id", data.destajoId).single();
+    if (!d0) throw new Error("Destajo no encontrado");
+    const { isDirector } = await getRoles(supabase, userId);
+    const member = await isMemberObra(supabase, userId, d0.obra_id);
+    if (!isDirector && !member) throw new Error("Sin permisos");
+
+    // Si ya hay anticipo registrado (pagado), no permitir cambiar el %
+    const { data: ant } = await supabase
+      .from("obra_destajo_anticipos").select("id, pagado").eq("destajo_id", data.destajoId).maybeSingle();
+    if (ant?.pagado) throw new Error("El anticipo ya fue marcado como pagado; no se pueden modificar los términos");
+
+    const anticipoMonto = Number(d0.monto_total ?? 0) * (data.anticipoPct / 100);
+    const { error } = await supabase
+      .from("obra_destajos")
+      .update({
+        anticipo_pct: data.anticipoPct,
+        anticipo_monto: anticipoMonto,
+        fondo_garantia_pct: data.fondoGarantiaPct,
+      })
+      .eq("id", data.destajoId);
+    if (error) throw new Error(error.message);
+
+    // Sincronizar monto del registro de anticipo si existe (no pagado)
+    if (ant && !ant.pagado) {
+      await supabase
+        .from("obra_destajo_anticipos")
+        .update({ monto: anticipoMonto })
+        .eq("id", ant.id);
+    }
+    return { ok: true };
+  });
+
 
 
 export const eliminarDestajo = createServerFn({ method: "POST" })
