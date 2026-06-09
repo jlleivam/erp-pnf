@@ -71,11 +71,13 @@ export function TrabajadorFormDialog({
   onClose,
   initial,
   canManage,
+  obraId,
 }: {
   open: boolean;
   onClose: () => void;
   initial?: TrabajadorFormInitial | null;
   canManage: boolean;
+  obraId?: string;
 }) {
   const isEdit = !!initial?.id;
   const [f, setF] = useState<TrabajadorFormInitial>(initial ?? EMPTY);
