@@ -114,6 +114,11 @@ export function CapturaOrdenCambioDestajoSheet({
     return map;
   }, [calc.errores]);
 
+  const clavesPadre = useMemo(
+    () => calcularClavesPadre(rows.map((r) => r.clave)),
+    [rows],
+  );
+
   const guardar = useServerFn(guardarRenglonesOCDestajo);
   const guardarM = useMutation({
     mutationFn: guardar,
