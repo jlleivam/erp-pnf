@@ -216,8 +216,7 @@ function NuevaNominaDialog({
   semanasUsadas: Set<string>;
 }) {
   const hoy = toISODate(new Date());
-  const [fecha, setFecha] = useState(hoy);
-  const semana = calcularSemana(fecha);
+  const semana = calcularSemana(hoy);
   const yaExiste = semanasUsadas.has(semana.inicio);
 
   return (
@@ -226,14 +225,10 @@ function NuevaNominaDialog({
         <DialogHeader>
           <DialogTitle>Nueva nómina semanal</DialogTitle>
           <DialogDescription>
-            Selecciona cualquier fecha dentro de la semana que deseas abrir.
+            Se abrirá la nómina correspondiente a la semana en curso.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Fecha</Label>
-            <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-          </div>
           <Card className="p-3 bg-muted/30">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Semana asignada</p>
             <p className="mt-1 font-medium">{formatRangoSemana(semana.inicio, semana.fin)}</p>
@@ -244,6 +239,7 @@ function NuevaNominaDialog({
             )}
           </Card>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={() => onConfirm(semana.inicio)}>Continuar</Button>
