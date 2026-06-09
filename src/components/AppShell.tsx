@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCompanyConfig, getCompanyLogoSignedUrl } from "@/lib/api/company.functions";
+import { listSwitchableUsers, impersonateUser } from "@/lib/dev-switch.functions";
 import {
   Building2,
   LayoutDashboard,
@@ -234,35 +235,8 @@ export function AppShell() {
 
 
 
-            {realDirector && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    Vista: {assumedRole ? ROLE_LABELS[assumedRole] : "Director"}
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Asumir rol</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => switchRole(null)}>
-                    Director (mi rol)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("residente")}>
-                    Residente
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("administrativo")}>
-                    Administrativo
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("supervisor")}>
-                    Supervisor
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("auxiliar")}>
-                    Auxiliar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DevUserSwitcher />
+
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -358,5 +332,81 @@ function NavItem({
       {icon}
       <span className="truncate">{label}</span>
     </Link>
+  );
+}
+
+function DevUserSwitcher() {
+  const profile = useAuthStore((s) => s.profile);
+  const reset = useAuthStore((s) => s.reset);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(listSwitchableUsers);
+  const impersonateFn = useServerFn(impersonateUser);
+  const [switching, setSwitching] = useState(false);
+
+  const users = useQuery({
+    queryKey: ["dev-switchable-users"],
+    queryFn: () => listFn(),
+    staleTime: 60_000,
+  });
+
+  const onPick = async (userId: string) => {
+    if (switching) return;
+    setSwitching(true);
+    try {
+      const { token_hash } = await impersonateFn({ data: { userId } });
+      await supabase.auth.signOut();
+      reset();
+      const { error } = await supabase.auth.verifyOtp({ type: "magiclink", token_hash });
+      if (error) throw error;
+      queryClient.clear();
+      navigate({ to: "/app", replace: true });
+      window.location.reload();
+    } catch (e) {
+      console.error("Dev impersonate failed", e);
+      alert("No se pudo cambiar de usuario: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  const currentLabel = profile?.nombre_completo || profile?.email || "Usuario";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <span className="text-xs font-mono text-muted-foreground">DEV</span>
+          <span className="hidden sm:inline truncate max-w-[140px]">{currentLabel}</span>
+          <ChevronDown className="size-3" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto w-72">
+        <DropdownMenuLabel>Cambiar de usuario (dev)</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {users.isLoading && (
+          <div className="px-3 py-2 text-xs text-muted-foreground">Cargando…</div>
+        )}
+        {(users.data as Array<{ id: string; nombre_completo: string | null; email: string | null; roles: string[] }> | undefined)?.map((u) => {
+          const isCurrent = u.id === profile?.id;
+          return (
+            <DropdownMenuItem
+              key={u.id}
+              disabled={isCurrent || switching}
+              onClick={() => onPick(u.id)}
+              className="flex flex-col items-start gap-0.5"
+            >
+              <span className="text-sm">
+                {u.nombre_completo || u.email}
+                {isCurrent && <span className="ml-2 text-xs text-muted-foreground">(actual)</span>}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {u.roles.length > 0 ? u.roles.join(", ") : "sin rol"}
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
