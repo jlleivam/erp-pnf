@@ -486,3 +486,164 @@ function CrearOcDialog({
     </Dialog>
   );
 }
+
+function TerminosTab({
+  destajo,
+  canEdit,
+  onChanged,
+}: {
+  destajo: any;
+  canEdit: boolean;
+  onChanged: () => void;
+}) {
+  const qc = useQueryClient();
+  const fetchAnt = useServerFn(getDestajoAnticipo);
+  const antQ = useQuery({
+    queryKey: ["destajo-anticipo", destajo?.id],
+    queryFn: () => fetchAnt({ data: { destajoId: destajo!.id } }),
+    enabled: !!destajo?.id,
+  });
+
+  const [editing, setEditing] = useState(false);
+  const [anticipoPct, setAnticipoPct] = useState<string>(String(destajo?.anticipo_pct ?? 0));
+  const [fondoPct, setFondoPct] = useState<string>(String(destajo?.fondo_garantia_pct ?? 0));
+
+  const update = useServerFn(actualizarTerminosDestajo);
+  const updM = useMutation({
+    mutationFn: update,
+    onSuccess: () => {
+      toast.success("Términos actualizados");
+      setEditing(false);
+      qc.invalidateQueries({ queryKey: ["destajo-anticipo", destajo?.id] });
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const marcar = useServerFn(marcarAnticipoPagado);
+  const marcarM = useMutation({
+    mutationFn: marcar,
+    onSuccess: () => {
+      toast.success("Anticipo marcado como pagado");
+      qc.invalidateQueries({ queryKey: ["destajo-anticipo", destajo?.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (!destajo) return null;
+  const anticipoPctNum = Number(destajo.anticipo_pct ?? 0);
+  const anticipoMonto = Number(destajo.anticipo_monto ?? 0);
+  const fondoPctNum = Number(destajo.fondo_garantia_pct ?? 0);
+  const antData = antQ.data;
+  const anticipoRegistro = antData?.anticipo;
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Anticipo</p>
+            <p className="text-lg font-semibold">
+              {anticipoPctNum.toFixed(2)}% · {formatMXN(anticipoMonto)}
+            </p>
+            {anticipoMonto > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Amortizado: {formatMXN(antData?.anticipoAmortizado ?? 0)} · Saldo:{" "}
+                {formatMXN(Math.max(0, anticipoMonto - (antData?.anticipoAmortizado ?? 0)))}
+              </p>
+            )}
+            {anticipoRegistro && (
+              <p className="text-xs mt-1">
+                {anticipoRegistro.pagado ? (
+                  <Badge>Pagado</Badge>
+                ) : (
+                  <Badge variant="secondary">Pendiente de pago</Badge>
+                )}
+              </p>
+            )}
+          </div>
+          {anticipoMonto > 0 && anticipoRegistro && !anticipoRegistro.pagado && (
+            <Button
+              size="sm"
+              disabled={marcarM.isPending}
+              onClick={() => marcarM.mutate({ data: { destajoId: destajo.id } })}
+            >
+              Marcar pagado
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">Fondo de garantía</p>
+        <p className="text-lg font-semibold">{fondoPctNum.toFixed(2)}% por estimación</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Retenido: {formatMXN(antData?.fondoRetenido ?? 0)} · Liberado:{" "}
+          {formatMXN(antData?.fondoLiberado ?? 0)} · Saldo:{" "}
+          {formatMXN(antData?.fondoSaldo ?? 0)}
+        </p>
+      </Card>
+
+      {!editing ? (
+        <Button size="sm" variant="outline" disabled={!canEdit} onClick={() => setEditing(true)}>
+          Editar términos
+        </Button>
+      ) : (
+        <Card className="p-4 space-y-3">
+          <div>
+            <Label className="text-sm">Anticipo (%)</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              max={100}
+              value={anticipoPct}
+              onChange={(e) => setAnticipoPct(e.target.value)}
+              className="w-32 mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm">Fondo de garantía (%)</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              max={100}
+              value={fondoPct}
+              onChange={(e) => setFondoPct(e.target.value)}
+              className="w-32 mt-1"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={updM.isPending}
+              onClick={() =>
+                updM.mutate({
+                  data: {
+                    destajoId: destajo.id,
+                    anticipoPct: Number(anticipoPct || 0),
+                    fondoGarantiaPct: Number(fondoPct || 0),
+                  },
+                })
+              }
+            >
+              {updM.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+              Cancelar
+            </Button>
+          </div>
+          {anticipoRegistro?.pagado && (
+            <p className="text-xs text-destructive">
+              El anticipo ya fue marcado como pagado; no podrás cambiar el %.
+            </p>
+          )}
+        </Card>
+      )}
+    </div>
+  );
+}
+
