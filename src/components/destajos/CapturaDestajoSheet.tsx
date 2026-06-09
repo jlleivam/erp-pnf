@@ -5,7 +5,7 @@ import {
   getDestajoPresupuesto,
   guardarRenglonesDestajo,
 } from "@/lib/api/destajos.functions";
-import { procesarRenglones, type RenglonInput } from "@/lib/presupuesto-utils";
+import { procesarRenglones, calcularClavesPadre, type RenglonInput } from "@/lib/presupuesto-utils";
 import {
   Sheet,
   SheetContent,
