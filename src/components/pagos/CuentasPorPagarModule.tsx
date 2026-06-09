@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { Building2, Search } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, Search, HandCoins } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -12,6 +14,8 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { getSaldosProveedores, getDetalleSaldoProveedor } from "@/lib/api/pagos.functions";
+import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
+import { RegistrarPagoAnticipoDialog } from "./RegistrarPagoAnticipoDialog";
 import { formatMXN, formatDate } from "@/lib/format";
 
 type Row = {
