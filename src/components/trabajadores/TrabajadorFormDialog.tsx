@@ -94,7 +94,7 @@ export function TrabajadorFormDialog({
     mutationFn: create,
     onSuccess: () => {
       toast.success(
-        canManage ? "Trabajador creado" : "Solicitud enviada. Pendiente de autorización.",
+        canManage ? "Trabajador creado" : "Solicitud enviada. Pendiente de registro.",
       );
       qc.invalidateQueries({ queryKey: ["trabajadores"] });
       onClose();
