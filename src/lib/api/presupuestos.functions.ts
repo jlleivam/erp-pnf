@@ -557,7 +557,6 @@ export const guardarRenglonesOC = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
-    if (!isDirector) throw new Error("Solo el Director puede editar órdenes de cambio");
 
     const { data: presupuesto } = await supabase
       .from("obra_presupuestos")
@@ -567,8 +566,13 @@ export const guardarRenglonesOC = createServerFn({ method: "POST" })
     if (!presupuesto) throw new Error("Presupuesto no encontrado");
     if (presupuesto.tipo !== "adenda")
       throw new Error("Este endpoint es solo para órdenes de cambio");
-    if (presupuesto.estatus === "autorizado")
-      throw new Error("La orden de cambio está autorizada y no se puede editar");
+    if (presupuesto.estatus !== "borrador")
+      throw new Error("Solo se puede editar una OC en borrador. Reábrela si fue rechazada.");
+
+    const { isResidente } = await getObraRole(supabase, userId, presupuesto.obra_id);
+    if (!isDirector && !isResidente)
+      throw new Error("Solo el Residente de la obra (o el Director) puede editar órdenes de cambio");
+
 
     // Reconstruir el vigente SIN incluir esta OC (aunque no esté autorizada, igual la excluimos)
     const { baseRenglones, ocsRenglones } = await loadBaseYOcs(supabase, presupuesto.obra_id);
