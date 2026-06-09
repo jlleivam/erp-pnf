@@ -110,7 +110,7 @@ export function TrabajadorDetalle({
                       </Badge>
                       {t.estatus_autorizacion === "pendiente" && (
                         <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                          Pendiente de autorización
+                          Pendiente de registro
                         </Badge>
                       )}
                     </span>
