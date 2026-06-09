@@ -68,19 +68,5 @@ function ObraModule() {
     );
   }
 
-  return (
-    <div>
-      <div className="flex justify-end mb-2">
-        <Link
-          to="/app/obras/$obraId"
-          params={{ obraId }}
-          aria-label="Cerrar módulo"
-          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-        >
-          <X className="size-4" />
-        </Link>
-      </div>
-      {content}
-    </div>
-  );
+  return <>{content}</>;
 }
