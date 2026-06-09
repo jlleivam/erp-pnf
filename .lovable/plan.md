@@ -1,67 +1,32 @@
-# Flujo de órdenes de cambio: residente solicita, supervisor autoriza
+# Botón "Ver vigente" dentro de la captura de Orden de Cambio
 
-Aplica a **Presupuesto de obra**, **Destajos** y **Subcontratos**. La OC solo modifica el contrato vigente cuando queda **autorizada**.
+Agregar un botón de solo lectura para consultar el **presupuesto/destajo/subcontrato vigente** mientras se captura una OC, sin tener que cerrar la hoja.
 
-## Reglas de permisos
+## Alcance
 
-- **Solicitar OC** (crear y enviar para autorización): miembros de la obra (`obra_team`) con rol `residente`. El **Director** también puede.
-- **Autorizar / Rechazar OC**: miembros de la obra con rol `supervisor`. El **Director** también puede.
-- El residente no puede autorizar lo que él solicita; el supervisor no crea OCs (puede rechazar/autorizar).
-- Ambos roles se toman de la pestaña **Equipo** de la obra (`obra_team.role`), no del rol global.
+Tres hojas de captura de OC:
+1. `CapturaOrdenCambioSheet.tsx` (Presupuesto de obra)
+2. `CapturaOrdenCambioDestajoSheet.tsx` (Destajos)
+3. `CapturaOrdenCambioSubcontratoSheet.tsx` (Subcontratos)
 
-## Estados (unificados para OC / adenda)
+## UI
 
-```text
-borrador  →  solicitada  →  autorizada
-                       ↘
-                         rechazada  →  (residente vuelve a borrador y reenvía)
-```
+- Agregar un botón **"Ver vigente"** (icono `Eye`, variante `outline`, tamaño `sm`) en la barra superior de acciones, junto a "Agregar movimiento" / badge de errores.
+- Al hacer clic, abre un **Dialog** (no Sheet, para evitar apilar Sheets) ancho con la tabla del vigente en modo solo-lectura: Clave, Concepto, Unidad, Cantidad, PU, Importe + total al pie. Mismo render que `VerVigenteSheet` (jerarquía con padding por nivel, badges Mod/Nuevo).
+- Los datos del vigente ya se cargan en cada captura sheet (`vigQ`), así que solo se reusa esa query — sin llamadas extra al servidor.
 
-- **borrador**: el residente edita renglones.
-- **solicitada**: enviada al supervisor; ya no es editable por el residente.
-- **autorizada**: se suma al contrato vigente (única que afecta totales).
-- **rechazada**: vuelve a editarse; el residente puede reenviar a "solicitada".
+## Implementación técnica
 
-Solo las OCs **autorizadas** se incluyen en totales y validaciones del contrato (ya es el comportamiento actual, se mantiene).
+1. **Nuevo componente** `src/components/presupuesto/VigenteViewerDialog.tsx`
+   - Props: `open`, `onClose`, `vigente: any[]`, `total: number`, `title?: string`.
+   - Render genérico (sirve para los 3 módulos; las filas tienen la misma forma).
+2. En cada uno de los 3 sheets:
+   - Agregar estado `const [showVigente, setShowVigente] = useState(false)`.
+   - Botón "Ver vigente" antes del badge de errores.
+   - Renderizar `<VigenteViewerDialog />` pasándole `vigente` y total calculado (`sum importe` o `montoTotal` cuando esté disponible).
+3. Sin cambios en backend, RLS, ni lógica de cálculo.
 
-## Cambios técnicos
+## Out of scope
 
-### Base de datos (una migración)
-
-1. Extender `presupuesto_estatus` con `solicitada` y `rechazada` (hoy solo tiene `borrador, autorizado`). Reutilizar `destajo_doc_estatus` existente (`borrador, enviado, autorizado, rechazado`) — renombramos semánticamente `enviado` ↔ "solicitada" en UI/labels, sin cambiar el enum.
-2. Dos funciones `SECURITY DEFINER`:
-   - `public.is_residente_de_obra(_obra_id uuid) → boolean`
-   - `public.is_supervisor_de_obra(_obra_id uuid) → boolean`
-   Consultan `obra_team` por `auth.uid()` + rol.
-
-### Server functions (`src/lib/api/*.functions.ts`)
-
-**Presupuestos (`presupuestos.functions.ts`)**
-- `crearPresupuesto` con `tipo='adenda'`: permitir si `isDirector` **o** `is_residente_de_obra(obraId)`. `tipo='base'` sigue siendo solo Director.
-- Nueva `solicitarAutorizacionPresupuesto({ id })`: `borrador → solicitada`. Permitida a residente/director, valida que tenga renglones.
-- `autorizarPresupuesto({ id })`: pasar de `solicitada → autorizado`. Permitida a `is_supervisor_de_obra` o Director (hoy es solo Director).
-- Nueva `rechazarPresupuesto({ id, motivo? })`: `solicitada → rechazada`. Mismo permiso que autorizar.
-
-**Destajos (`destajos.functions.ts`) y Subcontratos (`subcontratos.functions.ts`)**
-- `crearOrdenCambioDestajo` / `crearOrdenCambioSubcontrato`: permitir a residente de obra o Director (hoy: cualquier miembro). Estado inicial `borrador`.
-- Nuevas `solicitarAutorizacion…` (`borrador → enviado`).
-- `autorizarPresupuestoDestajo` / `…Subcontrato`: cambiar permiso a `is_supervisor_de_obra` o Director (hoy: Director o `app_role=supervisor` global).
-- Nueva `rechazarPresupuesto…` (`enviado → rechazado`) con el mismo permiso.
-
-### UI
-
-Componentes ya existentes: `VerPresupuestoSheet`, `DestajoDetalleSheet`, `SubcontratoDetalleSheet` (y panel de OC en `PresupuestoModule`).
-
-En cada uno, según estado y rol del usuario en la obra:
-- Estado `borrador` + (residente|director): botón **"Solicitar autorización"**.
-- Estado `solicitada/enviado` + (supervisor|director): botones **"Autorizar"** y **"Rechazar"** (con motivo opcional).
-- Estado `rechazada`: mostrar motivo + botón "Volver a borrador" para el residente.
-- Mostrar badge de estado con color (gris/amarillo/verde/rojo).
-
-Para saber el rol del usuario en la obra se reutiliza la consulta de equipo ya disponible; si no existe un hook, agregar `useObraTeamRole(obraId)` que regresa `{ isResidente, isSupervisor }`.
-
-### Sin cambios
-
-- Cálculo de totales del contrato (sigue sumando solo adendas `autorizado`).
-- RLS de las tablas existentes.
-- Lógica de renglones, estimaciones, importes.
+- No se permite editar desde la vista.
+- No se agrega navegación al presupuesto completo (solo el vigente consolidado).

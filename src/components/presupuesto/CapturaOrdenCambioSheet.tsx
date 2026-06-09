@@ -24,7 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, AlertCircle, CheckCircle2, Search } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Search, Eye } from "lucide-react";
+import { VigenteViewerDialog } from "./VigenteViewerDialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
 
@@ -211,6 +212,7 @@ export function CapturaOrdenCambioSheet({
   // ====== Pickers ======
   const [pickMod, setPickMod] = useState(false);
   const [pickDel, setPickDel] = useState(false);
+  const [showVigente, setShowVigente] = useState(false);
 
   const addMod = (n: VigenteNode) => {
     if (mods.some((m) => m.clave === n.clave)) {
@@ -267,7 +269,15 @@ export function CapturaOrdenCambioSheet({
         ) : (
           <div className="mt-6 space-y-4">
             {/* Resumen */}
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center justify-end gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowVigente(true)}
+                className="mr-auto"
+              >
+                <Eye className="size-4 mr-1" /> Ver vigente
+              </Button>
               {calc.errores.length > 0 ? (
                 <Badge variant="destructive" className="gap-1">
                   <AlertCircle className="size-3" />
@@ -708,6 +718,12 @@ export function CapturaOrdenCambioSheet({
             multi
           />
         )}
+        <VigenteViewerDialog
+          open={showVigente}
+          onClose={() => setShowVigente(false)}
+          vigente={vigente as any[]}
+          total={vigQ.data?.montoTotal}
+        />
       </SheetContent>
     </Sheet>
   );

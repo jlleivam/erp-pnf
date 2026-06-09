@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Eye } from "lucide-react";
+import { VigenteViewerDialog } from "@/components/presupuesto/VigenteViewerDialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
 
@@ -66,6 +67,7 @@ export function CapturaOrdenCambioDestajoSheet({
   });
 
   const [rows, setRows] = useState<RowDraft[]>([emptyRow()]);
+  const [showVigente, setShowVigente] = useState(false);
 
   useEffect(() => {
     if (data?.renglones && data.renglones.length > 0) {
@@ -165,6 +167,13 @@ export function CapturaOrdenCambioDestajoSheet({
         ) : (
           <div className="mt-6 space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowVigente(true)}
+              >
+                <Eye className="size-4 mr-1" /> Ver vigente
+              </Button>
               {editable && (
                 <Button size="sm" variant="ghost" onClick={addRow}>
                   <Plus className="size-4 mr-1" /> Agregar movimiento
@@ -313,6 +322,12 @@ export function CapturaOrdenCambioDestajoSheet({
             </div>
           </div>
         )}
+        <VigenteViewerDialog
+          open={showVigente}
+          onClose={() => setShowVigente(false)}
+          vigente={vigente}
+          title="Vigente del destajo"
+        />
       </SheetContent>
     </Sheet>
   );
