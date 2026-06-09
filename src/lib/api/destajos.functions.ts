@@ -959,7 +959,9 @@ export const getOrCreateEstimacionDestajo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: d0 } = await supabase
-      .from("obra_destajos").select("obra_id, company_id").eq("id", data.destajoId).single();
+      .from("obra_destajos")
+      .select("obra_id, company_id, anticipo_pct, anticipo_monto, fondo_garantia_pct")
+      .eq("id", data.destajoId).single();
     if (!d0) throw new Error("Destajo no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
     const member = await isMemberObra(supabase, userId, d0.obra_id);
