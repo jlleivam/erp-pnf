@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listNominas, eliminarNomina, getNominaAccess } from "@/lib/api/nominas.functions";
 import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
-import { useEffectiveIsDirector } from "@/stores/auth";
+import { useEffectiveIsDirector, useEffectiveRoles } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,7 @@ type Nomina = {
 
 export function NominaModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
+  const effectiveRoles = useEffectiveRoles();
   const qc = useQueryClient();
   const fetchList = useServerFn(listNominas);
   const listQ = useQuery({
@@ -44,7 +45,9 @@ export function NominaModule({ obraId }: { obraId: string }) {
     queryKey: ["nomina-access", obraId],
     queryFn: () => fetchAccess({ data: { obraId } }),
   });
-  const canEdit = accessQ.data?.canEdit ?? false;
+  const canEdit =
+    director ||
+    (effectiveRoles.includes("residente") && (accessQ.data?.isObraResidente ?? false));
 
   const [editing, setEditing] = useState<{ semanaInicio: string; readOnly?: boolean } | null>(null);
   const [openNueva, setOpenNueva] = useState(false);
