@@ -6,7 +6,7 @@ import {
   getVigenteSubcontrato,
   guardarRenglonesOCSubcontrato,
 } from "@/lib/api/subcontratos.functions";
-import { procesarOrdenCambio, type OCInput } from "@/lib/presupuesto-utils";
+import { procesarOrdenCambio, calcularClavesPadre, type OCInput } from "@/lib/presupuesto-utils";
 import {
   Sheet,
   SheetContent,
