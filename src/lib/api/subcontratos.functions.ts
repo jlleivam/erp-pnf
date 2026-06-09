@@ -572,6 +572,21 @@ export const autorizarPresupuestoSubcontrato = createServerFn({ method: "POST" }
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
     await recalcSubcontratoTotal(supabase, p.subcontrato_id);
+
+    if (p.tipo === "adenda") {
+      try {
+        await notifyResidenteOC(supabase, {
+          residenteId: p.enviado_por,
+          actorUserId: userId,
+          obraId: d0!.obra_id,
+          tipo: "oc_subcontrato_autorizada",
+          link: `/app/obras/${d0!.obra_id}`,
+        });
+      } catch (e: any) {
+        console.error("[notificaciones] oc_subcontrato_autorizada error", e?.message);
+      }
+    }
+
     return { ok: true };
   });
 
