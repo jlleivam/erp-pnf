@@ -278,7 +278,7 @@ export function CapturaEstimacionSheet({
                                 inputMode="decimal"
                                 step="any"
                                 min={0}
-                                disabled={isCerrada}
+                                disabled={soloLectura}
                                 value={cantStr}
                                 onChange={(e) =>
                                   setCantidades((s) => ({ ...s, [r.clave]: e.target.value }))
