@@ -125,19 +125,7 @@ export function CapturaEstimacionSheet({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const cerrar = useServerFn(cerrarEstimacion);
-  const cerrarM = useMutation({
-    mutationFn: cerrar,
-    onSuccess: () => {
-      toast.success("Estimación cerrada");
-      qc.invalidateQueries({ queryKey: ["estimaciones", obraId] });
-      setConfirmCierre(false);
-      onClose();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const handleGuardar = (cerrarDespues = false) => {
+  const handleGuardar = () => {
     if (!estimacion) return;
     if (computed.erroresPorClave.size > 0) {
       toast.error("Hay conceptos que exceden el vigente. Corrige antes de guardar.");
@@ -147,20 +135,7 @@ export function CapturaEstimacionSheet({
       .map(([k, v]) => ({ renglon_clave: k, cantidad_ejecutada: Number(v || 0) }))
       .filter((r) => Number.isFinite(r.cantidad_ejecutada) && r.cantidad_ejecutada > 0);
 
-    guardarM.mutate(
-      { data: { estimacionId: estimacion.id, renglones } },
-      {
-        onSuccess: () => {
-          if (cerrarDespues) {
-            if (renglones.length === 0) {
-              toast.error("Captura al menos un concepto antes de cerrar");
-              return;
-            }
-            setConfirmCierre(true);
-          }
-        },
-      },
-    );
+    guardarM.mutate({ data: { estimacionId: estimacion.id, renglones } });
   };
 
   const pctAvance = computed.totalVigente > 0 ? (computed.totalAcum / computed.totalVigente) * 100 : 0;
@@ -171,8 +146,8 @@ export function CapturaEstimacionSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 flex-wrap">
             Estimación semanal
-            <Badge variant={isCerrada ? "default" : "secondary"}>
-              {isCerrada ? "Cerrada" : "Borrador"}
+            <Badge variant={soloLectura ? "default" : "secondary"}>
+              {soloLectura ? "Cerrada" : "Activa"}
             </Badge>
             <span className="ml-auto text-sm text-muted-foreground">
               {formatRangoSemana(semana.inicio, semana.fin)}
