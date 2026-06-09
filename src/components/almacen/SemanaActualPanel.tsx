@@ -87,38 +87,36 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
         </Card>
 
         <Card>
-          <div className="overflow-x-auto">
-            <Table className="text-sm">
-              <TableHeader>
+          <Table className="text-xs w-full table-fixed">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[10px] uppercase tracking-wide py-1.5 px-1.5 w-[26%]">Insumo</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[16%]">Proveedor</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[7%]">Ud</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[11%]">PU</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[8%]">Ini</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[8%]">Rec</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[14%]">Util</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wide text-center py-1.5 px-1 w-[10%]">Final</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((m: any) => (
+                <MovRow
+                  key={m.id}
+                  mov={m}
+                  onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
+                />
+              ))}
+              {items.length === 0 && (
                 <TableRow>
-                  <TableHead className="text-xs uppercase tracking-wide py-1.5 px-2">Insumo</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Proveedor</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Unidad</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">PU</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Inv. inicial</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Recibido</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Utilizado</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Inv. final</TableHead>
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    Aún no hay material en el almacén esta semana. Registra recepciones desde la pestaña "Por recibir".
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((m: any) => (
-                  <MovRow
-                    key={m.id}
-                    mov={m}
-                    onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
-                  />
-                ))}
-                {items.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                      Aún no hay material en el almacén esta semana. Registra recepciones desde la pestaña "Por recibir".
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              )}
+            </TableBody>
+          </Table>
         </Card>
 
         <AlertDialog open={cerrarOpen} onOpenChange={setCerrarOpen}>
