@@ -54,7 +54,7 @@ export function CapturaEstimacionSheet({
 
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
-  const [confirmCierre, setConfirmCierre] = useState(false);
+  
   const [initialized, setInitialized] = useState(false);
 
   // Inicializar cantidades con lo capturado previamente
