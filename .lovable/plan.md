@@ -1,28 +1,68 @@
-# Plan: Compactar la pantalla de Destajos
+## Objetivo
 
-Objetivo: dar protagonismo a la lista (un destajo por renglón) reduciendo el espacio del header y de las tarjetas de totales.
+Agregar al destajo dos conceptos contractuales: **fondo de garantía** (retención por estimación, liberable parcialmente) y **anticipo** (pagado al inicio, amortizado proporcionalmente al avance de cada estimación). Sin estado de cuenta completo todavía.
 
-## Cambios en `src/components/destajos/DestajosModule.tsx`
+## 1) Cambios de base de datos (migración)
 
-1. **Header más compacto**
-   - Reducir título a `text-xl` y quitar el párrafo descriptivo ("Subcontratación a trabajadores propios…").
-   - Mantener el botón "Nuevo destajo" alineado a la derecha en la misma fila.
-   - Reducir `space-y-6` a `space-y-4`.
+### Tabla `obra_destajos` — nuevas columnas
+- `anticipo_pct numeric not null default 0` (0–100)
+- `anticipo_monto numeric not null default 0` (snapshot = monto_total × anticipo_pct/100; se recalcula al guardar)
+- `fondo_garantia_pct numeric not null default 0` (0–100)
 
-2. **KPIs en una sola fila compacta**
-   - Reemplazar las 3 `Card` grandes (`p-4`, valor `text-xl`) por una sola tarjeta horizontal con 3 columnas separadas por divisores:
-     - Padding `p-3`, label `text-[11px]`, valor `text-base font-semibold`.
-   - Esto baja la altura del bloque KPIs de ~110px a ~56px.
+### Tabla `obra_destajo_estimaciones` — nuevas columnas (calculadas al cerrar la estimación)
+- `monto_bruto numeric not null default 0` — avance valorizado de la semana
+- `amortizacion_anticipo numeric not null default 0` — `monto_bruto × anticipo_pct/100`, topado al saldo pendiente del anticipo
+- `retencion_fondo numeric not null default 0` — `monto_bruto × fondo_garantia_pct/100`
+- `liberacion_fondo numeric not null default 0` — liberación manual capturada por el usuario en esa estimación (default 0)
+- `monto_neto numeric` — `monto_bruto − amortizacion_anticipo − retencion_fondo + liberacion_fondo` (lo que ya existe como `monto_total` pasará a representar el neto pagable; se documenta y migra).
 
-3. **Tabla: forzar un destajo por renglón**
-   - En `<td>` de "Destajo": quitar la descripción debajo del nombre (o mostrarla en `truncate` con `title`) para evitar wrap a 2 líneas.
-   - En `<td>` de "Destajista": añadir `whitespace-nowrap` (evita que "Mario Sánchez García" rompa en 3 líneas).
-   - En `<td>` de "Estatus": el `Badge` con `whitespace-nowrap` para que "Por autorizar" quepa en una línea.
-   - Reducir padding de celdas de `p-3` a `py-2 px-3`.
+### Nueva tabla `obra_destajo_movimientos_anticipo` (opcional, simple)
+Un solo registro tipo "pago de anticipo" por destajo:
+- `destajo_id`, `company_id`, `fecha`, `monto`, `metodo_pago`, `referencia`, `creado_por`.
+- Generado automáticamente al activar el destajo si `anticipo_monto > 0`.
+- GRANT + RLS análogos a las otras tablas de destajo.
 
-## No se toca
-- Lógica, queries, server functions, permisos.
-- Otros archivos.
+(No se crea aún tabla de "saldos"; los saldos se derivan por suma de columnas en las estimaciones.)
 
-## Resultado esperado
-Header + KPIs ocupan ~⅓ de lo actual; cada destajo se ve en un solo renglón de la tabla.
+## 2) UI — Alta / edición de destajo (`NuevoDestajoSheet` / equivalente)
+
+Nueva sección "Términos económicos" debajo de monto total:
+- Switch "Requiere anticipo" → input % (0–100). Muestra preview en MXN: `monto_total × %`.
+- Switch "Aplicar fondo de garantía" → input % (0–100). Muestra texto: "Se retendrá X% de cada estimación; podrás liberarlo parcialmente."
+- Validaciones: 0 ≤ pct ≤ 100, dos decimales.
+
+Al guardar: se persisten los % y se calcula `anticipo_monto` snapshot.
+
+## 3) UI — Detalle del destajo
+
+- Tarjetita informativa con: % anticipo, monto del anticipo, % fondo de garantía. Texto plano, sin KPIs de saldos.
+- Cuando el destajo se "activa" (cambia de borrador a activo) y `anticipo_monto > 0`: crear automáticamente el movimiento de anticipo (estimación 0 / pago inicial). Se muestra en la lista de pagos del destajo como "Anticipo".
+
+## 4) UI — Captura/cierre de estimación semanal
+
+Al cerrar una estimación:
+- Se calcula `monto_bruto` (como hoy).
+- Se calcula automáticamente:
+  - `amortizacion_anticipo = min(saldo_anticipo_pendiente, monto_bruto × anticipo_pct/100)` donde `saldo_anticipo_pendiente = anticipo_monto − Σ amortizacion_anticipo de estimaciones previas cerradas`.
+  - `retencion_fondo = monto_bruto × fondo_garantia_pct/100`.
+- Input opcional "Liberar fondo de garantía en esta estimación" (MXN, default 0, ≤ fondo retenido acumulado − ya liberado).
+- Resumen visible: Bruto − Amortización anticipo − Retención fondo + Liberación fondo = **Neto a pagar**.
+
+## 5) Server functions (`src/lib/api/destajos.functions.ts`)
+
+- `createDestajo` / `updateDestajo`: aceptar y persistir `anticipo_pct`, `fondo_garantia_pct`; calcular `anticipo_monto`.
+- `activateDestajo` (o donde se transicione a "activo"): insertar movimiento de anticipo si aplica.
+- `closeEstimacion`: calcular `monto_bruto`, `amortizacion_anticipo`, `retencion_fondo`, aceptar `liberacion_fondo` del input, persistir `monto_neto`.
+- Helper `getDestajoAnticipoSaldo(destajo_id)` para mostrar el saldo pendiente del anticipo durante la captura.
+
+## Respuesta a "¿Necesitamos saldos como proveedores?"
+
+Por ahora **no** se construye un estado de cuenta completo. Lo que se entrega es:
+- Persistir los conceptos en cada estimación (bruto, amortización, retención, liberación, neto).
+- Dejar la información lista para que en un siguiente paso se construya la vista de saldos (similar a proveedores) sumando esas columnas, sin necesidad de re-migrar datos.
+
+## Fuera de alcance (siguiente iteración)
+
+- Vista/tarjetas de "estado de cuenta del destajo" (contratado, anticipo pagado, anticipo amortizado, fondo retenido, fondo liberado, pagado, saldo).
+- Reglas de bloqueo: no permitir cerrar el destajo si queda anticipo sin amortizar o fondo sin liberar.
+- Reportes consolidados por obra.
