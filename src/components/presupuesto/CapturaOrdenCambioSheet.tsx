@@ -5,7 +5,7 @@ import {
   getPresupuesto,
   getVigente,
   guardarRenglonesOC,
-  autorizarPresupuesto,
+  solicitarAutorizacionPresupuesto,
 } from "@/lib/api/presupuestos.functions";
 import {
   procesarOrdenCambio,
