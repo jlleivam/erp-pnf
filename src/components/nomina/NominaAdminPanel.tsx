@@ -162,16 +162,16 @@ export function NominaAdminPanel() {
             : "Ningún trabajador coincide con los filtros."}
         </Card>
       ) : (
-        <Card className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <Card className="overflow-hidden">
+          <table className="w-full text-sm table-fixed">
             <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="text-left py-2 px-3">Trabajador</th>
-                <th className="text-right py-2 px-3 w-24">Sueldo/día</th>
-                <th className="text-right py-2 px-3 w-16">Días</th>
-                <th className="text-right py-2 px-3 w-16">Extras h</th>
-                <th className="text-left py-2 px-3">Obras</th>
-                <th className="text-right py-2 px-3 w-28">Importe</th>
+                <th className="text-left py-2 px-2 whitespace-nowrap">Trabajador</th>
+                <th className="text-center py-2 px-2 w-20 whitespace-nowrap">Sueldo/día</th>
+                <th className="text-center py-2 px-2 w-12 whitespace-nowrap">Días</th>
+                <th className="text-center py-2 px-2 w-14 whitespace-nowrap">Extras h</th>
+                <th className="text-center py-2 px-2 whitespace-nowrap">Obras</th>
+                <th className="text-center py-2 px-2 w-24 whitespace-nowrap">Importe</th>
               </tr>
             </thead>
             <tbody>
@@ -184,26 +184,26 @@ export function NominaAdminPanel() {
                   )}
                   onClick={() => setVerDetalle(t)}
                 >
-                  <td className="py-2 px-3 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
+                  <td className="py-2 px-2 text-left">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       {t.duplicados.length > 0 && (
                         <AlertTriangle className="size-3.5 text-destructive shrink-0" />
                       )}
-                      <span className="font-medium">{t.nombre}</span>
+                      <span className="font-medium truncate">{t.nombre}</span>
                       {t.puesto && (
-                        <span className="text-xs text-muted-foreground">· {t.puesto}</span>
+                        <span className="text-xs text-muted-foreground truncate">· {t.puesto}</span>
                       )}
                     </div>
                   </td>
-                  <td className="py-2 px-3 text-right tabular-nums text-xs">
+                  <td className="py-2 px-2 text-center tabular-nums text-xs">
                     {formatMXN(t.sueldo_diario)}
                   </td>
-                  <td className="py-2 px-3 text-right tabular-nums">{t.dias_totales.toFixed(1)}</td>
-                  <td className="py-2 px-3 text-right tabular-nums">
+                  <td className="py-2 px-2 text-center tabular-nums">{t.dias_totales.toFixed(1)}</td>
+                  <td className="py-2 px-2 text-center tabular-nums">
                     {t.horas_extras_totales.toFixed(1)}
                   </td>
-                  <td className="py-2 px-3 min-w-0">
-                    <div className="flex gap-1 overflow-hidden whitespace-nowrap">
+                  <td className="py-2 px-2 text-center min-w-0">
+                    <div className="flex gap-1 overflow-hidden whitespace-nowrap justify-center">
                       {t.obras.map((o) => (
                         <Badge key={o.nomina_id} variant="secondary" className="text-[11px] shrink-0">
                           {o.nombre} ({o.dias.toFixed(1)})
@@ -211,7 +211,7 @@ export function NominaAdminPanel() {
                       ))}
                     </div>
                   </td>
-                  <td className="py-2 px-3 text-right tabular-nums font-medium whitespace-nowrap">
+                  <td className="py-2 px-2 text-center tabular-nums font-medium whitespace-nowrap">
                     {formatMXN(t.importe_total)}
                   </td>
                 </tr>
@@ -219,6 +219,7 @@ export function NominaAdminPanel() {
             </tbody>
           </table>
         </Card>
+
       )}
 
       {verDetalle && (
