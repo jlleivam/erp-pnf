@@ -59,7 +59,7 @@ export const listDestajos = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: destajos, error } = await supabase
       .from("obra_destajos")
-      .select("id, obra_id, destajista_id, numero, nombre, descripcion, estatus, monto_total, created_at")
+      .select("id, obra_id, destajista_id, numero, nombre, descripcion, estatus, monto_total, anticipo_pct, anticipo_monto, fondo_garantia_pct, created_at")
       .eq("obra_id", data.obraId)
       .order("numero", { ascending: true });
     if (error) throw new Error(error.message);
