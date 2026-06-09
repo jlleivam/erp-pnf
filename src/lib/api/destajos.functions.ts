@@ -1339,7 +1339,7 @@ async function notifyAdminsAnticipoSolicitado(
 
   const titulo = "Solicitud de pago de anticipo";
   const mensaje = `${args.solicitanteNombre} solicitó el pago del anticipo (${montoFmt}) para el destajo ${args.destajoNombre} · ${args.destajistaNombre} en la obra ${args.obraNombre}.`;
-  const link = `/app/cuentas-por-pagar?tab=anticipos`;
+  const link = `/app/admin/cuentas-por-pagar`;
 
   const rows = destinatarios.map((uid) => ({
     user_id: uid,
