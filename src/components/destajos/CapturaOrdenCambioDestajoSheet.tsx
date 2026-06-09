@@ -322,6 +322,12 @@ export function CapturaOrdenCambioDestajoSheet({
             </div>
           </div>
         )}
+        <VigenteViewerDialog
+          open={showVigente}
+          onClose={() => setShowVigente(false)}
+          vigente={vigente}
+          title="Vigente del destajo"
+        />
       </SheetContent>
     </Sheet>
   );
