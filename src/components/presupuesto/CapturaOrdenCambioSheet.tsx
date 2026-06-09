@@ -24,6 +24,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Plus, Trash2, AlertCircle, CheckCircle2, Search, Eye } from "lucide-react";
 import { VigenteViewerDialog } from "./VigenteViewerDialog";
 import { toast } from "sonner";
@@ -778,24 +784,39 @@ function ConceptoPicker({
               Sin resultados.
             </p>
           ) : (
-            <ul className="divide-y border rounded-md">
-              {filtradas.map((h) => (
-                <li key={h.clave}>
-                  <button
-                    className="w-full text-left p-2 hover:bg-muted/50 text-sm flex items-center gap-2"
-                    onClick={() => onSelect(h)}
-                  >
-                    <span className="font-mono text-xs text-muted-foreground w-16">
-                      {h.clave}
-                    </span>
-                    <span className="flex-1 truncate">{h.concepto}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatMXN(Number(h.importe))}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <TooltipProvider delayDuration={200}>
+              <ul className="divide-y border rounded-md">
+                {filtradas.map((h) => (
+                  <li key={h.clave}>
+                    <button
+                      className="w-full text-left p-2 hover:bg-muted/50 text-sm flex items-center gap-2"
+                      onClick={() => onSelect(h)}
+                    >
+                      <span className="font-mono text-xs text-muted-foreground w-16">
+                        {h.clave}
+                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="flex-1 truncate cursor-default">
+                            {h.concepto}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          align="start"
+                          className="max-w-md whitespace-normal"
+                        >
+                          {h.concepto}
+                        </TooltipContent>
+                      </Tooltip>
+                      <span className="text-xs text-muted-foreground">
+                        {formatMXN(Number(h.importe))}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </TooltipProvider>
           )}
           {multi && (
             <div className="flex justify-end">
