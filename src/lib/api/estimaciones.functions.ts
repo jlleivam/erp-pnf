@@ -204,8 +204,9 @@ export const guardarRenglonesEstimacion = createServerFn({ method: "POST" })
       .from("obra_estimaciones").select("*")
       .eq("id", data.estimacionId).single();
     if (estErr || !est) throw new Error("Estimación no encontrada");
-    if (est.estatus !== "borrador")
-      throw new Error("La estimación está cerrada y no se puede modificar");
+    const semanaActual = calcularSemana(new Date()).inicio;
+    if (est.semana_inicio !== semanaActual)
+      throw new Error("Solo se puede modificar la estimación de la semana vigente");
 
     const { canEdit } = await getCompanyAndAccess(supabase, userId, est.obra_id);
     if (!canEdit) throw new Error("No tiene permisos para editar esta estimación");
@@ -217,7 +218,7 @@ export const guardarRenglonesEstimacion = createServerFn({ method: "POST" })
 
     const { data: prevs } = await supabase
       .from("obra_estimaciones").select("id")
-      .eq("obra_id", est.obra_id).eq("estatus", "cerrada")
+      .eq("obra_id", est.obra_id)
       .lt("semana_inicio", est.semana_inicio);
     const prevIds = (prevs ?? []).map((p: any) => p.id);
     const acumuladoPrevio = new Map<string, number>();
