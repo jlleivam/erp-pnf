@@ -179,7 +179,11 @@ export type OCInput = {
 };
 
 export type VigenteNode = RenglonBase & {
-  origen: "base" | "modificada" | "agregada";
+  origen: "base" | "modificada" | "agregada" | "eliminada";
+  cantidad_base?: number | null;
+  pu_base?: number | null;
+  cantidad_modificada?: boolean;
+  pu_modificado?: boolean;
 };
 
 /**
