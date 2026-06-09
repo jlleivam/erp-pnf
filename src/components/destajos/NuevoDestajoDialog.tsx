@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { crearDestajo } from "@/lib/api/destajos.functions";
 import { listTrabajadores } from "@/lib/api/trabajadores.functions";
 import {
@@ -24,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { TrabajadorFormDialog } from "@/components/trabajadores/TrabajadorFormDialog";
+import { useEffectiveRoles } from "@/stores/auth";
 
 export function NuevoDestajoDialog({
   obraId,
@@ -34,6 +37,9 @@ export function NuevoDestajoDialog({
   onClose: () => void;
   onCreated: (destajoId: string) => void;
 }) {
+  const roles = useEffectiveRoles();
+  const canManage = roles.includes("director") || roles.includes("administrativo");
+
   const fetchTrabs = useServerFn(listTrabajadores);
   const trabsQ = useQuery({
     queryKey: ["trabajadores-lista"],
@@ -57,6 +63,26 @@ export function NuevoDestajoDialog({
   const [anticipoPct, setAnticipoPct] = useState<string>("");
   const [fondoOn, setFondoOn] = useState(false);
   const [fondoPct, setFondoPct] = useState<string>("");
+  const [nuevoTrabajadorOpen, setNuevoTrabajadorOpen] = useState(false);
+  const [idsPrevios, setIdsPrevios] = useState<Set<string> | null>(null);
+
+  // Detecta un trabajador recién creado y lo pre-selecciona (solo si el usuario puede autorizar altas).
+  useEffect(() => {
+    const idsActuales = new Set<string>(trabajadores.map((t) => t.id));
+    if (idsPrevios === null) {
+      setIdsPrevios(idsActuales);
+      return;
+    }
+    if (!canManage) {
+      setIdsPrevios(idsActuales);
+      return;
+    }
+    const nuevos = trabajadores.filter((t) => !idsPrevios.has(t.id));
+    if (nuevos.length > 0) {
+      if (!destajistaId) setDestajistaId(nuevos[0].id);
+      setIdsPrevios(idsActuales);
+    }
+  }, [trabajadores, idsPrevios, canManage, destajistaId]);
 
   const crear = useServerFn(crearDestajo);
   const m = useMutation({
@@ -81,19 +107,32 @@ export function NuevoDestajoDialog({
         <div className="space-y-3">
           <div>
             <Label>Destajista</Label>
-            <Select value={destajistaId} onValueChange={setDestajistaId}>
-              <SelectTrigger>
-                <SelectValue placeholder={trabsQ.isLoading ? "Cargando…" : "Selecciona un trabajador"} />
-              </SelectTrigger>
-              <SelectContent>
-                {trabajadores.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.nombre_completo}
-                    {t.puesto ? ` · ${t.puesto}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <Select value={destajistaId} onValueChange={setDestajistaId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={trabsQ.isLoading ? "Cargando…" : "Selecciona un trabajador"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {trabajadores.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nombre_completo}
+                        {t.puesto ? ` · ${t.puesto}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setNuevoTrabajadorOpen(true)}
+              >
+                <Plus className="size-4 mr-1" />
+                {canManage ? "Nuevo" : "Solicitar alta"}
+              </Button>
+            </div>
             {trabajadores.length === 0 && !trabsQ.isLoading && (
               <p className="text-xs text-muted-foreground mt-1">
                 No hay trabajadores autorizados disponibles.
@@ -202,6 +241,17 @@ export function NuevoDestajoDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {nuevoTrabajadorOpen && (
+        <TrabajadorFormDialog
+          open
+          canManage={canManage}
+          obraId={obraId}
+          onClose={() => {
+            setNuevoTrabajadorOpen(false);
+            trabsQ.refetch();
+          }}
+        />
+      )}
     </Dialog>
   );
 }
