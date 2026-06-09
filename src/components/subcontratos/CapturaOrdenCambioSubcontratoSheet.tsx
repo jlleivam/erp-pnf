@@ -322,6 +322,12 @@ export function CapturaOrdenCambioSubcontratoSheet({
             </div>
           </div>
         )}
+        <VigenteViewerDialog
+          open={showVigente}
+          onClose={() => setShowVigente(false)}
+          vigente={vigente}
+          title="Vigente del subcontrato"
+        />
       </SheetContent>
     </Sheet>
   );
