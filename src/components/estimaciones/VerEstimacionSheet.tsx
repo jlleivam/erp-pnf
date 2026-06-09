@@ -5,6 +5,7 @@ import { formatRangoSemana } from "@/lib/estimacion-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 
 export function VerEstimacionSheet({
@@ -58,40 +59,63 @@ export function VerEstimacionSheet({
               Sin cantidades capturadas.
             </Card>
           ) : (
-            <Card className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="text-left p-2 w-24">Clave</th>
-                    <th className="text-left p-2">Concepto</th>
-                    <th className="text-left p-2 w-16">Un.</th>
-                    <th className="text-right p-2 w-24">Cant. ejec.</th>
-                    <th className="text-right p-2 w-28">PU</th>
-                    <th className="text-right p-2 w-32">Importe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {renglones.map((r: any) => (
-                    <tr key={r.id} className="border-t border-border">
-                      <td className="p-2 tabular-nums">{r.renglon_clave}</td>
-                      <td className="p-2">{r.concepto}</td>
-                      <td className="p-2 text-muted-foreground">{r.unidad ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">
-                        {Number(r.cantidad_ejecutada).toLocaleString("es-MX", {
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="p-2 text-right tabular-nums">
-                        {formatMXN(Number(r.pu_vigente))}
-                      </td>
-                      <td className="p-2 text-right tabular-nums">
-                        {formatMXN(Number(r.importe_ejecutado))}
-                      </td>
+            <TooltipProvider delayDuration={200}>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-xs table-fixed">
+                  <colgroup>
+                    <col className="w-20" />
+                    <col />
+                    <col className="w-16" />
+                    <col className="w-24" />
+                    <col className="w-24" />
+                    <col className="w-28" />
+                  </colgroup>
+                  <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-2 py-1.5">Clave</th>
+                      <th className="text-left px-2 py-1.5">Concepto</th>
+                      <th className="text-left px-2 py-1.5">Un.</th>
+                      <th className="text-right px-2 py-1.5">Cant. ejec.</th>
+                      <th className="text-right px-2 py-1.5">PU</th>
+                      <th className="text-right px-2 py-1.5">Importe</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+                  </thead>
+                  <tbody>
+                    {renglones.map((r: any) => (
+                      <tr key={r.id} className="border-t border-border">
+                        <td className="px-2 py-1 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis">
+                          {r.renglon_clave}
+                        </td>
+                        <td className="px-2 py-1 max-w-0">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="truncate whitespace-nowrap overflow-hidden text-ellipsis cursor-default">
+                                {r.concepto}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="start" className="max-w-md whitespace-normal">
+                              {r.concepto}
+                            </TooltipContent>
+                          </Tooltip>
+                        </td>
+                        <td className="px-2 py-1 text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                          {r.unidad ?? "—"}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          {Number(r.cantidad_ejecutada).toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          {formatMXN(Number(r.pu_vigente))}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          {formatMXN(Number(r.importe_ejecutado))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </TooltipProvider>
           )}
         </div>
       </SheetContent>
