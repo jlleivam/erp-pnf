@@ -177,17 +177,17 @@ export function CapturaOrdenCambioSheet({
     },
     onError: (e: Error) => toast.error(e.message),
   });
-  const autorizar = useServerFn(autorizarPresupuesto);
-  const autorizarM = useMutation({
-    mutationFn: autorizar,
+  const solicitar = useServerFn(solicitarAutorizacionPresupuesto);
+  const solicitarM = useMutation({
+    mutationFn: solicitar,
     onSuccess: () => {
-      toast.success("Orden de cambio autorizada");
+      toast.success("Solicitud enviada al supervisor");
       onSaved();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleGuardar = (autorizarDespues: boolean) => {
+  const handleGuardar = (solicitarDespues: boolean) => {
     if (calc.errores.length > 0) {
       toast.error("Corrige los errores antes de guardar");
       return;
@@ -200,8 +200,8 @@ export function CapturaOrdenCambioSheet({
       { data: { presupuestoId, renglones: input } },
       {
         onSuccess: () => {
-          if (autorizarDespues) {
-            autorizarM.mutate({ data: { id: presupuestoId } });
+          if (solicitarDespues) {
+            solicitarM.mutate({ data: { id: presupuestoId } });
           }
         },
       },
