@@ -598,7 +598,7 @@ function AsignarTrabajadoresDialog({
                         <span>{t.nombre_completo}</span>
                         {isPendiente && (
                           <Badge variant="secondary" className="text-[10px]">
-                            Pendiente de autorización
+                            Pendiente de registro
                           </Badge>
                         )}
                       </div>
