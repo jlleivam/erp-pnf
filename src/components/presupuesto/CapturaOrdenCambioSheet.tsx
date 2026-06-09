@@ -488,13 +488,19 @@ export function CapturaOrdenCambioSheet({
                       </thead>
                       <tbody>
                         {adds.map((r) => {
-                          const errs = erroresPorClave.get(r.clave.trim()) ?? [];
-                          const delta = deltaPorClave.get(r.clave.trim()) ?? 0;
+                          const claveTrim = r.clave.trim();
+                          const errs = erroresPorClave.get(claveTrim) ?? [];
+                          const delta = deltaPorClave.get(claveTrim) ?? 0;
+                          const esPadre = claveTrim !== "" && clavesPadreAdds.has(claveTrim);
                           return (
                             <tr
                               key={r._id}
                               className={`border-t border-border ${
-                                errs.length ? "bg-destructive/5" : ""
+                                errs.length
+                                  ? "bg-destructive/5"
+                                  : esPadre
+                                  ? "bg-accent/40 font-medium"
+                                  : ""
                               }`}
                             >
                               <td className="p-1">
@@ -529,65 +535,80 @@ export function CapturaOrdenCambioSheet({
                                     {errs.join(" · ")}
                                   </p>
                                 )}
+                                {esPadre && errs.length === 0 && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Partida — suma de sus conceptos
+                                  </p>
+                                )}
                               </td>
-                              <td className="p-1">
-                                <Input
-                                  value={r.unidad}
-                                  placeholder="m2"
-                                  className="h-8"
-                                  onChange={(e) =>
-                                    setAdds((rs) =>
-                                      rs.map((x) =>
-                                        x._id === r._id ? { ...x, unidad: e.target.value } : x,
-                                      ),
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="p-1">
-                                <Input
-                                  type="number"
-                                  value={r.cantidad ?? ""}
-                                  className="h-8 text-right"
-                                  onChange={(e) =>
-                                    setAdds((rs) =>
-                                      rs.map((x) =>
-                                        x._id === r._id
-                                          ? {
-                                              ...x,
-                                              cantidad:
-                                                e.target.value === ""
-                                                  ? null
-                                                  : Number(e.target.value),
-                                            }
-                                          : x,
-                                      ),
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="p-1">
-                                <Input
-                                  type="number"
-                                  value={r.precio_unitario ?? ""}
-                                  className="h-8 text-right"
-                                  onChange={(e) =>
-                                    setAdds((rs) =>
-                                      rs.map((x) =>
-                                        x._id === r._id
-                                          ? {
-                                              ...x,
-                                              precio_unitario:
-                                                e.target.value === ""
-                                                  ? null
-                                                  : Number(e.target.value),
-                                            }
-                                          : x,
-                                      ),
-                                    )
-                                  }
-                                />
-                              </td>
+                              {esPadre ? (
+                                <>
+                                  <td className="p-2 text-center text-muted-foreground">—</td>
+                                  <td className="p-2 text-center text-muted-foreground">—</td>
+                                  <td className="p-2 text-center text-muted-foreground">—</td>
+                                </>
+                              ) : (
+                                <>
+                                  <td className="p-1">
+                                    <Input
+                                      value={r.unidad}
+                                      placeholder="m2"
+                                      className="h-8"
+                                      onChange={(e) =>
+                                        setAdds((rs) =>
+                                          rs.map((x) =>
+                                            x._id === r._id ? { ...x, unidad: e.target.value } : x,
+                                          ),
+                                        )
+                                      }
+                                    />
+                                  </td>
+                                  <td className="p-1">
+                                    <Input
+                                      type="number"
+                                      value={r.cantidad ?? ""}
+                                      className="h-8 text-right"
+                                      onChange={(e) =>
+                                        setAdds((rs) =>
+                                          rs.map((x) =>
+                                            x._id === r._id
+                                              ? {
+                                                  ...x,
+                                                  cantidad:
+                                                    e.target.value === ""
+                                                      ? null
+                                                      : Number(e.target.value),
+                                                }
+                                              : x,
+                                          ),
+                                        )
+                                      }
+                                    />
+                                  </td>
+                                  <td className="p-1">
+                                    <Input
+                                      type="number"
+                                      value={r.precio_unitario ?? ""}
+                                      className="h-8 text-right"
+                                      onChange={(e) =>
+                                        setAdds((rs) =>
+                                          rs.map((x) =>
+                                            x._id === r._id
+                                              ? {
+                                                  ...x,
+                                                  precio_unitario:
+                                                    e.target.value === ""
+                                                      ? null
+                                                      : Number(e.target.value),
+                                                }
+                                              : x,
+                                          ),
+                                        )
+                                      }
+                                    />
+                                  </td>
+                                </>
+                              )}
                               <td className="p-2 text-right tabular-nums">
                                 {formatMXN(delta)}
                               </td>
