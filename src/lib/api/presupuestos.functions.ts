@@ -237,14 +237,27 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
-    if (!isDirector) throw new Error("Solo el Director puede autorizar presupuestos");
 
     const { data: pres, error: pErr } = await supabase
       .from("obra_presupuestos")
-      .select("obra_id")
+      .select("obra_id, tipo, estatus, enviado_por")
       .eq("id", data.id)
       .single();
     if (pErr) throw new Error(pErr.message);
+
+    if (pres.tipo === "adenda") {
+      // OC: solo Supervisor de la obra o Director, y debe estar en "solicitada"
+      const { isSupervisor } = await getObraRole(supabase, userId, pres.obra_id);
+      if (!isDirector && !isSupervisor)
+        throw new Error("Solo el Supervisor de la obra (o el Director) puede autorizar órdenes de cambio");
+      if (pres.estatus !== "solicitada")
+        throw new Error("La orden de cambio debe haber sido solicitada por el residente");
+      if (pres.enviado_por && pres.enviado_por === userId && !isDirector)
+        throw new Error("No puedes autorizar una OC que tú mismo solicitaste");
+    } else {
+      // Base: solo director (puede autorizar desde borrador directamente)
+      if (!isDirector) throw new Error("Solo el Director puede autorizar el presupuesto base");
+    }
 
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
@@ -264,6 +277,115 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     await recalcularMontoContratado(supabase, pres.obra_id);
+    return { ok: true };
+  });
+
+// Solicitar autorización de una OC (residente -> supervisor)
+export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    const { data: pres } = await supabase
+      .from("obra_presupuestos")
+      .select("obra_id, tipo, estatus")
+      .eq("id", data.id)
+      .single();
+    if (!pres) throw new Error("Presupuesto no encontrado");
+    if (pres.tipo !== "adenda")
+      throw new Error("Solo las órdenes de cambio se envían a autorización");
+    if (pres.estatus !== "borrador")
+      throw new Error("Solo se puede solicitar desde borrador");
+    const { isResidente } = await getObraRole(supabase, userId, pres.obra_id);
+    if (!isDirector && !isResidente)
+      throw new Error("Solo el Residente de la obra (o el Director) puede solicitar la autorización");
+    const { count } = await supabase
+      .from("obra_presupuesto_renglones")
+      .select("id", { count: "exact", head: true })
+      .eq("presupuesto_id", data.id);
+    if (!count) throw new Error("La OC no tiene movimientos capturados");
+    const { error } = await supabase
+      .from("obra_presupuestos")
+      .update({
+        estatus: "solicitada",
+        enviado_at: new Date().toISOString(),
+        enviado_por: userId,
+        rechazado_at: null,
+        rechazado_por: null,
+        rechazo_motivo: null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Rechazar OC solicitada (supervisor)
+export const rechazarPresupuesto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      motivo: z.string().trim().min(3).max(500),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    const { data: pres } = await supabase
+      .from("obra_presupuestos")
+      .select("obra_id, tipo, estatus")
+      .eq("id", data.id)
+      .single();
+    if (!pres) throw new Error("Presupuesto no encontrado");
+    if (pres.tipo !== "adenda")
+      throw new Error("Solo se rechazan órdenes de cambio");
+    if (pres.estatus !== "solicitada")
+      throw new Error("Solo se puede rechazar una solicitud pendiente");
+    const { isSupervisor } = await getObraRole(supabase, userId, pres.obra_id);
+    if (!isDirector && !isSupervisor)
+      throw new Error("Solo el Supervisor de la obra (o el Director) puede rechazar");
+    const { error } = await supabase
+      .from("obra_presupuestos")
+      .update({
+        estatus: "rechazada",
+        rechazado_at: new Date().toISOString(),
+        rechazado_por: userId,
+        rechazo_motivo: data.motivo,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Reabrir OC rechazada: vuelve a borrador para editar
+export const reabrirPresupuesto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    const { data: pres } = await supabase
+      .from("obra_presupuestos")
+      .select("obra_id, tipo, estatus")
+      .eq("id", data.id)
+      .single();
+    if (!pres) throw new Error("Presupuesto no encontrado");
+    if (pres.tipo !== "adenda") throw new Error("Solo aplica a órdenes de cambio");
+    if (pres.estatus !== "rechazada")
+      throw new Error("Solo OCs rechazadas se pueden reabrir");
+    const { isResidente } = await getObraRole(supabase, userId, pres.obra_id);
+    if (!isDirector && !isResidente) throw new Error("Sin permisos");
+    const { error } = await supabase
+      .from("obra_presupuestos")
+      .update({
+        estatus: "borrador",
+        rechazado_at: null,
+        rechazado_por: null,
+        rechazo_motivo: null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
