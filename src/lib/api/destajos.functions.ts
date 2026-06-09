@@ -565,21 +565,21 @@ export const enviarPresupuestoDestajo = createServerFn({ method: "POST" })
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
 
-    if (p.tipo === "adenda") {
-      try {
-        await notifySupervisoresOC(supabase, {
-          userId,
-          obraId: d0!.obra_id,
-          tipo: "oc_destajo_solicitada",
-          link: `/app/obras/${d0!.obra_id}`,
-        });
-      } catch (e: any) {
-        console.error("[notificaciones] oc_destajo_solicitada error", e?.message);
-      }
+    const link = `/app/obras/${d0!.obra_id}/destajos?destajo=${p.destajo_id}`;
+    try {
+      await notifySupervisoresOC(supabase, {
+        userId,
+        obraId: d0!.obra_id,
+        tipo: p.tipo === "adenda" ? "oc_destajo_solicitada" : "destajo_solicitado",
+        link,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] destajo solicitado error", e?.message);
     }
 
     return { ok: true };
   });
+
 
 export const autorizarPresupuestoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
