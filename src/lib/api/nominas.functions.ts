@@ -51,6 +51,15 @@ function recalcRenglon(asistencias: { jornada: number; horas_extras: number }[],
   };
 }
 
+export const getNominaAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ obraId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { canEdit, isDirector, isObraResidente } = await getAccess(supabase, userId, data.obraId);
+    return { canEdit, isDirector, isObraResidente };
+  });
+
 export const listNominas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ obraId: z.string().uuid() }).parse(d))

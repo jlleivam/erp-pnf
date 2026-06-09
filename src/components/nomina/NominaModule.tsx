@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listNominas, eliminarNomina } from "@/lib/api/nominas.functions";
+import { listNominas, eliminarNomina, getNominaAccess } from "@/lib/api/nominas.functions";
 import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
 import { useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,12 @@ export function NominaModule({ obraId }: { obraId: string }) {
     queryKey: ["nominas", obraId],
     queryFn: () => fetchList({ data: { obraId } }),
   });
+  const fetchAccess = useServerFn(getNominaAccess);
+  const accessQ = useQuery({
+    queryKey: ["nomina-access", obraId],
+    queryFn: () => fetchAccess({ data: { obraId } }),
+  });
+  const canEdit = accessQ.data?.canEdit ?? false;
 
   const [editing, setEditing] = useState<{ semanaInicio: string; readOnly?: boolean } | null>(null);
   const [openNueva, setOpenNueva] = useState(false);
@@ -71,9 +77,11 @@ export function NominaModule({ obraId }: { obraId: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setOpenNueva(true)}>
-            <Plus className="size-4 mr-1" /> Nueva semana
-          </Button>
+          {canEdit && (
+            <Button onClick={() => setOpenNueva(true)}>
+              <Plus className="size-4 mr-1" /> Nueva semana
+            </Button>
+          )}
         </div>
       </header>
 
@@ -138,10 +146,10 @@ export function NominaModule({ obraId }: { obraId: string }) {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setEditing({ semanaInicio: n.semana_inicio, readOnly: n.estatus === "cerrada" })}
+                        onClick={() => setEditing({ semanaInicio: n.semana_inicio, readOnly: n.estatus === "cerrada" || !canEdit })}
                       >
                         <FileText className="size-4 mr-1" />
-                        {n.estatus === "cerrada" ? "Ver" : "Editar"}
+                        {n.estatus === "cerrada" || !canEdit ? "Ver" : "Editar"}
                       </Button>
                       {n.estatus === "borrador" && director && (
                         <Button size="sm" variant="ghost" onClick={() => setToDelete(n)}>
