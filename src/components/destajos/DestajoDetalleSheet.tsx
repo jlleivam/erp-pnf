@@ -53,7 +53,7 @@ type Presupuesto = {
 
 const ESTATUS_LABEL: Record<string, string> = {
   borrador: "Borrador",
-  enviado: "Pendiente autorización",
+  enviado: "Por autorizar",
   autorizado: "Autorizado",
   rechazado: "Rechazado",
 };
