@@ -40,6 +40,7 @@ import { CapturaDestajoSheet } from "./CapturaDestajoSheet";
 import { CapturaOrdenCambioDestajoSheet } from "./CapturaOrdenCambioDestajoSheet";
 import { AsignarTrabajadoresDialog } from "./AsignarTrabajadoresDialog";
 import { EstimacionesDestajoTab } from "./EstimacionesDestajoTab";
+import { RenglonesDestajoView } from "./RenglonesDestajoView";
 
 type Presupuesto = {
   id: string;
