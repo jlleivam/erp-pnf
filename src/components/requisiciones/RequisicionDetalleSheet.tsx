@@ -74,26 +74,46 @@ export function RequisicionDetalleSheet({ id, open, onOpenChange }: Props) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Insumo</TableHead>
-                      <TableHead className="text-right">Cantidad</TableHead>
+                      <TableHead className="text-right">Solicitado</TableHead>
+                      <TableHead className="text-right">Pedido</TableHead>
+                      <TableHead className="text-right">Recibido</TableHead>
                       <TableHead>Unidad</TableHead>
                       <TableHead>Fecha req.</TableHead>
                       <TableHead>Nota</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(r.items ?? []).map((it: any) => (
-                      <TableRow key={it.id}>
-                        <TableCell className="font-medium">{it.insumo?.nombre}</TableCell>
-                        <TableCell className="text-right">{Number(it.cantidad)}</TableCell>
-                        <TableCell>{it.insumo?.unidad}</TableCell>
-                        <TableCell>{formatDate(it.fecha_requerida)}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {it.nota ?? "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {(r.items ?? []).map((it: any) => {
+                      const solicitado = Number(it.cantidad) || 0;
+                      const pedido = Number(it.pedido) || 0;
+                      const recibido = Number(it.recibido) || 0;
+                      const fmt = (n: number) => n.toLocaleString("es-MX", { maximumFractionDigits: 2 });
+                      const recibidoCls =
+                        pedido === 0 && recibido === 0
+                          ? "text-muted-foreground"
+                          : recibido >= solicitado
+                            ? "text-emerald-600 font-medium"
+                            : recibido > 0
+                              ? "text-amber-600"
+                              : "text-muted-foreground";
+                      const pedidoCls = pedido === 0 ? "text-muted-foreground" : "";
+                      return (
+                        <TableRow key={it.id}>
+                          <TableCell className="font-medium">{it.insumo?.nombre}</TableCell>
+                          <TableCell className="text-right tabular-nums">{fmt(solicitado)}</TableCell>
+                          <TableCell className={`text-right tabular-nums ${pedidoCls}`}>{fmt(pedido)}</TableCell>
+                          <TableCell className={`text-right tabular-nums ${recibidoCls}`}>{fmt(recibido)}</TableCell>
+                          <TableCell>{it.insumo?.unidad}</TableCell>
+                          <TableCell>{formatDate(it.fecha_requerida)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {it.nota ?? "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
+
               </div>
             </div>
 

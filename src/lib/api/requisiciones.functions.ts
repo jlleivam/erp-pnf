@@ -133,8 +133,41 @@ export const getRequisicion = createServerFn({ method: "POST" })
       for (const p of profs ?? []) profileMap.set(p.id, p);
     }
     const nameOf = (id: string | null | undefined) => (id ? profileMap.get(id)?.nombre_completo ?? null : null);
+
+    // Pedido (cantidad en OC) y Recibido (cantidad en almacén) por insumo
+    const pedidoPorInsumo = new Map<string, number>();
+    const recibidoPorInsumo = new Map<string, number>();
+    const { data: ocs } = await supabase
+      .from("ordenes_compra")
+      .select("id, estatus, paquete:cotizacion_paquetes(insumos:cotizacion_paquete_insumos(insumo_id, cantidad))")
+      .eq("requisicion_id", data.id)
+      .not("estatus", "in", "(borrador,rechazada)");
+    const ocIds: string[] = [];
+    for (const oc of (ocs ?? []) as any[]) {
+      ocIds.push(oc.id);
+      const insumos = oc.paquete?.insumos ?? [];
+      for (const pi of insumos) {
+        pedidoPorInsumo.set(pi.insumo_id, (pedidoPorInsumo.get(pi.insumo_id) ?? 0) + Number(pi.cantidad));
+      }
+    }
+    if (ocIds.length > 0) {
+      const { data: parts } = await supabase
+        .from("almacen_recepcion_partidas")
+        .select("insumo_id, cantidad, recepcion:almacen_recepciones!inner(oc_id)")
+        .in("recepcion.oc_id", ocIds);
+      for (const p of (parts ?? []) as any[]) {
+        recibidoPorInsumo.set(p.insumo_id, (recibidoPorInsumo.get(p.insumo_id) ?? 0) + Number(p.cantidad));
+      }
+    }
+    const itemsEnriched = (req.items ?? []).map((it: any) => ({
+      ...it,
+      pedido: pedidoPorInsumo.get(it.insumo?.id) ?? 0,
+      recibido: recibidoPorInsumo.get(it.insumo?.id) ?? 0,
+    }));
+
     return {
       ...req,
+      items: itemsEnriched,
       solicitante: nameOf(req.creado_por),
       cotizacion_responsable: nameOf(req.cotizacion_por),
       autorizacion_responsable: nameOf(req.autorizacion_por),
@@ -143,6 +176,7 @@ export const getRequisicion = createServerFn({ method: "POST" })
       rechazada_responsable: nameOf(req.rechazada_por),
     };
   });
+
 
 export const crearRequisicion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
