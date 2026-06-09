@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listPresupuestos,
@@ -102,12 +103,32 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
     queryFn: () => fetchList({ data: { obraId } }),
   });
 
+  const search = useSearch({ strict: false }) as { tab?: string; ver?: string };
+  const navigate = useNavigate();
+
   const [creating, setCreating] = useState<null | "base" | "adenda">(null);
   const [editing, setEditing] = useState<{ id: string; tipo: "base" | "adenda" } | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const [verVigente, setVerVigente] = useState(false);
   const [toDelete, setToDelete] = useState<Presupuesto | null>(null);
   const [rechazando, setRechazando] = useState<Presupuesto | null>(null);
+  const [tab, setTab] = useState<string>(search.tab === "adendas" ? "adendas" : "base");
+
+  // Auto-open OC from notification link (?ver=<id>&tab=adendas)
+  useEffect(() => {
+    if (search.ver) {
+      setViewing(search.ver);
+      if (search.tab === "adendas") setTab("adendas");
+      // Limpiar search params para que cerrar el sheet no lo vuelva a abrir
+      navigate({
+        to: ".",
+        search: (prev: any) => ({ ...prev, ver: undefined, tab: undefined }),
+        replace: true,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.ver]);
+
 
   const remove = useServerFn(eliminarPresupuesto);
   const removeM = useMutation({
@@ -218,7 +239,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         </Card>
       </div>
 
-      <Tabs defaultValue="base">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="base">Base</TabsTrigger>
           <TabsTrigger value="adendas">Órdenes de cambio ({adendas.length})</TabsTrigger>
