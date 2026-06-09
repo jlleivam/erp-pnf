@@ -14,6 +14,7 @@ import {
   HardHat,
   FileText,
   Wallet,
+  ShieldCheck,
   Receipt,
   ClipboardList,
   Users,
