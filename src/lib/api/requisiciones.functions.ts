@@ -24,8 +24,10 @@ export const listRequisiciones = createServerFn({ method: "POST" })
       .select("id, folio, estatus, notas, created_at, creado_por, items:requisicion_insumos(id, cantidad, fecha_requerida, nota, insumo:insumos(id, nombre, unidad))")
       .eq("obra_id", data.obraId)
       .order("created_at", { ascending: false });
-    if (data.soloActivas) {
+    if (data.soloActivas === true) {
       q = q.not("estatus", "in", "(completada,rechazada)");
+    } else if (data.soloActivas === false) {
+      q = q.in("estatus", ["completada", "rechazada"]);
     }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
