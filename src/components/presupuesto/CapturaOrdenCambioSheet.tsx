@@ -5,7 +5,7 @@ import {
   getPresupuesto,
   getVigente,
   guardarRenglonesOC,
-  autorizarPresupuesto,
+  solicitarAutorizacionPresupuesto,
 } from "@/lib/api/presupuestos.functions";
 import {
   procesarOrdenCambio,
@@ -71,7 +71,7 @@ export function CapturaOrdenCambioSheet({
   });
 
   const presupuesto = presQ.data?.presupuesto;
-  const yaAutorizado = presupuesto?.estatus === "autorizado";
+  const yaAutorizado = presupuesto?.estatus !== "borrador";
   const vigente = (vigQ.data?.vigente ?? []) as VigenteNode[];
   const vigenteMap = useMemo(() => {
     const m = new Map<string, VigenteNode>();
@@ -177,17 +177,17 @@ export function CapturaOrdenCambioSheet({
     },
     onError: (e: Error) => toast.error(e.message),
   });
-  const autorizar = useServerFn(autorizarPresupuesto);
-  const autorizarM = useMutation({
-    mutationFn: autorizar,
+  const solicitar = useServerFn(solicitarAutorizacionPresupuesto);
+  const solicitarM = useMutation({
+    mutationFn: solicitar,
     onSuccess: () => {
-      toast.success("Orden de cambio autorizada");
+      toast.success("Solicitud enviada al supervisor");
       onSaved();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleGuardar = (autorizarDespues: boolean) => {
+  const handleGuardar = (solicitarDespues: boolean) => {
     if (calc.errores.length > 0) {
       toast.error("Corrige los errores antes de guardar");
       return;
@@ -200,8 +200,8 @@ export function CapturaOrdenCambioSheet({
       { data: { presupuestoId, renglones: input } },
       {
         onSuccess: () => {
-          if (autorizarDespues) {
-            autorizarM.mutate({ data: { id: presupuestoId } });
+          if (solicitarDespues) {
+            solicitarM.mutate({ data: { id: presupuestoId } });
           }
         },
       },
@@ -242,7 +242,15 @@ export function CapturaOrdenCambioSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 flex-wrap">
             {presupuesto?.nombre ?? "Orden de cambio"}
-            {yaAutorizado && <Badge className="ml-2">Autorizada</Badge>}
+            {presupuesto && presupuesto.estatus !== "borrador" && (
+              <Badge className="ml-2">
+                {presupuesto.estatus === "autorizado"
+                  ? "Autorizada"
+                  : presupuesto.estatus === "solicitada"
+                  ? "Solicitada"
+                  : "Rechazada"}
+              </Badge>
+            )}
           </SheetTitle>
           <SheetDescription>
             Captura las modificaciones, adiciones y eliminaciones sobre el presupuesto
@@ -664,14 +672,14 @@ export function CapturaOrdenCambioSheet({
               <Button
                 disabled={
                   guardarM.isPending ||
-                  autorizarM.isPending ||
+                  solicitarM.isPending ||
                   calc.errores.length > 0 ||
                   yaAutorizado ||
                   input.length === 0
                 }
                 onClick={() => handleGuardar(true)}
               >
-                Guardar y autorizar
+                Guardar y solicitar autorización
               </Button>
             </div>
           </div>

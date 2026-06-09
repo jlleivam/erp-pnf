@@ -5,7 +5,8 @@ import {
   listSubcontratos,
   eliminarSubcontrato,
 } from "@/lib/api/subcontratos.functions";
-import { useEffectiveIsDirector, useEffectiveRoles } from "@/stores/auth";
+import { useEffectiveIsDirector } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,8 +56,7 @@ const ESTATUS_VARIANT: Record<Subcontrato["estatus"], "default" | "secondary" | 
 
 export function SubcontratosModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
-  const roles = useEffectiveRoles();
-  const isSupervisor = roles.includes("supervisor");
+  const { isSupervisor } = useObraRole(obraId);
   const qc = useQueryClient();
   const fetchList = useServerFn(listSubcontratos);
   const listQ = useQuery({

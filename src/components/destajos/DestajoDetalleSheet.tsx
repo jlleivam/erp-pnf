@@ -344,7 +344,7 @@ function PresupuestoCard({
           <>
             <Button size="sm" onClick={onEdit}>Editar</Button>
             <Button size="sm" variant="outline" onClick={onEnviar}>
-              <Send className="size-4 mr-1" /> Enviar a autorización
+              <Send className="size-4 mr-1" /> Solicitar autorización
             </Button>
           </>
         )}

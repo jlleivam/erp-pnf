@@ -35,6 +35,18 @@ async function isMemberObra(supabase: any, userId: string, obraId: string) {
   return !!data;
 }
 
+async function getObraRole(supabase: any, userId: string, obraId: string) {
+  const { data } = await supabase
+    .from("obra_team").select("role")
+    .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
+  const role = (data?.role ?? null) as string | null;
+  return {
+    isResidente: role === "residente",
+    isSupervisor: role === "supervisor",
+    role,
+  };
+}
+
 // ============================================================
 // CRUD SUBCONTRATOS
 // ============================================================
@@ -450,8 +462,9 @@ export const crearOrdenCambioSubcontrato = createServerFn({ method: "POST" })
       .from("obra_subcontratos").select("obra_id").eq("id", data.subcontratoId).single();
     if (!d0) throw new Error("Subcontrato no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente)
+      throw new Error("Solo el Residente de la obra (o el Director) puede solicitar órdenes de cambio");
 
     const { data: base } = await supabase
       .from("obra_subcontrato_presupuestos").select("id, estatus")
@@ -494,9 +507,20 @@ export const enviarPresupuestoSubcontrato = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase
-      .from("obra_subcontrato_presupuestos").select("id, estatus, subcontrato_id").eq("id", data.presupuestoId).single();
+      .from("obra_subcontrato_presupuestos").select("id, estatus, subcontrato_id, tipo").eq("id", data.presupuestoId).single();
     if (!p) throw new Error("No encontrado");
-    if (p.estatus !== "borrador") throw new Error("Solo se puede enviar desde borrador");
+    if (p.estatus !== "borrador") throw new Error("Solo se puede solicitar desde borrador");
+    const { data: d0 } = await supabase
+      .from("obra_subcontratos").select("obra_id").eq("id", p.subcontrato_id).single();
+    const { isDirector } = await getRoles(supabase, userId);
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (p.tipo === "adenda") {
+      if (!isDirector && !obraRole.isResidente)
+        throw new Error("Solo el Residente (o Director) puede solicitar la autorización");
+    } else {
+      const member = await isMemberObra(supabase, userId, d0!.obra_id);
+      if (!isDirector && !member) throw new Error("Sin permisos");
+    }
     const { count } = await supabase
       .from("obra_subcontrato_renglones")
       .select("id", { count: "exact", head: true })
@@ -515,13 +539,18 @@ export const autorizarPresupuestoSubcontrato = createServerFn({ method: "POST" }
   .inputValidator((d: unknown) => z.object({ presupuestoId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector, isSupervisor } = await getRoles(supabase, userId);
-    if (!isDirector && !isSupervisor)
-      throw new Error("Solo Director o Supervisor pueden autorizar");
     const { data: p } = await supabase
-      .from("obra_subcontrato_presupuestos").select("id, estatus, subcontrato_id").eq("id", data.presupuestoId).single();
+      .from("obra_subcontrato_presupuestos").select("id, estatus, subcontrato_id, tipo, enviado_por").eq("id", data.presupuestoId).single();
     if (!p) throw new Error("No encontrado");
-    if (p.estatus !== "enviado") throw new Error("Solo se puede autorizar un envío");
+    if (p.estatus !== "enviado") throw new Error("Solo se puede autorizar una solicitud");
+    const { data: d0 } = await supabase
+      .from("obra_subcontratos").select("obra_id").eq("id", p.subcontrato_id).single();
+    const { isDirector } = await getRoles(supabase, userId);
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isSupervisor)
+      throw new Error("Solo el Supervisor de la obra (o el Director) puede autorizar");
+    if (p.tipo === "adenda" && p.enviado_por && p.enviado_por === userId && !isDirector)
+      throw new Error("No puedes autorizar una OC que tú mismo solicitaste");
     const { error } = await supabase
       .from("obra_subcontrato_presupuestos")
       .update({ estatus: "autorizado", autorizado_at: new Date().toISOString(), autorizado_por: userId })
@@ -541,13 +570,16 @@ export const rechazarPresupuestoSubcontrato = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector, isSupervisor } = await getRoles(supabase, userId);
-    if (!isDirector && !isSupervisor)
-      throw new Error("Solo Director o Supervisor pueden rechazar");
     const { data: p } = await supabase
-      .from("obra_subcontrato_presupuestos").select("estatus").eq("id", data.presupuestoId).single();
+      .from("obra_subcontrato_presupuestos").select("estatus, subcontrato_id").eq("id", data.presupuestoId).single();
     if (!p) throw new Error("No encontrado");
-    if (p.estatus !== "enviado") throw new Error("Solo se puede rechazar un envío");
+    if (p.estatus !== "enviado") throw new Error("Solo se puede rechazar una solicitud");
+    const { data: d0 } = await supabase
+      .from("obra_subcontratos").select("obra_id").eq("id", p.subcontrato_id).single();
+    const { isDirector } = await getRoles(supabase, userId);
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isSupervisor)
+      throw new Error("Solo el Supervisor de la obra (o el Director) puede rechazar");
     const { error } = await supabase
       .from("obra_subcontrato_presupuestos")
       .update({
@@ -567,15 +599,20 @@ export const reabrirPresupuestoSubcontrato = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase
-      .from("obra_subcontrato_presupuestos").select("estatus, subcontrato_id").eq("id", data.presupuestoId).single();
+      .from("obra_subcontrato_presupuestos").select("estatus, subcontrato_id, tipo").eq("id", data.presupuestoId).single();
     if (!p) throw new Error("No encontrado");
     if (p.estatus !== "rechazado")
       throw new Error("Solo presupuestos rechazados se pueden reabrir como borrador");
     const { data: d0 } = await supabase
       .from("obra_subcontratos").select("obra_id").eq("id", p.subcontrato_id).single();
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0!.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (p.tipo === "adenda") {
+      if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
+    } else {
+      const member = await isMemberObra(supabase, userId, d0!.obra_id);
+      if (!isDirector && !member) throw new Error("Sin permisos");
+    }
     const { error } = await supabase
       .from("obra_subcontrato_presupuestos")
       .update({ estatus: "borrador", rechazado_at: null, rechazado_por: null, rechazo_motivo: null })

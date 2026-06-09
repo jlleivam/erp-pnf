@@ -1802,12 +1802,17 @@ export type Database = {
           created_at: string
           created_by: string
           descripcion: string | null
+          enviado_at: string | null
+          enviado_por: string | null
           estatus: Database["public"]["Enums"]["presupuesto_estatus"]
           id: string
           monto_total: number
           nombre: string
           numero: number
           obra_id: string
+          rechazado_at: string | null
+          rechazado_por: string | null
+          rechazo_motivo: string | null
           tipo: Database["public"]["Enums"]["presupuesto_tipo"]
           updated_at: string
         }
@@ -1818,12 +1823,17 @@ export type Database = {
           created_at?: string
           created_by: string
           descripcion?: string | null
+          enviado_at?: string | null
+          enviado_por?: string | null
           estatus?: Database["public"]["Enums"]["presupuesto_estatus"]
           id?: string
           monto_total?: number
           nombre: string
           numero?: number
           obra_id: string
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
           tipo: Database["public"]["Enums"]["presupuesto_tipo"]
           updated_at?: string
         }
@@ -1834,12 +1844,17 @@ export type Database = {
           created_at?: string
           created_by?: string
           descripcion?: string | null
+          enviado_at?: string | null
+          enviado_por?: string | null
           estatus?: Database["public"]["Enums"]["presupuesto_estatus"]
           id?: string
           monto_total?: number
           nombre?: string
           numero?: number
           obra_id?: string
+          rechazado_at?: string | null
+          rechazado_por?: string | null
+          rechazo_motivo?: string | null
           tipo?: Database["public"]["Enums"]["presupuesto_tipo"]
           updated_at?: string
         }
@@ -3369,6 +3384,8 @@ export type Database = {
       }
       is_director_of: { Args: { _company_id: string }; Returns: boolean }
       is_member_of_obra: { Args: { _obra_id: string }; Returns: boolean }
+      is_residente_de_obra: { Args: { _obra_id: string }; Returns: boolean }
+      is_supervisor_de_obra: { Args: { _obra_id: string }; Returns: boolean }
       siguiente_codigo_insumo: {
         Args: { _categoria_id: string; _company_id: string }
         Returns: string
@@ -3425,7 +3442,11 @@ export type Database = {
         | "pagada"
         | "recibida_parcial"
         | "recibida"
-      presupuesto_estatus: "borrador" | "autorizado"
+      presupuesto_estatus:
+        | "borrador"
+        | "autorizado"
+        | "solicitada"
+        | "rechazada"
       presupuesto_movimiento:
         | "renglon"
         | "modificacion"
@@ -3654,7 +3675,12 @@ export const Constants = {
         "recibida_parcial",
         "recibida",
       ],
-      presupuesto_estatus: ["borrador", "autorizado"],
+      presupuesto_estatus: [
+        "borrador",
+        "autorizado",
+        "solicitada",
+        "rechazada",
+      ],
       presupuesto_movimiento: [
         "renglon",
         "modificacion",
