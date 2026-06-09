@@ -203,6 +203,10 @@ export function reconstruirVigente(
     precio_unitario: number | null;
     origen: "base" | "modificada" | "agregada";
     eliminada: boolean;
+    cantidad_base?: number | null;
+    pu_base?: number | null;
+    cantidad_modificada?: boolean;
+    pu_modificado?: boolean;
   };
   const hojas = new Map<string, Hoja>();
 
@@ -237,14 +241,27 @@ export function reconstruirVigente(
       } else if (m.tipo_movimiento === "modificacion") {
         const h = hojas.get(m.clave);
         if (h && !h.eliminada) {
-          h.cantidad = m.cantidad;
-          h.precio_unitario = m.precio_unitario;
+          if (h.origen === "base") {
+            h.cantidad_base = h.cantidad;
+            h.pu_base = h.precio_unitario;
+          }
+          const newCant = m.cantidad;
+          const newPU = m.precio_unitario;
+          if (Number(newCant ?? 0) !== Number(h.cantidad_base ?? 0)) {
+            h.cantidad_modificada = true;
+          }
+          if (Number(newPU ?? 0) !== Number(h.pu_base ?? 0)) {
+            h.pu_modificado = true;
+          }
+          h.cantidad = newCant;
+          h.precio_unitario = newPU;
           if (m.concepto) h.concepto = m.concepto;
           if (m.unidad !== undefined) h.unidad = m.unidad;
           if (h.origen === "base") h.origen = "modificada";
         }
       }
     }
+  }
   }
 
   // Construir nodos hoja vivos + reconstruir grupos
