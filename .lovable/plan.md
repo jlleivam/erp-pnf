@@ -1,46 +1,40 @@
 ## Objetivo
 
-En `CapturaDestajoSheet` (pantalla "Presupuesto base") agregar:
-
-- **Arriba de la tabla**: Nombre del destajo y Destajista (en lugar de solo el título genérico).
-- **Abajo de la tabla**: Bloque "Condiciones del destajo" con Anticipo y Fondo de garantía, ambos mostrando % y monto calculado sobre el Total actual.
+En la pestaña "Presupuesto" del `DestajoDetalleSheet`, mostrar **inline y en solo vista** los conceptos (renglones WBS) del presupuesto base —y de cada orden de cambio— sin tener que abrir el editor. Imita el estilo del presupuesto base del módulo Presupuesto (tabla agrupada por clave, padres en negritas, importe por renglón, total).
 
 ## Cambios
 
-### 1) `src/lib/api/destajos.functions.ts` — `getDestajoPresupuesto`
+### Nuevo componente: `src/components/destajos/RenglonesDestajoView.tsx`
 
-Extender el `select` del join `obra_destajos!inner(...)` para incluir `anticipo_pct, anticipo_monto, fondo_garantia_pct` y los datos del destajista vía relación a `trabajadores`:
+Componente de solo lectura que:
 
-```
-obra_destajos!inner(
-  id, obra_id, company_id, destajista_id, nombre, numero,
-  anticipo_pct, anticipo_monto, fondo_garantia_pct,
-  trabajadores:destajista_id ( id, nombre_completo, puesto )
-)
-```
+- Recibe `presupuestoDestajoId: string` y opcional `tipo: "base" | "adenda"`.
+- Llama a `getDestajoPresupuesto` (ya existente) vía `useServerFn` + `useQuery`.
+- Procesa los renglones con `procesarRenglones` (de `@/lib/presupuesto-utils`) para que los grupos padre sumen automáticamente, igual que en `CapturaDestajoSheet`.
+- Renderiza una `Card` con tabla compacta (sin inputs, sin botón eliminar):
+  - Columnas: Clave, Concepto, Unidad, Cantidad, PU, Importe.
+  - Filas padre con `bg-accent/40 font-medium` y `—` en unidad/cantidad/PU (mismo patrón que la captura).
+  - Para OC (`tipo === "adenda"`) muestra una columna extra "Tipo" con badge `modificación / adición / eliminación` y formatea importes negativos en `text-destructive`.
+- Pie de la tabla: Total alineado a la derecha.
+- Estados:
+  - `isLoading`: skeleton/línea "Cargando…".
+  - Sin renglones: card vacía "Aún no hay renglones capturados."
 
-Sin cambios de lógica, validaciones ni de escritura.
+### Integración en `DestajoDetalleSheet.tsx`
 
-### 2) `src/components/destajos/CapturaDestajoSheet.tsx`
+En `PresupuestoCard`:
 
-**Encabezado (arriba de la tabla):**
-- Reemplazar el título actual "Presupuesto base" / nombre del presupuesto por una sección con:
-  - `SheetTitle`: "Presupuesto base" + badge de estatus (igual que hoy).
-  - Tarjeta compacta con dos campos read-only:
-    - **Destajo**: `presupuesto.obra_destajos.nombre` (con `# numero` si aplica).
-    - **Destajista**: `obra_destajos.trabajadores.nombre_completo` (· puesto si existe).
-- Mantener `SheetDescription` con la nota de WBS.
+- Aceptar nueva prop opcional `children?: ReactNode` y renderizarla después de los botones de acción, dentro de la misma `Card`, separada por un `border-t` con padding superior.
 
-**Pie (debajo de la tabla, antes del sticky footer):**
-- Nuevo bloque "Condiciones del destajo" (Card) con dos filas:
-  - **Anticipo**: `anticipo_pct %` · monto calculado = `montoTotal * anticipo_pct / 100`. Nota chica: "Se calcula sobre el total y se amortiza con cada estimación. Monto definitivo al autorizar."
-  - **Fondo de garantía**: `fondo_garantia_pct %` · monto estimado al cierre = `montoTotal * fondo_garantia_pct / 100`. Nota chica: "Se retiene de cada estimación; el % muestra el acumulado al 100% del contrato."
-- Si ambos % son 0 mostrar una línea "Sin anticipo ni fondo de garantía".
-- Usar `formatMXN` y `calc.montoTotal` (ya disponible) para los cálculos. Si hay errores en renglones, mostrar "—" en los montos pero conservar los %.
+En el `TabsContent value="presupuesto"`:
 
-Sin cambios al guardado, validaciones, ni a la tabla de renglones.
+- Debajo del `PresupuestoCard` del base (dentro de él como `children`) montar `<RenglonesDestajoView presupuestoDestajoId={base.id} tipo="base" />`.
+- Igual para cada adenda: pasar `<RenglonesDestajoView presupuestoDestajoId={oc.id} tipo="adenda" />` como `children`.
+
+Sin cambios al backend, ni a la edición. Los botones "Editar / Solicitar autorización / Autorizar / Rechazar / Reabrir / Ver detalle" siguen funcionando igual.
 
 ## Notas técnicas
 
-- El tipo de `presupuesto` actualmente es `any` en el componente, así que no hace falta tocar `types.ts`.
-- Las condiciones son solo informativas en esta pantalla (no editables aquí); ya se capturan al crear el destajo en `NuevoDestajoDialog`.
+- Para evitar duplicar lógica de presentación, el componente nuevo es muy ligero (≈80 líneas) y reutiliza `procesarRenglones` y `calcularClavesPadre` ya disponibles.
+- No se reabre el `CapturaDestajoSheet` por defecto; el usuario sigue pudiendo entrar a editar con el botón "Editar" / "Ver detalle".
+- El total se toma de `procesarRenglones(...).montoTotal` (consistente con la captura) y debe coincidir con `p.monto_total` ya mostrado en el header de la tarjeta.
