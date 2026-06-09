@@ -127,31 +127,31 @@ export function NominaModule({ obraId }: { obraId: string }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="text-left p-3 w-16">#</th>
+                <th className="text-center p-3 w-12">#</th>
                 <th className="text-left p-3">Semana</th>
-                <th className="text-left p-3 w-28">Estatus</th>
-                <th className="text-right p-3 w-28">Trabajadores</th>
-                <th className="text-right p-3 w-40">Monto</th>
-                <th className="text-right p-3 w-56">Acciones</th>
+                <th className="text-center p-3 w-24">Estatus</th>
+                <th className="text-center p-3 w-24">Trabajadores</th>
+                <th className="text-center p-3 w-32">Monto</th>
+                <th className="text-center p-3 w-40">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {nominas.map((n) => (
                 <tr key={n.id} className="border-t border-border">
-                  <td className="p-3 tabular-nums">{n.numero}</td>
-                  <td className="p-3">{formatRangoSemana(n.semana_inicio, n.semana_fin)}</td>
-                  <td className="p-3">
+                  <td className="p-3 text-center tabular-nums">{n.numero}</td>
+                  <td className="p-3 whitespace-nowrap">{formatRangoSemana(n.semana_inicio, n.semana_fin)}</td>
+                  <td className="p-3 text-center">
                     <Badge variant={n.estatus === "cerrada" ? "default" : "secondary"}>
                       {n.estatus === "cerrada" ? "Cerrada" : "Activa"}
                     </Badge>
                   </td>
-                  <td className="p-3 text-right tabular-nums">{n.trabajadores_count}</td>
-                  <td className="p-3 text-right tabular-nums font-medium">
+                  <td className="p-3 text-center tabular-nums">{n.trabajadores_count}</td>
+                  <td className="p-3 text-center tabular-nums font-medium">
                     {formatMXN(Number(n.monto_total))}
                   </td>
 
-                  <td className="p-3 text-right">
-                    <div className="flex gap-2 justify-end">
+                  <td className="p-3">
+                    <div className="flex gap-2 justify-center">
                       <Button
                         size="sm"
                         variant="outline"
@@ -170,6 +170,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
                 </tr>
               ))}
             </tbody>
+
           </table>
         </Card>
       )}
