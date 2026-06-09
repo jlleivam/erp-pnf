@@ -286,7 +286,7 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
           actorUserId: userId,
           obraId: pres.obra_id,
           tipo: "oc_presupuesto_autorizada",
-          link: `/app/obras/${pres.obra_id}/presupuesto`,
+          link: `/app/obras/${pres.obra_id}/presupuesto?tab=adendas&ver=${data.id}`,
         });
       } catch (e: any) {
         console.error("[notificaciones] oc_presupuesto_autorizada error", e?.message);

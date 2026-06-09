@@ -1,38 +1,25 @@
 # Problema
 
-El "Acumulado previo" sale en `—` (vacío) aunque ya existan estimaciones de semanas anteriores. 
-
-Causa: en `src/lib/api/estimaciones.functions.ts` la consulta que arma el acumulado previo aún filtra por `estatus = "cerrada"`. Al haber migrado a derivar el estatus por semana, todas las estimaciones quedan guardadas en la base como `borrador`, por lo que la consulta no encuentra ninguna estimación previa y devuelve `{}`.
+Al hacer click en la notificación "OC autorizada" navega a `/app/obras/{id}/presupuesto`, pero no abre directamente la OC autorizada. El usuario debe encontrarla manualmente en la pestaña de Órdenes de cambio.
 
 # Cambios
 
-**`src/lib/api/estimaciones.functions.ts`** — quitar el filtro `.eq("estatus", "cerrada")` en los dos lugares donde se calcula `acumuladoPrevio`. Una estimación es "previa" simplemente si su `semana_inicio` es anterior a la semana en curso:
+**1. `src/lib/api/presupuestos.functions.ts`** — incluir el id de la OC y el tab en el `link` de las notificaciones de OC autorizada/rechazada para que la UI pueda abrir el sheet directamente:
 
-1. En `iniciarOEditarEstimacion` (≈ línea 161): cambiar
-   ```ts
-   .eq("estatus", "cerrada")
-   .lt("semana_inicio", semana.inicio);
-   ```
-   por solo
-   ```ts
-   .lt("semana_inicio", semana.inicio);
-   ```
+- En `autorizarPresupuesto` (≈ línea 289):  
+  `link: \`/app/obras/${pres.obra_id}/presupuesto?tab=adendas&ver=${data.id}\``
+- En `rechazarPresupuesto` (≈ línea 393): mismo formato.
 
-2. En `guardarRenglonesEstimacion` (≈ línea 221): mismo cambio sobre `est.semana_inicio`.
+**2. `src/components/presupuesto/PresupuestoModule.tsx`** — leer los search params `tab` y `ver` al montar y aplicar:
 
-Adicionalmente, en `guardarRenglonesEstimacion` la guarda
-```ts
-if (est.estatus !== "borrador") throw new Error("...cerrada...");
-```
-ya no representa el modelo real (la "cerradura" depende de la semana). Reemplazarla por:
-```ts
-const semanaActual = calcularSemana(new Date()).inicio;
-if (est.semana_inicio !== semanaActual)
-  throw new Error("Solo se puede modificar la estimación de la semana vigente");
-```
-e importar `calcularSemana` desde `@/lib/estimaciones-utils` si no está ya importado.
+- Importar `useSearch` y `useNavigate` de `@tanstack/react-router`.
+- Cambiar `<Tabs defaultValue="base">` por un Tabs controlado con `value={tab}` y `onValueChange` que actualice el search param.
+- Al detectar `ver` en los search params, hacer `setViewing(ver)` en un `useEffect` y luego limpiar el param (`navigate({ search: (prev) => ({ ...prev, ver: undefined }) })`) para que cerrar el sheet no lo vuelva a abrir.
+- Inicializar `tab` desde el search param (default `"base"`).
+
+Como la ruta es un splat (`app.obras.$obraId.$.tsx`) sin `validateSearch`, usar `useSearch({ strict: false })` para leer y `useNavigate()` para escribir; los valores se tipan como `string | undefined`.
 
 # Sin cambios
 
-- No se tocan tablas, migraciones, RLS, ni el frontend.
-- No se modifica la lógica de validación de excedente (sigue usando el `acumuladoPrevio` recalculado, que ahora sí trae datos).
+- No se tocan tablas ni notificaciones ya existentes (los nuevos enlaces aplican a notificaciones creadas a partir de este cambio).
+- El comportamiento al entrar al módulo sin search params permanece igual.
