@@ -167,6 +167,13 @@ export function CapturaOrdenCambioDestajoSheet({
         ) : (
           <div className="mt-6 space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowVigente(true)}
+              >
+                <Eye className="size-4 mr-1" /> Ver vigente
+              </Button>
               {editable && (
                 <Button size="sm" variant="ghost" onClick={addRow}>
                   <Plus className="size-4 mr-1" /> Agregar movimiento
