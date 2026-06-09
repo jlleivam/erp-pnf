@@ -521,6 +521,7 @@ export type Database = {
       companies: {
         Row: {
           calle: string | null
+          capital_social: number
           codigo_postal: string | null
           colonia: string | null
           created_at: string
@@ -545,6 +546,7 @@ export type Database = {
         }
         Insert: {
           calle?: string | null
+          capital_social?: number
           codigo_postal?: string | null
           colonia?: string | null
           created_at?: string
@@ -569,6 +571,7 @@ export type Database = {
         }
         Update: {
           calle?: string | null
+          capital_social?: number
           codigo_postal?: string | null
           colonia?: string | null
           created_at?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS capital_social numeric(14,2) NOT NULL DEFAULT 0;
