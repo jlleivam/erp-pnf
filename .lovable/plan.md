@@ -1,99 +1,125 @@
 ## Objetivo
 
-Introducir el flujo de **solicitud de pago de anticipo de destajo**. Hoy el residente puede marcar directamente el anticipo como pagado; queremos que:
+Mostrar un **Balance General gerencial** de la empresa, donde cada operación (anticipo, pago, estimación, nómina, etc.) impacte automáticamente la categoría correcta. Sin partida doble formal: las cifras se **derivan en vivo** de las tablas operativas que ya existen, agrupadas por un catálogo predefinido para constructora.
 
-1. El residente **solicite el pago** del anticipo (no lo marque pagado).
-2. La solicitud aparezca al **administrativo** en **Cuentas por pagar**, en una nueva sección dedicada a anticipos de destajo.
-3. El administrativo sea quien registre el pago efectivo (marcar pagado / liquidar contra una cuenta).
+---
 
-Esta es la base sobre la que después se podrán colgar otras solicitudes (estimaciones de destajo, etc.) con el mismo patrón.
+## 1. Catálogo predefinido (sin tabla nueva, código en TS)
 
-## Cambios
+Definimos un catálogo fijo en `src/lib/contabilidad/catalogo.ts`. Cada categoría tiene `codigo`, `nombre`, `grupo` (activo / pasivo / capital), `subgrupo` (circulante / fijo / corto plazo / largo plazo) y un **resolver** que sabe cómo calcular su saldo desde Supabase.
 
-### 1. Base de datos — migración
+Catálogo inicial:
 
-Tabla `obra_destajo_anticipos`: agregar columnas de estado de solicitud.
+**Activo circulante**
+- `1100` Bancos — suma `cuentas.saldo_actual` (tipo = bancaria)
+- `1110` Caja fuerte — suma `cuentas.saldo_actual` (tipo = caja_fuerte)
+- `1120` Caja chica — suma `caja_chica_fondos.saldo_actual`
+- `1200` Anticipos a proveedores — OCs con anticipo pagado y no amortizado
+- `1210` Anticipos a destajistas — `obra_destajo_anticipos` pagados con destajo no liquidado
+- `1220` Anticipos a subcontratistas — análogo para subcontratos
+- `1300` Obras en proceso — costo acumulado de obras activas (suma de pagos de OC/nómina/destajo/renta asociados a obra activa)
+- `1400` Almacén — valor de inventario en obra (recepciones - consumos)
 
-- `solicitado_at timestamptz null`
-- `solicitado_por uuid null references auth.users(id)`
-- `solicitud_notas text null`
+**Pasivo corto plazo**
+- `2100` Proveedores por pagar — OCs autorizadas sin pagar
+- `2110` Destajistas por pagar — estimaciones de destajo aprobadas sin pagar
+- `2120` Subcontratistas por pagar — análogo
+- `2130` Nómina por pagar — nóminas cerradas sin pagar
+- `2140` Rentas por pagar — eventos de renta sin pagar
+- `2150` Vales de gasolina por reembolsar
+- `2160` Caja chica por reembolsar — reembolsos solicitados sin pagar
 
-Estado derivado en el cliente:
-- `pagado = true` → **Pagado**
-- `solicitado_at not null && !pagado` → **Solicitado** (pendiente en CxP)
-- `else` → **Por solicitar**
+**Capital**
+- `3100` Capital social — semilla manual (configurable por director)
+- `3200` Resultado del ejercicio — Ingresos − Egresos del periodo
 
-Sólo permitir solicitar cuando:
-- el destajo tiene `presupuesto base autorizado`
-- `anticipo_monto > 0`
-- `pagado = false`
-- `solicitado_at IS NULL` (no se ha solicitado aún)
+**Cuentas de orden (informativas, no entran al balance)**
+- Ingresos por estimaciones a cliente
+- Egresos por categoría (mano de obra, materiales, subcontratos, rentas, gasolina, caja chica)
 
-(No se agregan policies nuevas: las existentes ya permiten al residente/director leer y actualizar; el administrativo es director o tiene acceso por company.)
+---
 
-### 2. Server functions (`src/lib/api/destajos.functions.ts`)
+## 2. Arquitectura: resolvers en server functions
 
-- **`solicitarPagoAnticipoDestajo({ destajoId, notas? })`**
-  - Verifica que el usuario sea residente de la obra o director de la empresa.
-  - Verifica precondiciones (presupuesto base autorizado, anticipo_monto > 0, no pagado, no solicitado).
-  - Actualiza `obra_destajo_anticipos` con `solicitado_at = now()`, `solicitado_por = userId`, `solicitud_notas`.
-  - Genera notificación dirigida a usuarios con rol `administrativo` / `director`:
-    `"Solicitud de pago de anticipo · {destajo.numero} {destajista.nombre} · {formatMXN(monto)}"` con link a Cuentas por pagar.
+Sin tabla nueva de movimientos. Cada categoría tiene un resolver que consulta las tablas operativas existentes.
 
-- **`cancelarSolicitudAnticipoDestajo({ destajoId })`** (opcional, recomendable)
-  - Sólo el residente que solicitó o el director, mientras no esté pagado.
-  - Limpia `solicitado_at`, `solicitado_por`, `solicitud_notas`.
+```text
+src/lib/contabilidad/
+├── catalogo.ts                  # definición + metadata
+├── resolvers.ts                 # 1 función por categoría → { saldo, detalle[] }
+└── balance.functions.ts         # createServerFn que arma el balance completo
+```
 
-- **`listAnticiposDestajoPendientes()`**
-  - Para administrativo/director. Devuelve solicitudes con `solicitado_at not null` y `pagado = false` de la empresa actual.
-  - Join con `obra_destajos`, `obras`, y trabajador (destajista) para mostrar contexto.
+Server functions clave:
+- `getBalanceGeneral({ fecha? })` → estructura jerárquica con totales por grupo/subgrupo
+- `getCategoriaDetalle({ codigo, fecha? })` → drill-down con los registros origen (folio, fecha, monto, link a la entidad)
+- `getEstadoResultados({ desde, hasta })` → ingresos vs egresos del periodo
 
-- `marcarAnticipoPagado` existente: añadirle prerequisito de `solicitado_at not null` (no se puede pagar sin solicitud previa). Mantener el resto del comportamiento (registrar `pagado_at`, opcionalmente cuenta_id/metodo si se decide).
+Todas con `requireSupabaseAuth` y filtrado a roles `director` / `administrativo`.
 
-### 3. UI Residente — `DestajoDetalleSheet` (pestaña Términos)
+---
 
-En la tarjeta de Anticipo:
-- Si el anticipo está **por solicitar** y `canEdit` (residente o director): mostrar botón **"Solicitar pago de anticipo"** que abre un mini-diálogo con campo opcional de notas.
-- Si está **solicitado**: badge `Solicitado` + fecha + nombre de quien solicitó + (si es el solicitante o director) botón discreto "Cancelar solicitud".
-- Si está **pagado**: el badge `Pagado` actual.
-- **Eliminar** el botón directo "Marcar pagado" de esta vista (esa acción ahora vive en Cuentas por pagar).
+## 3. Configuración mínima: Capital social
 
-### 4. UI Administrativo — `CuentasPorPagarModule`
+Único dato que no se puede derivar. Agregamos a `companies`:
+- `capital_social numeric(14,2) default 0`
 
-Convertir el módulo a **pestañas** (`Tabs`):
-- Pestaña **Proveedores (OC)** — el contenido actual sin cambios.
-- Pestaña **Anticipos de destajo** — nueva:
-  - Tabla: Obra · Destajo · Destajista · Monto · Solicitado el · Solicitado por · acción.
-  - Acción **"Registrar pago"** → diálogo que reutiliza el mismo patrón que `RegistrarPagoOCDialog` (cuenta, método, fecha, referencia) y al confirmar invoca `marcarAnticipoPagado` (lo extenderemos para aceptar `cuentaId`, `metodo`, `fecha`, `referencia` y crear el `cuenta_movimiento` correspondiente, igual que `pagos.functions.ts` ya hace para OC).
-  - Total de la pestaña en el header.
+Editable por el director desde Configuración de empresa.
 
-### 5. Notificaciones
+---
 
-Reutilizar `notificaciones` con tipo `anticipo_destajo_solicitado` apuntando al destajo y a la sección Cuentas por pagar. (Si el destinatario está viendo CxP, además se invalida la query.)
+## 4. UI: nuevo módulo "Contabilidad" en el menú lateral
+
+Visible solo para `director` y `administrativo`. Dos pestañas:
+
+**Balance General**
+- Encabezado: nombre empresa, fecha de corte (selector, default hoy)
+- Tres columnas tradicionales: Activo / Pasivo / Capital con totales y verificación `Activo = Pasivo + Capital + Resultado`
+- Cada renglón es clickeable → abre Sheet con el detalle (registros que componen el saldo, con link al módulo origen)
+
+**Estado de Resultados**
+- Selector de rango (mes actual, trimestre, año, custom)
+- Ingresos − Egresos agrupados por categoría
+- Mismo patrón de drill-down
+
+---
+
+## 5. Garantías de consistencia
+
+Para que los saldos cuadren sin partida doble, dejamos reglas claras en los resolvers:
+
+1. **Anticipo a proveedor**: se considera "Anticipo" (activo) mientras la OC no esté totalmente amortizada en estimaciones. Al cerrarse, sale de Anticipos y se reclasifica como costo de Obra en proceso.
+2. **OC pendiente de pago**: total autorizado − pagado = saldo en Proveedores por pagar.
+3. **Obras en proceso**: suma de todos los `pagos` con `origen_tipo` ligado a obra activa, menos lo facturado al cliente (cuando se implemente facturación).
+4. **Bancos / Caja**: ya autocontenido vía `cuenta_movimientos`.
+
+Documento estas reglas en `src/lib/contabilidad/README.md` para que cada nuevo origen de pago (futuro módulo) sepa a qué categoría impacta.
+
+---
+
+## 6. Fase 0 (este plan)
+
+1. Agregar `capital_social` a `companies` (migración) + edición desde configuración.
+2. Crear `src/lib/contabilidad/{catalogo,resolvers}.ts` + `balance.functions.ts`.
+3. Crear ruta `_authenticated/contabilidad/index.tsx` con pestañas Balance / Estado de Resultados.
+4. Componentes: `BalanceGeneralView`, `EstadoResultadosView`, `CategoriaDetalleSheet`.
+5. Entrada en menú lateral con guard por rol.
+
+No tocamos los módulos existentes (OC, destajos, nómina, etc.): el contable se construye **encima**, leyendo lo que ya generan.
+
+---
+
+## Fase 1 (futuro, no incluido)
+
+- Facturación a cliente → genera Ingresos y Cuentas por cobrar.
+- Conciliación bancaria.
+- Cierre de periodo (snapshot del balance) para histórico.
+- Migración opcional a partida doble si se requiere reporte fiscal formal.
+
+---
 
 ## Notas técnicas
 
-- Los anticipos no pasan por `ordenes_compra`, por lo que en la pestaña de CxP **no** se agregarán a los saldos por proveedor; quedan en un listado propio. El "Pendiente total" del header pasará a ser un total combinado (OC + anticipos) o se mostrará un total por pestaña — me inclino por **total por pestaña** para no mezclar conceptos.
-- `marcarAnticipoPagado` al registrar el pago real:
-  - inserta `pagos` (`origen_tipo = 'anticipo_destajo'`, `origen_id = anticipo.id`),
-  - inserta `cuenta_movimientos` egreso ligado al pago,
-  - actualiza `cuentas.saldo_actual`,
-  - setea `obra_destajo_anticipos.pagado = true, pagado_at = now(), metodo_pago, referencia`.
-- Validaciones de cuenta idénticas a OC (caja_fuerte → efectivo, bancaria → no efectivo, cuenta activa).
-- No se tocan los renglones del presupuesto ni el cálculo de amortización; el saldo a amortizar sigue siendo `anticipo_monto`.
-
-## Flujo resultante
-
-```text
-Residente (Términos del destajo)
-   └── Solicitar pago de anticipo  ──►  notificación a administrativo
-                                            │
-                                            ▼
-Administrativo (Cuentas por pagar → Anticipos de destajo)
-   └── Registrar pago (cuenta, método, referencia)
-            │
-            ▼
-   anticipo.pagado = true, pago + movimiento de cuenta creados
-```
-
-¿Procedo a implementarlo así?
+- Resolvers cacheables con `useQuery` (`staleTime: 30s`) — el balance no necesita ser milisegundo-real.
+- Performance: las queries agregadas usan `sum()` en SQL, no traemos todos los registros al cliente.
+- Cada resolver retorna `{ saldo: number, items: Array<{ id, label, monto, fecha, link }> }` para alimentar el drill-down sin refetch.

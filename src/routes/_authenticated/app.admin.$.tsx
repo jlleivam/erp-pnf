@@ -5,12 +5,14 @@ import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
 import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
 import { CuentasPorPagarModule } from "@/components/pagos/CuentasPorPagarModule";
 import { TesoreriaModule } from "@/components/tesoreria/TesoreriaModule";
+import { ContabilidadModule } from "@/components/contabilidad/ContabilidadModule";
 import { useEffectiveRoles } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
   requisiciones: "Requisiciones",
   "cuentas-por-pagar": "Cuentas por pagar",
   tesoreria: "Tesorería",
+  contabilidad: "Contabilidad",
   "almacen-central": "Almacén central",
   "gastos-oficina": "Gastos de oficina",
   nomina: "Nómina",
@@ -40,6 +42,17 @@ function AdminModule() {
   if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   if (slug === "caja-chica") return <CajaChicaModule scope="admin" />;
   if (slug === "cuentas-por-pagar") return <CuentasPorPagarModule />;
+  if (slug === "contabilidad") {
+    if (!roles.includes("director") && !roles.includes("administrativo")) {
+      return (
+        <ModulePlaceholder
+          title="Contabilidad"
+          description="No tienes permisos para ver este módulo."
+        />
+      );
+    }
+    return <ContabilidadModule />;
+  }
   if (slug === "tesoreria") {
     if (!roles.includes("director") && !roles.includes("administrativo")) {
       return (
