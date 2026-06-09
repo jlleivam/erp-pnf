@@ -114,6 +114,11 @@ export function CapturaOrdenCambioSubcontratoSheet({
     return map;
   }, [calc.errores]);
 
+  const clavesPadre = useMemo(
+    () => calcularClavesPadre(rows.map((r) => r.clave)),
+    [rows],
+  );
+
   const guardar = useServerFn(guardarRenglonesOCSubcontrato);
   const guardarM = useMutation({
     mutationFn: guardar,
