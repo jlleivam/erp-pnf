@@ -37,6 +37,9 @@ export function NuevoDestajoDialog({
   onClose: () => void;
   onCreated: (destajoId: string) => void;
 }) {
+  const roles = useEffectiveRoles();
+  const canManage = roles.includes("director") || roles.includes("administrativo");
+
   const fetchTrabs = useServerFn(listTrabajadores);
   const trabsQ = useQuery({
     queryKey: ["trabajadores-lista"],
@@ -60,6 +63,26 @@ export function NuevoDestajoDialog({
   const [anticipoPct, setAnticipoPct] = useState<string>("");
   const [fondoOn, setFondoOn] = useState(false);
   const [fondoPct, setFondoPct] = useState<string>("");
+  const [nuevoTrabajadorOpen, setNuevoTrabajadorOpen] = useState(false);
+  const [idsPrevios, setIdsPrevios] = useState<Set<string> | null>(null);
+
+  // Detecta un trabajador recién creado y lo pre-selecciona (solo si el usuario puede autorizar altas).
+  useEffect(() => {
+    const idsActuales = new Set<string>(trabajadores.map((t) => t.id));
+    if (idsPrevios === null) {
+      setIdsPrevios(idsActuales);
+      return;
+    }
+    if (!canManage) {
+      setIdsPrevios(idsActuales);
+      return;
+    }
+    const nuevos = trabajadores.filter((t) => !idsPrevios.has(t.id));
+    if (nuevos.length > 0) {
+      if (!destajistaId) setDestajistaId(nuevos[0].id);
+      setIdsPrevios(idsActuales);
+    }
+  }, [trabajadores, idsPrevios, canManage, destajistaId]);
 
   const crear = useServerFn(crearDestajo);
   const m = useMutation({
