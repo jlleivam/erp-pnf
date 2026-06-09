@@ -120,6 +120,13 @@ export function CatalogoTrabajadoresModule() {
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Row | null>(null);
   const [toDelete, setToDelete] = useState<Row | null>(null);
+  const search_ = useSearch({ from: "/_authenticated/app/catalogos/trabajadores" });
+  useEffect(() => {
+    if (search_.tab === "pendientes") setTab("pendientes");
+    if (search_.id) setDetalleId(search_.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search_.tab, search_.id]);
+
 
   const fetchList = useServerFn(listTrabajadores);
   const listQ = useQuery({
