@@ -99,6 +99,11 @@ export function CapturaSubcontratoSheet({
     return m;
   }, [calc]);
 
+  const clavesPadre = useMemo(
+    () => calcularClavesPadre(rows.map((r) => r.clave)),
+    [rows],
+  );
+
   const guardar = useServerFn(guardarRenglonesSubcontrato);
   const guardarM = useMutation({
     mutationFn: guardar,
