@@ -220,24 +220,27 @@ export function CapturaNominaSheet({
                       return (
                       <tr key={r.id} className="border-t border-border">
                         <td className="p-2">
-                          <div className="font-medium flex items-center gap-2 flex-wrap">
+                          <div className="font-medium">
                             {r.trabajador?.nombre_completo ?? "—"}
-                            {bloq && (
-                              <Badge
-                                variant="outline"
-                                className="gap-1"
-                                title={`También asignado al destajo: ${bloq.destajo_nombre}`}
-                              >
-                                <Lock className="size-3" /> Destajo: {bloq.destajo_nombre}
-                              </Badge>
-                            )}
                           </div>
                           {r.trabajador?.puesto && (
                             <div className="text-xs text-muted-foreground">
                               {r.trabajador.puesto}
                             </div>
                           )}
+                          {bloq && (
+                            <div className="mt-1">
+                              <Badge
+                                variant="outline"
+                                className="text-destructive"
+                                title={`También asignado al destajo: ${bloq.destajo_nombre}`}
+                              >
+                                Destajo: {bloq.destajo_nombre}
+                              </Badge>
+                            </div>
+                          )}
                         </td>
+
                         <td className="p-2 text-right tabular-nums text-xs">
                           {formatMXN(Number(r.sueldo_diario_snapshot))}
                         </td>
