@@ -157,27 +157,27 @@ function MovRow({ mov, onSave }: { mov: any; onSave: (utilizado: number) => void
 
   return (
     <TableRow>
-      <TableCell className="py-1.5 px-2 whitespace-nowrap">
+      <TableCell className="py-1.5 px-1.5">
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="truncate max-w-[180px] block cursor-default">{insumoNombre}</span>
+            <span className="truncate block cursor-default">{insumoNombre}</span>
           </TooltipTrigger>
           <TooltipContent side="top">{insumoNombre}</TooltipContent>
         </Tooltip>
       </TableCell>
-      <TableCell className="py-1.5 px-2 text-center text-muted-foreground whitespace-nowrap">
+      <TableCell className="py-1.5 px-1 text-center text-muted-foreground">
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="truncate max-w-[140px] inline-block align-middle cursor-default">{proveedor}</span>
+            <span className="truncate block cursor-default">{proveedor}</span>
           </TooltipTrigger>
           <TooltipContent side="top">{proveedor}</TooltipContent>
         </Tooltip>
       </TableCell>
-      <TableCell className="py-1.5 px-2 text-center text-muted-foreground whitespace-nowrap">{mov.insumo?.unidad ?? "—"}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{formatMXN(Number(mov.precio_unitario))}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{Number(mov.inv_inicial)}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{Number(mov.recibido)}</TableCell>
-      <TableCell className="py-1.5 px-2 text-center whitespace-nowrap">
+      <TableCell className="py-1.5 px-1 text-center text-muted-foreground">{mov.insumo?.unidad ?? "—"}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center tabular-nums truncate">{formatMXN(Number(mov.precio_unitario))}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center tabular-nums">{Number(mov.inv_inicial)}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center tabular-nums">{Number(mov.recibido)}</TableCell>
+      <TableCell className="py-1.5 px-1 text-center">
         <Input
           type="number"
           step="0.01"
@@ -190,10 +190,10 @@ function MovRow({ mov, onSave }: { mov: any; onSave: (utilizado: number) => void
             if (n === Number(mov.utilizado)) return;
             onSave(n);
           }}
-          className={`h-7 w-20 text-center mx-auto tabular-nums ${overflow ? "border-rose-500" : ""}`}
+          className={`h-7 w-full max-w-[64px] px-1 text-center mx-auto tabular-nums ${overflow ? "border-rose-500" : ""}`}
         />
       </TableCell>
-      <TableCell className={`py-1.5 px-2 text-center tabular-nums font-medium whitespace-nowrap ${final < 0 ? "text-rose-600" : ""}`}>
+      <TableCell className={`py-1.5 px-1 text-center tabular-nums font-medium ${final < 0 ? "text-rose-600" : ""}`}>
         {final}
       </TableCell>
     </TableRow>
