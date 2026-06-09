@@ -317,6 +317,18 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    try {
+      await notifySupervisoresOC(supabase, {
+        userId,
+        obraId: pres.obra_id,
+        tipo: "oc_presupuesto_solicitada",
+        link: `/app/obras/${pres.obra_id}`,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] oc_presupuesto_solicitada error", e?.message);
+    }
+
     return { ok: true };
   });
 
