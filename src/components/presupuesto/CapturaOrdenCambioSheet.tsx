@@ -24,7 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, AlertCircle, CheckCircle2, Search } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Search, Eye } from "lucide-react";
+import { VigenteViewerDialog } from "./VigenteViewerDialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
 
