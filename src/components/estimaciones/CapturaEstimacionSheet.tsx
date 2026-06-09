@@ -305,47 +305,19 @@ export function CapturaEstimacionSheet({
             </TooltipProvider>
 
 
-            {!isCerrada && (
+            {!soloLectura && (
               <div className="flex gap-2 mt-4 flex-wrap justify-end sticky bottom-0 bg-background py-3">
                 <Button
-                  variant="outline"
                   disabled={guardarM.isPending}
-                  onClick={() => handleGuardar(false)}
+                  onClick={handleGuardar}
                 >
                   <Save className="size-4 mr-1" />
-                  {guardarM.isPending ? "Guardando…" : "Guardar borrador"}
-                </Button>
-                <Button
-                  disabled={guardarM.isPending || cerrarM.isPending}
-                  onClick={() => handleGuardar(true)}
-                >
-                  <Lock className="size-4 mr-1" />
-                  Guardar y cerrar semana
+                  {guardarM.isPending ? "Guardando…" : "Guardar"}
                 </Button>
               </div>
             )}
           </>
         )}
-
-        <AlertDialog open={confirmCierre} onOpenChange={setConfirmCierre}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Cerrar la estimación de esta semana?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Una vez cerrada, los precios unitarios quedarán congelados y no podrás modificar
-                cantidades. Asegúrate de haber capturado toda la producción de la semana.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => estimacion && cerrarM.mutate({ data: { id: estimacion.id } })}
-              >
-                Cerrar semana
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </SheetContent>
     </Sheet>
   );
