@@ -281,6 +281,7 @@ export function AppShell() {
       ) : showAdmin ? (
         <MobileBottomBar
           pathname={pathname}
+          variant="scroll"
           items={[
             { to: "/app/admin/cuentas-por-pagar", label: "CXP", icon: FileText },
             { to: "/app/admin/nomina", label: "Nómina", icon: Users },
