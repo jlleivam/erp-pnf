@@ -435,7 +435,15 @@ export function CapturaEstimacionDestajoSheet({
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => estimacion && cerrarM.mutate({ data: { id: estimacion.id } })}
+                onClick={() =>
+                  estimacion &&
+                  cerrarM.mutate({
+                    data: {
+                      id: estimacion.id,
+                      liberacionFondo: Number(liberacionFondo || 0),
+                    },
+                  })
+                }
               >
                 Cerrar semana
               </AlertDialogAction>
