@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getOrCreateBorrador,
   guardarRenglonesEstimacion,
-  cerrarEstimacion,
 } from "@/lib/api/estimaciones.functions";
 import { calcularSemana, formatRangoSemana } from "@/lib/estimacion-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -13,16 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -30,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 import { toast } from "sonner";
-import { Save, Lock, AlertTriangle, Search } from "lucide-react";
+import { Save, AlertTriangle, Search } from "lucide-react";
 
 
 type VigenteRow = {
@@ -65,7 +54,7 @@ export function CapturaEstimacionSheet({
 
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
-  const [confirmCierre, setConfirmCierre] = useState(false);
+  
   const [initialized, setInitialized] = useState(false);
 
   // Inicializar cantidades con lo capturado previamente
@@ -81,8 +70,9 @@ export function CapturaEstimacionSheet({
   const vigente = (q.data?.vigente ?? []) as VigenteRow[];
   const acumuladoPrevio = (q.data?.acumuladoPrevio ?? {}) as Record<string, number>;
   const estimacion = q.data?.estimacion;
-  const isCerrada = estimacion?.estatus === "cerrada";
   const semana = calcularSemana(semanaInicio);
+  const semanaActual = calcularSemana(new Date()).inicio;
+  const soloLectura = semanaInicio !== semanaActual;
 
   // Calcular validaciones y totales en cliente
   const computed = useMemo(() => {
@@ -135,19 +125,7 @@ export function CapturaEstimacionSheet({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const cerrar = useServerFn(cerrarEstimacion);
-  const cerrarM = useMutation({
-    mutationFn: cerrar,
-    onSuccess: () => {
-      toast.success("Estimación cerrada");
-      qc.invalidateQueries({ queryKey: ["estimaciones", obraId] });
-      setConfirmCierre(false);
-      onClose();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const handleGuardar = (cerrarDespues = false) => {
+  const handleGuardar = () => {
     if (!estimacion) return;
     if (computed.erroresPorClave.size > 0) {
       toast.error("Hay conceptos que exceden el vigente. Corrige antes de guardar.");
@@ -157,20 +135,7 @@ export function CapturaEstimacionSheet({
       .map(([k, v]) => ({ renglon_clave: k, cantidad_ejecutada: Number(v || 0) }))
       .filter((r) => Number.isFinite(r.cantidad_ejecutada) && r.cantidad_ejecutada > 0);
 
-    guardarM.mutate(
-      { data: { estimacionId: estimacion.id, renglones } },
-      {
-        onSuccess: () => {
-          if (cerrarDespues) {
-            if (renglones.length === 0) {
-              toast.error("Captura al menos un concepto antes de cerrar");
-              return;
-            }
-            setConfirmCierre(true);
-          }
-        },
-      },
-    );
+    guardarM.mutate({ data: { estimacionId: estimacion.id, renglones } });
   };
 
   const pctAvance = computed.totalVigente > 0 ? (computed.totalAcum / computed.totalVigente) * 100 : 0;
@@ -181,8 +146,8 @@ export function CapturaEstimacionSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 flex-wrap">
             Estimación semanal
-            <Badge variant={isCerrada ? "default" : "secondary"}>
-              {isCerrada ? "Cerrada" : "Borrador"}
+            <Badge variant={soloLectura ? "default" : "secondary"}>
+              {soloLectura ? "Cerrada" : "Activa"}
             </Badge>
             <span className="ml-auto text-sm text-muted-foreground">
               {formatRangoSemana(semana.inicio, semana.fin)}
@@ -313,7 +278,7 @@ export function CapturaEstimacionSheet({
                                 inputMode="decimal"
                                 step="any"
                                 min={0}
-                                disabled={isCerrada}
+                                disabled={soloLectura}
                                 value={cantStr}
                                 onChange={(e) =>
                                   setCantidades((s) => ({ ...s, [r.clave]: e.target.value }))
@@ -340,47 +305,19 @@ export function CapturaEstimacionSheet({
             </TooltipProvider>
 
 
-            {!isCerrada && (
+            {!soloLectura && (
               <div className="flex gap-2 mt-4 flex-wrap justify-end sticky bottom-0 bg-background py-3">
                 <Button
-                  variant="outline"
                   disabled={guardarM.isPending}
-                  onClick={() => handleGuardar(false)}
+                  onClick={handleGuardar}
                 >
                   <Save className="size-4 mr-1" />
-                  {guardarM.isPending ? "Guardando…" : "Guardar borrador"}
-                </Button>
-                <Button
-                  disabled={guardarM.isPending || cerrarM.isPending}
-                  onClick={() => handleGuardar(true)}
-                >
-                  <Lock className="size-4 mr-1" />
-                  Guardar y cerrar semana
+                  {guardarM.isPending ? "Guardando…" : "Guardar"}
                 </Button>
               </div>
             )}
           </>
         )}
-
-        <AlertDialog open={confirmCierre} onOpenChange={setConfirmCierre}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Cerrar la estimación de esta semana?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Una vez cerrada, los precios unitarios quedarán congelados y no podrás modificar
-                cantidades. Asegúrate de haber capturado toda la producción de la semana.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => estimacion && cerrarM.mutate({ data: { id: estimacion.id } })}
-              >
-                Cerrar semana
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </SheetContent>
     </Sheet>
   );

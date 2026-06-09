@@ -1,7 +1,7 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getEstimacion } from "@/lib/api/estimaciones.functions";
-import { formatRangoSemana } from "@/lib/estimacion-utils";
+import { calcularSemana, formatRangoSemana } from "@/lib/estimacion-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ export function VerEstimacionSheet({
 
   const est = data?.estimacion;
   const renglones = data?.renglones ?? [];
+  const semanaActual = calcularSemana(new Date()).inicio;
+  const esActiva = est ? est.semana_inicio === semanaActual : false;
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
@@ -31,8 +33,8 @@ export function VerEstimacionSheet({
           <SheetTitle className="flex items-center gap-2 flex-wrap">
             Estimación #{est?.numero ?? "…"}
             {est && (
-              <Badge variant={est.estatus === "cerrada" ? "default" : "secondary"}>
-                {est.estatus === "cerrada" ? "Cerrada" : "Borrador"}
+              <Badge variant={esActiva ? "secondary" : "default"}>
+                {esActiva ? "Activa" : "Cerrada"}
               </Badge>
             )}
             {est && (
@@ -44,9 +46,6 @@ export function VerEstimacionSheet({
           {est && (
             <SheetDescription>
               {formatRangoSemana(est.semana_inicio, est.semana_fin)}
-              {est.cerrada_at && (
-                <> · Cerrada el {new Date(est.cerrada_at).toLocaleDateString("es-MX")}</>
-              )}
             </SheetDescription>
           )}
         </SheetHeader>

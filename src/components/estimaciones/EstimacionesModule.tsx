@@ -71,13 +71,11 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
   });
 
   const estimaciones = (listQ.data ?? []) as Estimacion[];
-  const totalProduccion = estimaciones
-    .filter((e) => e.estatus === "cerrada")
-    .reduce((s, e) => s + Number(e.monto_total), 0);
-  const borrador = estimaciones.find((e) => e.estatus === "borrador");
   const semanaActual = calcularSemana(new Date()).inicio;
-  const esEditable = (e: Estimacion) =>
-    e.estatus === "borrador" && e.semana_inicio === semanaActual;
+  const esActiva = (e: Estimacion) => e.semana_inicio === semanaActual;
+  const cerradas = estimaciones.filter((e) => !esActiva(e));
+  const totalProduccion = cerradas.reduce((s, e) => s + Number(e.monto_total), 0);
+  const activa = estimaciones.find(esActiva);
 
   return (
     <div className="space-y-6">
@@ -103,22 +101,21 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
         </Card>
         <Card className="p-4">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Semanas cerradas</p>
-          <p className="mt-2 text-xl font-semibold">
-            {estimaciones.filter((e) => e.estatus === "cerrada").length}
-          </p>
+          <p className="mt-2 text-xl font-semibold">{cerradas.length}</p>
         </Card>
         <Card className="p-4 border-primary/30 bg-primary/5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Borrador actual</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Semana activa</p>
           <p className="mt-2 text-xl font-semibold">
-            {borrador ? formatMXN(Number(borrador.monto_total)) : "—"}
+            {activa ? formatMXN(Number(activa.monto_total)) : "—"}
           </p>
-          {borrador && (
+          {activa && (
             <p className="text-xs text-muted-foreground mt-1">
-              {formatRangoSemana(borrador.semana_inicio, borrador.semana_fin)}
+              {formatRangoSemana(activa.semana_inicio, activa.semana_fin)}
             </p>
           )}
         </Card>
       </div>
+
 
       {listQ.isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
@@ -144,8 +141,8 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
                   <td className="p-3 tabular-nums">{e.numero}</td>
                   <td className="p-3">{formatRangoSemana(e.semana_inicio, e.semana_fin)}</td>
                   <td className="p-3">
-                    <Badge variant={e.estatus === "cerrada" ? "default" : "secondary"}>
-                      {e.estatus === "cerrada" ? "Cerrada" : "Borrador"}
+                    <Badge variant={esActiva(e) ? "secondary" : "default"}>
+                      {esActiva(e) ? "Activa" : "Cerrada"}
                     </Badge>
                   </td>
                   <td className="p-3 text-right tabular-nums font-medium">
@@ -156,12 +153,12 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
                       <Button size="sm" variant="outline" onClick={() => setViewing(e.id)}>
                         <FileText className="size-4 mr-1" /> Ver
                       </Button>
-                      {esEditable(e) && (
+                      {esActiva(e) && (
                         <Button size="sm" onClick={() => setEditing(e.semana_inicio)}>
                           Editar
                         </Button>
                       )}
-                      {e.estatus === "borrador" && director && (
+                      {esActiva(e) && director && (
                         <Button
                           size="sm"
                           variant="ghost"
