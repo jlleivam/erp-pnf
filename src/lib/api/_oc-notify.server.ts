@@ -59,3 +59,59 @@ export async function notifySupervisoresOC(
   const { error } = await supabaseAdmin.from("notificaciones").insert(rows);
   if (error) console.error("[notificaciones] insert failed", error.message);
 }
+
+const TIPO_LABEL_RES: Record<string, string> = {
+  oc_presupuesto_autorizada: "presupuesto",
+  oc_destajo_autorizada: "destajo",
+  oc_subcontrato_autorizada: "subcontrato",
+  oc_presupuesto_rechazada: "presupuesto",
+  oc_destajo_rechazada: "destajo",
+  oc_subcontrato_rechazada: "subcontrato",
+};
+
+export async function notifyResidenteOC(
+  supabase: any,
+  args: {
+    residenteId: string | null | undefined;
+    actorUserId: string;
+    obraId: string;
+    tipo:
+      | "oc_presupuesto_autorizada"
+      | "oc_destajo_autorizada"
+      | "oc_subcontrato_autorizada"
+      | "oc_presupuesto_rechazada"
+      | "oc_destajo_rechazada"
+      | "oc_subcontrato_rechazada";
+    link: string;
+    motivo?: string | null;
+  },
+) {
+  const { residenteId, actorUserId, obraId, tipo, link, motivo } = args;
+  if (!residenteId || residenteId === actorUserId) return;
+
+  const [{ data: obra }, { data: actor }] = await Promise.all([
+    supabase.from("obras").select("nombre, company_id").eq("id", obraId).maybeSingle(),
+    supabase.from("profiles").select("nombre_completo").eq("id", actorUserId).maybeSingle(),
+  ]);
+  if (!obra?.company_id) return;
+
+  const accion = tipo.endsWith("autorizada") ? "autorizó" : "rechazó";
+  const quien = actor?.nombre_completo ?? "El supervisor";
+  const donde = obra?.nombre ? ` en la obra ${obra.nombre}` : "";
+  const label = TIPO_LABEL_RES[tipo] ?? "OC";
+  const sufMotivo = tipo.endsWith("rechazada") && motivo ? ` Motivo: ${motivo}` : "";
+
+  const row = {
+    user_id: residenteId,
+    company_id: obra.company_id as string,
+    obra_id: obraId,
+    tipo,
+    titulo: tipo.endsWith("autorizada") ? "OC autorizada" : "OC rechazada",
+    mensaje: `${quien} ${accion} tu OC de ${label}${donde}.${sufMotivo}`,
+    link,
+  };
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin.from("notificaciones").insert(row);
+  if (error) console.error("[notificaciones] insert failed", error.message);
+}
