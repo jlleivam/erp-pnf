@@ -110,3 +110,28 @@ export const getCompanyLogoSignedUrl = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { url: signed.signedUrl };
   });
+
+export const updateCompanyCapitalSocial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ capital_social: z.number().min(0).max(9_999_999_999) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const companyId = await getMyCompanyId(supabase, userId);
+    // Solo director
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("company_id", companyId);
+    if (!(roles ?? []).some((r: any) => r.role === "director")) {
+      throw new Error("Solo el director puede actualizar el capital social");
+    }
+    const { error } = await supabase
+      .from("companies")
+      .update({ capital_social: data.capital_social })
+      .eq("id", companyId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
