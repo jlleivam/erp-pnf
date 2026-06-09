@@ -52,6 +52,10 @@ export function NuevoDestajoDialog({
   const [destajistaId, setDestajistaId] = useState<string>("");
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
+  const [anticipoOn, setAnticipoOn] = useState(false);
+  const [anticipoPct, setAnticipoPct] = useState<string>("");
+  const [fondoOn, setFondoOn] = useState(false);
+  const [fondoPct, setFondoPct] = useState<string>("");
 
   const crear = useServerFn(crearDestajo);
   const m = useMutation({
