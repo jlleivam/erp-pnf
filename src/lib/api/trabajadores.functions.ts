@@ -164,7 +164,9 @@ export const getTrabajador = createServerFn({ method: "POST" })
 // =============== CREATE ===============
 export const crearTrabajador = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => trabajadorFieldsSchema.parse(d))
+  .inputValidator((d: unknown) =>
+    trabajadorFieldsSchema.extend({ obraId: z.string().uuid().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, roles } = await getMyContext(supabase, userId);
