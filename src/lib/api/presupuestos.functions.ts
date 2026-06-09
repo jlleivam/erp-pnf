@@ -105,10 +105,24 @@ export const crearPresupuesto = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getCompanyAndIsDirector(supabase, userId);
-    if (!isDirector) throw new Error("Solo el Director puede crear presupuestos");
+
+    if (data.tipo === "base") {
+      if (!isDirector) throw new Error("Solo el Director puede crear el presupuesto base");
+    } else {
+      // adenda (orden de cambio): residente de la obra o director
+      const { isResidente } = await getObraRole(supabase, userId, data.obraId);
+      if (!isDirector && !isResidente)
+        throw new Error("Solo el Residente de la obra (o el Director) puede crear órdenes de cambio");
+    }
 
     let numero = 0;
     if (data.tipo === "adenda") {
+      // Requiere base autorizado
+      const { data: base } = await supabase
+        .from("obra_presupuestos").select("id, estatus")
+        .eq("obra_id", data.obraId).eq("tipo", "base").maybeSingle();
+      if (!base || base.estatus !== "autorizado")
+        throw new Error("Primero autoriza el presupuesto base de la obra");
       const { data: maxRow } = await supabase
         .from("obra_presupuestos")
         .select("numero")
