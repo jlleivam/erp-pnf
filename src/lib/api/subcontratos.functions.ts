@@ -601,7 +601,7 @@ export const rechazarPresupuestoSubcontrato = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase
-      .from("obra_subcontrato_presupuestos").select("estatus, subcontrato_id").eq("id", data.presupuestoId).single();
+      .from("obra_subcontrato_presupuestos").select("estatus, subcontrato_id, tipo, enviado_por").eq("id", data.presupuestoId).single();
     if (!p) throw new Error("No encontrado");
     if (p.estatus !== "enviado") throw new Error("Solo se puede rechazar una solicitud");
     const { data: d0 } = await supabase
@@ -620,6 +620,22 @@ export const rechazarPresupuestoSubcontrato = createServerFn({ method: "POST" })
       })
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
+
+    if (p.tipo === "adenda") {
+      try {
+        await notifyResidenteOC(supabase, {
+          residenteId: p.enviado_por,
+          actorUserId: userId,
+          obraId: d0!.obra_id,
+          tipo: "oc_subcontrato_rechazada",
+          link: `/app/obras/${d0!.obra_id}`,
+          motivo: data.motivo,
+        });
+      } catch (e: any) {
+        console.error("[notificaciones] oc_subcontrato_rechazada error", e?.message);
+      }
+    }
+
     return { ok: true };
   });
 
