@@ -390,7 +390,7 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
         actorUserId: userId,
         obraId: pres.obra_id,
         tipo: "oc_presupuesto_rechazada",
-        link: `/app/obras/${pres.obra_id}/presupuesto`,
+        link: `/app/obras/${pres.obra_id}/presupuesto?tab=adendas&ver=${data.id}`,
         motivo: data.motivo,
       });
     } catch (e: any) {
