@@ -473,3 +473,15 @@ function StatCard({
     </Card>
   );
 }
+
+function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground text-xs">
+        {label}
+        {hint && <span className="block text-[10px]">{hint}</span>}
+      </span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+}
