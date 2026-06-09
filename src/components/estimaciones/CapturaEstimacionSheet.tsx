@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getOrCreateBorrador,
   guardarRenglonesEstimacion,
-  cerrarEstimacion,
 } from "@/lib/api/estimaciones.functions";
 import { calcularSemana, formatRangoSemana } from "@/lib/estimacion-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -13,16 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -30,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 import { toast } from "sonner";
-import { Save, Lock, AlertTriangle, Search } from "lucide-react";
+import { Save, AlertTriangle, Search } from "lucide-react";
 
 
 type VigenteRow = {
