@@ -387,7 +387,7 @@ function DevUserSwitcher() {
         {users.isLoading && (
           <div className="px-3 py-2 text-xs text-muted-foreground">Cargando…</div>
         )}
-        {users.data?.map((u) => {
+        {(users.data as Array<{ id: string; nombre_completo: string | null; email: string | null; roles: string[] }> | undefined)?.map((u) => {
           const isCurrent = u.id === profile?.id;
           return (
             <DropdownMenuItem
