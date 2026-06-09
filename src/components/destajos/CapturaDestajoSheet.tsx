@@ -155,6 +155,27 @@ export function CapturaDestajoSheet({
           <p className="text-sm text-muted-foreground mt-6">Cargando…</p>
         ) : (
           <div className="mt-6 space-y-4">
+            {presupuesto?.obra_destajos && (
+              <Card className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Destajo</p>
+                  <p className="text-sm font-medium">
+                    {presupuesto.obra_destajos.numero ? `#${presupuesto.obra_destajos.numero} · ` : ""}
+                    {presupuesto.obra_destajos.nombre}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Destajista</p>
+                  <p className="text-sm font-medium">
+                    {presupuesto.obra_destajos.trabajadores?.nombre_completo ?? "—"}
+                    {presupuesto.obra_destajos.trabajadores?.puesto
+                      ? ` · ${presupuesto.obra_destajos.trabajadores.puesto}`
+                      : ""}
+                  </p>
+                </div>
+              </Card>
+            )}
+
             <div className="flex items-center gap-2 flex-wrap">
               {editable && (
                 <Button size="sm" variant="ghost" onClick={addRow}>
