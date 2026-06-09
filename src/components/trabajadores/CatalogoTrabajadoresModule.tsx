@@ -198,7 +198,7 @@ export function CatalogoTrabajadoresModule() {
             {stats.pendientes > 0 && (
               <>
                 <span>·</span>
-                <span className="text-amber-700">{stats.pendientes} por autorizar</span>
+                <span className="text-amber-700">{stats.pendientes} por registrar</span>
               </>
             )}
           </div>
