@@ -1,14 +1,14 @@
-### Cambios en menú inferior administrativo
+## Compactar tabla del panel global de nómina
 
-1. **Renombrar "Cuentas" → "CXP"**
-   - Archivo: `src/components/AppShell.tsx`
-   - Cambiar el label del item de navegación de `"Cuentas"` a `"CXP"`.
+Archivo: `src/components/nomina/NominaAdminPanel.tsx`
 
-2. **Distribución proporcional al ancho**
-   - Archivo: `src/components/AppShell.tsx`
-   - Cambiar `variant="scroll"` a `variant="fixed"` (o remover la prop ya que "fixed" es el default) en el `<MobileBottomBar>` del bloque `showAdmin`.
-   - Con `variant="fixed"`, cada item usa `flex-1`, por lo que los 6 módulos se distribuyen proporcionalmente ocupando todo el ancho de la pantalla, adaptándose automáticamente a cualquier tamaño móvil.
-   - Como ya no se necesita el botón "Más" en este menú admin, se omitirá `onMoreClick`.
+Cambios en la tabla principal (no en el diálogo de detalle):
 
-### Resultado esperado
-El menú inferior del rol administrativo mostrará 6 pestañas de igual ancho: **CXP**, **Nómina**, **Obras**, **Catálogos**, **Tesorería** y **Gastos**, ocupando todo el ancho disponible sin scroll horizontal.
+1. **Eliminar la columna "Estado"**: remover el `<th>` y la `<td>` correspondientes. El indicador de duplicados se preserva tintando la fila en rojo (ya existe) y mostrando un ícono pequeño de `AlertTriangle` junto al nombre del trabajador cuando `t.duplicados.length > 0`.
+
+2. **Una sola línea por trabajador**:
+   - Nombre y puesto en la misma celda, en línea: `Nombre · puesto` (puesto en `text-xs text-muted-foreground`) en lugar de dos renglones apilados.
+   - Celda "Obras": cambiar `flex-wrap` por `flex` con `truncate`/`whitespace-nowrap` y `overflow-hidden`, mostrando los badges en una sola línea (con `min-w-0` en la celda). Si hay varias obras se recortan con ellipsis.
+   - Reducir padding de celdas de `p-3` a `py-2 px-3` y tamaño de fuente general a `text-sm` (ya está) — los badges de obra a `text-[11px]`.
+
+3. **Sin cambios** en encabezado, filtros, totales, ni en el diálogo de detalle.
