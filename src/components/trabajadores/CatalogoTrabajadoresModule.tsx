@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -119,6 +120,13 @@ export function CatalogoTrabajadoresModule() {
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Row | null>(null);
   const [toDelete, setToDelete] = useState<Row | null>(null);
+  const search_ = useSearch({ from: "/_authenticated/app/catalogos/trabajadores" });
+  useEffect(() => {
+    if (search_.tab === "pendientes") setTab("pendientes");
+    if (search_.id) setDetalleId(search_.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search_.tab, search_.id]);
+
 
   const fetchList = useServerFn(listTrabajadores);
   const listQ = useQuery({
