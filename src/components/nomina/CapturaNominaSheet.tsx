@@ -524,8 +524,8 @@ function AsignarTrabajadoresDialog({
     }
     if (!canManage) return;
     const nuevos: string[] = [];
-    idsActuales.forEach((id) => {
-      if (!idsPrevios.has(id)) nuevos.push(id);
+    lista.forEach((t) => {
+      if (!idsPrevios.has(t.id) && t.estatus_autorizacion !== "pendiente") nuevos.push(t.id);
     });
     if (nuevos.length > 0) {
       setSeleccionados((prev) => {
@@ -573,21 +573,35 @@ function AsignarTrabajadoresDialog({
             ) : (
               filtered.map((t) => {
                 const checked = seleccionados.has(t.id);
+                const isPendiente = t.estatus_autorizacion === "pendiente";
                 return (
                   <Label
                     key={t.id}
-                    className="flex items-center gap-3 p-2 cursor-pointer hover:bg-muted/50"
+                    className={`flex items-center gap-3 p-2 ${
+                      isPendiente
+                        ? "opacity-60 cursor-not-allowed"
+                        : "cursor-pointer hover:bg-muted/50"
+                    }`}
                   >
                     <Checkbox
-                      checked={checked}
+                      checked={isPendiente ? false : checked}
+                      disabled={isPendiente}
                       onCheckedChange={(v) => {
+                        if (isPendiente) return;
                         const next = new Set(seleccionados);
                         if (v) next.add(t.id); else next.delete(t.id);
                         setSeleccionados(next);
                       }}
                     />
                     <div className="flex-1">
-                      <div className="font-medium">{t.nombre_completo}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        <span>{t.nombre_completo}</span>
+                        {isPendiente && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Pendiente de autorización
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {t.puesto ?? "—"} · {formatMXN(Number(t.sueldo_diario ?? 0))}/día
                       </div>

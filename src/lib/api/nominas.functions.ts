@@ -177,8 +177,8 @@ export const listTrabajadoresDisponibles = createServerFn({ method: "POST" })
       .from("trabajadores")
       .select("id, nombre_completo, puesto, sueldo_diario, fecha_baja, estatus_autorizacion")
       .eq("company_id", companyId)
-      .eq("estatus_autorizacion", "autorizado")
       .order("nombre_completo", { ascending: true });
+    
     if (error) throw new Error(error.message);
     // filtrar dados de baja antes del lunes
     return (rows ?? []).filter(
