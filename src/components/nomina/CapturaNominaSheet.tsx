@@ -217,9 +217,8 @@ export function CapturaNominaSheet({
                   <tbody>
                     {renglones.map((r) => {
                       const bloq = bloqueadosMap.get(r.trabajador_id);
-                      const filaBloqueada = !!bloq;
                       return (
-                      <tr key={r.id} className={cn("border-t border-border", filaBloqueada && "bg-muted/30")}>
+                      <tr key={r.id} className="border-t border-border">
                         <td className="p-2">
                           <div className="font-medium flex items-center gap-2 flex-wrap">
                             {r.trabajador?.nombre_completo ?? "—"}
@@ -227,7 +226,7 @@ export function CapturaNominaSheet({
                               <Badge
                                 variant="outline"
                                 className="gap-1"
-                                title={`Pago por destajo: ${bloq.destajo_nombre}`}
+                                title={`También asignado al destajo: ${bloq.destajo_nombre}`}
                               >
                                 <Lock className="size-3" /> Destajo: {bloq.destajo_nombre}
                               </Badge>
@@ -252,7 +251,7 @@ export function CapturaNominaSheet({
                                 jornada={Number(a?.jornada ?? 0)}
                                 horasExtras={Number(a?.horas_extras ?? 0)}
                                 notaExtras={a?.nota_extras ?? null}
-                                disabled={!!isClosed || filaBloqueada}
+                                disabled={!!isClosed}
                                 onSaved={() => {
                                   qc.invalidateQueries({
                                     queryKey: ["nomina", obraId, semanaInicio],
@@ -264,21 +263,18 @@ export function CapturaNominaSheet({
                           );
                         })}
                         <td className="p-2 text-right tabular-nums">
-                          {filaBloqueada ? "—" : Number(r.dias_trabajados).toFixed(1)}
+                          {Number(r.dias_trabajados).toFixed(1)}
                         </td>
                         <td className="p-2 text-right tabular-nums">
-                          {filaBloqueada ? "—" : Number(r.horas_extras_total).toFixed(1)}
+                          {Number(r.horas_extras_total).toFixed(1)}
                         </td>
                         <td className="p-2 text-right tabular-nums font-medium">
-                          {filaBloqueada ? (
-                            <span className="text-muted-foreground">vía destajo</span>
-                          ) : (
-                            formatMXN(Number(r.importe_total))
-                          )}
+                          {formatMXN(Number(r.importe_total))}
                         </td>
                       </tr>
                       );
                     })}
+
                   </tbody>
                 </table>
               </Card>
