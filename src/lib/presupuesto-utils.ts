@@ -34,6 +34,20 @@ export function parentDeClave(clave: string): string | null {
   return idx === -1 ? null : clave.slice(0, idx);
 }
 
+/**
+ * Dado un conjunto de claves WBS, devuelve el set de claves que son
+ * padre (es decir, que tienen al menos una clave hija). Útil para la UI
+ * que necesita marcar las partidas y deshabilitar sus inputs.
+ */
+export function calcularClavesPadre(claves: string[]): Set<string> {
+  const set = new Set<string>();
+  for (const c of claves) {
+    const p = parentDeClave((c ?? "").trim());
+    if (p) set.add(p);
+  }
+  return set;
+}
+
 export function ordenSort(a: string, b: string): number {
   const pa = a.split(".").map((n) => parseInt(n, 10));
   const pb = b.split(".").map((n) => parseInt(n, 10));
