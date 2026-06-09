@@ -167,9 +167,9 @@ export function NominaAdminPanel() {
             <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left py-2 px-2 whitespace-nowrap">Trabajador</th>
-                <th className="text-center py-2 px-2 w-20 whitespace-nowrap">Sueldo/día</th>
+                <th className="text-center py-2 px-2 w-20 whitespace-nowrap">$/día</th>
                 <th className="text-center py-2 px-2 w-12 whitespace-nowrap">Días</th>
-                <th className="text-center py-2 px-2 w-14 whitespace-nowrap">Extras h</th>
+                <th className="text-center py-2 px-2 w-14 whitespace-nowrap">HE</th>
                 <th className="text-center py-2 px-2 whitespace-nowrap">Obras</th>
                 <th className="text-center py-2 px-2 w-24 whitespace-nowrap">Importe</th>
               </tr>
@@ -286,7 +286,7 @@ function DetalleTrabajadorDialog({
                   </th>
                 ))}
                 <th className="text-right p-2 w-20">Días</th>
-                <th className="text-right p-2 w-20">Extras h</th>
+                <th className="text-right p-2 w-20">HE</th>
                 <th className="text-right p-2 w-24">Importe</th>
               </tr>
             </thead>
