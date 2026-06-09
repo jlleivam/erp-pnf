@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { crearDestajo } from "@/lib/api/destajos.functions";
 import { listTrabajadores } from "@/lib/api/trabajadores.functions";
 import {
@@ -24,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { TrabajadorFormDialog } from "@/components/trabajadores/TrabajadorFormDialog";
+import { useEffectiveRoles } from "@/stores/auth";
 
 export function NuevoDestajoDialog({
   obraId,
