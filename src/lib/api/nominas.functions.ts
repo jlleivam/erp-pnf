@@ -71,8 +71,21 @@ export const listNominas = createServerFn({ method: "POST" })
       .eq("obra_id", data.obraId)
       .order("semana_inicio", { ascending: false });
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const nominas = rows ?? [];
+    const ids = nominas.map((n: any) => n.id);
+    const countsMap = new Map<string, number>();
+    if (ids.length > 0) {
+      const { data: rens } = await supabase
+        .from("obra_nomina_renglones")
+        .select("nomina_id")
+        .in("nomina_id", ids);
+      for (const r of (rens ?? []) as Array<{ nomina_id: string }>) {
+        countsMap.set(r.nomina_id, (countsMap.get(r.nomina_id) ?? 0) + 1);
+      }
+    }
+    return nominas.map((n: any) => ({ ...n, trabajadores_count: countsMap.get(n.id) ?? 0 }));
   });
+
 
 export const getOrCreateNomina = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -1,20 +1,26 @@
-# Plan para corregir el empalme en Nómina
+# Compactar el módulo Nómina
 
-## Objetivo
-Evitar que el botón de cerrar del módulo se monte encima de los botones de acción de Nómina, en particular `Nueva semana` y `Cerrar semana`.
+## Cambios
 
-## Qué voy a cambiar
-1. Ajustar el layout del contenedor de módulos de obra para que el botón `Cerrar módulo` deje de estar posicionado de forma absoluta sobre el contenido.
-2. Mantener ese botón visible y accesible, pero integrado al flujo normal del encabezado del módulo.
-3. Verificar que el cambio no altere la lógica de permisos ni el comportamiento interno de Nómina.
-
-## Resultado esperado
-- El botón `Nueva semana` ya no quedará tapado o cruzado por la `X`.
-- El botón `Cerrar semana` dentro de la captura tampoco se verá invadido por controles externos.
-- La navegación de cierre del módulo seguirá funcionando igual.
+1. **Quitar la `X`** de cerrar módulo en `src/routes/_authenticated/app.obras.$obraId.$.tsx`. El header superior con el nombre de la obra (y la flecha de regreso) ya permite salir.
+2. **Subir el header de Nómina**: al desaparecer la fila de la `X`, el título "Nómina" queda pegado arriba sin espacio muerto.
+3. **Compactar el módulo** (`src/components/nomina/NominaModule.tsx`):
+   - Reducir el `space-y` del contenedor.
+   - Achicar tipografías del header y descripción.
+   - Reducir padding de las tarjetas resumen.
+   - La tabla de nóminas queda como protagonista visual.
+4. **Agregar columna "Trabajadores"** con la cantidad de trabajadores asignados a la nómina de esa semana:
+   - Backend: `listNominas` devolverá adicionalmente `trabajadores_count` por nómina (consulta a `obra_nomina_renglones` agrupando por `nomina_id`).
+   - Frontend: nueva columna en la tabla, alineada a la derecha, con valor tabular.
+5. Se mantiene **un solo renglón por nómina** (ya es así).
 
 ## Detalle técnico
-- Archivo principal a ajustar: `src/routes/_authenticated/app.obras.$obraId.$.tsx`
-- Cambio previsto: reemplazar el posicionamiento `absolute top-0 right-0` del botón de cierre por una disposición en layout normal con separación propia.
-- No se requieren cambios en backend, permisos, consultas ni funciones del servidor.
-- No se modificarán las reglas de quién puede crear, editar o cerrar nóminas.
+
+- `src/lib/api/nominas.functions.ts > listNominas`: tras obtener las nóminas, hacer un segundo query a `obra_nomina_renglones` con `in("nomina_id", ids)` y contar en JS por `nomina_id`. Adjuntar `trabajadores_count` a cada fila.
+- `NominaModule.tsx`:
+  - Tipo `Nomina` agrega `trabajadores_count: number`.
+  - Nueva `<th>` "Trabajadores" entre "Estatus" y "Monto".
+  - Header: pasar de `text-2xl` a `text-xl`, eliminar margen extra; `space-y-6` → `space-y-4`; cards resumen con `p-3` en lugar de `p-4`.
+- `app.obras.$obraId.$.tsx`: eliminar el bloque del `<Link>` con la `X` y el wrapper `flex justify-end`. Dejar solo `{content}`.
+
+No hay cambios de permisos ni de RLS.
