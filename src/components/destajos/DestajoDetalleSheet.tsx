@@ -157,6 +157,7 @@ export function DestajoDetalleSheet({
             <Tabs defaultValue="presupuesto">
               <TabsList>
                 <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>
+                <TabsTrigger value="terminos">Términos</TabsTrigger>
                 <TabsTrigger value="trabajadores">
                   Trabajadores ({trabajadores.length})
                 </TabsTrigger>
