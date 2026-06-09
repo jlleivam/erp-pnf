@@ -10,7 +10,8 @@ import {
   reabrirPresupuestoDestajo,
   actualizarTerminosDestajo,
   getDestajoAnticipo,
-  marcarAnticipoPagado,
+  solicitarPagoAnticipoDestajo,
+  cancelarSolicitudAnticipoDestajo,
 } from "@/lib/api/destajos.functions";
 import {
   Sheet,
