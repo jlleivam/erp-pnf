@@ -642,34 +642,47 @@ export const rechazarPresupuestoDestajo = createServerFn({ method: "POST" })
     const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
     if (!isDirector && !obraRole.isSupervisor)
       throw new Error("Solo el Supervisor de la obra (o el Director) puede rechazar");
+    // Base: vuelve a borrador con motivo registrado (sin estado rechazado intermedio).
+    // Adenda: queda como rechazado y requiere "reabrir".
+    const update =
+      p.tipo === "base"
+        ? {
+            estatus: "borrador" as const,
+            enviado_at: null,
+            enviado_por: null,
+            rechazado_at: new Date().toISOString(),
+            rechazado_por: userId,
+            rechazo_motivo: data.motivo,
+          }
+        : {
+            estatus: "rechazado" as const,
+            rechazado_at: new Date().toISOString(),
+            rechazado_por: userId,
+            rechazo_motivo: data.motivo,
+          };
     const { error } = await supabase
       .from("obra_destajo_presupuestos")
-      .update({
-        estatus: "rechazado",
-        rechazado_at: new Date().toISOString(),
-        rechazado_por: userId,
-        rechazo_motivo: data.motivo,
-      })
+      .update(update)
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
 
-    if (p.tipo === "adenda") {
-      try {
-        await notifyResidenteOC(supabase, {
-          residenteId: p.enviado_por,
-          actorUserId: userId,
-          obraId: d0!.obra_id,
-          tipo: "oc_destajo_rechazada",
-          link: `/app/obras/${d0!.obra_id}`,
-          motivo: data.motivo,
-        });
-      } catch (e: any) {
-        console.error("[notificaciones] oc_destajo_rechazada error", e?.message);
-      }
+    const link = `/app/obras/${d0!.obra_id}/destajos?destajo=${p.destajo_id}`;
+    try {
+      await notifyResidenteOC(supabase, {
+        residenteId: p.enviado_por,
+        actorUserId: userId,
+        obraId: d0!.obra_id,
+        tipo: p.tipo === "adenda" ? "oc_destajo_rechazada" : "destajo_rechazado",
+        link,
+        motivo: data.motivo,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] destajo rechazado error", e?.message);
     }
 
     return { ok: true };
   });
+
 
 export const reabrirPresupuestoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
