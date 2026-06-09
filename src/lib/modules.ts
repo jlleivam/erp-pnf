@@ -1,6 +1,7 @@
 import {
   FileText,
   Wallet,
+  Scale,
   Banknote,
   Warehouse,
   Receipt,
@@ -27,6 +28,7 @@ export const ADMIN_MODULES: ModuleEntry[] = [
   { to: "/app/admin/requisiciones", label: "Requisiciones", icon: ClipboardList },
   { to: "/app/admin/cuentas-por-pagar", label: "Cuentas por pagar", icon: FileText },
   { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
+  { to: "/app/admin/contabilidad", label: "Contabilidad", icon: Scale },
   { to: "/app/admin/almacen-central", label: "Almacén central", icon: Warehouse },
   { to: "/app/admin/gastos-oficina", label: "Gastos de oficina", icon: Receipt },
   { to: "/app/admin/nomina", label: "Nómina", icon: Users },
