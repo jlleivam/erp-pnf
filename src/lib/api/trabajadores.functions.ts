@@ -344,8 +344,8 @@ export const autorizarTrabajador = createServerFn({ method: "POST" })
           user_id: tr.creado_por,
           company_id: tr.company_id,
           tipo: "trabajador_alta_autorizada",
-          titulo: "Trabajador autorizado",
-          mensaje: `${tr.nombre_completo} ya fue registrado y autorizado. Ya puedes asignarlo a la nómina semanal.`,
+          titulo: "Trabajador registrado",
+          mensaje: `${tr.nombre_completo} ya fue registrado. Ya puedes asignarlo a la nómina semanal.`,
           link: `/app/catalogos/trabajadores?id=${data.id}`,
         });
         if (notifErr) console.error("[notificaciones] autorizado insert failed", notifErr.message);

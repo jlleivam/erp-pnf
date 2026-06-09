@@ -94,7 +94,7 @@ export function TrabajadorFormDialog({
     mutationFn: create,
     onSuccess: () => {
       toast.success(
-        canManage ? "Trabajador creado" : "Solicitud enviada. Pendiente de autorización.",
+        canManage ? "Trabajador creado" : "Solicitud enviada. Pendiente de registro.",
       );
       qc.invalidateQueries({ queryKey: ["trabajadores"] });
       onClose();
@@ -163,7 +163,7 @@ export function TrabajadorFormDialog({
           <DialogDescription>
             {canManage
               ? "Captura los datos del trabajador. Los documentos se suben desde la ficha."
-              : "Tu solicitud quedará pendiente de autorización por un administrativo o director."}
+              : "Tu solicitud quedará pendiente de registro por un administrativo o director."}
           </DialogDescription>
         </DialogHeader>
 

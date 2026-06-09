@@ -167,7 +167,7 @@ export function CatalogoTrabajadoresModule() {
   const autM = useMutation({
     mutationFn: autorizar,
     onSuccess: () => {
-      toast.success("Trabajador autorizado");
+      toast.success("Trabajador registrado");
       qc.invalidateQueries({ queryKey: ["trabajadores"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -198,7 +198,7 @@ export function CatalogoTrabajadoresModule() {
             {stats.pendientes > 0 && (
               <>
                 <span>·</span>
-                <span className="text-amber-700">{stats.pendientes} por autorizar</span>
+                <span className="text-amber-700">{stats.pendientes} por registrar</span>
               </>
             )}
           </div>
@@ -345,7 +345,7 @@ export function CatalogoTrabajadoresModule() {
                   {r.estatus_autorizacion === "autorizado" ? (
                     <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700">
                       <span className="size-1.5 rounded-full bg-emerald-500" />
-                      Autorizado
+                      Registrado
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
@@ -375,7 +375,7 @@ export function CatalogoTrabajadoresModule() {
                             className="text-emerald-700"
                           >
                             <CheckCircle2 className="size-4 mr-2" />
-                            Autorizar
+                            Registrar
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => setEditing(r)}>

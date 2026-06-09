@@ -71,7 +71,7 @@ export function TrabajadorDetalle({
   const autorizarM = useMutation({
     mutationFn: autorizar,
     onSuccess: () => {
-      toast.success("Trabajador autorizado");
+      toast.success("Trabajador registrado");
       qc.invalidateQueries({ queryKey: ["trabajador", trabajadorId] });
       qc.invalidateQueries({ queryKey: ["trabajadores"] });
     },
@@ -110,7 +110,7 @@ export function TrabajadorDetalle({
                       </Badge>
                       {t.estatus_autorizacion === "pendiente" && (
                         <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                          Pendiente de autorización
+                          Pendiente de registro
                         </Badge>
                       )}
                     </span>
@@ -125,7 +125,7 @@ export function TrabajadorDetalle({
                     onClick={() => autorizarM.mutate({ data: { id: t.id } })}
                     disabled={autorizarM.isPending}
                   >
-                    <CheckCircle2 className="size-4 mr-1" /> Autorizar
+                    <CheckCircle2 className="size-4 mr-1" /> Registrar
                   </Button>
                 )}
                 {canManage && t && (
