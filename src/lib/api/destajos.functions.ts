@@ -1298,3 +1298,356 @@ export const eliminarEstimacionDestajo = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+
+// ============================================================
+// SOLICITUD Y PAGO DE ANTICIPO DE DESTAJO
+// ============================================================
+
+async function notifyAdminsAnticipoSolicitado(
+  supabase: any,
+  args: {
+    companyId: string;
+    obraId: string;
+    obraNombre: string;
+    destajoNombre: string;
+    destajistaNombre: string;
+    monto: number;
+    solicitanteId: string;
+    solicitanteNombre: string;
+  },
+) {
+  // Destinatarios: usuarios con rol director o administrativo en la empresa
+  const { data: roles } = await supabase
+    .from("user_roles")
+    .select("user_id")
+    .eq("company_id", args.companyId)
+    .in("role", ["director", "administrativo"]);
+  const destinatarios = Array.from(
+    new Set(
+      ((roles ?? []) as Array<{ user_id: string }>)
+        .map((r) => r.user_id)
+        .filter((u) => u && u !== args.solicitanteId),
+    ),
+  );
+  if (destinatarios.length === 0) return;
+
+  const montoFmt = new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(args.monto);
+
+  const titulo = "Solicitud de pago de anticipo";
+  const mensaje = `${args.solicitanteNombre} solicitó el pago del anticipo (${montoFmt}) para el destajo ${args.destajoNombre} · ${args.destajistaNombre} en la obra ${args.obraNombre}.`;
+  const link = `/app/cuentas-por-pagar?tab=anticipos`;
+
+  const rows = destinatarios.map((uid) => ({
+    user_id: uid,
+    company_id: args.companyId,
+    obra_id: args.obraId,
+    tipo: "anticipo_destajo_solicitado",
+    titulo,
+    mensaje,
+    link,
+  }));
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin.from("notificaciones").insert(rows);
+  if (error) console.error("[notificaciones] anticipo destajo solicitado:", error.message);
+}
+
+export const solicitarPagoAnticipoDestajo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      destajoId: z.string().uuid(),
+      notas: z.string().trim().max(500).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: destajo } = await supabase
+      .from("obra_destajos")
+      .select(
+        "id, obra_id, company_id, nombre, anticipo_monto, destajista:destajista_id(nombre_completo), obra:obra_id(nombre)",
+      )
+      .eq("id", data.destajoId)
+      .maybeSingle();
+    if (!destajo) throw new Error("Destajo no encontrado");
+
+    const { isDirector } = await getRoles(supabase, userId);
+    const obraRole = await getObraRole(supabase, userId, destajo.obra_id);
+    if (!isDirector && !obraRole.isResidente) {
+      throw new Error("Solo el Residente (o Director) puede solicitar el pago del anticipo");
+    }
+
+    // Presupuesto base autorizado
+    const { data: base } = await supabase
+      .from("obra_destajo_presupuestos")
+      .select("estatus")
+      .eq("destajo_id", data.destajoId)
+      .eq("tipo", "base")
+      .maybeSingle();
+    if (!base || base.estatus !== "autorizado") {
+      throw new Error("El presupuesto base debe estar autorizado");
+    }
+
+    const { data: anticipo } = await supabase
+      .from("obra_destajo_anticipos")
+      .select("id, pagado, solicitado_at, monto")
+      .eq("destajo_id", data.destajoId)
+      .maybeSingle();
+    if (!anticipo) throw new Error("No hay anticipo registrado");
+    if (anticipo.pagado) throw new Error("El anticipo ya está pagado");
+    if (anticipo.solicitado_at) throw new Error("Ya se solicitó el pago del anticipo");
+    if (Number(anticipo.monto) <= 0) throw new Error("El monto del anticipo es 0");
+
+    const { error } = await supabase
+      .from("obra_destajo_anticipos")
+      .update({
+        solicitado_at: new Date().toISOString(),
+        solicitado_por: userId,
+        solicitud_notas: data.notas ?? null,
+      })
+      .eq("id", anticipo.id);
+    if (error) throw new Error(error.message);
+
+    const { data: prof } = await supabase
+      .from("profiles").select("nombre_completo").eq("id", userId).maybeSingle();
+
+    try {
+      await notifyAdminsAnticipoSolicitado(supabase, {
+        companyId: destajo.company_id,
+        obraId: destajo.obra_id,
+        obraNombre: (destajo.obra as any)?.nombre ?? "",
+        destajoNombre: destajo.nombre,
+        destajistaNombre: (destajo.destajista as any)?.nombre_completo ?? "",
+        monto: Number(anticipo.monto),
+        solicitanteId: userId,
+        solicitanteNombre: prof?.nombre_completo ?? "Un residente",
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] anticipo solicitado:", e?.message);
+    }
+
+    return { ok: true };
+  });
+
+export const cancelarSolicitudAnticipoDestajo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ destajoId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: destajo } = await supabase
+      .from("obra_destajos").select("obra_id").eq("id", data.destajoId).maybeSingle();
+    if (!destajo) throw new Error("Destajo no encontrado");
+    const { isDirector } = await getRoles(supabase, userId);
+    const obraRole = await getObraRole(supabase, userId, destajo.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
+
+    const { data: ant } = await supabase
+      .from("obra_destajo_anticipos")
+      .select("id, pagado, solicitado_at, solicitado_por")
+      .eq("destajo_id", data.destajoId).maybeSingle();
+    if (!ant) throw new Error("Anticipo no encontrado");
+    if (ant.pagado) throw new Error("El anticipo ya fue pagado");
+    if (!ant.solicitado_at) throw new Error("No hay solicitud activa");
+    if (!isDirector && ant.solicitado_por !== userId) {
+      throw new Error("Solo quien solicitó (o Director) puede cancelar");
+    }
+    const { error } = await supabase
+      .from("obra_destajo_anticipos")
+      .update({ solicitado_at: null, solicitado_por: null, solicitud_notas: null })
+      .eq("id", ant.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listAnticiposDestajoPendientes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getRoles(supabase, userId);
+    const { data: rolesData } = await supabase
+      .from("user_roles").select("role")
+      .eq("user_id", userId).eq("company_id", companyId);
+    const roleSet = new Set((rolesData ?? []).map((r: any) => r.role as string));
+    if (!isDirector && !roleSet.has("administrativo")) {
+      throw new Error("No tienes permisos");
+    }
+
+    const { data, error } = await supabase
+      .from("obra_destajo_anticipos")
+      .select(
+        "id, destajo_id, monto, solicitado_at, solicitud_notas, solicitado_por, " +
+        "destajo:destajo_id(id, nombre, numero, obra_id, destajista:destajista_id(nombre_completo), obra:obra_id(id, nombre))",
+      )
+      .eq("company_id", companyId)
+      .eq("pagado", false)
+      .not("solicitado_at", "is", null)
+      .order("solicitado_at", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    // Resolver nombre del solicitante
+    const ids = Array.from(
+      new Set(((data ?? []) as any[]).map((r) => r.solicitado_por).filter(Boolean)),
+    );
+    let profMap: Record<string, string> = {};
+    if (ids.length) {
+      const { data: profs } = await supabase
+        .from("profiles").select("id, nombre_completo").in("id", ids);
+      profMap = Object.fromEntries(
+        ((profs ?? []) as any[]).map((p) => [p.id, p.nombre_completo ?? ""]),
+      );
+    }
+
+    return ((data ?? []) as any[]).map((r) => ({
+      anticipoId: r.id,
+      destajoId: r.destajo_id,
+      monto: Number(r.monto),
+      solicitadoAt: r.solicitado_at,
+      notas: r.solicitud_notas,
+      solicitadoPor: r.solicitado_por,
+      solicitadoPorNombre: profMap[r.solicitado_por] ?? "—",
+      destajoNombre: r.destajo?.nombre ?? "",
+      destajoNumero: r.destajo?.numero ?? null,
+      destajistaNombre: r.destajo?.destajista?.nombre_completo ?? "",
+      obraId: r.destajo?.obra?.id ?? null,
+      obraNombre: r.destajo?.obra?.nombre ?? "",
+    }));
+  });
+
+export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      destajoId: z.string().uuid(),
+      cuentaId: z.string().uuid(),
+      monto: z.number().positive(),
+      metodo: z.enum(["efectivo", "transferencia", "cheque"]),
+      fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      referencia: z.string().trim().max(120).optional().nullable(),
+      notas: z.string().trim().max(500).optional().nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, isDirector } = await getRoles(supabase, userId);
+    const { data: rolesData } = await supabase
+      .from("user_roles").select("role")
+      .eq("user_id", userId).eq("company_id", companyId);
+    const roleSet = new Set((rolesData ?? []).map((r: any) => r.role as string));
+    if (!isDirector && !roleSet.has("administrativo")) {
+      throw new Error("Solo Director o Administrativo pueden registrar el pago");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: ant } = await supabaseAdmin
+      .from("obra_destajo_anticipos")
+      .select("id, company_id, destajo_id, monto, pagado, solicitado_at")
+      .eq("destajo_id", data.destajoId).maybeSingle();
+    if (!ant || ant.company_id !== companyId) throw new Error("Anticipo no encontrado");
+    if (ant.pagado) throw new Error("El anticipo ya está pagado");
+    if (!ant.solicitado_at) throw new Error("Falta solicitar el pago antes de registrarlo");
+
+    const montoAnticipo = Number(ant.monto);
+    if (Math.abs(data.monto - montoAnticipo) > 0.01) {
+      throw new Error(`El monto debe coincidir con el anticipo (${montoAnticipo.toFixed(2)})`);
+    }
+
+    const { data: cuenta } = await supabaseAdmin
+      .from("cuentas")
+      .select("id, company_id, tipo, activa, saldo_actual, nombre")
+      .eq("id", data.cuentaId).maybeSingle();
+    if (!cuenta || cuenta.company_id !== companyId) throw new Error("Cuenta no encontrada");
+    if (!cuenta.activa) throw new Error("La cuenta está inactiva");
+    if (cuenta.tipo === "caja_fuerte" && data.metodo !== "efectivo") {
+      throw new Error("La caja fuerte solo admite pagos en efectivo");
+    }
+    if (cuenta.tipo === "bancaria" && data.metodo === "efectivo") {
+      throw new Error("Las cuentas bancarias no admiten pagos en efectivo");
+    }
+    if (data.monto > Number(cuenta.saldo_actual) + 0.01) {
+      throw new Error("El monto excede el saldo disponible de la cuenta");
+    }
+
+    const { data: destajo } = await supabaseAdmin
+      .from("obra_destajos")
+      .select("nombre, destajista:destajista_id(nombre_completo)")
+      .eq("id", data.destajoId).maybeSingle();
+    const destNombre = destajo?.nombre ?? "Destajo";
+    const destajistaNombre = (destajo?.destajista as any)?.nombre_completo ?? "";
+    const concepto = `Anticipo destajo · ${destNombre}${destajistaNombre ? " · " + destajistaNombre : ""}`;
+
+    // 1) pago
+    const { data: pago, error: pErr } = await supabaseAdmin
+      .from("pagos")
+      .insert({
+        company_id: companyId,
+        cuenta_id: data.cuentaId,
+        fecha: data.fecha,
+        monto: data.monto,
+        metodo: data.metodo,
+        referencia: data.referencia || null,
+        concepto,
+        notas: data.notas || null,
+        origen_tipo: "destajo",
+        origen_id: ant.id,
+        creado_por: userId,
+      })
+      .select("id").single();
+    if (pErr) throw new Error(pErr.message);
+
+    // 2) movimiento
+    const { data: mov, error: mErr } = await supabaseAdmin
+      .from("cuenta_movimientos")
+      .insert({
+        cuenta_id: data.cuentaId,
+        company_id: companyId,
+        fecha: data.fecha,
+        tipo: "egreso",
+        monto: data.monto,
+        concepto,
+        referencia: data.referencia || null,
+        origen: "pago",
+        origen_id: pago.id,
+        creado_por: userId,
+      })
+      .select("id").single();
+    if (mErr) {
+      await supabaseAdmin.from("pagos").delete().eq("id", pago.id);
+      throw new Error(mErr.message);
+    }
+
+    await supabaseAdmin.from("pagos").update({ cuenta_movimiento_id: mov.id }).eq("id", pago.id);
+
+    // 3) saldo cuenta
+    const nuevoSaldo = +(Number(cuenta.saldo_actual) - data.monto).toFixed(2);
+    const { error: sErr } = await supabaseAdmin
+      .from("cuentas").update({ saldo_actual: nuevoSaldo }).eq("id", data.cuentaId);
+    if (sErr) {
+      await supabaseAdmin.from("cuenta_movimientos").delete().eq("id", mov.id);
+      await supabaseAdmin.from("pagos").delete().eq("id", pago.id);
+      throw new Error(sErr.message);
+    }
+
+    // 4) marcar anticipo pagado
+    const { error: aErr } = await supabaseAdmin
+      .from("obra_destajo_anticipos")
+      .update({
+        pagado: true,
+        pagado_at: new Date().toISOString(),
+        fecha: data.fecha,
+        metodo_pago: data.metodo,
+        referencia: data.referencia || null,
+      })
+      .eq("id", ant.id);
+    if (aErr) {
+      await supabaseAdmin.from("cuentas").update({ saldo_actual: cuenta.saldo_actual }).eq("id", data.cuentaId);
+      await supabaseAdmin.from("cuenta_movimientos").delete().eq("id", mov.id);
+      await supabaseAdmin.from("pagos").delete().eq("id", pago.id);
+      throw new Error(aErr.message);
+    }
+
+    return { ok: true, pagoId: pago.id };
+  });
