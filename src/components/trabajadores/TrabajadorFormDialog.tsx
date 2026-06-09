@@ -143,7 +143,7 @@ export function TrabajadorFormDialog({
     if (isEdit && initial?.id) {
       updateM.mutate({ data: { ...payload, id: initial.id } });
     } else {
-      createM.mutate({ data: payload });
+      createM.mutate({ data: obraId ? { ...payload, obraId } : payload });
     }
   };
 
