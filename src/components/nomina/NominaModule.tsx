@@ -130,6 +130,7 @@ export function NominaModule({ obraId }: { obraId: string }) {
                 <th className="text-left p-3 w-16">#</th>
                 <th className="text-left p-3">Semana</th>
                 <th className="text-left p-3 w-28">Estatus</th>
+                <th className="text-right p-3 w-28">Trabajadores</th>
                 <th className="text-right p-3 w-40">Monto</th>
                 <th className="text-right p-3 w-56">Acciones</th>
               </tr>
@@ -144,9 +145,11 @@ export function NominaModule({ obraId }: { obraId: string }) {
                       {n.estatus === "cerrada" ? "Cerrada" : "Activa"}
                     </Badge>
                   </td>
+                  <td className="p-3 text-right tabular-nums">{n.trabajadores_count}</td>
                   <td className="p-3 text-right tabular-nums font-medium">
                     {formatMXN(Number(n.monto_total))}
                   </td>
+
                   <td className="p-3 text-right">
                     <div className="flex gap-2 justify-end">
                       <Button
