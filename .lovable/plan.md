@@ -1,32 +1,22 @@
-# Botón "Ver vigente" dentro de la captura de Orden de Cambio
+# Unificar diseño del visor "Ver vigente" con `VerPresupuestoSheet`
 
-Agregar un botón de solo lectura para consultar el **presupuesto/destajo/subcontrato vigente** mientras se captura una OC, sin tener que cerrar la hoja.
+Hacer que `VigenteViewerDialog` (el visor de presupuesto vigente que abre el botón "Ver vigente" dentro de la captura de OC) se vea idéntico al `VerPresupuestoSheet` (presupuesto base — segunda imagen).
 
-## Alcance
+## Cambios
 
-Tres hojas de captura de OC:
-1. `CapturaOrdenCambioSheet.tsx` (Presupuesto de obra)
-2. `CapturaOrdenCambioDestajoSheet.tsx` (Destajos)
-3. `CapturaOrdenCambioSubcontratoSheet.tsx` (Subcontratos)
+Reemplazar el render actual del Dialog para que use el mismo patrón que `VerPresupuestoSheet`:
 
-## UI
+1. **Header**:
+   - Título grande con badge `Autorizado` (variant `default`) al lado, y monto total alineado a la derecha con `ml-auto text-base font-semibold`.
+2. **Tabla**:
+   - `text-xs table-fixed` con `<colgroup>` (clave 28, concepto flex, unidad 16, cantidad 20, PU 24, importe 28).
+   - Header `bg-muted/50`, `text-[11px] uppercase tracking-wider`.
+   - Celdas con `px-2 py-1.5` (header) / `px-2 py-1` (filas), `tabular-nums`.
+   - Columna Concepto con `truncate` + `Tooltip` (de `@/components/ui/tooltip`) para ver el texto completo en hover.
+   - Filas de grupo (`es_grupo`) con `bg-muted/30 font-medium`.
+   - Indentación por nivel con `paddingLeft: 0.5 + (nivel-1) * 1rem`.
+   - Badges `Mod` / `Nuevo` siguen apareciendo junto a la clave.
 
-- Agregar un botón **"Ver vigente"** (icono `Eye`, variante `outline`, tamaño `sm`) en la barra superior de acciones, junto a "Agregar movimiento" / badge de errores.
-- Al hacer clic, abre un **Dialog** (no Sheet, para evitar apilar Sheets) ancho con la tabla del vigente en modo solo-lectura: Clave, Concepto, Unidad, Cantidad, PU, Importe + total al pie. Mismo render que `VerVigenteSheet` (jerarquía con padding por nivel, badges Mod/Nuevo).
-- Los datos del vigente ya se cargan en cada captura sheet (`vigQ`), así que solo se reusa esa query — sin llamadas extra al servidor.
+## Archivo afectado
 
-## Implementación técnica
-
-1. **Nuevo componente** `src/components/presupuesto/VigenteViewerDialog.tsx`
-   - Props: `open`, `onClose`, `vigente: any[]`, `total: number`, `title?: string`.
-   - Render genérico (sirve para los 3 módulos; las filas tienen la misma forma).
-2. En cada uno de los 3 sheets:
-   - Agregar estado `const [showVigente, setShowVigente] = useState(false)`.
-   - Botón "Ver vigente" antes del badge de errores.
-   - Renderizar `<VigenteViewerDialog />` pasándole `vigente` y total calculado (`sum importe` o `montoTotal` cuando esté disponible).
-3. Sin cambios en backend, RLS, ni lógica de cálculo.
-
-## Out of scope
-
-- No se permite editar desde la vista.
-- No se agrega navegación al presupuesto completo (solo el vigente consolidado).
+- `src/components/presupuesto/VigenteViewerDialog.tsx` — único archivo a modificar. Sin cambios de datos, props, ni en los tres sheets que lo usan (presupuesto/destajo/subcontrato).

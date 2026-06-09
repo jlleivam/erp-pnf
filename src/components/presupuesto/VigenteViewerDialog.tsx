@@ -3,10 +3,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 
 type Row = {
@@ -27,7 +32,6 @@ export function VigenteViewerDialog({
   vigente,
   total,
   title = "Presupuesto vigente",
-  description = "Vista de solo lectura para usar como referencia.",
 }: {
   open: boolean;
   onClose: () => void;
@@ -48,75 +52,107 @@ export function VigenteViewerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             {title}
+            <Badge>Autorizado</Badge>
             <span className="ml-auto text-base font-semibold">
               {formatMXN(calcTotal)}
             </span>
           </DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        {vigente.length === 0 ? (
-          <Card className="border-dashed p-6 text-center text-sm text-muted-foreground">
-            Sin renglones.
-          </Card>
-        ) : (
-          <Card className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="text-left p-2 w-24">Clave</th>
-                  <th className="text-left p-2">Concepto</th>
-                  <th className="text-left p-2 w-20">Unidad</th>
-                  <th className="text-right p-2 w-24">Cant.</th>
-                  <th className="text-right p-2 w-28">PU</th>
-                  <th className="text-right p-2 w-32">Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vigente.map((r) => (
-                  <tr
-                    key={r.clave}
-                    className={`border-t border-border ${r.es_grupo ? "bg-muted/30 font-medium" : ""}`}
-                  >
-                    <td
-                      className="p-2 tabular-nums"
-                      style={{
-                        paddingLeft: `${0.5 + ((r.nivel ?? 1) - 1) * 1}rem`,
-                      }}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        {r.clave}
-                        {r.origen === "modificada" && (
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                            Mod
-                          </Badge>
-                        )}
-                        {r.origen === "agregada" && (
-                          <Badge className="text-[10px] h-4 px-1">Nuevo</Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-2">{r.concepto}</td>
-                    <td className="p-2 text-muted-foreground">{r.unidad ?? "—"}</td>
-                    <td className="p-2 text-right tabular-nums">
-                      {r.cantidad != null
-                        ? Number(r.cantidad).toLocaleString("es-MX")
-                        : "—"}
-                    </td>
-                    <td className="p-2 text-right tabular-nums">
-                      {r.precio_unitario != null
-                        ? formatMXN(Number(r.precio_unitario))
-                        : "—"}
-                    </td>
-                    <td className="p-2 text-right tabular-nums">
-                      {r.importe != null ? formatMXN(Number(r.importe)) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-        )}
+        <div>
+          {vigente.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin renglones.</p>
+          ) : (
+            <TooltipProvider delayDuration={200}>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-xs table-fixed">
+                  <colgroup>
+                    <col className="w-28" />
+                    <col />
+                    <col className="w-16" />
+                    <col className="w-20" />
+                    <col className="w-24" />
+                    <col className="w-28" />
+                  </colgroup>
+                  <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-2 py-1.5">Clave</th>
+                      <th className="text-left px-2 py-1.5">Concepto</th>
+                      <th className="text-left px-2 py-1.5">Unidad</th>
+                      <th className="text-right px-2 py-1.5">Cantidad</th>
+                      <th className="text-right px-2 py-1.5">PU</th>
+                      <th className="text-right px-2 py-1.5">Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vigente.map((r) => (
+                      <tr
+                        key={r.clave}
+                        className={`border-t border-border ${r.es_grupo ? "bg-muted/30 font-medium" : ""}`}
+                      >
+                        <td
+                          className="px-2 py-1 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis"
+                          style={{
+                            paddingLeft: `${0.5 + ((r.nivel ?? 1) - 1) * 1}rem`,
+                          }}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate">{r.clave}</span>
+                            {r.origen === "modificada" && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] h-4 px-1 shrink-0"
+                              >
+                                Mod
+                              </Badge>
+                            )}
+                            {r.origen === "agregada" && (
+                              <Badge className="text-[10px] h-4 px-1 shrink-0">
+                                Nuevo
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-2 py-1 max-w-0">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="truncate whitespace-nowrap overflow-hidden text-ellipsis cursor-default">
+                                {r.concepto}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              align="start"
+                              className="max-w-md whitespace-normal"
+                            >
+                              {r.concepto}
+                            </TooltipContent>
+                          </Tooltip>
+                        </td>
+                        <td className="px-2 py-1 text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                          {r.unidad ?? "—"}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          {r.cantidad != null
+                            ? Number(r.cantidad).toLocaleString("es-MX")
+                            : "—"}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          {r.precio_unitario != null
+                            ? formatMXN(Number(r.precio_unitario))
+                            : "—"}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                          {r.importe != null ? formatMXN(Number(r.importe)) : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </TooltipProvider>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
