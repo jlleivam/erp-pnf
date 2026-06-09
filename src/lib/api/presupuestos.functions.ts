@@ -278,6 +278,21 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     await recalcularMontoContratado(supabase, pres.obra_id);
+
+    if (pres.tipo === "adenda") {
+      try {
+        await notifyResidenteOC(supabase, {
+          residenteId: pres.enviado_por,
+          actorUserId: userId,
+          obraId: pres.obra_id,
+          tipo: "oc_presupuesto_autorizada",
+          link: `/app/obras/${pres.obra_id}/presupuesto`,
+        });
+      } catch (e: any) {
+        console.error("[notificaciones] oc_presupuesto_autorizada error", e?.message);
+      }
+    }
+
     return { ok: true };
   });
 
