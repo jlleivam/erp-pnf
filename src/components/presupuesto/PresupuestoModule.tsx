@@ -5,8 +5,13 @@ import {
   listPresupuestos,
   crearPresupuesto,
   eliminarPresupuesto,
+  solicitarAutorizacionPresupuesto,
+  autorizarPresupuesto,
+  rechazarPresupuesto,
+  reabrirPresupuesto,
 } from "@/lib/api/presupuestos.functions";
 import { useEffectiveIsDirector } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, FileText, Trash2, Eye } from "lucide-react";
+import { Plus, FileText, Trash2, Eye, Send, Check, X, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { CapturaPresupuestoSheet } from "./CapturaPresupuestoSheet";
 import { CapturaOrdenCambioSheet } from "./CapturaOrdenCambioSheet";
@@ -41,20 +46,55 @@ import { VerVigenteSheet } from "./VerVigenteSheet";
 import { formatMXN } from "@/lib/format";
 const formatCurrency = formatMXN;
 
+type EstatusPresupuesto = "borrador" | "solicitada" | "autorizado" | "rechazada";
+
 type Presupuesto = {
   id: string;
   tipo: "base" | "adenda";
   numero: number;
   nombre: string;
   descripcion: string | null;
-  estatus: "borrador" | "autorizado";
+  estatus: EstatusPresupuesto;
   monto_total: number;
+  enviado_at?: string | null;
+  enviado_por?: string | null;
   autorizado_at: string | null;
+  autorizado_por?: string | null;
+  rechazado_at?: string | null;
+  rechazado_por?: string | null;
+  rechazo_motivo?: string | null;
   created_at: string;
 };
 
+function estatusLabel(e: EstatusPresupuesto) {
+  switch (e) {
+    case "borrador":
+      return "Borrador";
+    case "solicitada":
+      return "Solicitada";
+    case "autorizado":
+      return "Autorizada";
+    case "rechazada":
+      return "Rechazada";
+  }
+}
+
+function estatusVariant(e: EstatusPresupuesto): "default" | "secondary" | "destructive" | "outline" {
+  switch (e) {
+    case "autorizado":
+      return "default";
+    case "solicitada":
+      return "outline";
+    case "rechazada":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
 export function PresupuestoModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
+  const { isResidente, isSupervisor } = useObraRole(obraId);
   const qc = useQueryClient();
   const fetchList = useServerFn(listPresupuestos);
   const listQ = useQuery({
@@ -67,6 +107,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   const [viewing, setViewing] = useState<string | null>(null);
   const [verVigente, setVerVigente] = useState(false);
   const [toDelete, setToDelete] = useState<Presupuesto | null>(null);
+  const [rechazando, setRechazando] = useState<Presupuesto | null>(null);
 
   const remove = useServerFn(eliminarPresupuesto);
   const removeM = useMutation({
@@ -75,6 +116,37 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
       toast.success("Presupuesto eliminado");
       qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
       setToDelete(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const solicitar = useServerFn(solicitarAutorizacionPresupuesto);
+  const solicitarM = useMutation({
+    mutationFn: solicitar,
+    onSuccess: () => {
+      toast.success("Solicitud enviada al supervisor");
+      qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const autorizar = useServerFn(autorizarPresupuesto);
+  const autorizarM = useMutation({
+    mutationFn: autorizar,
+    onSuccess: () => {
+      toast.success("Orden de cambio autorizada");
+      qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
+      qc.invalidateQueries({ queryKey: ["presupuesto-vigente", obraId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reabrir = useServerFn(reabrirPresupuesto);
+  const reabrirM = useMutation({
+    mutationFn: reabrir,
+    onSuccess: () => {
+      toast.success("OC reabierta a borrador");
+      qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -88,6 +160,8 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
     .reduce((s, a) => s + Number(a.monto_total), 0);
   const totalVigente = totalBase + totalAdendas;
 
+  const puedeCrearOC = director || isResidente;
+
   const refresh = () => qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
 
   return (
@@ -96,7 +170,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Presupuesto</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Presupuesto base + órdenes de cambio. Estructura WBS hasta 5 niveles.
+            Presupuesto base + órdenes de cambio. El residente solicita y el supervisor autoriza.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -110,7 +184,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
               <Plus className="size-4 mr-1" /> Crear presupuesto base
             </Button>
           )}
-          {director && base?.estatus === "autorizado" && (
+          {puedeCrearOC && base?.estatus === "autorizado" && (
             <Button variant="outline" onClick={() => setCreating("adenda")}>
               <Plus className="size-4 mr-1" /> Nueva orden de cambio
             </Button>
@@ -161,9 +235,16 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
             <PresupuestoCard
               p={base}
               director={director}
+              isResidente={isResidente}
+              isSupervisor={isSupervisor}
               onView={() => setViewing(base.id)}
               onEdit={() => setEditing({ id: base.id, tipo: "base" })}
               onDelete={() => setToDelete(base)}
+              onSolicitar={() => solicitarM.mutate({ data: { id: base.id } })}
+              onAutorizar={() => autorizarM.mutate({ data: { id: base.id } })}
+              onRechazar={() => setRechazando(base)}
+              onReabrir={() => reabrirM.mutate({ data: { id: base.id } })}
+              busy={solicitarM.isPending || autorizarM.isPending || reabrirM.isPending}
             />
           )}
         </TabsContent>
@@ -179,9 +260,16 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
                 key={a.id}
                 p={a}
                 director={director}
+                isResidente={isResidente}
+                isSupervisor={isSupervisor}
                 onView={() => setViewing(a.id)}
                 onEdit={() => setEditing({ id: a.id, tipo: "adenda" })}
                 onDelete={() => setToDelete(a)}
+                onSolicitar={() => solicitarM.mutate({ data: { id: a.id } })}
+                onAutorizar={() => autorizarM.mutate({ data: { id: a.id } })}
+                onRechazar={() => setRechazando(a)}
+                onReabrir={() => reabrirM.mutate({ data: { id: a.id } })}
+                busy={solicitarM.isPending || autorizarM.isPending || reabrirM.isPending}
               />
             ))
           )}
@@ -259,6 +347,14 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {rechazando && (
+        <RechazarOCDialog
+          presupuesto={rechazando}
+          obraId={obraId}
+          onClose={() => setRechazando(null)}
+        />
+      )}
     </div>
   );
 }
@@ -266,57 +362,118 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
 function PresupuestoCard({
   p,
   director,
+  isResidente,
+  isSupervisor,
   onView,
   onEdit,
   onDelete,
+  onSolicitar,
+  onAutorizar,
+  onRechazar,
+  onReabrir,
+  busy,
 }: {
   p: Presupuesto;
   director: boolean;
+  isResidente: boolean;
+  isSupervisor: boolean;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onSolicitar: () => void;
+  onAutorizar: () => void;
+  onRechazar: () => void;
+  onReabrir: () => void;
+  busy: boolean;
 }) {
-  const label = p.tipo === "base" ? "Presupuesto base" : `Orden de cambio ${p.numero}`;
   const esOC = p.tipo === "adenda";
+  const label = p.tipo === "base" ? "Presupuesto base" : `Orden de cambio ${p.numero}`;
+
+  // Permisos derivados por estado
+  const puedeEditar =
+    p.estatus === "borrador" &&
+    (esOC ? director || isResidente : director);
+  const puedeEliminar =
+    (p.estatus === "borrador" || p.estatus === "rechazada") &&
+    (esOC ? director || isResidente : director);
+  const puedeSolicitar =
+    esOC && p.estatus === "borrador" && (director || isResidente);
+  const puedeAutorizar =
+    esOC
+      ? p.estatus === "solicitada" && (director || isSupervisor)
+      : p.estatus === "borrador" && director;
+  const puedeRechazar =
+    esOC && p.estatus === "solicitada" && (director || isSupervisor);
+  const puedeReabrir =
+    esOC && p.estatus === "rechazada" && (director || isResidente);
+
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-medium">{label}</p>
-            <Badge variant={p.estatus === "autorizado" ? "default" : "secondary"}>
-              {p.estatus === "autorizado" ? "Autorizado" : "Borrador"}
-            </Badge>
+            <Badge variant={estatusVariant(p.estatus)}>{estatusLabel(p.estatus)}</Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">{p.nombre}</p>
           {p.descripcion && (
             <p className="text-xs text-muted-foreground mt-1">{p.descripcion}</p>
+          )}
+          {p.estatus === "rechazada" && p.rechazo_motivo && (
+            <p className="text-xs text-destructive mt-2">
+              <span className="font-medium">Motivo del rechazo:</span> {p.rechazo_motivo}
+            </p>
           )}
         </div>
         <div className="text-right">
           <p className={`text-lg font-semibold ${esOC && Number(p.monto_total) < 0 ? "text-destructive" : ""}`}>
             {esOC ? "Δ " : ""}{formatCurrency(p.monto_total)}
           </p>
-          {p.autorizado_at && (
+          {p.autorizado_at && p.estatus === "autorizado" && (
             <p className="text-xs text-muted-foreground mt-1">
-              Autorizado: {new Date(p.autorizado_at).toLocaleDateString("es-MX")}
+              Autorizada: {new Date(p.autorizado_at).toLocaleDateString("es-MX")}
+            </p>
+          )}
+          {p.enviado_at && p.estatus === "solicitada" && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Solicitada: {new Date(p.enviado_at).toLocaleDateString("es-MX")}
             </p>
           )}
         </div>
       </div>
-      <div className="flex gap-2 mt-4">
+      <div className="flex flex-wrap gap-2 mt-4">
         <Button size="sm" variant="outline" onClick={onView}>
           <FileText className="size-4 mr-1" /> Ver
         </Button>
-        {director && p.estatus === "borrador" && (
-          <>
-            <Button size="sm" onClick={onEdit}>
-              Editar / Autorizar
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onDelete}>
-              <Trash2 className="size-4" />
-            </Button>
-          </>
+        {puedeEditar && (
+          <Button size="sm" onClick={onEdit}>
+            Editar
+          </Button>
+        )}
+        {puedeSolicitar && (
+          <Button size="sm" variant="secondary" onClick={onSolicitar} disabled={busy}>
+            <Send className="size-4 mr-1" /> Solicitar autorización
+          </Button>
+        )}
+        {puedeAutorizar && (
+          <Button size="sm" onClick={onAutorizar} disabled={busy}>
+            <Check className="size-4 mr-1" /> Autorizar
+          </Button>
+        )}
+        {puedeRechazar && (
+          <Button size="sm" variant="destructive" onClick={onRechazar} disabled={busy}>
+            <X className="size-4 mr-1" /> Rechazar
+          </Button>
+        )}
+        {puedeReabrir && (
+          <Button size="sm" variant="outline" onClick={onReabrir} disabled={busy}>
+            <RotateCcw className="size-4 mr-1" /> Volver a borrador
+          </Button>
+        )}
+        {puedeEliminar && (
+          <Button size="sm" variant="ghost" onClick={onDelete}>
+            <Trash2 className="size-4" />
+          </Button>
         )}
       </div>
     </Card>
@@ -389,6 +546,61 @@ function CrearPresupuestoDialog({
             }
           >
             {m.isPending ? "Creando…" : "Crear"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RechazarOCDialog({
+  presupuesto,
+  obraId,
+  onClose,
+}: {
+  presupuesto: Presupuesto;
+  obraId: string;
+  onClose: () => void;
+}) {
+  const [motivo, setMotivo] = useState("");
+  const qc = useQueryClient();
+  const rechazar = useServerFn(rechazarPresupuesto);
+  const m = useMutation({
+    mutationFn: rechazar,
+    onSuccess: () => {
+      toast.success("OC rechazada");
+      qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rechazar orden de cambio</DialogTitle>
+          <DialogDescription>
+            {presupuesto.nombre}. El residente podrá volver a borrador para corregir.
+          </DialogDescription>
+        </DialogHeader>
+        <div>
+          <Label>Motivo del rechazo</Label>
+          <Textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Explica al residente qué debe corregir…"
+            rows={4}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            variant="destructive"
+            disabled={m.isPending || motivo.trim().length < 3}
+            onClick={() => m.mutate({ data: { id: presupuesto.id, motivo: motivo.trim() } })}
+          >
+            {m.isPending ? "Rechazando…" : "Rechazar"}
           </Button>
         </DialogFooter>
       </DialogContent>
