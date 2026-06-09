@@ -141,8 +141,8 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
                   <td className="p-3 tabular-nums">{e.numero}</td>
                   <td className="p-3">{formatRangoSemana(e.semana_inicio, e.semana_fin)}</td>
                   <td className="p-3">
-                    <Badge variant={e.estatus === "cerrada" ? "default" : "secondary"}>
-                      {e.estatus === "cerrada" ? "Cerrada" : "Borrador"}
+                    <Badge variant={esActiva(e) ? "secondary" : "default"}>
+                      {esActiva(e) ? "Activa" : "Cerrada"}
                     </Badge>
                   </td>
                   <td className="p-3 text-right tabular-nums font-medium">
@@ -153,12 +153,12 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
                       <Button size="sm" variant="outline" onClick={() => setViewing(e.id)}>
                         <FileText className="size-4 mr-1" /> Ver
                       </Button>
-                      {esEditable(e) && (
+                      {esActiva(e) && (
                         <Button size="sm" onClick={() => setEditing(e.semana_inicio)}>
                           Editar
                         </Button>
                       )}
-                      {e.estatus === "borrador" && director && (
+                      {esActiva(e) && director && (
                         <Button
                           size="sm"
                           variant="ghost"
