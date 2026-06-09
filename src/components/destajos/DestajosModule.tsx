@@ -5,7 +5,8 @@ import {
   listDestajos,
   eliminarDestajo,
 } from "@/lib/api/destajos.functions";
-import { useEffectiveIsDirector, useEffectiveRoles } from "@/stores/auth";
+import { useEffectiveIsDirector } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
