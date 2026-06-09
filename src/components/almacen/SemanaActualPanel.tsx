@@ -12,6 +12,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
+} from "@/components/ui/tooltip";
 import { formatDate, formatMXN } from "@/lib/format";
 import { getSemanaActual, actualizarUtilizado, cerrarSemana } from "@/lib/api/almacen.functions";
 
@@ -60,92 +63,88 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
   );
 
   return (
-    <div className="space-y-3">
-      <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">Semana</span>
-            <Badge className="bg-emerald-100 text-emerald-800">Abierta</Badge>
+    <TooltipProvider>
+      <div className="space-y-3">
+        <Card className="p-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Semana</span>
+              <Badge className="bg-emerald-100 text-emerald-800 text-xs">Abierta</Badge>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {formatDate(data.semana.semana_inicio)} – {formatDate(data.semana.semana_fin)}
+            </span>
+            {items.length > 0 && (
+              <span className="text-xs text-muted-foreground flex gap-3 ml-2">
+                <span>Recibido: <span className="font-medium text-foreground">{formatMXN(totRecibido)}</span></span>
+                <span>Utilizado: <span className="font-medium text-foreground">{formatMXN(totUtilizado)}</span></span>
+              </span>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {formatDate(data.semana.semana_inicio)} – {formatDate(data.semana.semana_fin)}
-          </p>
-        </div>
-        <Button onClick={() => setCerrarOpen(true)} disabled={items.length === 0}>
-          <Lock className="size-4 mr-2" /> Cerrar semana
-        </Button>
-      </Card>
+          <Button size="sm" onClick={() => setCerrarOpen(true)} disabled={items.length === 0}>
+            <Lock className="size-3.5 mr-1.5" /> Cerrar semana
+          </Button>
+        </Card>
 
-      <Card>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Insumo</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>Unidad</TableHead>
-                <TableHead className="text-right">PU</TableHead>
-                <TableHead className="text-right">Inv. inicial</TableHead>
-                <TableHead className="text-right">Recibido</TableHead>
-                <TableHead className="text-right">Utilizado</TableHead>
-                <TableHead className="text-right">Inv. final</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((m: any) => (
-                <MovRow
-                  key={m.id}
-                  mov={m}
-                  onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
-                />
-              ))}
-              {items.length === 0 && (
+        <Card>
+          <div className="overflow-x-auto">
+            <Table className="text-sm">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    Aún no hay material en el almacén esta semana. Registra recepciones desde la pestaña "Por recibir".
-                  </TableCell>
+                  <TableHead className="text-xs uppercase tracking-wide py-1.5 px-2">Insumo</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Proveedor</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Unidad</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">PU</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Inv. inicial</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Recibido</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Utilizado</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-center py-1.5 px-2">Inv. final</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        {items.length > 0 && (
-          <div className="border-t p-3 flex flex-wrap gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">Valor recibido: </span>
-              <span className="font-medium">{formatMXN(totRecibido)}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Valor utilizado: </span>
-              <span className="font-medium">{formatMXN(totUtilizado)}</span>
-            </div>
+              </TableHeader>
+              <TableBody>
+                {items.map((m: any) => (
+                  <MovRow
+                    key={m.id}
+                    mov={m}
+                    onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
+                  />
+                ))}
+                {items.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                      Aún no hay material en el almacén esta semana. Registra recepciones desde la pestaña "Por recibir".
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </Card>
+        </Card>
 
-      <AlertDialog open={cerrarOpen} onOpenChange={setCerrarOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cerrar la semana</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se marcará como cerrada y el inventario final de cada insumo será el inventario inicial de la siguiente semana. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                cerrarMut.mutate(data.semana.id);
-              }}
-              disabled={cerrarMut.isPending}
-            >
-              {cerrarMut.isPending ? "Cerrando…" : "Cerrar semana"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={cerrarOpen} onOpenChange={setCerrarOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cerrar la semana</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se marcará como cerrada y el inventario final de cada insumo será el inventario inicial de la siguiente semana. Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  cerrarMut.mutate(data.semana.id);
+                }}
+                disabled={cerrarMut.isPending}
+              >
+                {cerrarMut.isPending ? "Cerrando…" : "Cerrar semana"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -155,16 +154,32 @@ function MovRow({ mov, onSave }: { mov: any; onSave: (utilizado: number) => void
   const final = Number(mov.inv_inicial) + Number(mov.recibido) - (Number(val) || 0);
   const max = Number(mov.inv_inicial) + Number(mov.recibido);
   const overflow = Number(val) > max + 1e-6;
+  const insumoNombre = mov.insumo?.nombre ?? "—";
+  const proveedor = mov.proveedor || "—";
 
   return (
     <TableRow>
-      <TableCell>{mov.insumo?.nombre ?? "—"}</TableCell>
-      <TableCell className="text-muted-foreground">{mov.proveedor || "—"}</TableCell>
-      <TableCell className="text-muted-foreground">{mov.insumo?.unidad ?? "—"}</TableCell>
-      <TableCell className="text-right">{formatMXN(Number(mov.precio_unitario))}</TableCell>
-      <TableCell className="text-right">{Number(mov.inv_inicial)}</TableCell>
-      <TableCell className="text-right">{Number(mov.recibido)}</TableCell>
-      <TableCell className="text-right">
+      <TableCell className="py-1.5 px-2 whitespace-nowrap">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate max-w-[180px] block cursor-default">{insumoNombre}</span>
+          </TooltipTrigger>
+          <TooltipContent side="top">{insumoNombre}</TooltipContent>
+        </Tooltip>
+      </TableCell>
+      <TableCell className="py-1.5 px-2 text-center text-muted-foreground whitespace-nowrap">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate max-w-[140px] inline-block align-middle cursor-default">{proveedor}</span>
+          </TooltipTrigger>
+          <TooltipContent side="top">{proveedor}</TooltipContent>
+        </Tooltip>
+      </TableCell>
+      <TableCell className="py-1.5 px-2 text-center text-muted-foreground whitespace-nowrap">{mov.insumo?.unidad ?? "—"}</TableCell>
+      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{formatMXN(Number(mov.precio_unitario))}</TableCell>
+      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{Number(mov.inv_inicial)}</TableCell>
+      <TableCell className="py-1.5 px-2 text-center tabular-nums whitespace-nowrap">{Number(mov.recibido)}</TableCell>
+      <TableCell className="py-1.5 px-2 text-center whitespace-nowrap">
         <Input
           type="number"
           step="0.01"
@@ -177,10 +192,10 @@ function MovRow({ mov, onSave }: { mov: any; onSave: (utilizado: number) => void
             if (n === Number(mov.utilizado)) return;
             onSave(n);
           }}
-          className={`h-8 w-24 text-right ml-auto ${overflow ? "border-rose-500" : ""}`}
+          className={`h-7 w-20 text-center mx-auto tabular-nums ${overflow ? "border-rose-500" : ""}`}
         />
       </TableCell>
-      <TableCell className={`text-right font-medium ${final < 0 ? "text-rose-600" : ""}`}>
+      <TableCell className={`py-1.5 px-2 text-center tabular-nums font-medium whitespace-nowrap ${final < 0 ? "text-rose-600" : ""}`}>
         {final}
       </TableCell>
     </TableRow>
