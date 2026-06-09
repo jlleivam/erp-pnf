@@ -6,7 +6,7 @@ import {
   getVigenteSubcontrato,
   guardarRenglonesOCSubcontrato,
 } from "@/lib/api/subcontratos.functions";
-import { procesarOrdenCambio, type OCInput } from "@/lib/presupuesto-utils";
+import { procesarOrdenCambio, calcularClavesPadre, type OCInput } from "@/lib/presupuesto-utils";
 import {
   Sheet,
   SheetContent,
@@ -114,6 +114,11 @@ export function CapturaOrdenCambioSubcontratoSheet({
     return map;
   }, [calc.errores]);
 
+  const clavesPadre = useMemo(
+    () => calcularClavesPadre(rows.map((r) => r.clave)),
+    [rows],
+  );
+
   const guardar = useServerFn(guardarRenglonesOCSubcontrato);
   const guardarM = useMutation({
     mutationFn: guardar,
@@ -209,11 +214,16 @@ export function CapturaOrdenCambioSubcontratoSheet({
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const errs = erroresPorClave.get(r.clave.trim()) ?? [];
+                    const claveTrim = r.clave.trim();
+                    const errs = erroresPorClave.get(claveTrim) ?? [];
+                    const esPadre = claveTrim !== "" && clavesPadre.has(claveTrim);
+                    const bloqueaCampos = esPadre || r.tipo_movimiento === "eliminacion";
                     return (
                       <tr
                         key={r._id}
-                        className={`border-t border-border ${errs.length ? "bg-destructive/5" : ""}`}
+                        className={`border-t border-border ${
+                          errs.length ? "bg-destructive/5" : esPadre ? "bg-accent/40 font-medium" : ""
+                        }`}
                       >
                         <td className="p-1">
                           <Input
@@ -254,42 +264,57 @@ export function CapturaOrdenCambioSubcontratoSheet({
                           {errs.length > 0 && (
                             <p className="text-xs text-destructive mt-1">{errs.join(" · ")}</p>
                           )}
+                          {esPadre && errs.length === 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Partida — suma de sus conceptos
+                            </p>
+                          )}
                         </td>
-                        <td className="p-1">
-                          <Input
-                            value={r.unidad ?? ""}
-                            disabled={!editable || r.tipo_movimiento === "eliminacion"}
-                            onChange={(e) => updateRow(r._id, { unidad: e.target.value })}
-                            className="h-8"
-                          />
-                        </td>
-                        <td className="p-1">
-                          <Input
-                            type="number"
-                            value={r.cantidad ?? ""}
-                            disabled={!editable || r.tipo_movimiento === "eliminacion"}
-                            onChange={(e) =>
-                              updateRow(r._id, {
-                                cantidad: e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                            className="h-8 text-right"
-                          />
-                        </td>
-                        <td className="p-1">
-                          <Input
-                            type="number"
-                            value={r.precio_unitario ?? ""}
-                            disabled={!editable || r.tipo_movimiento === "eliminacion"}
-                            onChange={(e) =>
-                              updateRow(r._id, {
-                                precio_unitario:
-                                  e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                            className="h-8 text-right"
-                          />
-                        </td>
+                        {bloqueaCampos ? (
+                          <>
+                            <td className="p-2 text-center text-muted-foreground">—</td>
+                            <td className="p-2 text-center text-muted-foreground">—</td>
+                            <td className="p-2 text-center text-muted-foreground">—</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="p-1">
+                              <Input
+                                value={r.unidad ?? ""}
+                                disabled={!editable}
+                                onChange={(e) => updateRow(r._id, { unidad: e.target.value })}
+                                className="h-8"
+                              />
+                            </td>
+                            <td className="p-1">
+                              <Input
+                                type="number"
+                                value={r.cantidad ?? ""}
+                                disabled={!editable}
+                                onChange={(e) =>
+                                  updateRow(r._id, {
+                                    cantidad: e.target.value === "" ? null : Number(e.target.value),
+                                  })
+                                }
+                                className="h-8 text-right"
+                              />
+                            </td>
+                            <td className="p-1">
+                              <Input
+                                type="number"
+                                value={r.precio_unitario ?? ""}
+                                disabled={!editable}
+                                onChange={(e) =>
+                                  updateRow(r._id, {
+                                    precio_unitario:
+                                      e.target.value === "" ? null : Number(e.target.value),
+                                  })
+                                }
+                                className="h-8 text-right"
+                              />
+                            </td>
+                          </>
+                        )}
                         <td className="p-1 text-right">
                           {editable && (
                             <Button
