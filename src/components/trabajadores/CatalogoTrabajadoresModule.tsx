@@ -345,7 +345,7 @@ export function CatalogoTrabajadoresModule() {
                   {r.estatus_autorizacion === "autorizado" ? (
                     <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700">
                       <span className="size-1.5 rounded-full bg-emerald-500" />
-                      Autorizado
+                      Registrado
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
