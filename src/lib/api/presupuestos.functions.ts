@@ -64,7 +64,7 @@ export const listPresupuestos = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("obra_presupuestos")
-      .select("id, tipo, numero, nombre, descripcion, estatus, monto_total, autorizado_at, created_at")
+      .select("id, tipo, numero, nombre, descripcion, estatus, monto_total, enviado_at, enviado_por, autorizado_at, autorizado_por, rechazado_at, rechazado_por, rechazo_motivo, created_at")
       .eq("obra_id", data.obraId)
       .order("tipo", { ascending: true })
       .order("numero", { ascending: true });
