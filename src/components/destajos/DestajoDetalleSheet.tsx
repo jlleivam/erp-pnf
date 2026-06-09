@@ -8,6 +8,9 @@ import {
   autorizarPresupuestoDestajo,
   rechazarPresupuestoDestajo,
   reabrirPresupuestoDestajo,
+  actualizarTerminosDestajo,
+  getDestajoAnticipo,
+  marcarAnticipoPagado,
 } from "@/lib/api/destajos.functions";
 import {
   Sheet,
