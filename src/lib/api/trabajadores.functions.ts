@@ -324,11 +324,36 @@ export const autorizarTrabajador = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { roles } = await getMyContext(supabase, userId);
     if (!canManage(roles)) throw new Error("No tienes permisos para esta acción");
+
+    const { data: tr } = await supabase
+      .from("trabajadores")
+      .select("creado_por, nombre_completo, company_id")
+      .eq("id", data.id)
+      .maybeSingle();
+
     const { error } = await supabase
       .from("trabajadores")
       .update({ estatus_autorizacion: "autorizado" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    if (tr?.creado_por && tr.creado_por !== userId) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert({
+          user_id: tr.creado_por,
+          company_id: tr.company_id,
+          tipo: "trabajador_alta_autorizada",
+          titulo: "Trabajador autorizado",
+          mensaje: `${tr.nombre_completo} ya fue registrado y autorizado. Ya puedes asignarlo a la nómina semanal.`,
+          link: `/app/catalogos/trabajadores?id=${data.id}`,
+        });
+        if (notifErr) console.error("[notificaciones] autorizado insert failed", notifErr.message);
+      } catch (e: any) {
+        console.error("[notificaciones] trabajador_alta_autorizada error", e?.message);
+      }
+    }
+
     return { ok: true };
   });
 
