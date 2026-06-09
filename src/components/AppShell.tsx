@@ -12,7 +12,8 @@ import {
   LogOut,
   ChevronDown,
   HardHat,
-
+  FileText,
+  Wallet,
   ShieldCheck,
   Receipt,
   ClipboardList,
@@ -275,6 +276,19 @@ export function AppShell() {
           pathname={pathname}
           variant="scroll"
           items={obraNavItems}
+        />
+      ) : showAdmin ? (
+        <MobileBottomBar
+          pathname={pathname}
+          variant="scroll"
+          items={[
+            { to: "/app/admin/cuentas-por-pagar", label: "Cuentas", icon: FileText },
+            { to: "/app/admin/nomina", label: "Nómina", icon: Users },
+            { to: "/app", label: "Obras", icon: HardHat, exact: true },
+            { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
+            { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
+            { to: "/app/admin/gastos-oficina", label: "Gastos", icon: Receipt },
+          ] satisfies BottomBarItem[]}
         />
       ) : (
         <MobileBottomBar
