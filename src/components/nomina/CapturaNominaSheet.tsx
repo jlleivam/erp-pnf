@@ -524,8 +524,8 @@ function AsignarTrabajadoresDialog({
     }
     if (!canManage) return;
     const nuevos: string[] = [];
-    idsActuales.forEach((id) => {
-      if (!idsPrevios.has(id)) nuevos.push(id);
+    lista.forEach((t) => {
+      if (!idsPrevios.has(t.id) && t.estatus_autorizacion !== "pendiente") nuevos.push(t.id);
     });
     if (nuevos.length > 0) {
       setSeleccionados((prev) => {
