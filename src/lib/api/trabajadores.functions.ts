@@ -164,7 +164,9 @@ export const getTrabajador = createServerFn({ method: "POST" })
 // =============== CREATE ===============
 export const crearTrabajador = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => trabajadorFieldsSchema.parse(d))
+  .inputValidator((d: unknown) =>
+    trabajadorFieldsSchema.extend({ obraId: z.string().uuid().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, roles } = await getMyContext(supabase, userId);
@@ -220,14 +222,14 @@ export const crearTrabajador = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Notificar a administradores/director si es una solicitud pendiente
-    if (estatus_autorizacion === "pendiente") {
+    // Notificar al administrador de la obra si es una solicitud pendiente
+    if (estatus_autorizacion === "pendiente" && data.obraId) {
       try {
         const { data: admins } = await supabase
-          .from("user_roles")
+          .from("obra_team")
           .select("user_id")
-          .eq("company_id", companyId)
-          .in("role", ["administrativo", "director"]);
+          .eq("obra_id", data.obraId)
+          .eq("role", "administrativo");
         const destinatarios = Array.from(
           new Set((admins ?? []).map((a: any) => a.user_id as string).filter((u) => u !== userId)),
         );
@@ -243,7 +245,7 @@ export const crearTrabajador = createServerFn({ method: "POST" })
             destinatarios.map((uid) => ({
               user_id: uid,
               company_id: companyId,
-              obra_id: null,
+              obra_id: data.obraId,
               tipo: "trabajador_alta_solicitada",
               titulo: "Solicitud de alta de trabajador",
               mensaje: `${quien} solicitó dar de alta a ${data.nombre_completo}. Completa su registro y alta ante el IMSS.`,

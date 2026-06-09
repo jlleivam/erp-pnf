@@ -71,11 +71,13 @@ export function TrabajadorFormDialog({
   onClose,
   initial,
   canManage,
+  obraId,
 }: {
   open: boolean;
   onClose: () => void;
   initial?: TrabajadorFormInitial | null;
   canManage: boolean;
+  obraId?: string;
 }) {
   const isEdit = !!initial?.id;
   const [f, setF] = useState<TrabajadorFormInitial>(initial ?? EMPTY);
@@ -141,7 +143,7 @@ export function TrabajadorFormDialog({
     if (isEdit && initial?.id) {
       updateM.mutate({ data: { ...payload, id: initial.id } });
     } else {
-      createM.mutate({ data: payload });
+      createM.mutate({ data: obraId ? { ...payload, obraId } : payload });
     }
   };
 

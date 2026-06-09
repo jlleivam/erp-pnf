@@ -619,6 +619,7 @@ function AsignarTrabajadoresDialog({
         <TrabajadorFormDialog
           open
           canManage={canManage}
+          obraId={obraId}
           onClose={() => {
             setNuevoOpen(false);
             dispQ.refetch();
