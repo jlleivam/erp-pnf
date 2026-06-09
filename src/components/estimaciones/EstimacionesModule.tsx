@@ -75,6 +75,9 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
     .filter((e) => e.estatus === "cerrada")
     .reduce((s, e) => s + Number(e.monto_total), 0);
   const borrador = estimaciones.find((e) => e.estatus === "borrador");
+  const semanaActual = calcularSemana(new Date()).inicio;
+  const esEditable = (e: Estimacion) =>
+    e.estatus === "borrador" && e.semana_inicio === semanaActual;
 
   return (
     <div className="space-y-6">
@@ -86,15 +89,9 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          {borrador ? (
-            <Button onClick={() => setEditing(borrador.semana_inicio)}>
-              Continuar borrador
-            </Button>
-          ) : (
-            <Button onClick={() => setOpenNueva(true)}>
-              <Plus className="size-4 mr-1" /> Nueva estimación
-            </Button>
-          )}
+          <Button onClick={() => setOpenNueva(true)}>
+            <Plus className="size-4 mr-1" /> Nueva estimación
+          </Button>
         </div>
       </header>
 
