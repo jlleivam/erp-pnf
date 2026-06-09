@@ -134,17 +134,17 @@ export function DestajosModule({ obraId }: { obraId: string }) {
           Aún no hay destajos. Crea uno para comenzar.
         </Card>
       ) : (
-        <Card className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+        <Card>
+          <table className="w-full text-sm table-fixed">
+            <thead className="bg-muted/50 text-[11px] uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="text-left p-3 w-12">#</th>
-                <th className="text-left p-3">Destajo</th>
-                <th className="text-left p-3">Destajista</th>
-                <th className="text-left p-3 w-44">Estatus</th>
-                <th className="text-right p-3 w-36">Contratado</th>
-                <th className="text-right p-3 w-36">Pagado</th>
-                <th className="text-right p-3 w-44">Acciones</th>
+                <th className="text-left py-1.5 px-2 w-10">#</th>
+                <th className="text-left py-1.5 px-2">Destajo</th>
+                <th className="text-left py-1.5 px-2 w-32">Destajista</th>
+                <th className="text-left py-1.5 px-2 w-28">Estatus</th>
+                <th className="text-right py-1.5 px-2 w-28">Contratado</th>
+                <th className="text-right py-1.5 px-2 w-28">Pagado</th>
+                <th className="text-right py-1.5 px-2 w-20">Acc.</th>
               </tr>
             </thead>
             <tbody>
@@ -154,31 +154,31 @@ export function DestajosModule({ obraId }: { obraId: string }) {
                   : 0;
                 return (
                   <tr key={d.id} className="border-t border-border">
-                    <td className="py-2 px-3 tabular-nums">{d.numero}</td>
-                    <td className="py-2 px-3">
+                    <td className="py-1.5 px-2 tabular-nums">{d.numero}</td>
+                    <td className="py-1.5 px-2">
                       <p className="font-medium truncate" title={d.descripcion ?? undefined}>{d.nombre}</p>
                     </td>
-                    <td className="py-2 px-3 whitespace-nowrap">{d.destajista_nombre}</td>
-                    <td className="py-2 px-3">
-                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]} className="whitespace-nowrap">
+                    <td className="py-1.5 px-2 truncate">{d.destajista_nombre}</td>
+                    <td className="py-1.5 px-2">
+                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]} className="whitespace-nowrap text-[10px] py-0 px-1.5 h-5">
                         {ESTATUS_LABEL[d.estatus_base]}
                       </Badge>
                     </td>
-                    <td className="py-2 px-3 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
-                    <td className="py-2 px-3 text-right tabular-nums">
+                    <td className="py-1.5 px-2 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">
                       {formatMXN(d.pagado_acumulado)}
                       {d.monto_total > 0 && (
-                        <div className="text-xs text-muted-foreground">{pct.toFixed(0)}%</div>
+                        <span className="text-[10px] text-muted-foreground ml-1">{pct.toFixed(0)}%</span>
                       )}
                     </td>
-                    <td className="py-2 px-3 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setViewingId(d.id)}>
-                          <Eye className="size-4 mr-1" /> Abrir
+                    <td className="py-1.5 px-2 text-right">
+                      <div className="flex gap-1 justify-end">
+                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setViewingId(d.id)}>
+                          <Eye className="size-3.5" />
                         </Button>
                         {director && d.estatus_base === "borrador" && d.pagado_acumulado === 0 && (
-                          <Button size="sm" variant="ghost" onClick={() => setToDelete(d)}>
-                            <Trash2 className="size-4" />
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setToDelete(d)}>
+                            <Trash2 className="size-3.5" />
                           </Button>
                         )}
                       </div>
