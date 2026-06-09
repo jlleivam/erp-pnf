@@ -175,6 +175,13 @@ export function CapturaOrdenCambioSheet({
     return m;
   }, [calc]);
 
+  // Claves padre dentro de las adiciones (al combinar vigente + adiciones, una adición
+  // puede convertirse en partida si otra adición la usa como prefijo).
+  const clavesPadreAdds = useMemo(
+    () => calcularClavesPadre(adds.map((r) => r.clave)),
+    [adds],
+  );
+
   // ====== Mutations ======
   const guardar = useServerFn(guardarRenglonesOC);
   const guardarM = useMutation({
