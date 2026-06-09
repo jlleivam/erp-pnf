@@ -125,7 +125,7 @@ export function TrabajadorDetalle({
                     onClick={() => autorizarM.mutate({ data: { id: t.id } })}
                     disabled={autorizarM.isPending}
                   >
-                    <CheckCircle2 className="size-4 mr-1" /> Autorizar
+                    <CheckCircle2 className="size-4 mr-1" /> Registrar
                   </Button>
                 )}
                 {canManage && t && (
