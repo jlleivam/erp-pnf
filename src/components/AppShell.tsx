@@ -26,6 +26,7 @@ import {
   Coins,
   ListTodo,
   BarChart3,
+  Scale,
 } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -280,12 +281,14 @@ export function AppShell() {
       ) : showAdmin ? (
         <MobileBottomBar
           pathname={pathname}
+          variant="scroll"
           items={[
             { to: "/app/admin/cuentas-por-pagar", label: "CXP", icon: FileText },
             { to: "/app/admin/nomina", label: "Nómina", icon: Users },
             { to: "/app", label: "Obras", icon: HardHat, exact: true },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
+            { to: "/app/admin/contabilidad", label: "Contabilidad", icon: Scale },
             { to: "/app/admin/gastos-oficina", label: "Gastos", icon: Receipt },
           ] satisfies BottomBarItem[]}
         />
