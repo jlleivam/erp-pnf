@@ -1,23 +1,44 @@
 ## Problema
 
-`NotificacionesBell.handleOpen` hace `navigate({ to: n.link })` con `n.link = "/app/obras/<id>/destajos?destajo=<id>"`. TanStack Router trata `to` como pathname; el `?destajo=...` no se interpreta como search params y se pierde (o el path queda como literal y no matchea la ruta). Por eso al hacer clic se navega a destajos pero sin el query `?destajo=` que `DestajosModule` necesita para abrir el `DestajoDetalleSheet`.
+Después del fix anterior, la URL llega a `/app/obras/<id>/destajos` pero sin el `?destajo=<id>`. Causa: la ruta splat `/_authenticated/app/obras/$obraId/$` no declara `validateSearch`, así que TanStack Router descarta cualquier search param desconocido en `navigate()`. El `?destajo=` nunca se conserva, y el `useEffect` de `DestajosModule` (que además lee `window.location.search` solo al montar) no encuentra nada.
 
-Esto también explica por qué (silenciosamente) las otras notificaciones de destajo solicitado/autorizado/rechazado tampoco abren el detalle pese a usar el mismo patrón.
+## Cambios
 
-## Cambio
+### 1. `src/routes/_authenticated/app.obras.$obraId.$.tsx`
 
-En `src/components/NotificacionesBell.tsx`, dentro de `handleOpen`, separar pathname y search antes de navegar:
+Agregar `validateSearch` para conservar `destajo`:
 
 ```tsx
-const handleOpen = (n: any) => {
-  if (!n.leida_at) markOne.mutate(n.id);
-  if (!n.link) return;
-  const url = new URL(n.link, window.location.origin);
-  const search = Object.fromEntries(url.searchParams.entries());
-  navigate({ to: url.pathname as any, search: search as any });
-};
+export const Route = createFileRoute("/_authenticated/app/obras/$obraId/$")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    destajo: typeof s.destajo === "string" ? s.destajo : undefined,
+  }),
+  component: ObraModule,
+});
 ```
 
-Con esto, al abrir una notificación cuyo link incluye `?destajo=<id>`, el query llega a la URL, `DestajosModule` lo lee en su `useEffect` de montaje y abre automáticamente el `DestajoDetalleSheet` correspondiente.
+### 2. `src/components/destajos/DestajosModule.tsx`
 
-No requiere cambios en `destajos.functions.ts` ni en `DestajosModule.tsx`.
+Reemplazar la lectura por `window.location.search` por el search tipado del router, para que también reaccione si el parámetro llega después del montaje:
+
+```tsx
+import { useSearch, useNavigate } from "@tanstack/react-router";
+...
+const search = useSearch({ strict: false }) as { destajo?: string };
+const navigate = useNavigate();
+
+useEffect(() => {
+  if (search.destajo) {
+    setViewingId(search.destajo);
+    navigate({
+      to: ".",
+      search: (prev: any) => ({ ...prev, destajo: undefined }),
+      replace: true,
+    });
+  }
+}, [search.destajo]);
+```
+
+Eliminar el `useEffect` previo basado en `window.location.search`.
+
+No requiere cambios en `NotificacionesBell.tsx`, en `destajos.functions.ts`, ni en la base de datos (las notificaciones existentes ya guardan el link correcto `/app/obras/<obraId>/destajos?destajo=<destajoId>`).
