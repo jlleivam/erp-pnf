@@ -254,8 +254,9 @@ export function DestajoDetalleSheet({
               </TabsContent>
 
               <TabsContent value="estimaciones" className="mt-4">
-                <EstimacionesDestajoTab destajoId={destajoId} />
+                <EstimacionesDestajoTab destajoId={destajoId} obraId={destajo?.obra_id ?? null} />
               </TabsContent>
+
             </Tabs>
           </div>
         )}
