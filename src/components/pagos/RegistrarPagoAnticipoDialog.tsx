@@ -28,7 +28,11 @@ type Metodo = "efectivo" | "transferencia" | "cheque";
 
 interface Props {
   destajoId: string;
-  destajoLabel: string;
+  destajoNombre: string;
+  destajistaNombre: string;
+  folio: string | null;
+  montoTotalContrato: number;
+  anticipoPct: number;
   monto: number;
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -36,8 +40,9 @@ interface Props {
 }
 
 export function RegistrarPagoAnticipoDialog({
-  destajoId, destajoLabel, monto, open, onOpenChange, onSaved,
+  destajoId, destajoNombre, destajistaNombre, folio, montoTotalContrato, anticipoPct, monto, open, onOpenChange, onSaved,
 }: Props) {
+
   const hoy = new Date().toISOString().slice(0, 10);
   const fetchCuentas = useServerFn(listCuentas);
   const pagarFn = useServerFn(pagarAnticipoDestajo);
