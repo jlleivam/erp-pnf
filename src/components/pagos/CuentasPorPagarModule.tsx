@@ -43,10 +43,21 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchSaldos(),
   });
 
+  const fetchAnticiposCount = useServerFn(listAnticiposDestajoPendientes);
+  const anticiposCountQ = useQuery({
+    queryKey: ["anticipos-destajo-pendientes"],
+    queryFn: () => fetchAnticiposCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
   const totalGeneral = rows.reduce((s, r) => s + r.saldo_pendiente, 0);
+
+  const ocPendientesCount = ((saldosQ.data ?? []) as Row[])
+    .filter((r) => r.saldo_pendiente > 0).length;
+  const anticiposPendientesCount = ((anticiposCountQ.data ?? []) as unknown[]).length;
+
 
   return (
     <div className="space-y-6">
