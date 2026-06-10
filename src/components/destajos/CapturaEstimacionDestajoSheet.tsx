@@ -422,21 +422,28 @@ export function CapturaEstimacionDestajoSheet({
                     />
                   )}
                   {terminos.fondo_garantia_pct > 0 && !isCerrada && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs flex-1">
-                        (+) Liberar fondo en esta semana
-                      </span>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        min={0}
-                        max={computed.fondoDisponible}
-                        value={liberacionFondo}
-                        onChange={(e) => setLiberacionFondo(e.target.value)}
-                        className="h-8 w-32 text-right tabular-nums"
-                        placeholder="0.00"
-                      />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs flex-1">
+                          (+) Liberar fondo en esta semana
+                        </span>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min={0}
+                          max={computed.fondoDisponible}
+                          value={liberacionFondo}
+                          onChange={(e) => setLiberacionFondo(e.target.value)}
+                          className={`h-8 w-32 text-right tabular-nums ${computed.excedeLiberacion ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      {computed.excedeLiberacion && (
+                        <p className="text-[11px] text-destructive text-right">
+                          Excede el fondo disponible ({formatMXN(computed.fondoDisponible)}).
+                        </p>
+                      )}
                     </div>
                   )}
                   {terminos.fondo_garantia_pct > 0 && isCerrada && computed.liberacion > 0 && (
