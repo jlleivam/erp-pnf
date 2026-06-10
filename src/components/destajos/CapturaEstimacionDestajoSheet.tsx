@@ -477,7 +477,7 @@ export function CapturaEstimacionDestajoSheet({
                   {guardarM.isPending ? "Guardando…" : "Guardar borrador"}
                 </Button>
                 <Button
-                  disabled={guardarM.isPending || cerrarM.isPending}
+                  disabled={guardarM.isPending || cerrarM.isPending || computed.excedeLiberacion}
                   onClick={() => handleGuardar(true)}
                 >
                   <Lock className="size-4 mr-1" />
