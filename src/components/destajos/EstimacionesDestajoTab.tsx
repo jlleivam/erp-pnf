@@ -230,7 +230,7 @@ export function EstimacionesDestajoTab({
                     <td className="p-3 text-right">
                       <div className="flex gap-1 justify-end flex-wrap">
                         <Button size="sm" variant="outline" onClick={() => setEditing(e.semana_inicio)}>
-                          <FileText className="size-4 mr-1" /> {esEditable ? "Editar" : "Ver"}
+                          <FileText className="size-4 mr-1" /> {esBorrador ? "Editar" : "Ver"}
                         </Button>
                         {e.estatus === "cerrada" && puedeAutorizar && (
                           <>
