@@ -934,12 +934,15 @@ export const listEstimacionesDestajo = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("obra_destajo_estimaciones")
-      .select("id, numero, semana_inicio, semana_fin, estatus, monto_total, cerrada_at, created_at")
+      .select(
+        "id, numero, semana_inicio, semana_fin, estatus, monto_total, monto_neto, cerrada_at, autorizada_at, autorizada_por, rechazada_at, rechazada_por, rechazo_motivo, cxp_id, created_at",
+      )
       .eq("destajo_id", data.destajoId)
       .order("semana_inicio", { ascending: false });
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
 
 async function loadVigenteDestajoData(supabase: any, destajoId: string) {
   const { base, baseRenglones, ocsRenglones } = await loadDestajoBaseYOcs(supabase, destajoId);
@@ -1296,7 +1299,9 @@ export const eliminarEstimacionDestajo = createServerFn({ method: "POST" })
     const { data: est } = await supabase
       .from("obra_destajo_estimaciones").select("destajo_id, estatus").eq("id", data.id).single();
     if (!est) throw new Error("No encontrada");
-    if (est.estatus === "cerrada") throw new Error("No se elimina una cerrada");
+    if (est.estatus !== "borrador" && est.estatus !== "rechazada") {
+      throw new Error("Solo se eliminan estimaciones en borrador o rechazadas");
+    }
     const { data: d0 } = await supabase
       .from("obra_destajos").select("obra_id").eq("id", est.destajo_id).single();
     const { isDirector } = await getRoles(supabase, userId);
@@ -1307,6 +1312,350 @@ export const eliminarEstimacionDestajo = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============================================================
+// AUTORIZACIÓN DE ESTIMACIONES (supervisor / director)
+// ============================================================
+
+async function canAutorizarEstimacion(
+  supabase: any,
+  userId: string,
+  companyId: string,
+  obraId: string,
+) {
+  const { isDirector } = await getRoles(supabase, userId);
+  if (isDirector) return true;
+  const { data } = await supabase
+    .from("obra_team")
+    .select("role")
+    .eq("obra_id", obraId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as any)?.role === "supervisor";
+}
+
+export const autorizarEstimacionDestajo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: est } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("id, destajo_id, company_id, estatus, monto_neto, monto_total, semana_inicio, semana_fin, numero")
+      .eq("id", data.id)
+      .single();
+    if (!est) throw new Error("Estimación no encontrada");
+    if (est.estatus !== "cerrada") {
+      throw new Error("Solo se autorizan estimaciones cerradas");
+    }
+    const { data: d0 } = await supabase
+      .from("obra_destajos")
+      .select("id, obra_id, nombre, destajista_id")
+      .eq("id", est.destajo_id)
+      .single();
+    if (!d0) throw new Error("Destajo no encontrado");
+
+    const allowed = await canAutorizarEstimacion(
+      supabase,
+      userId,
+      est.company_id,
+      d0.obra_id,
+    );
+    if (!allowed) throw new Error("Solo el supervisor o director pueden autorizar");
+
+    const { data: destajista } = await supabase
+      .from("trabajadores")
+      .select("nombre_completo")
+      .eq("id", d0.destajista_id)
+      .maybeSingle();
+    const destajistaNombre = (destajista as any)?.nombre_completo ?? "Contratista";
+
+    const { data: obra } = await supabase
+      .from("obras")
+      .select("nombre")
+      .eq("id", d0.obra_id)
+      .maybeSingle();
+    const obraNombre = (obra as any)?.nombre ?? "";
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1) Folio CxP
+    const { data: folioRow, error: fErr } = await supabaseAdmin
+      .rpc("siguiente_folio_cxp", { _company_id: est.company_id });
+    if (fErr) throw new Error(fErr.message);
+    const folio = folioRow as unknown as string;
+
+    const monto = Number(est.monto_neto);
+    if (monto <= 0) throw new Error("La estimación tiene monto neto en cero; no genera cuenta por pagar");
+
+    const concepto = `Estimación ${est.numero} destajo · ${d0.nombre} · ${destajistaNombre}`;
+
+    // 2) Crear CxP
+    const { data: cxp, error: cErr } = await supabaseAdmin
+      .from("cuentas_por_pagar")
+      .insert({
+        company_id: est.company_id,
+        obra_id: d0.obra_id,
+        folio,
+        beneficiario_tipo: "trabajador",
+        beneficiario_id: d0.destajista_id,
+        beneficiario_nombre: destajistaNombre,
+        concepto,
+        origen_tipo: "destajo_estimacion",
+        origen_id: est.id,
+        monto_total: monto,
+        estatus: "pendiente",
+        creado_por: userId,
+      })
+      .select("id, folio")
+      .single();
+    if (cErr) throw new Error(cErr.message);
+
+    // 3) Recuperar componentes para el asiento
+    const { data: full } = await supabaseAdmin
+      .from("obra_destajo_estimaciones")
+      .select("monto_total, amortizacion_anticipo, retencion_fondo, liberacion_fondo, monto_neto, cerrada_at")
+      .eq("id", est.id)
+      .single();
+    const bruto = Number((full as any)?.monto_total ?? 0);
+    const amort = Number((full as any)?.amortizacion_anticipo ?? 0);
+    const reten = Number((full as any)?.retencion_fondo ?? 0);
+    const liber = Number((full as any)?.liberacion_fondo ?? 0);
+    const fechaAsiento = (full as any)?.cerrada_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+
+    // 4) Asiento contable (doble partida)
+    const asientoId = crypto.randomUUID();
+    const renglones: any[] = [
+      {
+        company_id: est.company_id,
+        asiento_id: asientoId,
+        fecha: fechaAsiento,
+        concepto,
+        referencia: folio,
+        origen_tipo: "destajo_estimacion",
+        origen_id: est.id,
+        tipo_movimiento: "cargo",
+        cuenta_contable: "Costo de obra - Destajos",
+        monto: bruto,
+        creado_por: userId,
+      },
+    ];
+    if (amort > 0) {
+      renglones.push({
+        company_id: est.company_id,
+        asiento_id: asientoId,
+        fecha: fechaAsiento,
+        concepto,
+        referencia: folio,
+        origen_tipo: "destajo_estimacion",
+        origen_id: est.id,
+        tipo_movimiento: "abono",
+        cuenta_contable: "Anticipos a contratistas",
+        monto: amort,
+        creado_por: userId,
+      });
+    }
+    if (reten > 0) {
+      renglones.push({
+        company_id: est.company_id,
+        asiento_id: asientoId,
+        fecha: fechaAsiento,
+        concepto,
+        referencia: folio,
+        origen_tipo: "destajo_estimacion",
+        origen_id: est.id,
+        tipo_movimiento: "abono",
+        cuenta_contable: "Fondo de garantía retenido",
+        monto: reten,
+        creado_por: userId,
+      });
+    }
+    if (liber > 0) {
+      renglones.push({
+        company_id: est.company_id,
+        asiento_id: asientoId,
+        fecha: fechaAsiento,
+        concepto,
+        referencia: folio,
+        origen_tipo: "destajo_estimacion",
+        origen_id: est.id,
+        tipo_movimiento: "cargo",
+        cuenta_contable: "Fondo de garantía retenido",
+        monto: liber,
+        creado_por: userId,
+      });
+    }
+    // Abono al pasivo por el neto
+    renglones.push({
+      company_id: est.company_id,
+      asiento_id: asientoId,
+      fecha: fechaAsiento,
+      concepto,
+      referencia: folio,
+      origen_tipo: "destajo_estimacion",
+      origen_id: est.id,
+      tipo_movimiento: "abono",
+      cuenta_contable: "Cuentas por pagar - Contratistas destajo",
+      monto: monto,
+      creado_por: userId,
+    });
+
+    const { error: asErr } = await supabaseAdmin
+      .from("asientos_contables")
+      .insert(renglones);
+    if (asErr) {
+      await supabaseAdmin.from("cuentas_por_pagar").delete().eq("id", (cxp as any).id);
+      throw new Error(asErr.message);
+    }
+
+    // 5) Actualizar estimación
+    const { error: uErr } = await supabaseAdmin
+      .from("obra_destajo_estimaciones")
+      .update({
+        estatus: "autorizada",
+        autorizada_at: new Date().toISOString(),
+        autorizada_por: userId,
+        cxp_id: (cxp as any).id,
+        rechazada_at: null,
+        rechazada_por: null,
+        rechazo_motivo: null,
+      })
+      .eq("id", est.id);
+    if (uErr) {
+      await supabaseAdmin.from("asientos_contables").delete().eq("asiento_id", asientoId);
+      await supabaseAdmin.from("cuentas_por_pagar").delete().eq("id", (cxp as any).id);
+      throw new Error(uErr.message);
+    }
+
+    // 6) Notificar a administrativos
+    try {
+      const { data: roles } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", est.company_id)
+        .in("role", ["administrativo", "director"]);
+      const userIds = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
+      if (userIds.length > 0) {
+        const montoFmt = new Intl.NumberFormat("es-MX", {
+          style: "currency", currency: "MXN",
+        }).format(monto);
+        const titulo = "Estimación de destajo autorizada";
+        const mensaje = `${folio} · ${destajistaNombre} · ${montoFmt}${obraNombre ? " · obra " + obraNombre : ""}. Lista para programar pago.`;
+        const notis = userIds.map((uid) => ({
+          user_id: uid,
+          company_id: est.company_id,
+          obra_id: d0.obra_id,
+          tipo: "estimacion_destajo_autorizada",
+          titulo,
+          mensaje,
+          link: `/app/obras/${d0.obra_id}/destajos?destajo=${d0.id}`,
+        }));
+        await supabaseAdmin.from("notificaciones").insert(notis);
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] estimacion destajo autorizada:", e?.message);
+    }
+
+    return { ok: true, cxpId: (cxp as any).id, folio: (cxp as any).folio };
+  });
+
+export const rechazarEstimacionDestajo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      motivo: z.string().min(3).max(500),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: est } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("id, destajo_id, company_id, estatus, creado_por, numero")
+      .eq("id", data.id)
+      .single();
+    if (!est) throw new Error("Estimación no encontrada");
+    if (est.estatus !== "cerrada") {
+      throw new Error("Solo se rechazan estimaciones cerradas");
+    }
+    const { data: d0 } = await supabase
+      .from("obra_destajos").select("obra_id, nombre").eq("id", est.destajo_id).single();
+    const allowed = await canAutorizarEstimacion(
+      supabase, userId, est.company_id, d0!.obra_id,
+    );
+    if (!allowed) throw new Error("Solo el supervisor o director pueden rechazar");
+
+    const { error } = await supabase
+      .from("obra_destajo_estimaciones")
+      .update({
+        estatus: "rechazada",
+        rechazada_at: new Date().toISOString(),
+        rechazada_por: userId,
+        rechazo_motivo: data.motivo,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    // Notificar al residente que creó la estimación
+    try {
+      if (est.creado_por && est.creado_por !== userId) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("notificaciones").insert({
+          user_id: est.creado_por,
+          company_id: est.company_id,
+          obra_id: d0!.obra_id,
+          tipo: "estimacion_destajo_rechazada",
+          titulo: "Estimación rechazada",
+          mensaje: `La estimación ${est.numero} del destajo ${d0!.nombre} fue rechazada: ${data.motivo}`,
+          link: `/app/obras/${d0!.obra_id}/destajos?destajo=${est.destajo_id}`,
+        });
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] estimacion destajo rechazada:", e?.message);
+    }
+
+    return { ok: true };
+  });
+
+export const reabrirEstimacionRechazada = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: est } = await supabase
+      .from("obra_destajo_estimaciones")
+      .select("destajo_id, estatus")
+      .eq("id", data.id)
+      .single();
+    if (!est) throw new Error("No encontrada");
+    if (est.estatus !== "rechazada") {
+      throw new Error("Solo se reabren estimaciones rechazadas");
+    }
+    const { data: d0 } = await supabase
+      .from("obra_destajos").select("obra_id").eq("id", est.destajo_id).single();
+    const { isDirector } = await getRoles(supabase, userId);
+    const member = await isMemberObra(supabase, userId, d0!.obra_id);
+    if (!isDirector && !member) throw new Error("Sin permisos");
+    const { error } = await supabase
+      .from("obra_destajo_estimaciones")
+      .update({
+        estatus: "borrador",
+        rechazada_at: null,
+        rechazada_por: null,
+        rechazo_motivo: null,
+        cerrada_at: null,
+        cerrada_por: null,
+        amortizacion_anticipo: 0,
+        retencion_fondo: 0,
+        liberacion_fondo: 0,
+        monto_neto: 0,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
 
 
 // ============================================================

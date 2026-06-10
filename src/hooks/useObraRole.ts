@@ -13,6 +13,8 @@ export function useObraRole(obraId: string | null | undefined) {
     role: q.data?.role ?? null,
     isResidente: !!q.data?.isResidente,
     isSupervisor: !!q.data?.isSupervisor,
+    isDirector: !!q.data?.isDirector,
+    isAdministrativo: !!q.data?.isAdministrativo,
     loading: q.isLoading,
   };
 }
