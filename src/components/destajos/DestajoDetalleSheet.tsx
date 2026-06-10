@@ -622,7 +622,7 @@ function TerminosTab({
       <Dialog open={solicitOpen} onOpenChange={setSolicitOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Solicitar pago de anticipo</DialogTitle>
+            <DialogTitle>Pago de anticipo de destajo</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
@@ -631,20 +631,20 @@ function TerminosTab({
                 <span className="font-medium text-right">{destajo.nombre}</span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">Contratista</span>
+                <span className="text-muted-foreground">Destajista</span>
                 <span className="font-medium text-right">
                   {destajo?.destajista?.nombre_completo ?? "—"}
                 </span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">Monto total del destajo</span>
-                <span className="font-medium text-right">{formatMXN(Number(destajo.monto_total ?? 0))}</span>
-              </div>
-              <div className="flex justify-between gap-3 border-t pt-2">
-                <span className="text-muted-foreground">Monto de anticipo</span>
-                <span className="font-semibold text-right">
-                  {formatMXN(anticipoMonto)} · {anticipoPctNum.toFixed(2)}%
+                <span className="text-muted-foreground">Fecha</span>
+                <span className="font-medium text-right">
+                  {new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })}
                 </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Folio</span>
+                <span className="text-muted-foreground italic text-right">Se asignará al enviar</span>
               </div>
             </div>
             <div>
@@ -668,6 +668,7 @@ function TerminosTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       <Card className="p-4">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">Fondo de garantía</p>
