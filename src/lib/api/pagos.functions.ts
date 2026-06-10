@@ -251,12 +251,13 @@ export const getSaldosProveedores = createServerFn({ method: "GET" })
       throw new Error("No tienes permisos");
     }
 
-    // OCs autorizadas/enviadas con totales
+    // OCs con saldo pendiente
     const { data: ocs, error } = await supabase
       .from("ordenes_compra")
       .select("id, proveedor_id, total, monto_pagado, estado_pago, estatus, proveedor:terceros(id, razon_social)")
       .eq("company_id", companyId)
-      .in("estatus", ["autorizada", "enviada"]);
+      .in("estatus", ["autorizada", "enviada", "recibida_parcial", "recibida"])
+      .neq("estado_pago", "pagado");
     if (error) throw new Error(error.message);
 
     const map = new Map<string, {
@@ -314,7 +315,8 @@ export const getDetalleSaldoProveedor = createServerFn({ method: "POST" })
       .select("id, folio, total, monto_pagado, estado_pago, estatus, pagada_at, created_at, obra:obras(id, nombre)")
       .eq("company_id", companyId)
       .eq("proveedor_id", data.proveedorId)
-      .in("estatus", ["autorizada", "enviada"])
+      .in("estatus", ["autorizada", "enviada", "recibida_parcial", "recibida"])
+      .neq("estado_pago", "pagado")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return ocs ?? [];
