@@ -223,7 +223,11 @@ function AnticiposDestajoTab() {
       {pagar && (
         <RegistrarPagoAnticipoDialog
           destajoId={pagar.destajoId}
-          destajoLabel={`${pagar.destajoNombre} · ${pagar.destajistaNombre}`}
+          destajoNombre={pagar.destajoNombre}
+          destajistaNombre={pagar.destajistaNombre}
+          folio={(pagar as any).folio ?? null}
+          montoTotalContrato={Number((pagar as any).destajoMontoTotal ?? 0)}
+          anticipoPct={Number((pagar as any).destajoAnticipoPct ?? 0)}
           monto={pagar.monto}
           open={!!pagar}
           onOpenChange={(o) => !o && setPagar(null)}
@@ -234,6 +238,7 @@ function AnticiposDestajoTab() {
           }}
         />
       )}
+
     </div>
   );
 }

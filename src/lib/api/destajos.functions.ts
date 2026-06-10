@@ -1488,14 +1488,15 @@ export const listAnticiposDestajoPendientes = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("obra_destajo_anticipos")
       .select(
-        "id, destajo_id, monto, solicitado_at, solicitud_notas, solicitado_por, " +
-        "destajo:destajo_id(id, nombre, numero, obra_id, destajista:destajista_id(nombre_completo), obra:obra_id(id, nombre))",
+        "id, destajo_id, monto, folio, solicitado_at, solicitud_notas, solicitado_por, " +
+        "destajo:destajo_id(id, nombre, numero, monto_total, anticipo_pct, obra_id, destajista:destajista_id(nombre_completo), obra:obra_id(id, nombre))",
       )
       .eq("company_id", companyId)
       .eq("pagado", false)
       .not("solicitado_at", "is", null)
       .order("solicitado_at", { ascending: true });
     if (error) throw new Error(error.message);
+
 
     // Resolver nombre del solicitante
     const ids = Array.from(
@@ -1514,17 +1515,21 @@ export const listAnticiposDestajoPendientes = createServerFn({ method: "GET" })
       anticipoId: r.id,
       destajoId: r.destajo_id,
       monto: Number(r.monto),
+      folio: r.folio ?? null,
       solicitadoAt: r.solicitado_at,
       notas: r.solicitud_notas,
       solicitadoPor: r.solicitado_por,
       solicitadoPorNombre: profMap[r.solicitado_por] ?? "—",
       destajoNombre: r.destajo?.nombre ?? "",
       destajoNumero: r.destajo?.numero ?? null,
+      destajoMontoTotal: Number(r.destajo?.monto_total ?? 0),
+      destajoAnticipoPct: Number(r.destajo?.anticipo_pct ?? 0),
       destajistaNombre: r.destajo?.destajista?.nombre_completo ?? "",
       obraId: r.destajo?.obra?.id ?? null,
       obraNombre: r.destajo?.obra?.nombre ?? "",
     }));
   });
+
 
 export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -28,7 +28,11 @@ type Metodo = "efectivo" | "transferencia" | "cheque";
 
 interface Props {
   destajoId: string;
-  destajoLabel: string;
+  destajoNombre: string;
+  destajistaNombre: string;
+  folio: string | null;
+  montoTotalContrato: number;
+  anticipoPct: number;
   monto: number;
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -36,8 +40,9 @@ interface Props {
 }
 
 export function RegistrarPagoAnticipoDialog({
-  destajoId, destajoLabel, monto, open, onOpenChange, onSaved,
+  destajoId, destajoNombre, destajistaNombre, folio, montoTotalContrato, anticipoPct, monto, open, onOpenChange, onSaved,
 }: Props) {
+
   const hoy = new Date().toISOString().slice(0, 10);
   const fetchCuentas = useServerFn(listCuentas);
   const pagarFn = useServerFn(pagarAnticipoDestajo);
@@ -96,18 +101,48 @@ export function RegistrarPagoAnticipoDialog({
     : metodo === "transferencia" ? "# Referencia / folio"
     : "Referencia (opcional)";
 
+  const fechaHoyTxt = new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Pagar anticipo · {destajoLabel}</DialogTitle>
+          <DialogTitle>Pago de anticipo de destajo</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="rounded-md border bg-muted/30 p-3 text-sm flex justify-between">
-            <span className="text-muted-foreground">Monto del anticipo</span>
-            <span className="font-semibold">{formatMXN(monto)}</span>
+          <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Destajo</span>
+              <span className="font-medium text-right">{destajoNombre || "—"}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Destajista</span>
+              <span className="font-medium text-right">{destajistaNombre || "—"}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Monto total del contrato autorizado</span>
+              <span className="font-medium text-right">{formatMXN(montoTotalContrato)}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">% de anticipo autorizado</span>
+              <span className="font-medium text-right">{Number(anticipoPct).toFixed(2)}%</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Fecha</span>
+              <span className="font-medium text-right">{fechaHoyTxt}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Folio</span>
+              <span className="font-medium text-right">{folio ?? "—"}</span>
+            </div>
+            <div className="flex justify-between gap-3 border-t pt-2">
+              <span className="text-muted-foreground">Monto del anticipo</span>
+              <span className="font-semibold text-right">{formatMXN(monto)}</span>
+            </div>
           </div>
+
+
 
           <div>
             <Label>Cuenta</Label>
