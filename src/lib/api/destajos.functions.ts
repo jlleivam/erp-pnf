@@ -1393,7 +1393,7 @@ export const solicitarPagoAnticipoDestajo = createServerFn({ method: "POST" })
 
     const { data: anticipo } = await supabase
       .from("obra_destajo_anticipos")
-      .select("id, pagado, solicitado_at, monto")
+      .select("id, pagado, solicitado_at, monto, folio")
       .eq("destajo_id", data.destajoId)
       .maybeSingle();
     if (!anticipo) throw new Error("No hay anticipo registrado");
@@ -1401,13 +1401,22 @@ export const solicitarPagoAnticipoDestajo = createServerFn({ method: "POST" })
     if (anticipo.solicitado_at) throw new Error("Ya se solicitó el pago del anticipo");
     if (Number(anticipo.monto) <= 0) throw new Error("El monto del anticipo es 0");
 
+    let folio = (anticipo as any).folio as string | null;
+    if (!folio) {
+      const { data: folioData, error: folioErr } = await supabase
+        .rpc("siguiente_folio_anticipo_destajo", { _company_id: destajo.company_id });
+      if (folioErr) throw new Error(folioErr.message);
+      folio = folioData as string;
+    }
+
     const { error } = await supabase
       .from("obra_destajo_anticipos")
       .update({
         solicitado_at: new Date().toISOString(),
         solicitado_por: userId,
         solicitud_notas: data.notas ?? null,
-      })
+        folio,
+      } as any)
       .eq("id", anticipo.id);
     if (error) throw new Error(error.message);
 
@@ -1429,8 +1438,9 @@ export const solicitarPagoAnticipoDestajo = createServerFn({ method: "POST" })
       console.error("[notificaciones] anticipo solicitado:", e?.message);
     }
 
-    return { ok: true };
+    return { ok: true, folio };
   });
+
 
 export const cancelarSolicitudAnticipoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
