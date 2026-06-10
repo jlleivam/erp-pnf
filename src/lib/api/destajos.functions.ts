@@ -934,12 +934,15 @@ export const listEstimacionesDestajo = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("obra_destajo_estimaciones")
-      .select("id, numero, semana_inicio, semana_fin, estatus, monto_total, cerrada_at, created_at")
+      .select(
+        "id, numero, semana_inicio, semana_fin, estatus, monto_total, monto_neto, cerrada_at, autorizada_at, autorizada_por, rechazada_at, rechazada_por, rechazo_motivo, cxp_id, created_at",
+      )
       .eq("destajo_id", data.destajoId)
       .order("semana_inicio", { ascending: false });
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
 
 async function loadVigenteDestajoData(supabase: any, destajoId: string) {
   const { base, baseRenglones, ocsRenglones } = await loadDestajoBaseYOcs(supabase, destajoId);
