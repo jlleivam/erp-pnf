@@ -240,8 +240,8 @@ export function CapturaEstimacionDestajoSheet({
         <SheetHeader className="space-y-1">
           <SheetTitle className="flex items-center gap-2 flex-wrap text-base">
             Estimación del destajo
-            <Badge variant={isCerrada ? "default" : "secondary"} className="text-[10px] py-0 px-1.5 h-5">
-              {isCerrada ? "Cerrada" : "Borrador"}
+            <Badge variant={estatusVariant[estatus]} className="text-[10px] py-0 px-1.5 h-5">
+              {estatusLabel[estatus]}
             </Badge>
             <span className="ml-auto text-xs text-muted-foreground">
               {formatRangoSemana(semana.inicio, semana.fin)}
@@ -251,6 +251,18 @@ export function CapturaEstimacionDestajoSheet({
             Captura la cantidad ejecutada por el destajista en esta semana.
           </SheetDescription>
         </SheetHeader>
+
+        {estatus === "rechazada" && estimacion?.rechazo_motivo && (
+          <Card className="mt-3 p-3 border-destructive/40 bg-destructive/5">
+            <p className="text-xs uppercase tracking-wider text-destructive font-semibold flex items-center gap-1">
+              <AlertTriangle className="size-3" /> Rechazada
+            </p>
+            <p className="text-sm mt-1">{estimacion.rechazo_motivo}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Corrige las cantidades y vuelve a cerrar la semana para enviarla a autorización.
+            </p>
+          </Card>
+        )}
 
         {q.isLoading ? (
           <p className="mt-4 text-sm text-muted-foreground">Cargando…</p>
