@@ -476,10 +476,11 @@ export function CapturaEstimacionDestajoSheet({
         <AlertDialog open={confirmCierre} onOpenChange={setConfirmCierre}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Cerrar la estimación de esta semana?</AlertDialogTitle>
+              <AlertDialogTitle>¿Cerrar y enviar a autorización?</AlertDialogTitle>
               <AlertDialogDescription>
-                Una vez cerrada se congelan precios y cantidades. Este será el monto a pagar
-                al destajista por la semana.
+                Se congelan precios y cantidades de esta semana y se envía al supervisor
+                de la obra para que la autorice. La cuenta por pagar al contratista y el
+                asiento contable se generan hasta que el supervisor autorice.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
