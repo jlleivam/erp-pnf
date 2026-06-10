@@ -575,7 +575,19 @@ function TerminosTab({
             {anticipoRegistro && (
               <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
                 {anticipoRegistro.pagado ? (
-                  <Badge>Pagado</Badge>
+                  <>
+                    <Badge>Anticipo pagado</Badge>
+                    {(anticipoRegistro.pagado_at || anticipoRegistro.fecha) && (
+                      <span className="text-muted-foreground">
+                        el {new Date(anticipoRegistro.pagado_at ?? anticipoRegistro.fecha).toLocaleDateString("es-MX")}
+                      </span>
+                    )}
+                    {(anticipoRegistro as any).pagado_por_nombre && (
+                      <span className="text-muted-foreground">
+                        · pagado por {(anticipoRegistro as any).pagado_por_nombre}
+                      </span>
+                    )}
+                  </>
                 ) : anticipoRegistro.solicitado_at ? (
                   <>
                     <Badge variant="secondary">Solicitado</Badge>
@@ -588,6 +600,7 @@ function TerminosTab({
                 )}
               </div>
             )}
+
             {anticipoRegistro?.solicitud_notas && (
               <p className="text-xs text-muted-foreground mt-1 italic">
                 "{anticipoRegistro.solicitud_notas}"

@@ -187,6 +187,65 @@ export type Database = {
         }
         Relationships: []
       }
+      asientos_contables: {
+        Row: {
+          asiento_id: string
+          company_id: string
+          concepto: string
+          creado_por: string
+          created_at: string
+          cuenta_contable: string
+          fecha: string
+          id: string
+          monto: number
+          origen_id: string | null
+          origen_tipo: string
+          referencia: string | null
+          tipo_movimiento: string
+          updated_at: string
+        }
+        Insert: {
+          asiento_id: string
+          company_id: string
+          concepto: string
+          creado_por: string
+          created_at?: string
+          cuenta_contable: string
+          fecha: string
+          id?: string
+          monto: number
+          origen_id?: string | null
+          origen_tipo: string
+          referencia?: string | null
+          tipo_movimiento: string
+          updated_at?: string
+        }
+        Update: {
+          asiento_id?: string
+          company_id?: string
+          concepto?: string
+          creado_por?: string
+          created_at?: string
+          cuenta_contable?: string
+          fecha?: string
+          id?: string
+          monto?: number
+          origen_id?: string | null
+          origen_tipo?: string
+          referencia?: string | null
+          tipo_movimiento?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asientos_contables_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caja_chica_asignaciones: {
         Row: {
           activo: boolean
@@ -1162,6 +1221,7 @@ export type Database = {
           monto: number
           pagado: boolean
           pagado_at: string | null
+          pagado_por: string | null
           referencia: string | null
           solicitado_at: string | null
           solicitado_por: string | null
@@ -1180,6 +1240,7 @@ export type Database = {
           monto?: number
           pagado?: boolean
           pagado_at?: string | null
+          pagado_por?: string | null
           referencia?: string | null
           solicitado_at?: string | null
           solicitado_por?: string | null
@@ -1198,6 +1259,7 @@ export type Database = {
           monto?: number
           pagado?: boolean
           pagado_at?: string | null
+          pagado_por?: string | null
           referencia?: string | null
           solicitado_at?: string | null
           solicitado_por?: string | null

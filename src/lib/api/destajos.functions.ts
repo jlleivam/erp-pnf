@@ -1225,6 +1225,14 @@ export const getDestajoAnticipo = createServerFn({ method: "POST" })
       .select("*")
       .eq("destajo_id", data.destajoId)
       .maybeSingle();
+
+    let pagadoPorNombre: string | null = null;
+    if (anticipo?.pagado_por) {
+      const { data: prof } = await supabase
+        .from("profiles").select("nombre_completo").eq("id", anticipo.pagado_por).maybeSingle();
+      pagadoPorNombre = (prof as any)?.nombre_completo ?? null;
+    }
+
     // Saldo pendiente del anticipo
     const { data: ests } = await supabase
       .from("obra_destajo_estimaciones")
@@ -1235,13 +1243,14 @@ export const getDestajoAnticipo = createServerFn({ method: "POST" })
     const fondoRetenido = (ests ?? []).reduce((s: number, r: any) => s + Number(r.retencion_fondo ?? 0), 0);
     const fondoLiberado = (ests ?? []).reduce((s: number, r: any) => s + Number(r.liberacion_fondo ?? 0), 0);
     return {
-      anticipo: anticipo ?? null,
+      anticipo: anticipo ? { ...anticipo, pagado_por_nombre: pagadoPorNombre } : null,
       anticipoAmortizado: amortAcum,
       fondoRetenido,
       fondoLiberado,
       fondoSaldo: Math.max(0, fondoRetenido - fondoLiberado),
     };
   });
+
 
 export const marcarAnticipoPagado = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -1559,8 +1568,9 @@ export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
 
     const { data: ant } = await supabaseAdmin
       .from("obra_destajo_anticipos")
-      .select("id, company_id, destajo_id, monto, pagado, solicitado_at")
+      .select("id, company_id, destajo_id, monto, pagado, solicitado_at, solicitado_por, folio")
       .eq("destajo_id", data.destajoId).maybeSingle();
+
     if (!ant || ant.company_id !== companyId) throw new Error("Anticipo no encontrado");
     if (ant.pagado) throw new Error("El anticipo ya está pagado");
     if (!ant.solicitado_at) throw new Error("Falta solicitar el pago antes de registrarlo");
@@ -1588,10 +1598,12 @@ export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
 
     const { data: destajo } = await supabaseAdmin
       .from("obra_destajos")
-      .select("nombre, destajista:destajista_id(nombre_completo)")
+      .select("nombre, obra_id, destajista:destajista_id(nombre_completo), obra:obra_id(nombre)")
       .eq("id", data.destajoId).maybeSingle();
     const destNombre = destajo?.nombre ?? "Destajo";
     const destajistaNombre = (destajo?.destajista as any)?.nombre_completo ?? "";
+    const obraId = (destajo as any)?.obra_id ?? null;
+    const obraNombre = (destajo as any)?.obra?.nombre ?? "";
     const concepto = `Anticipo destajo · ${destNombre}${destajistaNombre ? " · " + destajistaNombre : ""}`;
 
     // 1) pago
@@ -1646,12 +1658,13 @@ export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
       throw new Error(sErr.message);
     }
 
-    // 4) marcar anticipo pagado
+    // 4) marcar anticipo pagado (incluye pagado_por)
     const { error: aErr } = await supabaseAdmin
       .from("obra_destajo_anticipos")
       .update({
         pagado: true,
         pagado_at: new Date().toISOString(),
+        pagado_por: userId,
         fecha: data.fecha,
         metodo_pago: data.metodo,
         referencia: data.referencia || null,
@@ -1664,5 +1677,73 @@ export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
       throw new Error(aErr.message);
     }
 
-    return { ok: true, pagoId: pago.id };
+    // 5) asiento contable (doble partida)
+    const asientoId = crypto.randomUUID();
+    const cuentaAbono = cuenta.tipo === "caja_fuerte" ? "Caja" : "Bancos";
+    const refAsiento = ant.folio || data.referencia || null;
+    const { error: asErr } = await supabaseAdmin
+      .from("asientos_contables")
+      .insert([
+        {
+          company_id: companyId,
+          asiento_id: asientoId,
+          fecha: data.fecha,
+          concepto,
+          referencia: refAsiento,
+          origen_tipo: "anticipo_destajo",
+          origen_id: ant.id,
+          tipo_movimiento: "cargo",
+          cuenta_contable: "Anticipo a destajistas",
+          monto: data.monto,
+          creado_por: userId,
+        },
+        {
+          company_id: companyId,
+          asiento_id: asientoId,
+          fecha: data.fecha,
+          concepto,
+          referencia: refAsiento,
+          origen_tipo: "anticipo_destajo",
+          origen_id: ant.id,
+          tipo_movimiento: "abono",
+          cuenta_contable: cuentaAbono,
+          monto: data.monto,
+          creado_por: userId,
+        },
+      ]);
+    if (asErr) {
+      // rollback completo
+      await supabaseAdmin.from("obra_destajo_anticipos").update({
+        pagado: false, pagado_at: null, pagado_por: null,
+      }).eq("id", ant.id);
+      await supabaseAdmin.from("cuentas").update({ saldo_actual: cuenta.saldo_actual }).eq("id", data.cuentaId);
+      await supabaseAdmin.from("cuenta_movimientos").delete().eq("id", mov.id);
+      await supabaseAdmin.from("pagos").delete().eq("id", pago.id);
+      throw new Error(asErr.message);
+    }
+
+    // 6) notificar al residente solicitante (no bloqueante)
+    try {
+      if (ant.solicitado_por && ant.solicitado_por !== userId) {
+        const montoFmt = new Intl.NumberFormat("es-MX", {
+          style: "currency", currency: "MXN",
+        }).format(data.monto);
+        const titulo = "Anticipo pagado";
+        const mensaje = `Se pagó el anticipo (${montoFmt}) del destajo ${destNombre}${destajistaNombre ? " · " + destajistaNombre : ""}${obraNombre ? " en la obra " + obraNombre : ""}.`;
+        await supabaseAdmin.from("notificaciones").insert({
+          user_id: ant.solicitado_por,
+          company_id: companyId,
+          obra_id: obraId,
+          tipo: "anticipo_destajo_pagado",
+          titulo,
+          mensaje,
+          link: `/app/obras/${obraId ?? ""}`,
+        });
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] anticipo destajo pagado:", e?.message);
+    }
+
+    return { ok: true, pagoId: pago.id, asientoId };
   });
+
