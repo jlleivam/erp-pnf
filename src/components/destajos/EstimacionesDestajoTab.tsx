@@ -201,6 +201,7 @@ export function EstimacionesDestajoTab({
             <tbody>
               {ests.map((e) => {
                 const esEditable = e.estatus === "borrador" || e.estatus === "rechazada";
+                const esBorrador = e.estatus === "borrador";
                 return (
                   <tr key={e.id} className="border-t border-border align-top">
                     <td className="p-3 tabular-nums">{e.numero}</td>
