@@ -1568,8 +1568,9 @@ export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
 
     const { data: ant } = await supabaseAdmin
       .from("obra_destajo_anticipos")
-      .select("id, company_id, destajo_id, monto, pagado, solicitado_at")
+      .select("id, company_id, destajo_id, monto, pagado, solicitado_at, solicitado_por, folio")
       .eq("destajo_id", data.destajoId).maybeSingle();
+
     if (!ant || ant.company_id !== companyId) throw new Error("Anticipo no encontrado");
     if (ant.pagado) throw new Error("El anticipo ya está pagado");
     if (!ant.solicitado_at) throw new Error("Falta solicitar el pago antes de registrarlo");
