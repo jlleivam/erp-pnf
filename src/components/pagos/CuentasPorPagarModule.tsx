@@ -51,6 +51,12 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchAnticiposCount(),
   });
 
+  const fetchEstimacionesCount = useServerFn(listCxPDestajoPendientes);
+  const estimacionesCountQ = useQuery({
+    queryKey: ["cxp-destajo-pendientes"],
+    queryFn: () => fetchEstimacionesCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -58,7 +64,9 @@ export function CuentasPorPagarModule() {
 
   const ocPendientesCount = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.saldo_pendiente > 0).length;
-  const anticiposPendientesCount = ((anticiposCountQ.data ?? []) as unknown[]).length;
+  const anticiposPendientesCount =
+    ((anticiposCountQ.data ?? []) as unknown[]).length
+    + ((estimacionesCountQ.data ?? []) as unknown[]).length;
 
 
   return (
