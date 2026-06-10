@@ -43,10 +43,21 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchSaldos(),
   });
 
+  const fetchAnticiposCount = useServerFn(listAnticiposDestajoPendientes);
+  const anticiposCountQ = useQuery({
+    queryKey: ["anticipos-destajo-pendientes"],
+    queryFn: () => fetchAnticiposCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
   const totalGeneral = rows.reduce((s, r) => s + r.saldo_pendiente, 0);
+
+  const ocPendientesCount = ((saldosQ.data ?? []) as Row[])
+    .filter((r) => r.saldo_pendiente > 0).length;
+  const anticiposPendientesCount = ((anticiposCountQ.data ?? []) as unknown[]).length;
+
 
   return (
     <div className="space-y-6">
@@ -59,8 +70,23 @@ export function CuentasPorPagarModule() {
 
       <Tabs defaultValue="proveedores">
         <TabsList>
-          <TabsTrigger value="proveedores">Proveedores (OC)</TabsTrigger>
-          <TabsTrigger value="anticipos">Anticipos de destajo</TabsTrigger>
+          <TabsTrigger value="proveedores">
+            Proveedores (OC)
+            {ocPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {ocPendientesCount > 99 ? "99+" : ocPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="anticipos">
+            Anticipos de destajo
+            {anticiposPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {anticiposPendientesCount > 99 ? "99+" : anticiposPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
+
         </TabsList>
 
         <TabsContent value="proveedores" className="space-y-4 mt-4">
