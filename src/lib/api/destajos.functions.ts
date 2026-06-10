@@ -1394,7 +1394,7 @@ export const autorizarEstimacionDestajo = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: est } = await supabase
       .from("obra_destajo_estimaciones")
-      .select("id, destajo_id, company_id, estatus, monto_neto, monto_total, semana_inicio, semana_fin, numero")
+      .select("id, destajo_id, company_id, estatus, monto_neto, monto_total, semana_inicio, semana_fin, numero, creado_por")
       .eq("id", data.id)
       .single();
     if (!est) throw new Error("Estimación no encontrada");
@@ -1580,21 +1580,53 @@ export const autorizarEstimacionDestajo = createServerFn({ method: "POST" })
       throw new Error(uErr.message);
     }
 
-    // 6) Notificar a administrativos
+    // 6) Notificar a administrativos (empresa + obra) y al residente solicitante
     try {
-      const { data: roles } = await supabaseAdmin
-        .from("user_roles")
-        .select("user_id")
-        .eq("company_id", est.company_id)
-        .in("role", ["administrativo", "director"]);
-      const userIds = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
-      if (userIds.length > 0) {
-        const montoFmt = new Intl.NumberFormat("es-MX", {
-          style: "currency", currency: "MXN",
-        }).format(monto);
-        const titulo = "Estimación de destajo autorizada";
-        const mensaje = `${folio} · ${destajistaNombre} · ${montoFmt}${obraNombre ? " · obra " + obraNombre : ""}. Lista para programar pago.`;
-        const notis = userIds.map((uid) => ({
+      const [{ data: roles }, { data: adminsObra }] = await Promise.all([
+        supabaseAdmin
+          .from("user_roles")
+          .select("user_id")
+          .eq("company_id", est.company_id)
+          .in("role", ["administrativo", "director"]),
+        supabaseAdmin
+          .from("obra_team")
+          .select("user_id")
+          .eq("obra_id", d0.obra_id)
+          .eq("role", "administrativo"),
+      ]);
+      const montoFmt = new Intl.NumberFormat("es-MX", {
+        style: "currency", currency: "MXN",
+      }).format(monto);
+
+      const notis: any[] = [];
+      const residenteId: string | null = (est as any).creado_por ?? null;
+
+      // Notificación al residente solicitante
+      if (residenteId && residenteId !== userId) {
+        notis.push({
+          user_id: residenteId,
+          company_id: est.company_id,
+          obra_id: d0.obra_id,
+          tipo: "estimacion_destajo_autorizada_residente",
+          titulo: "Tu estimación de destajo fue autorizada",
+          mensaje: `${folio} · ${destajistaNombre} · ${montoFmt}${obraNombre ? " · obra " + obraNombre : ""}. Lista para programar pago.`,
+          link: `/app/obras/${d0.obra_id}/destajos?destajo=${d0.id}`,
+        });
+      }
+
+      // Notificación a administrativos (empresa) y administrativo de la obra
+      const adminIds = Array.from(
+        new Set(
+          [
+            ...((roles ?? []).map((r: any) => r.user_id)),
+            ...((adminsObra ?? []).map((r: any) => r.user_id)),
+          ].filter((uid: string) => uid && uid !== userId && uid !== residenteId),
+        ),
+      );
+      const titulo = "Estimación de destajo autorizada";
+      const mensaje = `${folio} · ${destajistaNombre} · ${montoFmt}${obraNombre ? " · obra " + obraNombre : ""}. Lista para programar pago.`;
+      for (const uid of adminIds) {
+        notis.push({
           user_id: uid,
           company_id: est.company_id,
           obra_id: d0.obra_id,
@@ -1602,7 +1634,10 @@ export const autorizarEstimacionDestajo = createServerFn({ method: "POST" })
           titulo,
           mensaje,
           link: `/app/obras/${d0.obra_id}/destajos?destajo=${d0.id}`,
-        }));
+        });
+      }
+
+      if (notis.length > 0) {
         await supabaseAdmin.from("notificaciones").insert(notis);
       }
     } catch (e: any) {
