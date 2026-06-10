@@ -212,7 +212,6 @@ export function CapturaEstimacionDestajoSheet({
   const pctAvance = computed.totalVigente > 0 ? (computed.totalAcum / computed.totalVigente) * 100 : 0;
 
   return (
-  return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-6xl overflow-y-auto">
         <TooltipProvider delayDuration={150}>
