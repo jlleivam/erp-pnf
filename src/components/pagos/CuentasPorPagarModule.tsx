@@ -278,6 +278,9 @@ function ProveedorDetalleSheet({
   onOpenChange: (o: boolean) => void;
 }) {
   const fetchDetalle = useServerFn(getDetalleSaldoProveedor);
+  const qc = useQueryClient();
+  const [pagarOC, setPagarOC] = useState<{ id: string; folio: string; pendiente: number } | null>(null);
+
   const detalleQ = useQuery({
     queryKey: ["saldo-proveedor", proveedor.proveedor_id],
     queryFn: () => fetchDetalle({ data: { proveedorId: proveedor.proveedor_id } }),
@@ -327,6 +330,7 @@ function ProveedorDetalleSheet({
                     <TableHead className="text-right">Pagado</TableHead>
                     <TableHead className="text-right">Pendiente</TableHead>
                     <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -347,6 +351,16 @@ function ProveedorDetalleSheet({
                             {oc.estado_pago === "pagado" ? "Pagado" : oc.estado_pago === "parcial" ? "Parcial" : "Pendiente"}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          {pend > 0 && (
+                            <Button
+                              size="sm"
+                              onClick={() => setPagarOC({ id: oc.id, folio: oc.folio, pendiente: pend })}
+                            >
+                              Registrar pago
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -355,6 +369,20 @@ function ProveedorDetalleSheet({
             </Card>
           )}
         </div>
+
+        {pagarOC && (
+          <RegistrarPagoOCDialog
+            ocId={pagarOC.id}
+            ocFolio={pagarOC.folio}
+            saldoPendiente={pagarOC.pendiente}
+            open={!!pagarOC}
+            onOpenChange={(o) => !o && setPagarOC(null)}
+            onSaved={() => {
+              qc.invalidateQueries({ queryKey: ["saldos-proveedores"] });
+              qc.invalidateQueries({ queryKey: ["saldo-proveedor", proveedor.proveedor_id] });
+            }}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
