@@ -1515,17 +1515,21 @@ export const listAnticiposDestajoPendientes = createServerFn({ method: "GET" })
       anticipoId: r.id,
       destajoId: r.destajo_id,
       monto: Number(r.monto),
+      folio: r.folio ?? null,
       solicitadoAt: r.solicitado_at,
       notas: r.solicitud_notas,
       solicitadoPor: r.solicitado_por,
       solicitadoPorNombre: profMap[r.solicitado_por] ?? "—",
       destajoNombre: r.destajo?.nombre ?? "",
       destajoNumero: r.destajo?.numero ?? null,
+      destajoMontoTotal: Number(r.destajo?.monto_total ?? 0),
+      destajoAnticipoPct: Number(r.destajo?.anticipo_pct ?? 0),
       destajistaNombre: r.destajo?.destajista?.nombre_completo ?? "",
       obraId: r.destajo?.obra?.id ?? null,
       obraNombre: r.destajo?.obra?.nombre ?? "",
     }));
   });
+
 
 export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
