@@ -102,8 +102,30 @@ export function CapturaEstimacionDestajoSheet({
     fondo_liberado_prev: number;
     fondo_saldo_prev: number;
   };
-  const isCerrada = estimacion?.estatus === "cerrada";
+  const estatus = (estimacion?.estatus ?? "borrador") as
+    | "borrador"
+    | "cerrada"
+    | "autorizada"
+    | "rechazada"
+    | "pagada";
+  const isCerrada = estatus !== "borrador" && estatus !== "rechazada";
+  const isReadOnly = isCerrada; // inputs deshabilitados
   const semana = calcularSemana(semanaInicio);
+
+  const estatusLabel: Record<typeof estatus, string> = {
+    borrador: "Borrador",
+    cerrada: "Por autorizar",
+    autorizada: "Autorizada",
+    rechazada: "Rechazada",
+    pagada: "Pagada",
+  };
+  const estatusVariant: Record<typeof estatus, "default" | "secondary" | "destructive" | "outline"> = {
+    borrador: "secondary",
+    cerrada: "outline",
+    autorizada: "default",
+    rechazada: "destructive",
+    pagada: "default",
+  };
 
   const computed = useMemo(() => {
     let totalSemana = 0;
