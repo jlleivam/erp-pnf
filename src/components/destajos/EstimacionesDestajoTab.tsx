@@ -157,7 +157,19 @@ export function EstimacionesDestajoTab({
           </p>
         </div>
         {editable ? (
-          <Button onClick={() => setEditing(editable.semana_inicio)}>
+          <Button
+            onClick={() => {
+              if (editable.estatus === "rechazada") {
+                reabrirM.mutate(
+                  { data: { id: editable.id } },
+                  { onSuccess: () => setEditing(editable.semana_inicio) },
+                );
+              } else {
+                setEditing(editable.semana_inicio);
+              }
+            }}
+            disabled={reabrirM.isPending}
+          >
             {editable.estatus === "rechazada" ? "Corregir rechazada" : "Continuar borrador"}
           </Button>
         ) : (
