@@ -28,6 +28,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 import { toast } from "sonner";
 import { Save, Lock, AlertTriangle, Search } from "lucide-react";
@@ -208,30 +214,31 @@ export function CapturaEstimacionDestajoSheet({
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-6xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2 flex-wrap">
+        <TooltipProvider delayDuration={150}>
+        <SheetHeader className="space-y-1">
+          <SheetTitle className="flex items-center gap-2 flex-wrap text-base">
             Estimación del destajo
-            <Badge variant={isCerrada ? "default" : "secondary"}>
+            <Badge variant={isCerrada ? "default" : "secondary"} className="text-[10px] py-0 px-1.5 h-5">
               {isCerrada ? "Cerrada" : "Borrador"}
             </Badge>
-            <span className="ml-auto text-sm text-muted-foreground">
+            <span className="ml-auto text-xs text-muted-foreground">
               {formatRangoSemana(semana.inicio, semana.fin)}
             </span>
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="sr-only">
             Captura la cantidad ejecutada por el destajista en esta semana.
           </SheetDescription>
         </SheetHeader>
 
         {q.isLoading ? (
-          <p className="mt-6 text-sm text-muted-foreground">Cargando…</p>
+          <p className="mt-4 text-sm text-muted-foreground">Cargando…</p>
         ) : !q.data?.hasBase ? (
-          <Card className="mt-6 border-dashed p-8 text-center text-sm text-muted-foreground">
+          <Card className="mt-4 border-dashed p-6 text-center text-sm text-muted-foreground">
             El destajo no tiene presupuesto base autorizado.
           </Card>
         ) : (
           <>
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 mt-6">
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-4 mt-3">
               <StatCard label="Producción semana" value={formatMXN(computed.totalSemana)} />
               <StatCard label="Acumulado" value={formatMXN(computed.totalAcum)} />
               <StatCard label="Contratado" value={formatMXN(computed.totalVigente)} />
@@ -242,35 +249,35 @@ export function CapturaEstimacionDestajoSheet({
               />
             </div>
 
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex items-center gap-2 mt-3">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-2 size-3.5 text-muted-foreground" />
                 <Input
-                  className="pl-8"
+                  className="pl-7 h-8 text-sm"
                   placeholder="Buscar por clave o concepto…"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                 />
               </div>
               {computed.erroresPorClave.size > 0 && (
-                <Badge variant="destructive" className="gap-1">
+                <Badge variant="destructive" className="gap-1 text-[10px] py-0 px-1.5 h-5">
                   <AlertTriangle className="size-3" /> {computed.erroresPorClave.size} con exceso
                 </Badge>
               )}
             </div>
 
-            <Card className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+            <Card className="mt-3 overflow-x-auto">
+              <table className="w-full text-[13px] table-fixed">
+                <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2 w-24">Clave</th>
-                    <th className="text-left p-2">Concepto</th>
-                    <th className="text-left p-2 w-16">Un.</th>
-                    <th className="text-right p-2 w-24">Cant. vig.</th>
-                    <th className="text-right p-2 w-24">Acum. prev.</th>
-                    <th className="text-right p-2 w-28">Esta semana</th>
-                    <th className="text-right p-2 w-32">Importe sem.</th>
-                    <th className="text-right p-2 w-20">% Acum.</th>
+                    <th className="text-left py-1.5 px-2 w-16">Clave</th>
+                    <th className="text-left py-1.5 px-2">Concepto</th>
+                    <th className="text-center py-1.5 px-2 w-12">Un.</th>
+                    <th className="text-center py-1.5 px-2 w-20">Cant. vig.</th>
+                    <th className="text-center py-1.5 px-2 w-20">Acum. prev.</th>
+                    <th className="text-center py-1.5 px-2 w-24">Esta semana</th>
+                    <th className="text-center py-1.5 px-2 w-28">Importe sem.</th>
+                    <th className="text-center py-1.5 px-2 w-16">% Acum.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -290,26 +297,35 @@ export function CapturaEstimacionDestajoSheet({
                         className={`border-t border-border ${r.es_grupo ? "bg-muted/30 font-medium" : ""}`}
                       >
                         <td
-                          className="p-2 tabular-nums"
-                          style={{ paddingLeft: `${0.5 + (r.nivel - 1) * 1}rem` }}
+                          className="py-1 px-2 tabular-nums"
+                          style={{ paddingLeft: `${0.5 + (r.nivel - 1) * 0.75}rem` }}
                         >
                           {r.clave}
                         </td>
-                        <td className="p-2">{r.concepto}</td>
-                        <td className="p-2 text-muted-foreground">{r.unidad ?? "—"}</td>
-                        <td className="p-2 text-right tabular-nums">
+                        <td className="py-1 px-2 truncate">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="block truncate cursor-default">{r.concepto}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="start" className="max-w-xs">
+                              {r.concepto}
+                            </TooltipContent>
+                          </Tooltip>
+                        </td>
+                        <td className="py-1 px-2 text-center text-muted-foreground">{r.unidad ?? "—"}</td>
+                        <td className="py-1 px-2 text-center tabular-nums">
                           {r.es_grupo
                             ? "—"
                             : cantVig.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
                         </td>
-                        <td className="p-2 text-right tabular-nums text-muted-foreground">
+                        <td className="py-1 px-2 text-center tabular-nums text-muted-foreground">
                           {r.es_grupo
                             ? "—"
                             : acumPrev > 0
                               ? acumPrev.toLocaleString("es-MX", { maximumFractionDigits: 2 })
                               : "—"}
                         </td>
-                        <td className="p-2 text-right">
+                        <td className="py-1 px-2 text-center">
                           {r.es_grupo ? (
                             <span className="text-muted-foreground">—</span>
                           ) : (
@@ -323,16 +339,16 @@ export function CapturaEstimacionDestajoSheet({
                               onChange={(e) =>
                                 setCantidades((s) => ({ ...s, [r.clave]: e.target.value }))
                               }
-                              className={`h-8 text-right tabular-nums ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                              className={`h-7 text-center tabular-nums px-1 ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
                               title={err ?? ""}
                             />
                           )}
                         </td>
-                        <td className="p-2 text-right tabular-nums">
+                        <td className="py-1 px-2 text-center tabular-nums">
                           {r.es_grupo ? "—" : importeSem > 0 ? formatMXN(importeSem) : "—"}
                         </td>
                         <td
-                          className={`p-2 text-right tabular-nums ${pct > 100 ? "text-destructive font-medium" : ""}`}
+                          className={`py-1 px-2 text-center tabular-nums ${pct > 100 ? "text-destructive font-medium" : ""}`}
                         >
                           {r.es_grupo ? "—" : `${pct.toFixed(0)}%`}
                         </td>
@@ -450,6 +466,7 @@ export function CapturaEstimacionDestajoSheet({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </TooltipProvider>
       </SheetContent>
     </Sheet>
   );
@@ -465,9 +482,9 @@ function StatCard({
   tone?: "default" | "destructive";
 }) {
   return (
-    <Card className={`p-3 ${tone === "destructive" ? "border-destructive/40 bg-destructive/5" : ""}`}>
+    <Card className={`p-2 ${tone === "destructive" ? "border-destructive/40 bg-destructive/5" : ""}`}>
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-base font-semibold ${tone === "destructive" ? "text-destructive" : ""}`}>
+      <p className={`mt-0.5 text-sm font-semibold tabular-nums ${tone === "destructive" ? "text-destructive" : ""}`}>
         {value}
       </p>
     </Card>
