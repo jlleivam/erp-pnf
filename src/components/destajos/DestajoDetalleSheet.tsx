@@ -625,9 +625,27 @@ function TerminosTab({
             <DialogTitle>Solicitar pago de anticipo</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="rounded-md border bg-muted/30 p-3 text-sm flex justify-between">
-              <span className="text-muted-foreground">Monto del anticipo</span>
-              <span className="font-semibold">{formatMXN(anticipoMonto)}</span>
+            <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Destajo</span>
+                <span className="font-medium text-right">{destajo.nombre}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Contratista</span>
+                <span className="font-medium text-right">
+                  {destajo?.destajista?.nombre_completo ?? "—"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Monto total del destajo</span>
+                <span className="font-medium text-right">{formatMXN(Number(destajo.monto_total ?? 0))}</span>
+              </div>
+              <div className="flex justify-between gap-3 border-t pt-2">
+                <span className="text-muted-foreground">Monto de anticipo</span>
+                <span className="font-semibold text-right">
+                  {formatMXN(anticipoMonto)} · {anticipoPctNum.toFixed(2)}%
+                </span>
+              </div>
             </div>
             <div>
               <Label className="text-sm">Notas para administrativo (opcional)</Label>
