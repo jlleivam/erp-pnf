@@ -108,8 +108,8 @@ export function CapturaEstimacionDestajoSheet({
     | "autorizada"
     | "rechazada"
     | "pagada";
-  const isCerrada = estatus !== "borrador" && estatus !== "rechazada";
-  const isReadOnly = isCerrada; // inputs deshabilitados
+  const isCerrada = estatus !== "borrador";
+  const isReadOnly = estatus !== "borrador"; // inputs deshabilitados (incluye rechazada — debe reabrirse primero)
   const semana = calcularSemana(semanaInicio);
 
   const estatusLabel: Record<typeof estatus, string> = {
