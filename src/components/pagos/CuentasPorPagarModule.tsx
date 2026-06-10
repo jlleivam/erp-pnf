@@ -81,7 +81,7 @@ export function CuentasPorPagarModule() {
             )}
           </TabsTrigger>
           <TabsTrigger value="anticipos">
-            Anticipos de destajo
+            Destajos
             {anticiposPendientesCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
                 {anticiposPendientesCount > 99 ? "99+" : anticiposPendientesCount}
