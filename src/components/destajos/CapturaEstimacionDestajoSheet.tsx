@@ -157,7 +157,8 @@ export function CapturaEstimacionDestajoSheet({
     );
     const retencion = bruto * (terminos.fondo_garantia_pct / 100);
     const fondoDisponible = terminos.fondo_saldo_prev + retencion;
-    const liberacionNum = Math.min(Number(liberacionFondo || 0), fondoDisponible);
+    const liberacionNum = Number(liberacionFondo || 0);
+    const excedeLiberacion = liberacionNum > fondoDisponible + 0.01;
     const neto = bruto - amortizacion - retencion + liberacionNum;
     return {
       totalSemana,
@@ -169,6 +170,7 @@ export function CapturaEstimacionDestajoSheet({
       retencion,
       liberacion: liberacionNum,
       fondoDisponible,
+      excedeLiberacion,
       neto,
     };
   }, [vigente, cantidades, acumuladoPrevio, terminos, liberacionFondo]);
