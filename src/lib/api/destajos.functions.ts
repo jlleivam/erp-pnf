@@ -1737,7 +1737,7 @@ export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
           tipo: "anticipo_destajo_pagado",
           titulo,
           mensaje,
-          link: `/app/obras/${obraId ?? ""}`,
+          link: `/app/obras/${obraId}/destajos?destajo=${data.destajoId}`,
         });
       }
     } catch (e: any) {
