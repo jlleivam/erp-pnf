@@ -482,9 +482,9 @@ function StatCard({
   tone?: "default" | "destructive";
 }) {
   return (
-    <Card className={`p-3 ${tone === "destructive" ? "border-destructive/40 bg-destructive/5" : ""}`}>
+    <Card className={`p-2 ${tone === "destructive" ? "border-destructive/40 bg-destructive/5" : ""}`}>
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-base font-semibold ${tone === "destructive" ? "text-destructive" : ""}`}>
+      <p className={`mt-0.5 text-sm font-semibold tabular-nums ${tone === "destructive" ? "text-destructive" : ""}`}>
         {value}
       </p>
     </Card>
