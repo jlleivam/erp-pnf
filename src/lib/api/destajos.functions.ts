@@ -1394,7 +1394,7 @@ export const autorizarEstimacionDestajo = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: est } = await supabase
       .from("obra_destajo_estimaciones")
-      .select("id, destajo_id, company_id, estatus, monto_neto, monto_total, semana_inicio, semana_fin, numero")
+      .select("id, destajo_id, company_id, estatus, monto_neto, monto_total, semana_inicio, semana_fin, numero, creado_por")
       .eq("id", data.id)
       .single();
     if (!est) throw new Error("Estimación no encontrada");
