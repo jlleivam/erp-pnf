@@ -1225,6 +1225,14 @@ export const getDestajoAnticipo = createServerFn({ method: "POST" })
       .select("*")
       .eq("destajo_id", data.destajoId)
       .maybeSingle();
+
+    let pagadoPorNombre: string | null = null;
+    if (anticipo?.pagado_por) {
+      const { data: prof } = await supabase
+        .from("profiles").select("nombre_completo").eq("id", anticipo.pagado_por).maybeSingle();
+      pagadoPorNombre = (prof as any)?.nombre_completo ?? null;
+    }
+
     // Saldo pendiente del anticipo
     const { data: ests } = await supabase
       .from("obra_destajo_estimaciones")
@@ -1235,13 +1243,14 @@ export const getDestajoAnticipo = createServerFn({ method: "POST" })
     const fondoRetenido = (ests ?? []).reduce((s: number, r: any) => s + Number(r.retencion_fondo ?? 0), 0);
     const fondoLiberado = (ests ?? []).reduce((s: number, r: any) => s + Number(r.liberacion_fondo ?? 0), 0);
     return {
-      anticipo: anticipo ?? null,
+      anticipo: anticipo ? { ...anticipo, pagado_por_nombre: pagadoPorNombre } : null,
       anticipoAmortizado: amortAcum,
       fondoRetenido,
       fondoLiberado,
       fondoSaldo: Math.max(0, fondoRetenido - fondoLiberado),
     };
   });
+
 
 export const marcarAnticipoPagado = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
