@@ -16,6 +16,7 @@ import {
 import { getSaldosProveedores, getDetalleSaldoProveedor } from "@/lib/api/pagos.functions";
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
 import { RegistrarPagoAnticipoDialog } from "./RegistrarPagoAnticipoDialog";
+import { RegistrarPagoOCDialog } from "./RegistrarPagoOCDialog";
 import { formatMXN, formatDate } from "@/lib/format";
 
 type Row = {
