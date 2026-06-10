@@ -120,7 +120,7 @@ export function RequisicionesModule({ obraId }: Props) {
                     const estatus = r.estatus as RequisicionEstatus;
                     return (
                       <TableRow key={r.id} className="hover:bg-muted/50 h-9">
-                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => setDetalleId(r.id)}>
+                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>
                           {r.folio}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
@@ -141,14 +141,14 @@ export function RequisicionesModule({ obraId }: Props) {
                           <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0 h-5`}>{meta.label}</Badge>
                         </TableCell>
                         <TableCell className="text-right py-1">
-                          {estatus === "enviada" && (
+                          {estatus === "enviada" ? (
                             <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
-                          )}
-                          {estatus === "en_cotizacion" && (
+                          ) : estatus === "en_cotizacion" ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
-                          )}
-                          {["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && (
+                          ) : ["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
+                          ) : (
+                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Ver</Button>
                           )}
                         </TableCell>
                       </TableRow>
