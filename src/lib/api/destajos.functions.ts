@@ -1221,6 +1221,53 @@ export const cerrarEstimacionDestajo = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    // Notificar a supervisores de la obra (con fallback a directores) para autorización
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const [{ data: team }, { data: dirs }, { data: obraRow }] = await Promise.all([
+        supabaseAdmin
+          .from("obra_team")
+          .select("user_id")
+          .eq("obra_id", d0!.obra_id)
+          .eq("role", "supervisor"),
+        supabaseAdmin
+          .from("user_roles")
+          .select("user_id")
+          .eq("company_id", est.company_id)
+          .eq("role", "director"),
+        supabaseAdmin.from("obras").select("nombre").eq("id", d0!.obra_id).single(),
+      ]);
+      const supIds = (team ?? []).map((r: any) => r.user_id);
+      const targetIds = Array.from(
+        new Set(
+          (supIds.length > 0 ? supIds : (dirs ?? []).map((r: any) => r.user_id)).filter(
+            (uid: string) => uid && uid !== userId,
+          ),
+        ),
+      );
+      if (targetIds.length > 0) {
+        const montoFmt = new Intl.NumberFormat("es-MX", {
+          style: "currency", currency: "MXN",
+        }).format(neto);
+        const obraNombre = (obraRow as any)?.nombre ?? "";
+        const titulo = "Estimación de destajo por autorizar";
+        const mensaje = `Estimación #${est.numero ?? ""} · ${d0!.nombre}${obraNombre ? " · obra " + obraNombre : ""} · ${montoFmt}. Requiere tu autorización.`;
+        const rows = targetIds.map((uid: string) => ({
+          user_id: uid,
+          company_id: est.company_id,
+          obra_id: d0!.obra_id,
+          tipo: "estimacion_destajo_por_autorizar",
+          titulo,
+          mensaje,
+          link: `/app/obras/${d0!.obra_id}/destajos?destajo=${d0!.id}`,
+        }));
+        await supabaseAdmin.from("notificaciones").insert(rows);
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] estimacion destajo cerrada:", e?.message);
+    }
+
     return { ok: true, bruto, amortizacion, retencion, liberacion, neto };
   });
 
