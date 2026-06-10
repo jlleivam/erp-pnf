@@ -466,6 +466,7 @@ export function CapturaEstimacionDestajoSheet({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </TooltipProvider>
       </SheetContent>
     </Sheet>
   );
