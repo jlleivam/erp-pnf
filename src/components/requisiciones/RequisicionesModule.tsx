@@ -259,14 +259,23 @@ export function RequisicionesModule({ obraId }: Props) {
                   const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
                   return (
                     <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.folio}</TableCell>
+                      <TableCell
+                        className={`font-medium ${isAdministrativo ? "cursor-pointer" : ""}`}
+                        onClick={isAdministrativo ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
+                      >
+                        {r.folio}
+                      </TableCell>
                       <TableCell>{formatDate(r.created_at)}</TableCell>
                       <TableCell className="text-center">{r.items?.length ?? 0}</TableCell>
                       <TableCell>
                         <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => setDetalleId(r.id)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => isAdministrativo ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
+                        >
                           <Eye className="size-4" />
                         </Button>
                       </TableCell>
