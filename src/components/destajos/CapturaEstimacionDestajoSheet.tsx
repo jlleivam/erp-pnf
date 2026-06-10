@@ -213,6 +213,12 @@ export function CapturaEstimacionDestajoSheet({
       toast.error("Hay conceptos que exceden el vigente. Corrige antes de guardar.");
       return;
     }
+    if (computed.excedeLiberacion) {
+      toast.error(
+        `La liberación de fondo no puede exceder el fondo disponible (${formatMXN(computed.fondoDisponible)}).`,
+      );
+      return;
+    }
     const renglones = Object.entries(cantidades)
       .map(([k, v]) => ({ renglon_clave: k, cantidad_ejecutada: Number(v || 0) }))
       .filter((r) => Number.isFinite(r.cantidad_ejecutada) && r.cantidad_ejecutada > 0);
