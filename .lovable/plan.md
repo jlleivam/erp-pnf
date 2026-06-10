@@ -1,44 +1,32 @@
-## Problema
+## Cambios en `CapturaEstimacionDestajoSheet.tsx`
 
-Después del fix anterior, la URL llega a `/app/obras/<id>/destajos` pero sin el `?destajo=<id>`. Causa: la ruta splat `/_authenticated/app/obras/$obraId/$` no declara `validateSearch`, así que TanStack Router descarta cualquier search param desconocido en `navigate()`. El `?destajo=` nunca se conserva, y el `useEffect` de `DestajosModule` (que además lee `window.location.search` solo al montar) no encuentra nada.
+Compactar para dar protagonismo a la tabla de conceptos. Todo en frontend.
 
-## Cambios
+### 1. Header más compacto
+- Eliminar `SheetDescription` ("Captura la cantidad ejecutada…").
+- `SheetTitle` con `text-base` y rango de semana inline.
 
-### 1. `src/routes/_authenticated/app.obras.$obraId.$.tsx`
+### 2. StatCards condensados
+- Reducir padding (`p-2` en vez del default) y tipografía: label `text-[10px]`, value `text-sm font-semibold`.
+- Margen superior `mt-3` en lugar de `mt-6`.
 
-Agregar `validateSearch` para conservar `destajo`:
+### 3. Buscador compacto
+- `h-8`, `mt-3`.
 
-```tsx
-export const Route = createFileRoute("/_authenticated/app/obras/$obraId/$")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    destajo: typeof s.destajo === "string" ? s.destajo : undefined,
-  }),
-  component: ObraModule,
-});
-```
+### 4. Tabla — protagonista, una fila por concepto
+- Reducir paddings de celdas y header a `py-1.5 px-2`, fuente `text-[13px]`.
+- Header: `text-[10px]`.
+- Forzar **una sola línea por concepto**: en `<table>` agregar `table-fixed`; ajustar anchos: clave `w-16`, un. `w-12`, cant. vig. `w-20`, acum. prev. `w-20`, esta semana `w-24`, importe sem. `w-28`, % acum. `w-16`. Columna concepto toma el resto.
+- Celda Concepto: `truncate` con `Tooltip` envolviendo el texto para mostrar el concepto completo on hover. Importar `Tooltip, TooltipTrigger, TooltipContent, TooltipProvider` de `@/components/ui/tooltip`. Envolver la tabla (o el componente raíz) en un `TooltipProvider`.
+- **Centrar todas las columnas excepto Concepto y Clave (jerárquica con indent)**: cambiar `text-right`/`text-left` por `text-center` en headers y celdas de Un., Cant. vig., Acum. prev., Esta semana, Importe sem., % Acum.  
+  - Clave permanece alineada a la izquierda (mantiene su `paddingLeft` jerárquico).
+  - Concepto permanece a la izquierda.
+  - Input de "Esta semana": `text-center` en lugar de `text-right`, alto `h-7`.
 
-### 2. `src/components/destajos/DestajosModule.tsx`
+### 5. Card de cálculo de pago
+- `p-2` en vez de `p-3`, `text-xs`, `mt-3`.
 
-Reemplazar la lectura por `window.location.search` por el search tipado del router, para que también reaccione si el parámetro llega después del montaje:
+### 6. Footer
+- `py-2` y botones `size="sm"`.
 
-```tsx
-import { useSearch, useNavigate } from "@tanstack/react-router";
-...
-const search = useSearch({ strict: false }) as { destajo?: string };
-const navigate = useNavigate();
-
-useEffect(() => {
-  if (search.destajo) {
-    setViewingId(search.destajo);
-    navigate({
-      to: ".",
-      search: (prev: any) => ({ ...prev, destajo: undefined }),
-      replace: true,
-    });
-  }
-}, [search.destajo]);
-```
-
-Eliminar el `useEffect` previo basado en `window.location.search`.
-
-No requiere cambios en `NotificacionesBell.tsx`, en `destajos.functions.ts`, ni en la base de datos (las notificaciones existentes ya guardan el link correcto `/app/obras/<obraId>/destajos?destajo=<destajoId>`).
+Sin cambios de lógica de negocio ni de tipado.
