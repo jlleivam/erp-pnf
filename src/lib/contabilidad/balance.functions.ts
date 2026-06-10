@@ -148,9 +148,9 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
     }
     const pagado = (origen: string) => pagosPorOrigen.get(origen) ?? 0;
 
-    const destajistasPorPagar = Math.max(
+    const destajistasPorPagar = (destajoEstimRes.data ?? []).reduce(
+      (acc: number, r: any) => acc + Math.max(0, num(r.monto_total) - num(r.monto_pagado)),
       0,
-      sum(destajoEstimRes.data, "monto_neto") - pagado("destajo"),
     );
     const subcontratistasPorPagar = Math.max(
       0,
