@@ -254,7 +254,12 @@ export function EstimacionesDestajoTab({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => reabrirM.mutate({ data: { id: e.id } })}
+                            onClick={() =>
+                              reabrirM.mutate(
+                                { data: { id: e.id } },
+                                { onSuccess: () => setEditing(e.semana_inicio) },
+                              )
+                            }
                             disabled={reabrirM.isPending}
                           >
                             <RefreshCw className="size-4 mr-1" /> Reabrir
