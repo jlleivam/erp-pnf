@@ -1156,6 +1156,7 @@ export type Database = {
           created_at: string
           destajo_id: string
           fecha: string
+          folio: string | null
           id: string
           metodo_pago: string | null
           monto: number
@@ -1173,6 +1174,7 @@ export type Database = {
           created_at?: string
           destajo_id: string
           fecha?: string
+          folio?: string | null
           id?: string
           metodo_pago?: string | null
           monto?: number
@@ -1190,6 +1192,7 @@ export type Database = {
           created_at?: string
           destajo_id?: string
           fecha?: string
+          folio?: string | null
           id?: string
           metodo_pago?: string | null
           monto?: number
@@ -3481,6 +3484,10 @@ export type Database = {
       is_supervisor_de_obra: { Args: { _obra_id: string }; Returns: boolean }
       siguiente_codigo_insumo: {
         Args: { _categoria_id: string; _company_id: string }
+        Returns: string
+      }
+      siguiente_folio_anticipo_destajo: {
+        Args: { _company_id: string }
         Returns: string
       }
       siguiente_folio_caja_chica: {
