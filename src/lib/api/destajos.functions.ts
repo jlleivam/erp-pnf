@@ -1157,7 +1157,7 @@ export const cerrarEstimacionDestajo = createServerFn({ method: "POST" })
     if (est.estatus !== "borrador") throw new Error("Ya cerrada");
     const { data: d0 } = await supabase
       .from("obra_destajos")
-      .select("id, obra_id, anticipo_pct, anticipo_monto, fondo_garantia_pct")
+      .select("id, obra_id, nombre, anticipo_pct, anticipo_monto, fondo_garantia_pct")
       .eq("id", est.destajo_id).single();
     const { isDirector } = await getRoles(supabase, userId);
     const member = await isMemberObra(supabase, userId, d0!.obra_id);

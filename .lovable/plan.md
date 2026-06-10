@@ -1,28 +1,24 @@
 ## Problema
 
-Actualmente, en el cierre de estimación de destajo, si el usuario escribe un monto de "Liberar fondo en esta semana" mayor al fondo disponible (retenido acumulado), el sistema lo aceptaba silenciosamente y lo recortaba con `Math.min(...)`. Esto puede confundir al residente: capturó 150, pero solo se liberaron 0 (porque el fondo disponible era 0), y el neto a pagar no coincide con lo que esperaba.
+`cerrarEstimacionDestajo` actualiza el estatus a `cerrada` pero no envía notificación al supervisor de la obra, por lo que el supervisor no se entera de que hay una estimación esperando su autorización.
 
-## Cambios
+## Cambio
 
-### 1. Validación cliente — `CapturaEstimacionDestajoSheet.tsx`
+En `src/lib/api/destajos.functions.ts`, dentro de `cerrarEstimacionDestajo`, después del `update` exitoso, agregar bloque `try/catch` que:
 
-- Detectar exceso: `excedeLiberacion = Number(liberacionFondo) > fondoDisponible`.
-- Aplicar estilo de error al input (`border-destructive`) cuando excede.
-- Mostrar mensaje inline debajo del input: *"No puede liberar más de {fondoDisponible}. Fondo disponible insuficiente."*
-- En `handleGuardar(true)` (cerrar semana) y al confirmar el diálogo: si excede, mostrar `toast.error` y abortar.
-- Deshabilitar el botón "Guardar y cerrar semana" cuando hay exceso.
-- Quitar el clamp silencioso `Math.min(..., fondoDisponible)` del cálculo de `computed.liberacion` para que el "Neto a pagar" refleje el valor inválido y el usuario vea que algo está mal (alternativamente, mantener el clamp pero mostrar la advertencia — confirmamos abajo).
+1. Carga `obra_team` para `d0!.obra_id` con `role = 'supervisor'` para obtener los `user_id` de los supervisores asignados a la obra.
+2. Como fallback (por si la obra no tiene supervisor asignado en `obra_team`), también incluye a los `director` de la compañía desde `user_roles` para que el cierre nunca quede sin notificar.
+3. Excluye al `userId` que cerró (evita auto-notificar si el residente es además supervisor).
+4. Inserta en `notificaciones` (vía `supabaseAdmin`) un registro por usuario con:
+   - `tipo: "estimacion_destajo_por_autorizar"`
+   - `titulo: "Estimación de destajo por autorizar"`
+   - `mensaje`: incluye número de estimación, nombre del destajo, nombre de la obra y monto neto formateado en MXN.
+   - `link`: `/app/obras/{obraId}/destajos?destajo={destajoId}`
+   - `company_id`, `obra_id` correspondientes.
+5. Cualquier error se hace `console.error` sin romper el cierre (patrón existente).
 
-### 2. Validación servidor — `destajos.functions.ts` (`cerrarEstimacionDestajo`)
-
-- Reemplazar `Math.min(Number(data.liberacionFondo ?? 0), fondoDisponible)` por:
-  - Si `data.liberacionFondo > fondoDisponible + 0.01`: `throw new Error("La liberación de fondo (${...}) excede el fondo disponible (${...})")`.
-  - Si está dentro de rango, usar el valor tal cual.
-- Esto protege contra usuarios que manipulen el request directamente.
+Para esto se carga el nombre de la obra (`obras.nombre`) y del destajo (`obra_destajos.nombre`) — ya tenemos `d0`, solo falta extender el `select` a `nombre` y hacer una lectura ligera de `obras.nombre`.
 
 ## Archivos afectados
 
-- `src/components/destajos/CapturaEstimacionDestajoSheet.tsx`
 - `src/lib/api/destajos.functions.ts`
-
-No requiere migración de DB.
