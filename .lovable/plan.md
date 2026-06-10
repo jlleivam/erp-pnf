@@ -1,12 +1,22 @@
-## Cambio (solo para perfil administrativo)
+## Cambio
 
-Archivo: `src/components/requisiciones/RequisicionesModule.tsx`, pestaña **Historial** (líneas 258–275).
+En el sheet de detalle del proveedor (al hacer click en un renglón de Cuentas por pagar → Proveedores OC), agregar un botón **"Registrar pago"** por cada OC con saldo pendiente, que abra el diálogo `RegistrarPagoOCDialog` directamente — el mismo módulo de pago que se usa en la pestaña OCs de la requisición (imagen 1).
 
-Actualmente para todos los roles, el folio y el botón ojo del Historial abren `RequisicionDetalleSheet` (vista simple sin pestañas).
+### Archivos
 
-Ajuste: cuando `isAdministrativo === true`, esos clicks deben abrir `CotizacionSheet` (módulo completo con pestañas Requisición / Cotizaciones / Comparativa / OCs) en vez del detalle simple.
+1. **`src/components/pagos/CuentasPorPagarModule.tsx`** (componente `ProveedorDetalleSheet`, líneas 272–360):
+   - Importar `RegistrarPagoOCDialog` y `useQueryClient`.
+   - Agregar estado local `pagarOC` con `{ id, folio, pendiente }`.
+   - Añadir columna **"Acción"** en la tabla de OCs; mostrar botón "Registrar pago" cuando `pend > 0`.
+   - Al guardar, invalidar `["saldos-proveedores"]` y `["saldo-proveedor", proveedorId]` para refrescar saldos.
+   - Renderizar `<RegistrarPagoOCDialog>` cuando `pagarOC` esté seteado.
 
-1. Folio (`TableCell`): si `isAdministrativo`, hacerlo clickeable → `setCotizacion({ id: r.id, tab: "requisicion" })`. Para los demás roles, mantener comportamiento actual (sin click en el folio).
-2. Botón ojo en columna Acción: si `isAdministrativo`, `onClick` → `setCotizacion({ id: r.id, tab: "ocs" })`. Para los demás roles, mantener `setDetalleId(r.id)` actual.
+### Fuera de alcance
 
-Esto complementa el cambio previo en la tabla de **Activas** del administrativo, dejando consistente que el administrativo siempre acceda al módulo completo (Activas e Historial). No se modifica el comportamiento para residente, supervisor, director ni otros roles. No se cambia `CotizacionSheet` ni lógica de negocio.
+- No se cambia el comportamiento del click en la fila del proveedor (sigue abriendo el sheet de detalle).
+- No se modifica la pestaña Anticipos de destajo.
+- No se altera `RegistrarPagoOCDialog` ni server functions.
+
+### Por qué no navegar a la requisición
+
+Un proveedor puede tener múltiples OCs en distintas obras/requisiciones, por lo que el click en el renglón del proveedor es ambiguo para una sola navegación. Mantener el sheet con OCs listadas y un botón "Registrar pago" por OC abre exactamente el mismo formulario de pago que se usa en la vista de requisición.
