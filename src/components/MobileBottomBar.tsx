@@ -20,7 +20,7 @@ export function MobileBottomBar({ items, pathname, variant = "fixed", onMoreClic
   if (variant === "scroll") {
     return (
       <nav className="md:hidden fixed bottom-0 inset-x-0 h-16 bg-card border-t border-border z-30">
-        <div className="h-full overflow-x-auto overflow-y-hidden flex items-stretch [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="h-full w-full flex items-stretch justify-around">
           {items.map((it) => {
             const Icon = it.icon;
             const active = it.exact
@@ -30,17 +30,16 @@ export function MobileBottomBar({ items, pathname, variant = "fixed", onMoreClic
               <Link
                 key={it.label}
                 to={it.to}
-                className={`shrink-0 min-w-[72px] px-2 flex flex-col items-center justify-center gap-1 text-[11px] leading-none ${
+                className={`flex-1 min-w-0 px-1 flex flex-col items-center justify-center gap-1 text-[10px] leading-none ${
                   active ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <Icon className="size-5" />
-                <span className="truncate max-w-[68px]">{it.label}</span>
+                <Icon className="size-5 shrink-0" />
+                <span className="truncate max-w-full">{it.label}</span>
               </Link>
             );
           })}
         </div>
-        <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-card to-transparent" />
       </nav>
     );
   }
