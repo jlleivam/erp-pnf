@@ -197,15 +197,6 @@ export function RegistrarPagoAnticipoDialog({
             </div>
           )}
 
-          <div>
-            <Label>Fecha</Label>
-            <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-          </div>
-
-          <div>
-            <Label>{refLabel}</Label>
-            <Input value={referencia} onChange={(e) => setReferencia(e.target.value)} />
-          </div>
 
           <div>
             <Label>Notas (opcional)</Label>
