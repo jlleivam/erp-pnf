@@ -1198,7 +1198,13 @@ export const cerrarEstimacionDestajo = createServerFn({ method: "POST" })
       0,
     );
     const fondoDisponible = Math.max(0, fondoAcumPrev + retencion);
-    const liberacion = Math.min(Number(data.liberacionFondo ?? 0), fondoDisponible);
+    const liberacionSolicitada = Number(data.liberacionFondo ?? 0);
+    if (liberacionSolicitada > fondoDisponible + 0.01) {
+      throw new Error(
+        `La liberación de fondo (${liberacionSolicitada.toFixed(2)}) excede el fondo disponible (${fondoDisponible.toFixed(2)}).`,
+      );
+    }
+    const liberacion = liberacionSolicitada;
 
     const neto = bruto - amortizacion - retencion + liberacion;
 

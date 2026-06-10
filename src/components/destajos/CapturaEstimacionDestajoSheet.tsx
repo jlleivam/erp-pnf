@@ -157,7 +157,8 @@ export function CapturaEstimacionDestajoSheet({
     );
     const retencion = bruto * (terminos.fondo_garantia_pct / 100);
     const fondoDisponible = terminos.fondo_saldo_prev + retencion;
-    const liberacionNum = Math.min(Number(liberacionFondo || 0), fondoDisponible);
+    const liberacionNum = Number(liberacionFondo || 0);
+    const excedeLiberacion = liberacionNum > fondoDisponible + 0.01;
     const neto = bruto - amortizacion - retencion + liberacionNum;
     return {
       totalSemana,
@@ -169,6 +170,7 @@ export function CapturaEstimacionDestajoSheet({
       retencion,
       liberacion: liberacionNum,
       fondoDisponible,
+      excedeLiberacion,
       neto,
     };
   }, [vigente, cantidades, acumuladoPrevio, terminos, liberacionFondo]);
@@ -209,6 +211,12 @@ export function CapturaEstimacionDestajoSheet({
     if (!estimacion) return;
     if (computed.erroresPorClave.size > 0) {
       toast.error("Hay conceptos que exceden el vigente. Corrige antes de guardar.");
+      return;
+    }
+    if (computed.excedeLiberacion) {
+      toast.error(
+        `La liberación de fondo no puede exceder el fondo disponible (${formatMXN(computed.fondoDisponible)}).`,
+      );
       return;
     }
     const renglones = Object.entries(cantidades)
@@ -414,21 +422,28 @@ export function CapturaEstimacionDestajoSheet({
                     />
                   )}
                   {terminos.fondo_garantia_pct > 0 && !isCerrada && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs flex-1">
-                        (+) Liberar fondo en esta semana
-                      </span>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        min={0}
-                        max={computed.fondoDisponible}
-                        value={liberacionFondo}
-                        onChange={(e) => setLiberacionFondo(e.target.value)}
-                        className="h-8 w-32 text-right tabular-nums"
-                        placeholder="0.00"
-                      />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs flex-1">
+                          (+) Liberar fondo en esta semana
+                        </span>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min={0}
+                          max={computed.fondoDisponible}
+                          value={liberacionFondo}
+                          onChange={(e) => setLiberacionFondo(e.target.value)}
+                          className={`h-8 w-32 text-right tabular-nums ${computed.excedeLiberacion ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      {computed.excedeLiberacion && (
+                        <p className="text-[11px] text-destructive text-right">
+                          Excede el fondo disponible ({formatMXN(computed.fondoDisponible)}).
+                        </p>
+                      )}
                     </div>
                   )}
                   {terminos.fondo_garantia_pct > 0 && isCerrada && computed.liberacion > 0 && (
@@ -462,7 +477,7 @@ export function CapturaEstimacionDestajoSheet({
                   {guardarM.isPending ? "Guardando…" : "Guardar borrador"}
                 </Button>
                 <Button
-                  disabled={guardarM.isPending || cerrarM.isPending}
+                  disabled={guardarM.isPending || cerrarM.isPending || computed.excedeLiberacion}
                   onClick={() => handleGuardar(true)}
                 >
                   <Lock className="size-4 mr-1" />
