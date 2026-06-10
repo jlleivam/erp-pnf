@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-
+import { useSearch, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -70,19 +70,21 @@ export function DestajosModule({ obraId }: { obraId: string }) {
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Destajo | null>(null);
 
+  const search = useSearch({ strict: false }) as { destajo?: string };
+  const navigate = useNavigate();
+
   // Abrir automáticamente el destajo indicado en ?destajo=<id> (notificación).
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("destajo");
-    if (id) {
-      setViewingId(id);
-      params.delete("destajo");
-      const qs = params.toString();
-      const url = window.location.pathname + (qs ? `?${qs}` : "");
-      window.history.replaceState({}, "", url);
+    if (search.destajo) {
+      setViewingId(search.destajo);
+      navigate({
+        to: ".",
+        search: (prev: any) => ({ ...prev, destajo: undefined }),
+        replace: true,
+      } as any);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.destajo]);
 
 
   const remove = useServerFn(eliminarDestajo);
