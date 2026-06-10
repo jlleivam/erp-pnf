@@ -986,6 +986,96 @@ export type Database = {
           },
         ]
       }
+      cuentas_por_pagar: {
+        Row: {
+          beneficiario_id: string
+          beneficiario_nombre: string
+          beneficiario_tipo: Database["public"]["Enums"]["cxp_beneficiario_tipo"]
+          cancelacion_motivo: string | null
+          cancelado_at: string | null
+          cancelado_por: string | null
+          company_id: string
+          concepto: string
+          creado_por: string
+          created_at: string
+          estatus: Database["public"]["Enums"]["cxp_estatus"]
+          fecha_emision: string
+          fecha_vencimiento: string | null
+          folio: string
+          id: string
+          monto_pagado: number
+          monto_total: number
+          obra_id: string | null
+          origen_id: string | null
+          origen_tipo: string
+          saldo: number | null
+          updated_at: string
+        }
+        Insert: {
+          beneficiario_id: string
+          beneficiario_nombre: string
+          beneficiario_tipo: Database["public"]["Enums"]["cxp_beneficiario_tipo"]
+          cancelacion_motivo?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          company_id: string
+          concepto: string
+          creado_por: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["cxp_estatus"]
+          fecha_emision?: string
+          fecha_vencimiento?: string | null
+          folio: string
+          id?: string
+          monto_pagado?: number
+          monto_total: number
+          obra_id?: string | null
+          origen_id?: string | null
+          origen_tipo: string
+          saldo?: number | null
+          updated_at?: string
+        }
+        Update: {
+          beneficiario_id?: string
+          beneficiario_nombre?: string
+          beneficiario_tipo?: Database["public"]["Enums"]["cxp_beneficiario_tipo"]
+          cancelacion_motivo?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          company_id?: string
+          concepto?: string
+          creado_por?: string
+          created_at?: string
+          estatus?: Database["public"]["Enums"]["cxp_estatus"]
+          fecha_emision?: string
+          fecha_vencimiento?: string | null
+          folio?: string
+          id?: string
+          monto_pagado?: number
+          monto_total?: number
+          obra_id?: string | null
+          origen_id?: string | null
+          origen_tipo?: string
+          saldo?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuentas_por_pagar_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuentas_por_pagar_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insumo_categorias: {
         Row: {
           company_id: string
@@ -1333,11 +1423,14 @@ export type Database = {
       obra_destajo_estimaciones: {
         Row: {
           amortizacion_anticipo: number
+          autorizada_at: string | null
+          autorizada_por: string | null
           cerrada_at: string | null
           cerrada_por: string | null
           company_id: string
           creado_por: string
           created_at: string
+          cxp_id: string | null
           destajo_id: string
           estatus: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id: string
@@ -1345,6 +1438,9 @@ export type Database = {
           monto_neto: number
           monto_total: number
           numero: number
+          rechazada_at: string | null
+          rechazada_por: string | null
+          rechazo_motivo: string | null
           retencion_fondo: number
           semana_fin: string
           semana_inicio: string
@@ -1352,11 +1448,14 @@ export type Database = {
         }
         Insert: {
           amortizacion_anticipo?: number
+          autorizada_at?: string | null
+          autorizada_por?: string | null
           cerrada_at?: string | null
           cerrada_por?: string | null
           company_id: string
           creado_por: string
           created_at?: string
+          cxp_id?: string | null
           destajo_id: string
           estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id?: string
@@ -1364,6 +1463,9 @@ export type Database = {
           monto_neto?: number
           monto_total?: number
           numero?: number
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          rechazo_motivo?: string | null
           retencion_fondo?: number
           semana_fin: string
           semana_inicio: string
@@ -1371,11 +1473,14 @@ export type Database = {
         }
         Update: {
           amortizacion_anticipo?: number
+          autorizada_at?: string | null
+          autorizada_por?: string | null
           cerrada_at?: string | null
           cerrada_por?: string | null
           company_id?: string
           creado_por?: string
           created_at?: string
+          cxp_id?: string | null
           destajo_id?: string
           estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id?: string
@@ -1383,6 +1488,9 @@ export type Database = {
           monto_neto?: number
           monto_total?: number
           numero?: number
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          rechazo_motivo?: string | null
           retencion_fondo?: number
           semana_fin?: string
           semana_inicio?: string
@@ -1394,6 +1502,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_destajo_estimaciones_cxp_id_fkey"
+            columns: ["cxp_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_por_pagar"
             referencedColumns: ["id"]
           },
           {
@@ -2889,6 +3004,7 @@ export type Database = {
           created_at: string
           cuenta_id: string
           cuenta_movimiento_id: string | null
+          cxp_id: string | null
           fecha: string
           id: string
           metodo: string
@@ -2907,6 +3023,7 @@ export type Database = {
           created_at?: string
           cuenta_id: string
           cuenta_movimiento_id?: string | null
+          cxp_id?: string | null
           fecha?: string
           id?: string
           metodo: string
@@ -2925,6 +3042,7 @@ export type Database = {
           created_at?: string
           cuenta_id?: string
           cuenta_movimiento_id?: string | null
+          cxp_id?: string | null
           fecha?: string
           id?: string
           metodo?: string
@@ -2954,6 +3072,13 @@ export type Database = {
             columns: ["cuenta_movimiento_id"]
             isOneToOne: false
             referencedRelation: "cuenta_movimientos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_cxp_id_fkey"
+            columns: ["cxp_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_por_pagar"
             referencedColumns: ["id"]
           },
         ]
@@ -3556,6 +3681,7 @@ export type Database = {
         Args: { _company_id: string }
         Returns: string
       }
+      siguiente_folio_cxp: { Args: { _company_id: string }; Returns: string }
       siguiente_folio_oc: { Args: { _company_id: string }; Returns: string }
       siguiente_folio_requisicion: {
         Args: { _company_id: string }
@@ -3589,8 +3715,15 @@ export type Database = {
         | "enviado_admin"
         | "repuesto"
         | "rechazado"
+      cxp_beneficiario_tipo: "trabajador" | "tercero"
+      cxp_estatus: "pendiente" | "parcial" | "pagada" | "cancelada"
       destajo_doc_estatus: "borrador" | "enviado" | "autorizado" | "rechazado"
-      destajo_estimacion_estatus: "borrador" | "cerrada"
+      destajo_estimacion_estatus:
+        | "borrador"
+        | "cerrada"
+        | "autorizada"
+        | "rechazada"
+        | "pagada"
       destajo_presupuesto_tipo: "base" | "adenda"
       estimacion_estatus: "borrador" | "cerrada"
       insumo_estatus: "autorizado" | "pendiente"
@@ -3821,8 +3954,16 @@ export const Constants = {
         "repuesto",
         "rechazado",
       ],
+      cxp_beneficiario_tipo: ["trabajador", "tercero"],
+      cxp_estatus: ["pendiente", "parcial", "pagada", "cancelada"],
       destajo_doc_estatus: ["borrador", "enviado", "autorizado", "rechazado"],
-      destajo_estimacion_estatus: ["borrador", "cerrada"],
+      destajo_estimacion_estatus: [
+        "borrador",
+        "cerrada",
+        "autorizada",
+        "rechazada",
+        "pagada",
+      ],
       destajo_presupuesto_tipo: ["base", "adenda"],
       estimacion_estatus: ["borrador", "cerrada"],
       insumo_estatus: ["autorizado", "pendiente"],
