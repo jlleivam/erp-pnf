@@ -80,12 +80,15 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .eq("company_id", companyId)
         .in("estatus", ["autorizada", "enviada", "recibida_parcial", "recibida"])
         .neq("estado_pago", "pagado"),
-      // Destajistas por pagar: estimaciones cerradas
+      // Destajistas por pagar: CxP pendientes/parciales de estimaciones de destajo
       supabase
-        .from("obra_destajo_estimaciones")
-        .select("monto_neto, estatus")
+        .from("cuentas_por_pagar")
+        .select("monto_total, monto_pagado, beneficiario_tipo, origen_tipo, estatus, cancelado_at")
         .eq("company_id", companyId)
-        .eq("estatus", "cerrada"),
+        .eq("beneficiario_tipo", "trabajador")
+        .eq("origen_tipo", "destajo_estimacion")
+        .in("estatus", ["pendiente", "parcial"])
+        .is("cancelado_at", null),
       // Subcontratistas por pagar
       supabase
         .from("obra_subcontrato_estimaciones")
@@ -145,9 +148,9 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
     }
     const pagado = (origen: string) => pagosPorOrigen.get(origen) ?? 0;
 
-    const destajistasPorPagar = Math.max(
+    const destajistasPorPagar = (destajoEstimRes.data ?? []).reduce(
+      (acc: number, r: any) => acc + Math.max(0, num(r.monto_total) - num(r.monto_pagado)),
       0,
-      sum(destajoEstimRes.data, "monto_neto") - pagado("destajo"),
     );
     const subcontratistasPorPagar = Math.max(
       0,

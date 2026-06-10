@@ -321,3 +321,210 @@ export const getDetalleSaldoProveedor = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return ocs ?? [];
   });
+
+// ============================================================
+// Cuentas por pagar (destajo estimaciones, etc.)
+// ============================================================
+
+export const listCxPDestajoPendientes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { companyId, roles } = await getCtx(supabase, userId);
+    assertPayer(roles);
+
+    const { data, error } = await supabase
+      .from("cuentas_por_pagar")
+      .select("id, folio, fecha_emision, obra_id, beneficiario_nombre, concepto, monto_total, monto_pagado, estatus, origen_tipo, origen_id, obra:obras(id, nombre)")
+      .eq("company_id", companyId)
+      .eq("beneficiario_tipo", "trabajador")
+      .eq("origen_tipo", "destajo_estimacion")
+      .in("estatus", ["pendiente", "parcial"])
+      .is("cancelado_at", null)
+      .order("fecha_emision", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      id: r.id,
+      folio: r.folio,
+      fecha_emision: r.fecha_emision,
+      obra_id: r.obra_id,
+      obra_nombre: r.obra?.nombre ?? null,
+      beneficiario_nombre: r.beneficiario_nombre,
+      concepto: r.concepto,
+      monto_total: Number(r.monto_total),
+      monto_pagado: Number(r.monto_pagado),
+      saldo: +(Number(r.monto_total) - Number(r.monto_pagado)).toFixed(2),
+      estatus: r.estatus,
+      origen_tipo: r.origen_tipo,
+      origen_id: r.origen_id,
+    }));
+  });
+
+const registrarCxPSchema = z.object({
+  cxpId: z.string().uuid(),
+  cuentaId: z.string().uuid(),
+  monto: z.number().positive(),
+  metodo: metodoEnum,
+  fecha: z.string().min(10).max(10),
+  referencia: z.string().trim().max(120).optional().nullable(),
+  notas: z.string().trim().max(500).optional().nullable(),
+});
+
+export const registrarPagoCxP = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => registrarCxPSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, roles } = await getCtx(supabase, userId);
+    assertPayer(roles);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Lee cuenta
+    const { data: cuenta, error: cErr } = await supabaseAdmin
+      .from("cuentas")
+      .select("id, company_id, tipo, activa, saldo_actual, nombre")
+      .eq("id", data.cuentaId).maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!cuenta || cuenta.company_id !== companyId) throw new Error("Cuenta no encontrada");
+    if (!cuenta.activa) throw new Error("La cuenta está inactiva");
+
+    if (cuenta.tipo === "caja_fuerte" && data.metodo !== "efectivo") {
+      throw new Error("La caja fuerte solo admite pagos en efectivo");
+    }
+    if (cuenta.tipo === "bancaria" && data.metodo === "efectivo") {
+      throw new Error("Las cuentas bancarias no admiten pagos en efectivo");
+    }
+
+    // Lee CxP
+    const { data: cxp, error: cxpErr } = await supabaseAdmin
+      .from("cuentas_por_pagar")
+      .select("id, company_id, folio, beneficiario_nombre, beneficiario_tipo, origen_tipo, monto_total, monto_pagado, estatus, cancelado_at")
+      .eq("id", data.cxpId).maybeSingle();
+    if (cxpErr) throw new Error(cxpErr.message);
+    if (!cxp || cxp.company_id !== companyId) throw new Error("Cuenta por pagar no encontrada");
+    if (cxp.cancelado_at) throw new Error("La cuenta por pagar está cancelada");
+    if (cxp.estatus === "pagada") throw new Error("La cuenta por pagar ya está pagada");
+
+    const total = Number(cxp.monto_total);
+    const pagado = Number(cxp.monto_pagado);
+    const pendiente = +(total - pagado).toFixed(2);
+    if (data.monto > pendiente + 0.01) {
+      throw new Error(`El monto (${data.monto}) excede el saldo pendiente (${pendiente})`);
+    }
+
+    const concepto = `Pago CxP ${cxp.folio} · ${cxp.beneficiario_nombre}`;
+
+    // 1. Insert pago
+    const { data: pago, error: pErr } = await supabaseAdmin
+      .from("pagos")
+      .insert({
+        company_id: companyId,
+        cuenta_id: data.cuentaId,
+        fecha: data.fecha,
+        monto: data.monto,
+        metodo: data.metodo,
+        referencia: data.referencia || null,
+        concepto,
+        notas: data.notas || null,
+        origen_tipo: "cxp",
+        origen_id: data.cxpId,
+        creado_por: userId,
+      })
+      .select("id")
+      .single();
+    if (pErr) throw new Error(pErr.message);
+
+    // 2. Insert movimiento
+    const { data: mov, error: mErr } = await supabaseAdmin
+      .from("cuenta_movimientos")
+      .insert({
+        cuenta_id: data.cuentaId,
+        company_id: companyId,
+        fecha: data.fecha,
+        tipo: "egreso",
+        monto: data.monto,
+        concepto,
+        referencia: data.referencia || null,
+        origen: "pago",
+        origen_id: pago.id,
+        creado_por: userId,
+      })
+      .select("id")
+      .single();
+    if (mErr) {
+      await supabaseAdmin.from("pagos").delete().eq("id", pago.id);
+      throw new Error(mErr.message);
+    }
+
+    // 3. Link movimiento al pago
+    await supabaseAdmin.from("pagos").update({ cuenta_movimiento_id: mov.id }).eq("id", pago.id);
+
+    // 4. Update saldo cuenta
+    const nuevoSaldo = +(Number(cuenta.saldo_actual) - data.monto).toFixed(2);
+    const { error: sErr } = await supabaseAdmin
+      .from("cuentas").update({ saldo_actual: nuevoSaldo }).eq("id", data.cuentaId);
+    if (sErr) {
+      await supabaseAdmin.from("cuenta_movimientos").delete().eq("id", mov.id);
+      await supabaseAdmin.from("pagos").delete().eq("id", pago.id);
+      throw new Error(sErr.message);
+    }
+
+    // 5. Update CxP
+    const nuevoPagado = +(pagado + data.monto).toFixed(2);
+    const nuevoEstado: "parcial" | "pagada" = nuevoPagado >= total - 0.01 ? "pagada" : "parcial";
+    const { error: cxpUpdErr } = await supabaseAdmin
+      .from("cuentas_por_pagar")
+      .update({ monto_pagado: nuevoPagado, estatus: nuevoEstado })
+      .eq("id", data.cxpId);
+    if (cxpUpdErr) {
+      await supabaseAdmin.from("cuentas").update({ saldo_actual: cuenta.saldo_actual }).eq("id", data.cuentaId);
+      await supabaseAdmin.from("cuenta_movimientos").delete().eq("id", mov.id);
+      await supabaseAdmin.from("pagos").delete().eq("id", pago.id);
+      throw new Error(cxpUpdErr.message);
+    }
+
+    // 6. Asiento contable doble partida: cargo a pasivo, abono a cuenta (banco / caja fuerte)
+    const cuentaPasivo =
+      cxp.beneficiario_tipo === "trabajador" && cxp.origen_tipo === "destajo_estimacion"
+        ? "Cuentas por pagar - Contratistas destajo"
+        : cxp.origen_tipo === "subcontrato_estimacion"
+          ? "Cuentas por pagar - Subcontratistas"
+          : cxp.origen_tipo === "nomina"
+            ? "Nómina por pagar"
+            : "Cuentas por pagar";
+    const cuentaActivo = cuenta.tipo === "bancaria" ? "Bancos" : "Caja fuerte";
+
+    const asientoId = crypto.randomUUID();
+    const renglones = [
+      {
+        company_id: companyId,
+        asiento_id: asientoId,
+        fecha: data.fecha,
+        concepto,
+        referencia: cxp.folio,
+        origen_tipo: "pago_cxp",
+        origen_id: pago.id,
+        tipo_movimiento: "cargo",
+        cuenta_contable: cuentaPasivo,
+        monto: data.monto,
+        creado_por: userId,
+      },
+      {
+        company_id: companyId,
+        asiento_id: asientoId,
+        fecha: data.fecha,
+        concepto,
+        referencia: cxp.folio,
+        origen_tipo: "pago_cxp",
+        origen_id: pago.id,
+        tipo_movimiento: "abono",
+        cuenta_contable: cuentaActivo,
+        monto: data.monto,
+        creado_por: userId,
+      },
+    ];
+    await supabaseAdmin.from("asientos_contables").insert(renglones);
+
+    return { id: pago.id };
+  });

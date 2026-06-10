@@ -13,10 +13,11 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
-import { getSaldosProveedores, getDetalleSaldoProveedor } from "@/lib/api/pagos.functions";
+import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes } from "@/lib/api/pagos.functions";
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
 import { RegistrarPagoAnticipoDialog } from "./RegistrarPagoAnticipoDialog";
 import { RegistrarPagoOCDialog } from "./RegistrarPagoOCDialog";
+import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { formatMXN, formatDate } from "@/lib/format";
 
 type Row = {
@@ -50,6 +51,12 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchAnticiposCount(),
   });
 
+  const fetchEstimacionesCount = useServerFn(listCxPDestajoPendientes);
+  const estimacionesCountQ = useQuery({
+    queryKey: ["cxp-destajo-pendientes"],
+    queryFn: () => fetchEstimacionesCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -57,7 +64,9 @@ export function CuentasPorPagarModule() {
 
   const ocPendientesCount = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.saldo_pendiente > 0).length;
-  const anticiposPendientesCount = ((anticiposCountQ.data ?? []) as unknown[]).length;
+  const anticiposPendientesCount =
+    ((anticiposCountQ.data ?? []) as unknown[]).length
+    + ((estimacionesCountQ.data ?? []) as unknown[]).length;
 
 
   return (
@@ -80,7 +89,7 @@ export function CuentasPorPagarModule() {
             )}
           </TabsTrigger>
           <TabsTrigger value="anticipos">
-            Anticipos de destajo
+            Destajos
             {anticiposPendientesCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
                 {anticiposPendientesCount > 99 ? "99+" : anticiposPendientesCount}
@@ -181,71 +190,182 @@ type AnticipoRow = {
   obraNombre: string;
 };
 
+type CxPRow = {
+  id: string;
+  folio: string;
+  fecha_emision: string;
+  obra_id: string | null;
+  obra_nombre: string | null;
+  beneficiario_nombre: string;
+  concepto: string;
+  monto_total: number;
+  monto_pagado: number;
+  saldo: number;
+  estatus: "pendiente" | "parcial" | "pagada" | "cancelada";
+  origen_tipo: string;
+  origen_id: string | null;
+};
+
 function AnticiposDestajoTab() {
   const fetchAnticipos = useServerFn(listAnticiposDestajoPendientes);
+  const fetchEstimaciones = useServerFn(listCxPDestajoPendientes);
   const qc = useQueryClient();
   const [pagar, setPagar] = useState<AnticipoRow | null>(null);
+  const [pagarCxP, setPagarCxP] = useState<CxPRow | null>(null);
 
   const antQ = useQuery({
     queryKey: ["anticipos-destajo-pendientes"],
     queryFn: () => fetchAnticipos(),
   });
+  const estQ = useQuery({
+    queryKey: ["cxp-destajo-pendientes"],
+    queryFn: () => fetchEstimaciones(),
+  });
 
   const rows = (antQ.data ?? []) as AnticipoRow[];
-  const total = rows.reduce((s, r) => s + r.monto, 0);
+  const estRows = (estQ.data ?? []) as CxPRow[];
+  const totalAnticipos = rows.reduce((s, r) => s + r.monto, 0);
+  const totalEstimaciones = estRows.reduce((s, r) => s + r.saldo, 0);
+
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["anticipos-destajo-pendientes"] });
+    qc.invalidateQueries({ queryKey: ["cxp-destajo-pendientes"] });
+    qc.invalidateQueries({ queryKey: ["destajo-anticipo"] });
+    qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
+    qc.invalidateQueries({ queryKey: ["balance"] });
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Card className="px-4 py-2">
-          <p className="text-xs text-muted-foreground">Total solicitado</p>
-          <p className="text-xl font-semibold">{formatMXN(total)}</p>
-        </Card>
-      </div>
+    <div className="space-y-6">
+      {/* Estimaciones por pagar */}
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-base font-semibold">Estimaciones por pagar</h3>
+            <p className="text-xs text-muted-foreground">
+              Cuentas por pagar generadas al autorizar estimaciones de destajo.
+            </p>
+          </div>
+          <Card className="px-4 py-2">
+            <p className="text-xs text-muted-foreground">Saldo total</p>
+            <p className="text-lg font-semibold">{formatMXN(totalEstimaciones)}</p>
+          </Card>
+        </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Obra</TableHead>
-              <TableHead>Destajo</TableHead>
-              <TableHead>Destajista</TableHead>
-              <TableHead>Solicitado</TableHead>
-              <TableHead>Por</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-              <TableHead className="text-right">Acción</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {antQ.isLoading && (
-              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">Cargando…</TableCell></TableRow>
-            )}
-            {!antQ.isLoading && rows.length === 0 && (
+        <Card>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
-                  <HandCoins className="size-8 mx-auto mb-2 text-muted-foreground/50" />
-                  Sin solicitudes de anticipo pendientes.
-                </TableCell>
+                <TableHead>Folio</TableHead>
+                <TableHead>Obra</TableHead>
+                <TableHead>Destajista</TableHead>
+                <TableHead>Concepto</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Pagado</TableHead>
+                <TableHead className="text-right">Saldo</TableHead>
+                <TableHead>Estatus</TableHead>
+                <TableHead className="text-right">Acción</TableHead>
               </TableRow>
-            )}
-            {rows.map((r) => (
-              <TableRow key={r.anticipoId}>
-                <TableCell className="text-sm">{r.obraNombre}</TableCell>
-                <TableCell className="font-medium">
-                  {r.destajoNumero != null ? `#${r.destajoNumero} · ` : ""}{r.destajoNombre}
-                </TableCell>
-                <TableCell className="text-sm">{r.destajistaNombre}</TableCell>
-                <TableCell className="text-xs">{formatDate(r.solicitadoAt)}</TableCell>
-                <TableCell className="text-xs">{r.solicitadoPorNombre}</TableCell>
-                <TableCell className="text-right font-semibold">{formatMXN(r.monto)}</TableCell>
-                <TableCell className="text-right">
-                  <Button size="sm" onClick={() => setPagar(r)}>Registrar pago</Button>
-                </TableCell>
+            </TableHeader>
+            <TableBody>
+              {estQ.isLoading && (
+                <TableRow><TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">Cargando…</TableCell></TableRow>
+              )}
+              {!estQ.isLoading && estRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">
+                    <HandCoins className="size-8 mx-auto mb-2 text-muted-foreground/50" />
+                    Sin estimaciones por pagar.
+                  </TableCell>
+                </TableRow>
+              )}
+              {estRows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.folio}</TableCell>
+                  <TableCell className="text-xs">{r.obra_nombre ?? "—"}</TableCell>
+                  <TableCell className="text-sm">{r.beneficiario_nombre}</TableCell>
+                  <TableCell className="text-xs max-w-[260px] truncate" title={r.concepto}>{r.concepto}</TableCell>
+                  <TableCell className="text-xs">{formatDate(r.fecha_emision)}</TableCell>
+                  <TableCell className="text-right">{formatMXN(r.monto_total)}</TableCell>
+                  <TableCell className="text-right">{formatMXN(r.monto_pagado)}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
+                  <TableCell>
+                    <Badge className={ESTADO_PAGO_BADGE[r.estatus === "pagada" ? "pagado" : r.estatus] ?? ""}>
+                      {r.estatus === "parcial" ? "Parcial" : r.estatus === "pagada" ? "Pagado" : "Pendiente"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {r.saldo > 0 && (
+                      <Button size="sm" onClick={() => setPagarCxP(r)}>Registrar pago</Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      </section>
+
+      {/* Anticipos */}
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-base font-semibold">Anticipos pendientes</h3>
+            <p className="text-xs text-muted-foreground">
+              Solicitudes de anticipo de destajo enviadas por residentes.
+            </p>
+          </div>
+          <Card className="px-4 py-2">
+            <p className="text-xs text-muted-foreground">Total solicitado</p>
+            <p className="text-lg font-semibold">{formatMXN(totalAnticipos)}</p>
+          </Card>
+        </div>
+
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Obra</TableHead>
+                <TableHead>Destajo</TableHead>
+                <TableHead>Destajista</TableHead>
+                <TableHead>Solicitado</TableHead>
+                <TableHead>Por</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+                <TableHead className="text-right">Acción</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+            </TableHeader>
+            <TableBody>
+              {antQ.isLoading && (
+                <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">Cargando…</TableCell></TableRow>
+              )}
+              {!antQ.isLoading && rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                    <HandCoins className="size-8 mx-auto mb-2 text-muted-foreground/50" />
+                    Sin solicitudes de anticipo pendientes.
+                  </TableCell>
+                </TableRow>
+              )}
+              {rows.map((r) => (
+                <TableRow key={r.anticipoId}>
+                  <TableCell className="text-sm">{r.obraNombre}</TableCell>
+                  <TableCell className="font-medium">
+                    {r.destajoNumero != null ? `#${r.destajoNumero} · ` : ""}{r.destajoNombre}
+                  </TableCell>
+                  <TableCell className="text-sm">{r.destajistaNombre}</TableCell>
+                  <TableCell className="text-xs">{formatDate(r.solicitadoAt)}</TableCell>
+                  <TableCell className="text-xs">{r.solicitadoPorNombre}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatMXN(r.monto)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" onClick={() => setPagar(r)}>Registrar pago</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      </section>
 
       {pagar && (
         <RegistrarPagoAnticipoDialog
@@ -258,14 +378,21 @@ function AnticiposDestajoTab() {
           monto={pagar.monto}
           open={!!pagar}
           onOpenChange={(o) => !o && setPagar(null)}
-          onSaved={() => {
-            qc.invalidateQueries({ queryKey: ["anticipos-destajo-pendientes"] });
-            qc.invalidateQueries({ queryKey: ["destajo-anticipo"] });
-            qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
-          }}
+          onSaved={invalidateAll}
         />
       )}
 
+      {pagarCxP && (
+        <RegistrarPagoCxPDialog
+          cxpId={pagarCxP.id}
+          folio={pagarCxP.folio}
+          beneficiarioNombre={pagarCxP.beneficiario_nombre}
+          saldoPendiente={pagarCxP.saldo}
+          open={!!pagarCxP}
+          onOpenChange={(o) => !o && setPagarCxP(null)}
+          onSaved={invalidateAll}
+        />
+      )}
     </div>
   );
 }
