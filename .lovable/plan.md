@@ -1,29 +1,31 @@
-## Objetivo
-Modificar `autorizarEstimacionDestajo` en `src/lib/api/destajos.functions.ts` para notificar al residente solicitante y al administrativo de obra cuando una estimación de destajo es autorizada.
+## Problema
 
-## Cambios necesarios
+En la vista de obra → Requisiciones, un usuario con rol **administrativo** ve un listado en tabla, pero:
 
-1. **Notificar al residente solicitante**
-   - Usar `est.creado_por` como destinatario.
-   - Mensaje personalizado: `Tu estimación #N fue autorizada...`
-   - Solo si `creado_por` existe y es distinto del usuario que autoriza.
+- Al hacer click en el folio se abre solo el detalle de la requisición (sin pestañas).
+- Solo aparecen botones de acción condicionales por estatus:
+  - `enviada` → "Cotizar"
+  - `en_cotizacion` → "Continuar"
+  - `pendiente_autorizacion`, `oc_generada`, `completada` → "Ver OCs"
+- Para estatus intermedios como `cotizada`, `autorizada` o `rechazada` no hay ningún botón, por lo que el administrativo **no puede acceder a Comparativa ni a OCs**.
 
-2. **Notificar al administrativo de la obra**
-   - Consultar `obra_team` filtrando por `obra_id = d0.obra_id` y `role = 'administrativo'`.
-   - Mensaje: `Estimación #N autorizada... Lista para programar pago.`
+El `CotizacionSheet` ya contiene las 4 pestañas (Requisición / Cotizaciones / Comparativa / OCs) y no las restringe por rol — el problema es solo el punto de entrada desde la tabla del administrativo.
 
-3. **Deduplicación**
-   - Evitar enviar notificaciones duplicadas si el residente o administrativo de obra también aparece en `user_roles` (administrativo/director a nivel empresa).
-   - Usar un `Set` de user IDs unificados para la inserción.
+## Cambios
 
-4. **Tipos de notificación**
-   - Residente: `estimacion_destajo_autorizada_residente`
-   - Administrativo obra: `estimacion_destajo_autorizada` (mismo tipo que admins empresa, o separado si se prefiere)
+Archivo: `src/components/requisiciones/RequisicionesModule.tsx` (tabla del administrativo, ~líneas 97–158)
 
-## Archivo a modificar
-- `src/lib/api/destajos.functions.ts` — bloque de notificaciones dentro de `autorizarEstimacionDestajo` (líneas ~1583-1610).
+1. **Hacer que el folio abra el módulo completo** en lugar del detalle simple:
+   - Cambiar el `onClick` del `TableCell` del folio para `setCotizacion({ id: r.id, tab: "requisicion" })` en vez de `setDetalleId(r.id)`.
 
-## Notas técnicas
-- Usar `supabaseAdmin` para las consultas de notificación (ya está importado en el handler).
-- Mantener el bloque `try/catch` existente para que errores de notificación no rompan la transacción principal.
-- No requiere cambios en base de datos ni UI.
+2. **Agregar siempre un botón "Ver"** en la columna de acción para que el administrativo pueda abrir el sheet en cualquier estatus:
+   - Mantener los botones existentes (`Cotizar`, `Continuar`, `Ver OCs`) cuando aplica.
+   - Para los demás estatus (`cotizada`, `autorizada`, `rechazada`, `borrador`), mostrar un botón outline **"Ver"** que abra `setCotizacion({ id: r.id, tab: "requisicion" })`.
+
+3. No se tocan permisos ni lógica de negocio: las pestañas ya existen en `CotizacionSheet` y son visibles para todos los roles; solo se habilita el acceso desde la tabla.
+
+## Fuera de alcance
+
+- No se modifica `CotizacionSheet` ni las server functions.
+- No se cambia la vista de tarjetas (no-administrativo).
+- No se alteran permisos de autorización/edición.
