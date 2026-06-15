@@ -1,61 +1,20 @@
-## Problema
+## Cambios en la tabla de Subcontratos
 
-El rol **administrativo** puede editar borradores de destajo y subcontrato (crear, modificar renglones del presupuesto base, capturar órdenes de cambio en borrador, eliminar). No debería: la edición de borrador corresponde sólo a **director** o **residente** de la obra (igual que `crearOrdenCambioDestajo`, `enviarPresupuestoDestajo` y `reabrirPresupuestoDestajo`, que ya usan ese guard).
+### 1. Backend — `src/lib/api/subcontratos.functions.ts` (`listSubcontratos`)
+- Quitar el filtro `.eq("estatus", "cerrada")` al traer estimaciones y, en su lugar, calcular dos acumulados:
+  - `estimado_acumulado` = suma de `monto_total` de **todas** las estimaciones (cualquier estatus).
+  - `pagado_acumulado` = suma de `monto_total` solo de estimaciones con estatus `cerrada` (comportamiento actual).
+- Exponer ambos campos en el objeto devuelto.
 
-La causa raíz son guards permisivos del lado servidor que usan `isDirector || isMemberObra(obra)`. `isMemberObra` devuelve `true` para cualquier miembro del `obra_team` — incluyendo administrativo, auxiliar y supervisor. Y los botones de la UI no gatean por rol.
-
-## Cambios
-
-### 1. Server — tightening de permisos
-
-Reemplazar `isDirector || member` por `isDirector || obraRole.isResidente` (cargando `obraRole` con el helper `getObraRole` ya existente) en:
-
-**`src/lib/api/destajos.functions.ts`**
-- `crearDestajo` (~157)
-- `actualizarDestajo` (~235)
-- `eliminarDestajo` (~275)
-- `guardarRenglonesDestajo` (~345) — captura del presupuesto base en borrador
-- `guardarRenglonesOCDestajo` (~482) — captura de OC en borrador
-- `actualizarTerminosDestajo` (~839)
-
-**`src/lib/api/subcontratos.functions.ts`** (equivalentes en mismas líneas aproximadas)
-- `crearSubcontrato`
-- `actualizarSubcontrato`
-- `eliminarSubcontrato` (~271)
-- `guardarRenglonesSubcontrato` (~333)
-- `guardarRenglonesOCSubcontrato` (~465)
-- `actualizarTerminosSubcontrato`
-
-No se tocan los guards de estimaciones (capturar/cerrar/eliminar/autorizar), pagos, anticipos, autorización/rechazo de presupuestos, ni asignación de trabajadores — esos siguen como están.
-
-### 2. UI — esconder botones para admin
-
-Usar `useEffectiveIsDirector()` + `useObraRole(obraId).isResidente` para calcular `canEditDraft = director || isResidente` y gatear:
-
-**`src/components/destajos/DestajosModule.tsx`**
-- Botón "Nuevo destajo" (línea 112): mostrar sólo si `canEditDraft`.
-
-**`src/components/subcontratos/SubcontratosModule.tsx`**
-- Botón "Nuevo" (línea 98): mostrar sólo si `canEditDraft`.
-
-**`src/components/destajos/DestajoDetalleSheet.tsx`**
-- Pasar `canEditDraft` a `PresupuestoCard` y a `RenglonesDestajoView` no aplica; los botones a gatear están en `PresupuestoCard`:
-  - "Editar" y "Solicitar autorización" en borrador (líneas 367–370): mostrar sólo si `canEditDraft`.
-  - "Reabrir como borrador" en rechazado (línea 389–391): mantener — ya está gateado por `canAuthorize` flujo? Verificar; si no, gatear por `canEditDraft` también para consistencia con server.
-- Botón "Nueva orden de cambio" (línea 188–194): mostrar sólo si `canEditDraft`.
-
-**`src/components/subcontratos/SubcontratoDetalleSheet.tsx`**
-- Mismas reglas: gatear "Editar", "Solicitar autorización", "Nueva orden de cambio" por `canEditDraft`.
+### 2. UI — `src/components/subcontratos/SubcontratosModule.tsx`
+- **Encabezados de tabla**: reemplazar la columna `Acciones` por `Estimado`. Orden final:
+  `# · Subcontrato · Contratista · Estatus · Contratado · Estimado · Pagado`
+- **Celdas**: agregar celda `Estimado` con `formatMXN(d.estimado_acumulado)` (alineada a la derecha, tabular-nums). Eliminar la celda de acciones (botón "Abrir" + botón eliminar).
+- **Fila clickeable**: agregar `onClick={() => setViewingId(d.id)}` y clases `cursor-pointer hover:bg-muted/40` al `<tr>` para abrir el detalle al hacer click en cualquier parte.
+- **Eliminar borrador**: como el botón de basura vivía en la columna de acciones, mover esa acción al `SubcontratoDetalleSheet` no es necesario — ya existe la acción de eliminar dentro del detalle. Si no existe, conservar solo ese botón en una mini-celda dedicada queda fuera de alcance; el botón se elimina de la lista (los borradores se podrán seguir eliminando desde el sheet de detalle, que ya soporta `eliminarSubcontrato`).
+- Ajustar los anchos de columna (`w-[%]`) para repartir el espacio liberado por la columna Acciones.
 
 ### 3. Sin cambios
-
-- Esquema, RLS, tabla `user_roles` y `obra_team`: intactos.
-- Capture sheets (`CapturaDestajoSheet`, `CapturaSubcontratoSheet`, `CapturaOrdenCambioDestajoSheet`, `CapturaOrdenCambioSubcontratoSheet`): no se tocan; los inputs siguen habilitados por estatus borrador, pero el servidor ya bloquea cualquier guardado de admin. Como bonus la UI ya no expone los botones para llegar ahí.
-- Estimaciones, anticipos, pagos: sin cambios.
-
-## Resultado
-
-Un usuario con rol administrativo:
-- No verá botones "Nuevo destajo/subcontrato", "Editar", "Solicitar autorización" ni "Nueva orden de cambio".
-- Aunque dispare la server fn por otra vía, recibirá "Sin permisos".
-- Sigue pudiendo ver, registrar pagos, ligar anticipos, etc. (sus flujos propios no cambian).
+- KPIs superiores (Contratado vigente / Pagado acumulado / Subcontratos activos).
+- Permisos, server functions de mutación, sheets de detalle/captura.
+- Módulo de destajos (este cambio aplica solo a subcontratos).
