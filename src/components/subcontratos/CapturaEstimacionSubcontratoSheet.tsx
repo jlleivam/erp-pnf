@@ -28,6 +28,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatMXN } from "@/lib/format";
 import { toast } from "sonner";
 import { Save, Lock, AlertTriangle, Search } from "lucide-react";
@@ -64,6 +70,7 @@ export function CapturaEstimacionSubcontratoSheet({
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
   const [confirmCierre, setConfirmCierre] = useState(false);
+  const [liberacionFondo, setLiberacionFondo] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
 
   if (!initialized && q.data?.capturados) {
@@ -76,8 +83,48 @@ export function CapturaEstimacionSubcontratoSheet({
   const vigente = (q.data?.vigente ?? []) as VigenteRow[];
   const acumuladoPrevio = (q.data?.acumuladoPrevio ?? {}) as Record<string, number>;
   const estimacion = q.data?.estimacion as any;
-  const isCerrada = estimacion?.estatus === "cerrada";
+  const terminos = (q.data?.terminos ?? {
+    anticipo_pct: 0,
+    anticipo_monto: 0,
+    fondo_garantia_pct: 0,
+    anticipo_amortizado_prev: 0,
+    anticipo_saldo: 0,
+    fondo_retenido_prev: 0,
+    fondo_liberado_prev: 0,
+    fondo_saldo_prev: 0,
+  }) as {
+    anticipo_pct: number;
+    anticipo_monto: number;
+    fondo_garantia_pct: number;
+    anticipo_amortizado_prev: number;
+    anticipo_saldo: number;
+    fondo_retenido_prev: number;
+    fondo_liberado_prev: number;
+    fondo_saldo_prev: number;
+  };
+  const estatus = (estimacion?.estatus ?? "borrador") as
+    | "borrador"
+    | "cerrada"
+    | "autorizada"
+    | "rechazada"
+    | "pagada";
+  const isCerrada = estatus !== "borrador";
   const semana = calcularSemana(semanaInicio);
+
+  const estatusLabel: Record<typeof estatus, string> = {
+    borrador: "Borrador",
+    cerrada: "Por autorizar",
+    autorizada: "Autorizada",
+    rechazada: "Rechazada",
+    pagada: "Pagada",
+  };
+  const estatusVariant: Record<typeof estatus, "default" | "secondary" | "destructive" | "outline"> = {
+    borrador: "secondary",
+    cerrada: "outline",
+    autorizada: "default",
+    rechazada: "destructive",
+    pagada: "default",
+  };
 
   const computed = useMemo(() => {
     let totalSemana = 0;
@@ -102,8 +149,30 @@ export function CapturaEstimacionSubcontratoSheet({
         );
       }
     }
-    return { totalSemana, totalAcum, totalVigente, erroresPorClave };
-  }, [vigente, cantidades, acumuladoPrevio]);
+    const bruto = totalSemana;
+    const amortizacion = Math.min(
+      terminos.anticipo_saldo,
+      bruto * (terminos.anticipo_pct / 100),
+    );
+    const retencion = bruto * (terminos.fondo_garantia_pct / 100);
+    const fondoDisponible = terminos.fondo_saldo_prev + retencion;
+    const liberacionNum = Number(liberacionFondo || 0);
+    const excedeLiberacion = liberacionNum > fondoDisponible + 0.01;
+    const neto = bruto - amortizacion - retencion + liberacionNum;
+    return {
+      totalSemana,
+      totalAcum,
+      totalVigente,
+      erroresPorClave,
+      bruto,
+      amortizacion,
+      retencion,
+      liberacion: liberacionNum,
+      fondoDisponible,
+      excedeLiberacion,
+      neto,
+    };
+  }, [vigente, cantidades, acumuladoPrevio, terminos, liberacionFondo]);
 
   const visibleRows = useMemo(() => {
     const f = filter.trim().toLowerCase();
@@ -143,6 +212,12 @@ export function CapturaEstimacionSubcontratoSheet({
       toast.error("Hay conceptos que exceden el vigente. Corrige antes de guardar.");
       return;
     }
+    if (computed.excedeLiberacion) {
+      toast.error(
+        `La liberación de fondo no puede exceder el fondo disponible (${formatMXN(computed.fondoDisponible)}).`,
+      );
+      return;
+    }
     const renglones = Object.entries(cantidades)
       .map(([k, v]) => ({ renglon_clave: k, cantidad_ejecutada: Number(v || 0) }))
       .filter((r) => Number.isFinite(r.cantidad_ejecutada) && r.cantidad_ejecutada > 0);
@@ -168,30 +243,43 @@ export function CapturaEstimacionSubcontratoSheet({
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-6xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2 flex-wrap">
+        <TooltipProvider delayDuration={150}>
+        <SheetHeader className="space-y-1">
+          <SheetTitle className="flex items-center gap-2 flex-wrap text-base">
             Estimación del subcontrato
-            <Badge variant={isCerrada ? "default" : "secondary"}>
-              {isCerrada ? "Cerrada" : "Borrador"}
+            <Badge variant={estatusVariant[estatus]} className="text-[10px] py-0 px-1.5 h-5">
+              {estatusLabel[estatus]}
             </Badge>
-            <span className="ml-auto text-sm text-muted-foreground">
+            <span className="ml-auto text-xs text-muted-foreground">
               {formatRangoSemana(semana.inicio, semana.fin)}
             </span>
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="sr-only">
             Captura la cantidad ejecutada por el contratista en esta semana.
           </SheetDescription>
         </SheetHeader>
 
+        {estatus === "rechazada" && estimacion?.rechazo_motivo && (
+          <Card className="mt-3 p-3 border-destructive/40 bg-destructive/5">
+            <p className="text-xs uppercase tracking-wider text-destructive font-semibold flex items-center gap-1">
+              <AlertTriangle className="size-3" /> Rechazada
+            </p>
+            <p className="text-sm mt-1">{estimacion.rechazo_motivo}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Corrige las cantidades y vuelve a cerrar la semana para enviarla a autorización.
+            </p>
+          </Card>
+        )}
+
         {q.isLoading ? (
-          <p className="mt-6 text-sm text-muted-foreground">Cargando…</p>
+          <p className="mt-4 text-sm text-muted-foreground">Cargando…</p>
         ) : !q.data?.hasBase ? (
-          <Card className="mt-6 border-dashed p-8 text-center text-sm text-muted-foreground">
+          <Card className="mt-4 border-dashed p-6 text-center text-sm text-muted-foreground">
             El subcontrato no tiene presupuesto base autorizado.
           </Card>
         ) : (
           <>
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 mt-6">
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-4 mt-3">
               <StatCard label="Producción semana" value={formatMXN(computed.totalSemana)} />
               <StatCard label="Acumulado" value={formatMXN(computed.totalAcum)} />
               <StatCard label="Contratado" value={formatMXN(computed.totalVigente)} />
@@ -202,35 +290,35 @@ export function CapturaEstimacionSubcontratoSheet({
               />
             </div>
 
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex items-center gap-2 mt-3">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-2 size-3.5 text-muted-foreground" />
                 <Input
-                  className="pl-8"
+                  className="pl-7 h-8 text-sm"
                   placeholder="Buscar por clave o concepto…"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                 />
               </div>
               {computed.erroresPorClave.size > 0 && (
-                <Badge variant="destructive" className="gap-1">
+                <Badge variant="destructive" className="gap-1 text-[10px] py-0 px-1.5 h-5">
                   <AlertTriangle className="size-3" /> {computed.erroresPorClave.size} con exceso
                 </Badge>
               )}
             </div>
 
-            <Card className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+            <Card className="mt-3 overflow-x-auto">
+              <table className="w-full text-[13px] table-fixed">
+                <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2 w-24">Clave</th>
-                    <th className="text-left p-2">Concepto</th>
-                    <th className="text-left p-2 w-16">Un.</th>
-                    <th className="text-right p-2 w-24">Cant. vig.</th>
-                    <th className="text-right p-2 w-24">Acum. prev.</th>
-                    <th className="text-right p-2 w-28">Esta semana</th>
-                    <th className="text-right p-2 w-32">Importe sem.</th>
-                    <th className="text-right p-2 w-20">% Acum.</th>
+                    <th className="text-left py-1.5 px-2 w-16">Clave</th>
+                    <th className="text-left py-1.5 px-2">Concepto</th>
+                    <th className="text-center py-1.5 px-2 w-12">Un.</th>
+                    <th className="text-center py-1.5 px-2 w-20">Cant. vig.</th>
+                    <th className="text-center py-1.5 px-2 w-20">Acum. prev.</th>
+                    <th className="text-center py-1.5 px-2 w-24">Esta semana</th>
+                    <th className="text-center py-1.5 px-2 w-28">Importe sem.</th>
+                    <th className="text-center py-1.5 px-2 w-16">% Acum.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -250,26 +338,35 @@ export function CapturaEstimacionSubcontratoSheet({
                         className={`border-t border-border ${r.es_grupo ? "bg-muted/30 font-medium" : ""}`}
                       >
                         <td
-                          className="p-2 tabular-nums"
-                          style={{ paddingLeft: `${0.5 + (r.nivel - 1) * 1}rem` }}
+                          className="py-1 px-2 tabular-nums"
+                          style={{ paddingLeft: `${0.5 + (r.nivel - 1) * 0.75}rem` }}
                         >
                           {r.clave}
                         </td>
-                        <td className="p-2">{r.concepto}</td>
-                        <td className="p-2 text-muted-foreground">{r.unidad ?? "—"}</td>
-                        <td className="p-2 text-right tabular-nums">
+                        <td className="py-1 px-2 truncate">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="block truncate cursor-default">{r.concepto}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="start" className="max-w-xs">
+                              {r.concepto}
+                            </TooltipContent>
+                          </Tooltip>
+                        </td>
+                        <td className="py-1 px-2 text-center text-muted-foreground">{r.unidad ?? "—"}</td>
+                        <td className="py-1 px-2 text-center tabular-nums">
                           {r.es_grupo
                             ? "—"
                             : cantVig.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
                         </td>
-                        <td className="p-2 text-right tabular-nums text-muted-foreground">
+                        <td className="py-1 px-2 text-center tabular-nums text-muted-foreground">
                           {r.es_grupo
                             ? "—"
                             : acumPrev > 0
                               ? acumPrev.toLocaleString("es-MX", { maximumFractionDigits: 2 })
                               : "—"}
                         </td>
-                        <td className="p-2 text-right">
+                        <td className="py-1 px-2 text-center">
                           {r.es_grupo ? (
                             <span className="text-muted-foreground">—</span>
                           ) : (
@@ -283,16 +380,16 @@ export function CapturaEstimacionSubcontratoSheet({
                               onChange={(e) =>
                                 setCantidades((s) => ({ ...s, [r.clave]: e.target.value }))
                               }
-                              className={`h-8 text-right tabular-nums ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                              className={`h-7 text-center tabular-nums px-1 ${err ? "border-destructive focus-visible:ring-destructive" : ""}`}
                               title={err ?? ""}
                             />
                           )}
                         </td>
-                        <td className="p-2 text-right tabular-nums">
+                        <td className="py-1 px-2 text-center tabular-nums">
                           {r.es_grupo ? "—" : importeSem > 0 ? formatMXN(importeSem) : "—"}
                         </td>
                         <td
-                          className={`p-2 text-right tabular-nums ${pct > 100 ? "text-destructive font-medium" : ""}`}
+                          className={`py-1 px-2 text-center tabular-nums ${pct > 100 ? "text-destructive font-medium" : ""}`}
                         >
                           {r.es_grupo ? "—" : `${pct.toFixed(0)}%`}
                         </td>
@@ -302,6 +399,69 @@ export function CapturaEstimacionSubcontratoSheet({
                 </tbody>
               </table>
             </Card>
+
+            {(terminos.anticipo_pct > 0 || terminos.fondo_garantia_pct > 0) && (
+              <Card className="mt-4 p-3 text-sm">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Cálculo de pago de la semana
+                </p>
+                <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2">
+                  <Row label="Bruto (producción semana)" value={formatMXN(computed.bruto)} />
+                  {terminos.anticipo_pct > 0 && (
+                    <Row
+                      label={`(−) Amortización anticipo ${terminos.anticipo_pct}%`}
+                      value={`−${formatMXN(computed.amortizacion)}`}
+                      hint={`Saldo anticipo antes: ${formatMXN(terminos.anticipo_saldo)}`}
+                    />
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && (
+                    <Row
+                      label={`(−) Retención fondo ${terminos.fondo_garantia_pct}%`}
+                      value={`−${formatMXN(computed.retencion)}`}
+                    />
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && !isCerrada && (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs flex-1">
+                          (+) Liberar fondo en esta semana
+                        </span>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min={0}
+                          max={computed.fondoDisponible}
+                          value={liberacionFondo}
+                          onChange={(e) => setLiberacionFondo(e.target.value)}
+                          className="w-28 h-7 text-right tabular-nums"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground text-right">
+                        Disponible: {formatMXN(computed.fondoDisponible)}
+                      </p>
+                      {computed.excedeLiberacion && (
+                        <p className="text-[10px] text-destructive text-right">
+                          Excede el fondo disponible.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {terminos.fondo_garantia_pct > 0 && isCerrada && computed.liberacion > 0 && (
+                    <Row
+                      label="(+) Liberación de fondo"
+                      value={`+${formatMXN(computed.liberacion)}`}
+                    />
+                  )}
+                  <Row
+                    label="= Neto a pagar"
+                    value={formatMXN(computed.neto)}
+                    bold
+                  />
+                </div>
+              </Card>
+            )}
 
             {!isCerrada && (
               <div className="flex gap-2 mt-4 flex-wrap justify-end sticky bottom-0 bg-background py-3">
@@ -330,20 +490,29 @@ export function CapturaEstimacionSubcontratoSheet({
             <AlertDialogHeader>
               <AlertDialogTitle>¿Cerrar la estimación de esta semana?</AlertDialogTitle>
               <AlertDialogDescription>
-                Una vez cerrada se congelan precios y cantidades. Este será el monto a pagar
-                al contratista por la semana.
+                Una vez cerrada se congelan precios y cantidades. Quedará pendiente de
+                autorización por el supervisor.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => estimacion && cerrarM.mutate({ data: { id: estimacion.id } })}
+                onClick={() =>
+                  estimacion &&
+                  cerrarM.mutate({
+                    data: {
+                      id: estimacion.id,
+                      liberacionFondo: Number(liberacionFondo || 0),
+                    },
+                  })
+                }
               >
                 Cerrar semana
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </TooltipProvider>
       </SheetContent>
     </Sheet>
   );
@@ -365,5 +534,27 @@ function StatCard({
         {value}
       </p>
     </Card>
+  );
+}
+
+function Row({
+  label,
+  value,
+  hint,
+  bold,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  bold?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className={`text-xs ${bold ? "font-semibold" : "text-muted-foreground"}`}>
+        {label}
+        {hint && <span className="ml-1 text-[10px] text-muted-foreground/70">({hint})</span>}
+      </span>
+      <span className={`tabular-nums text-sm ${bold ? "font-semibold" : ""}`}>{value}</span>
+    </div>
   );
 }

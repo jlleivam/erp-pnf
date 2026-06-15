@@ -8,6 +8,10 @@ import {
   autorizarPresupuestoSubcontrato,
   rechazarPresupuestoSubcontrato,
   reabrirPresupuestoSubcontrato,
+  actualizarTerminosSubcontrato,
+  getSubcontratoAnticipo,
+  solicitarPagoAnticipoSubcontrato,
+  cancelarSolicitudAnticipoSubcontrato,
 } from "@/lib/api/subcontratos.functions";
 import {
   Sheet,
@@ -151,6 +155,7 @@ export function SubcontratoDetalleSheet({
             <Tabs defaultValue="presupuesto">
               <TabsList>
                 <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>
+                <TabsTrigger value="terminos">Términos</TabsTrigger>
                 <TabsTrigger value="estimaciones" disabled={!baseAutorizada}>
                   Estimaciones
                 </TabsTrigger>
@@ -193,8 +198,15 @@ export function SubcontratoDetalleSheet({
                 ))}
               </TabsContent>
 
+              <TabsContent value="terminos" className="mt-4">
+                <TerminosTab subcontrato={subcontrato} canEdit={!q.isLoading} onChanged={refresh} />
+              </TabsContent>
+
               <TabsContent value="estimaciones" className="mt-4">
-                <EstimacionesSubcontratoTab subcontratoId={subcontratoId} />
+                <EstimacionesSubcontratoTab
+                  subcontratoId={subcontratoId}
+                  obraId={subcontrato?.obra_id ?? null}
+                />
               </TabsContent>
             </Tabs>
           </div>
@@ -415,5 +427,266 @@ function CrearOcDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function TerminosTab({
+  subcontrato,
+  canEdit,
+  onChanged,
+}: {
+  subcontrato: any;
+  canEdit: boolean;
+  onChanged: () => void;
+}) {
+  const qc = useQueryClient();
+  const fetchAnt = useServerFn(getSubcontratoAnticipo);
+  const antQ = useQuery({
+    queryKey: ["subcontrato-anticipo", subcontrato?.id],
+    queryFn: () => fetchAnt({ data: { subcontratoId: subcontrato!.id } }),
+    enabled: !!subcontrato?.id,
+  });
+
+  const [editing, setEditing] = useState(false);
+  const [anticipoPct, setAnticipoPct] = useState<string>(String(subcontrato?.anticipo_pct ?? 0));
+  const [fondoPct, setFondoPct] = useState<string>(String(subcontrato?.fondo_garantia_pct ?? 0));
+
+  const update = useServerFn(actualizarTerminosSubcontrato);
+  const updM = useMutation({
+    mutationFn: update,
+    onSuccess: () => {
+      toast.success("Términos actualizados");
+      setEditing(false);
+      qc.invalidateQueries({ queryKey: ["subcontrato-anticipo", subcontrato?.id] });
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const solicitar = useServerFn(solicitarPagoAnticipoSubcontrato);
+  const cancelar = useServerFn(cancelarSolicitudAnticipoSubcontrato);
+  const [solicitNotas, setSolicitNotas] = useState<string>("");
+  const [solicitOpen, setSolicitOpen] = useState(false);
+  const solicitarM = useMutation({
+    mutationFn: solicitar,
+    onSuccess: () => {
+      toast.success("Solicitud de pago enviada");
+      setSolicitOpen(false);
+      setSolicitNotas("");
+      qc.invalidateQueries({ queryKey: ["subcontrato-anticipo", subcontrato?.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const cancelarM = useMutation({
+    mutationFn: cancelar,
+    onSuccess: () => {
+      toast.success("Solicitud cancelada");
+      qc.invalidateQueries({ queryKey: ["subcontrato-anticipo", subcontrato?.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (!subcontrato) return null;
+  const anticipoPctNum = Number(subcontrato.anticipo_pct ?? 0);
+  const anticipoMonto = Number(subcontrato.anticipo_monto ?? 0);
+  const fondoPctNum = Number(subcontrato.fondo_garantia_pct ?? 0);
+  const antData = antQ.data;
+  const anticipoRegistro = antData?.anticipo;
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Anticipo</p>
+            <p className="text-lg font-semibold">
+              {anticipoPctNum.toFixed(2)}% · {formatMXN(anticipoMonto)}
+            </p>
+            {anticipoMonto > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Amortizado: {formatMXN(antData?.anticipoAmortizado ?? 0)} · Saldo:{" "}
+                {formatMXN(Math.max(0, anticipoMonto - (antData?.anticipoAmortizado ?? 0)))}
+              </p>
+            )}
+            {anticipoRegistro && (
+              <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
+                {anticipoRegistro.pagado ? (
+                  <>
+                    <Badge>Anticipo pagado</Badge>
+                    {(anticipoRegistro.pagado_at || anticipoRegistro.fecha) && (
+                      <span className="text-muted-foreground">
+                        el {new Date(anticipoRegistro.pagado_at ?? anticipoRegistro.fecha).toLocaleDateString("es-MX")}
+                      </span>
+                    )}
+                    {(anticipoRegistro as any).pagado_por_nombre && (
+                      <span className="text-muted-foreground">
+                        · pagado por {(anticipoRegistro as any).pagado_por_nombre}
+                      </span>
+                    )}
+                  </>
+                ) : anticipoRegistro.solicitado_at ? (
+                  <>
+                    <Badge variant="secondary">Solicitado</Badge>
+                    <span className="text-muted-foreground">
+                      el {new Date(anticipoRegistro.solicitado_at).toLocaleDateString("es-MX")}
+                    </span>
+                  </>
+                ) : (
+                  <Badge variant="outline">Por solicitar</Badge>
+                )}
+              </div>
+            )}
+
+            {anticipoRegistro?.solicitud_notas && (
+              <p className="text-xs text-muted-foreground mt-1 italic">
+                "{anticipoRegistro.solicitud_notas}"
+              </p>
+            )}
+          </div>
+          {anticipoMonto > 0 && anticipoRegistro && !anticipoRegistro.pagado && (
+            <div className="flex gap-2">
+              {!anticipoRegistro.solicitado_at ? (
+                <Button
+                  size="sm"
+                  disabled={!canEdit}
+                  onClick={() => setSolicitOpen(true)}
+                >
+                  Solicitar pago
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={cancelarM.isPending}
+                  onClick={() => cancelarM.mutate({ data: { subcontratoId: subcontrato.id } })}
+                >
+                  Cancelar solicitud
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Dialog open={solicitOpen} onOpenChange={setSolicitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pago de anticipo de subcontrato</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Subcontrato</span>
+                <span className="font-medium text-right">{subcontrato.nombre}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Contratista</span>
+                <span className="font-medium text-right">
+                  {subcontrato?.contratista?.razon_social ?? "—"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Fecha</span>
+                <span className="font-medium text-right">
+                  {new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Folio</span>
+                <span className="text-muted-foreground italic text-right">Se asignará al enviar</span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm">Notas para administrativo (opcional)</Label>
+              <Textarea
+                value={solicitNotas}
+                onChange={(e) => setSolicitNotas(e.target.value)}
+                rows={3}
+                placeholder="Detalles, urgencia, etc."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSolicitOpen(false)}>Cancelar</Button>
+            <Button
+              disabled={solicitarM.isPending}
+              onClick={() => solicitarM.mutate({ data: { subcontratoId: subcontrato.id, notas: solicitNotas.trim() || undefined } })}
+            >
+              {solicitarM.isPending ? "Enviando…" : "Enviar solicitud"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Card className="p-4">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">Fondo de garantía</p>
+        <p className="text-lg font-semibold">{fondoPctNum.toFixed(2)}% por estimación</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Retenido: {formatMXN(antData?.fondoRetenido ?? 0)} · Liberado:{" "}
+          {formatMXN(antData?.fondoLiberado ?? 0)} · Saldo:{" "}
+          {formatMXN(antData?.fondoSaldo ?? 0)}
+        </p>
+      </Card>
+
+      {!editing ? (
+        <Button size="sm" variant="outline" disabled={!canEdit} onClick={() => setEditing(true)}>
+          Editar términos
+        </Button>
+      ) : (
+        <Card className="p-4 space-y-3">
+          <div>
+            <Label className="text-sm">Anticipo (%)</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              max={100}
+              value={anticipoPct}
+              onChange={(e) => setAnticipoPct(e.target.value)}
+              className="w-32 mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm">Fondo de garantía (%)</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              max={100}
+              value={fondoPct}
+              onChange={(e) => setFondoPct(e.target.value)}
+              className="w-32 mt-1"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={updM.isPending}
+              onClick={() =>
+                updM.mutate({
+                  data: {
+                    subcontratoId: subcontrato.id,
+                    anticipoPct: Number(anticipoPct || 0),
+                    fondoGarantiaPct: Number(fondoPct || 0),
+                  },
+                })
+              }
+            >
+              {updM.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+              Cancelar
+            </Button>
+          </div>
+          {anticipoRegistro?.pagado && (
+            <p className="text-xs text-destructive">
+              El anticipo ya fue marcado como pagado; no podrás cambiar el %.
+            </p>
+          )}
+        </Card>
+      )}
+    </div>
   );
 }

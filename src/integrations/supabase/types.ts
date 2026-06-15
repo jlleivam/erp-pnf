@@ -2433,6 +2433,81 @@ export type Database = {
           },
         ]
       }
+      obra_subcontrato_anticipos: {
+        Row: {
+          company_id: string
+          creado_por: string
+          created_at: string
+          fecha: string
+          folio: string | null
+          id: string
+          metodo_pago: string | null
+          monto: number
+          pagado: boolean
+          pagado_at: string | null
+          pagado_por: string | null
+          referencia: string | null
+          solicitado_at: string | null
+          solicitado_por: string | null
+          solicitud_notas: string | null
+          subcontrato_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          creado_por: string
+          created_at?: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          pagado?: boolean
+          pagado_at?: string | null
+          pagado_por?: string | null
+          referencia?: string | null
+          solicitado_at?: string | null
+          solicitado_por?: string | null
+          solicitud_notas?: string | null
+          subcontrato_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          pagado?: boolean
+          pagado_at?: string | null
+          pagado_por?: string | null
+          referencia?: string | null
+          solicitado_at?: string | null
+          solicitado_por?: string | null
+          solicitud_notas?: string | null
+          subcontrato_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_subcontrato_anticipos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_subcontrato_anticipos_subcontrato_id_fkey"
+            columns: ["subcontrato_id"]
+            isOneToOne: true
+            referencedRelation: "obra_subcontratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_subcontrato_estimacion_renglones: {
         Row: {
           cantidad_ejecutada: number
@@ -2482,51 +2557,88 @@ export type Database = {
       }
       obra_subcontrato_estimaciones: {
         Row: {
+          amortizacion_anticipo: number
+          autorizada_at: string | null
+          autorizada_por: string | null
           cerrada_at: string | null
           cerrada_por: string | null
           company_id: string
           creado_por: string
           created_at: string
+          cxp_id: string | null
           estatus: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id: string
+          liberacion_fondo: number
+          monto_neto: number
           monto_total: number
           numero: number
+          rechazada_at: string | null
+          rechazada_por: string | null
+          rechazo_motivo: string | null
+          retencion_fondo: number
           semana_fin: string
           semana_inicio: string
           subcontrato_id: string
           updated_at: string
         }
         Insert: {
+          amortizacion_anticipo?: number
+          autorizada_at?: string | null
+          autorizada_por?: string | null
           cerrada_at?: string | null
           cerrada_por?: string | null
           company_id: string
           creado_por: string
           created_at?: string
+          cxp_id?: string | null
           estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id?: string
+          liberacion_fondo?: number
+          monto_neto?: number
           monto_total?: number
           numero?: number
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          rechazo_motivo?: string | null
+          retencion_fondo?: number
           semana_fin: string
           semana_inicio: string
           subcontrato_id: string
           updated_at?: string
         }
         Update: {
+          amortizacion_anticipo?: number
+          autorizada_at?: string | null
+          autorizada_por?: string | null
           cerrada_at?: string | null
           cerrada_por?: string | null
           company_id?: string
           creado_por?: string
           created_at?: string
+          cxp_id?: string | null
           estatus?: Database["public"]["Enums"]["destajo_estimacion_estatus"]
           id?: string
+          liberacion_fondo?: number
+          monto_neto?: number
           monto_total?: number
           numero?: number
+          rechazada_at?: string | null
+          rechazada_por?: string | null
+          rechazo_motivo?: string | null
+          retencion_fondo?: number
           semana_fin?: string
           semana_inicio?: string
           subcontrato_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "obra_subcontrato_estimaciones_cxp_id_fkey"
+            columns: ["cxp_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_por_pagar"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "obra_subcontrato_estimaciones_subcontrato_id_fkey"
             columns: ["subcontrato_id"]
@@ -2671,12 +2783,15 @@ export type Database = {
       }
       obra_subcontratos: {
         Row: {
+          anticipo_monto: number
+          anticipo_pct: number
           company_id: string
           contratista_id: string
           creado_por: string
           created_at: string
           descripcion: string | null
           estatus: Database["public"]["Enums"]["destajo_doc_estatus"]
+          fondo_garantia_pct: number
           id: string
           monto_total: number
           nombre: string
@@ -2685,12 +2800,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          anticipo_monto?: number
+          anticipo_pct?: number
           company_id: string
           contratista_id: string
           creado_por: string
           created_at?: string
           descripcion?: string | null
           estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          fondo_garantia_pct?: number
           id?: string
           monto_total?: number
           nombre: string
@@ -2699,12 +2817,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          anticipo_monto?: number
+          anticipo_pct?: number
           company_id?: string
           contratista_id?: string
           creado_por?: string
           created_at?: string
           descripcion?: string | null
           estatus?: Database["public"]["Enums"]["destajo_doc_estatus"]
+          fondo_garantia_pct?: number
           id?: string
           monto_total?: number
           nombre?: string
@@ -3674,6 +3795,10 @@ export type Database = {
         Returns: string
       }
       siguiente_folio_anticipo_destajo: {
+        Args: { _company_id: string }
+        Returns: string
+      }
+      siguiente_folio_anticipo_subcontrato: {
         Args: { _company_id: string }
         Returns: string
       }
