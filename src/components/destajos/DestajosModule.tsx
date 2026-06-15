@@ -212,6 +212,7 @@ export function DestajosModule({ obraId }: { obraId: string }) {
         <DestajoDetalleSheet
           destajoId={viewingId}
           canAuthorize={director || isSupervisor}
+          canEditDraft={canEditDraft}
           onClose={() => setViewingId(null)}
           onChanged={() => qc.invalidateQueries({ queryKey: ["destajos", obraId] })}
         />
