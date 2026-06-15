@@ -56,7 +56,8 @@ const ESTATUS_VARIANT: Record<Subcontrato["estatus"], "default" | "secondary" | 
 
 export function SubcontratosModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
-  const { isSupervisor } = useObraRole(obraId);
+  const { isSupervisor, isResidente } = useObraRole(obraId);
+  const canEditDraft = director || isResidente;
   const qc = useQueryClient();
   const fetchList = useServerFn(listSubcontratos);
   const listQ = useQuery({
@@ -95,9 +96,11 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
             Trabajos contratados con un tercero con presupuesto, órdenes de cambio y estimaciones semanales.
           </p>
         </div>
-        <Button size="sm" onClick={() => setCreating(true)} className="shrink-0">
-          <Plus className="size-4 mr-1" /> Nuevo
-        </Button>
+        {canEditDraft && (
+          <Button size="sm" onClick={() => setCreating(true)} className="shrink-0">
+            <Plus className="size-4 mr-1" /> Nuevo
+          </Button>
+        )}
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -200,6 +203,7 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
         <SubcontratoDetalleSheet
           subcontratoId={viewingId}
           canAuthorize={director || isSupervisor}
+          canEditDraft={canEditDraft}
           onClose={() => setViewingId(null)}
           onChanged={() => qc.invalidateQueries({ queryKey: ["subcontratos", obraId] })}
         />

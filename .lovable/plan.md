@@ -1,18 +1,61 @@
-## Cambio
+## Problema
 
-Los términos del subcontrato (anticipo % y fondo de garantía %) se definen al crear el subcontrato y se congelan al autorizar el presupuesto base. Una vez creado, ya no deben poder editarse desde la pestaña "Términos".
+El rol **administrativo** puede editar borradores de destajo y subcontrato (crear, modificar renglones del presupuesto base, capturar órdenes de cambio en borrador, eliminar). No debería: la edición de borrador corresponde sólo a **director** o **residente** de la obra (igual que `crearOrdenCambioDestajo`, `enviarPresupuestoDestajo` y `reabrirPresupuestoDestajo`, que ya usan ese guard).
 
-## Edición
+La causa raíz son guards permisivos del lado servidor que usan `isDirector || isMemberObra(obra)`. `isMemberObra` devuelve `true` para cualquier miembro del `obra_team` — incluyendo administrativo, auxiliar y supervisor. Y los botones de la UI no gatean por rol.
 
-`src/components/subcontratos/SubcontratoDetalleSheet.tsx` → componente `TerminosTab`:
+## Cambios
 
-- Eliminar el botón "Editar términos" y todo el bloque de edición (form con inputs de % y botones Guardar/Cancelar, líneas ~631–688).
-- Eliminar el estado `editing`, `anticipoPct`, `fondoPct` y la mutación `updM` que usa `actualizarTerminosSubcontrato`.
-- Quitar el import `actualizarTerminosSubcontrato` y la prop `canEdit` (ya no se usa para edición de términos; se mantiene la lógica de "Solicitar pago" que usa `!q.isLoading` — esa sigue intacta usando la misma prop o reemplazándola por una variable local equivalente).
+### 1. Server — tightening de permisos
 
-Se conserva todo lo demás de la pestaña: tarjetas de Anticipo y Fondo de garantía con sus montos/saldos, badges de estado del anticipo, diálogo de "Solicitar pago" y botón de "Cancelar solicitud".
+Reemplazar `isDirector || member` por `isDirector || obraRole.isResidente` (cargando `obraRole` con el helper `getObraRole` ya existente) en:
 
-## Notas
+**`src/lib/api/destajos.functions.ts`**
+- `crearDestajo` (~157)
+- `actualizarDestajo` (~235)
+- `eliminarDestajo` (~275)
+- `guardarRenglonesDestajo` (~345) — captura del presupuesto base en borrador
+- `guardarRenglonesOCDestajo` (~482) — captura de OC en borrador
+- `actualizarTerminosDestajo` (~839)
 
-- No se elimina la server function `actualizarTerminosSubcontrato` ni la migración relacionada — sólo se deja de exponer desde la UI. Si prefieres que también borre la server function, dímelo y lo incluyo.
-- No se tocan: creación de subcontrato (`NuevoSubcontratoDialog`), autorización del presupuesto base, cálculos de estimaciones, ni nada de pagos.
+**`src/lib/api/subcontratos.functions.ts`** (equivalentes en mismas líneas aproximadas)
+- `crearSubcontrato`
+- `actualizarSubcontrato`
+- `eliminarSubcontrato` (~271)
+- `guardarRenglonesSubcontrato` (~333)
+- `guardarRenglonesOCSubcontrato` (~465)
+- `actualizarTerminosSubcontrato`
+
+No se tocan los guards de estimaciones (capturar/cerrar/eliminar/autorizar), pagos, anticipos, autorización/rechazo de presupuestos, ni asignación de trabajadores — esos siguen como están.
+
+### 2. UI — esconder botones para admin
+
+Usar `useEffectiveIsDirector()` + `useObraRole(obraId).isResidente` para calcular `canEditDraft = director || isResidente` y gatear:
+
+**`src/components/destajos/DestajosModule.tsx`**
+- Botón "Nuevo destajo" (línea 112): mostrar sólo si `canEditDraft`.
+
+**`src/components/subcontratos/SubcontratosModule.tsx`**
+- Botón "Nuevo" (línea 98): mostrar sólo si `canEditDraft`.
+
+**`src/components/destajos/DestajoDetalleSheet.tsx`**
+- Pasar `canEditDraft` a `PresupuestoCard` y a `RenglonesDestajoView` no aplica; los botones a gatear están en `PresupuestoCard`:
+  - "Editar" y "Solicitar autorización" en borrador (líneas 367–370): mostrar sólo si `canEditDraft`.
+  - "Reabrir como borrador" en rechazado (línea 389–391): mantener — ya está gateado por `canAuthorize` flujo? Verificar; si no, gatear por `canEditDraft` también para consistencia con server.
+- Botón "Nueva orden de cambio" (línea 188–194): mostrar sólo si `canEditDraft`.
+
+**`src/components/subcontratos/SubcontratoDetalleSheet.tsx`**
+- Mismas reglas: gatear "Editar", "Solicitar autorización", "Nueva orden de cambio" por `canEditDraft`.
+
+### 3. Sin cambios
+
+- Esquema, RLS, tabla `user_roles` y `obra_team`: intactos.
+- Capture sheets (`CapturaDestajoSheet`, `CapturaSubcontratoSheet`, `CapturaOrdenCambioDestajoSheet`, `CapturaOrdenCambioSubcontratoSheet`): no se tocan; los inputs siguen habilitados por estatus borrador, pero el servidor ya bloquea cualquier guardado de admin. Como bonus la UI ya no expone los botones para llegar ahí.
+- Estimaciones, anticipos, pagos: sin cambios.
+
+## Resultado
+
+Un usuario con rol administrativo:
+- No verá botones "Nuevo destajo/subcontrato", "Editar", "Solicitar autorización" ni "Nueva orden de cambio".
+- Aunque dispare la server fn por otra vía, recibirá "Sin permisos".
+- Sigue pudiendo ver, registrar pagos, ligar anticipos, etc. (sus flujos propios no cambian).

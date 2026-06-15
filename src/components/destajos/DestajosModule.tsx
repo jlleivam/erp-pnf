@@ -58,7 +58,8 @@ const ESTATUS_VARIANT: Record<Destajo["estatus"], "default" | "secondary" | "des
 
 export function DestajosModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
-  const { isSupervisor } = useObraRole(obraId);
+  const { isSupervisor, isResidente } = useObraRole(obraId);
+  const canEditDraft = director || isResidente;
   const qc = useQueryClient();
   const fetchList = useServerFn(listDestajos);
   const listQ = useQuery({
@@ -109,9 +110,11 @@ export function DestajosModule({ obraId }: { obraId: string }) {
     <div className="space-y-4">
       <header className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-xl font-semibold tracking-tight">Destajos</h1>
-        <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus className="size-4 mr-1" /> Nuevo destajo
-        </Button>
+        {canEditDraft && (
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus className="size-4 mr-1" /> Nuevo destajo
+          </Button>
+        )}
       </header>
 
       <Card className="flex divide-x divide-border">
@@ -209,6 +212,7 @@ export function DestajosModule({ obraId }: { obraId: string }) {
         <DestajoDetalleSheet
           destajoId={viewingId}
           canAuthorize={director || isSupervisor}
+          canEditDraft={canEditDraft}
           onClose={() => setViewingId(null)}
           onChanged={() => qc.invalidateQueries({ queryKey: ["destajos", obraId] })}
         />

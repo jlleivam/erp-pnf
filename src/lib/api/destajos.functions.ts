@@ -155,8 +155,9 @@ export const crearDestajo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, data.obraId);
-    if (!isDirector && !member) throw new Error("Sin permisos para crear destajos en esta obra");
+    const obraRole = await getObraRole(supabase, userId, data.obraId);
+    if (!isDirector && !obraRole.isResidente)
+      throw new Error("Sin permisos para crear destajos en esta obra");
 
     const { data: maxRow } = await supabase
       .from("obra_destajos").select("numero")
@@ -233,8 +234,8 @@ export const actualizarTerminosDestajo = createServerFn({ method: "POST" })
       .from("obra_destajos").select("obra_id, monto_total").eq("id", data.destajoId).single();
     if (!d0) throw new Error("Destajo no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     // Si ya hay anticipo registrado (pagado), no permitir cambiar el %
     const { data: ant } = await supabase
@@ -273,8 +274,8 @@ export const eliminarDestajo = createServerFn({ method: "POST" })
       .from("obra_destajos").select("estatus, obra_id, company_id").eq("id", data.id).single();
     if (!d0) throw new Error("Destajo no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
     // Solo eliminar si todos los presupuestos están en borrador y no hay estimaciones cerradas
     const { data: ests } = await supabase
       .from("obra_destajo_estimaciones").select("id, estatus")
@@ -345,8 +346,8 @@ export const guardarRenglonesDestajo = createServerFn({ method: "POST" })
     const { isDirector } = await getRoles(supabase, userId);
     const { data: d0 } = await supabase
       .from("obra_destajos").select("obra_id").eq("id", pres.destajo_id).single();
-    const member = await isMemberObra(supabase, userId, d0!.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { renglones, errores, montoTotal } = procesarRenglones(data.renglones as RenglonInput[]);
     if (errores.length > 0) {
@@ -480,8 +481,8 @@ export const guardarRenglonesOCDestajo = createServerFn({ method: "POST" })
     const { data: d0 } = await supabase
       .from("obra_destajos").select("obra_id").eq("id", pres.destajo_id).single();
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0!.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { baseRenglones, ocsRenglones } = await loadDestajoBaseYOcs(supabase, pres.destajo_id);
     const { vigente } = reconstruirVigente(baseRenglones, ocsRenglones);

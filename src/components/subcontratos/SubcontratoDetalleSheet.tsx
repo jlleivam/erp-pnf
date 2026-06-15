@@ -70,11 +70,13 @@ const ESTATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | 
 export function SubcontratoDetalleSheet({
   subcontratoId,
   canAuthorize,
+  canEditDraft,
   onClose,
   onChanged,
 }: {
   subcontratoId: string;
   canAuthorize: boolean;
+  canEditDraft: boolean;
   onClose: () => void;
   onChanged?: () => void;
 }) {
@@ -166,6 +168,7 @@ export function SubcontratoDetalleSheet({
                   <PresupuestoCard
                     p={base}
                     canAuthorize={canAuthorize}
+                    canEditDraft={canEditDraft}
                     onEdit={() => setEditingBaseId(base.id)}
                     onEnviar={() => enviarM.mutate({ data: { presupuestoId: base.id } })}
                     onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: base.id } })}
@@ -173,7 +176,7 @@ export function SubcontratoDetalleSheet({
                     onReabrir={() => reabrirM.mutate({ data: { presupuestoId: base.id } })}
                   />
                 )}
-                {baseAutorizada && (
+                {baseAutorizada && canEditDraft && (
                   <div>
                     <Button
                       size="sm"
@@ -189,6 +192,7 @@ export function SubcontratoDetalleSheet({
                     key={oc.id}
                     p={oc}
                     canAuthorize={canAuthorize}
+                    canEditDraft={canEditDraft}
                     onEdit={() => setEditingOcId(oc.id)}
                     onEnviar={() => enviarM.mutate({ data: { presupuestoId: oc.id } })}
                     onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: oc.id } })}
@@ -259,6 +263,7 @@ export function SubcontratoDetalleSheet({
 function PresupuestoCard({
   p,
   canAuthorize,
+  canEditDraft,
   onEdit,
   onEnviar,
   onAutorizar,
@@ -267,6 +272,7 @@ function PresupuestoCard({
 }: {
   p: Presupuesto;
   canAuthorize: boolean;
+  canEditDraft: boolean;
   onEdit: () => void;
   onEnviar: () => void;
   onAutorizar: () => void;
@@ -297,7 +303,7 @@ function PresupuestoCard({
         </div>
       </div>
       <div className="flex gap-2 mt-4 flex-wrap">
-        {p.estatus === "borrador" && (
+        {p.estatus === "borrador" && canEditDraft && (
           <>
             <Button size="sm" onClick={onEdit}>Editar</Button>
             <Button size="sm" variant="outline" onClick={onEnviar}>
@@ -320,7 +326,7 @@ function PresupuestoCard({
             Esperando autorización del supervisor.
           </p>
         )}
-        {p.estatus === "rechazado" && (
+        {p.estatus === "rechazado" && canEditDraft && (
           <Button size="sm" variant="outline" onClick={onReabrir}>
             <RefreshCw className="size-4 mr-1" /> Reabrir como borrador
           </Button>

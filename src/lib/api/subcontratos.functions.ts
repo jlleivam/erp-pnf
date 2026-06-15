@@ -154,8 +154,9 @@ export const crearSubcontrato = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, data.obraId);
-    if (!isDirector && !member) throw new Error("Sin permisos para crear subcontratos en esta obra");
+    const obraRole = await getObraRole(supabase, userId, data.obraId);
+    if (!isDirector && !obraRole.isResidente)
+      throw new Error("Sin permisos para crear subcontratos en esta obra");
 
     // Validar contratista
     const { data: tercero } = await supabase
@@ -222,8 +223,8 @@ export const actualizarTerminosSubcontrato = createServerFn({ method: "POST" })
       .from("obra_subcontratos").select("obra_id, monto_total").eq("id", data.subcontratoId).single();
     if (!d0) throw new Error("Subcontrato no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { data: ant } = await supabase
       .from("obra_subcontrato_anticipos").select("id, pagado").eq("subcontrato_id", data.subcontratoId).maybeSingle();
@@ -258,8 +259,8 @@ export const eliminarSubcontrato = createServerFn({ method: "POST" })
       .from("obra_subcontratos").select("estatus, obra_id, company_id").eq("id", data.id).single();
     if (!d0) throw new Error("Subcontrato no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
     const { data: ests } = await supabase
       .from("obra_subcontrato_estimaciones").select("id, estatus")
       .eq("subcontrato_id", data.id).eq("estatus", "cerrada").limit(1);
@@ -333,8 +334,8 @@ export const guardarRenglonesSubcontrato = createServerFn({ method: "POST" })
     const { isDirector } = await getRoles(supabase, userId);
     const { data: d0 } = await supabase
       .from("obra_subcontratos").select("obra_id").eq("id", pres.subcontrato_id).single();
-    const member = await isMemberObra(supabase, userId, d0!.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { renglones, errores, montoTotal } = procesarRenglones(data.renglones as RenglonInput[]);
     if (errores.length > 0) {
@@ -468,8 +469,8 @@ export const guardarRenglonesOCSubcontrato = createServerFn({ method: "POST" })
     const { data: d0 } = await supabase
       .from("obra_subcontratos").select("obra_id").eq("id", pres.subcontrato_id).single();
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0!.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { baseRenglones, ocsRenglones } = await loadSubcontratoBaseYOcs(supabase, pres.subcontrato_id);
     const { vigente } = reconstruirVigente(baseRenglones, ocsRenglones);
