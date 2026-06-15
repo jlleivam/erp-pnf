@@ -1,35 +1,99 @@
-## Problema
+## Modelo conceptual
 
-`getOrCreateSemanaAbierta` (en `src/lib/api/almacen.functions.ts`) busca *cualquier* semana abierta de la obra sin importar su fecha. Si nadie pulsa "Cerrar semana", la semana del 7–12 jun se queda abierta indefinidamente aunque ya estemos en una semana posterior.
+- **Semana actual** = derivado, no es columna. Es la semana cuyo rango `[semana_inicio, semana_fin]` contiene hoy. Siempre existe una y solo una; si no hay registro, se crea al entrar al módulo.
+- **Estado** (`almacen_semanas.estatus`):
+  1. **`abierta`** — editable. Aplica a la semana actual.
+  2. **`bloqueada`** — no editable. Aplica a la semana actual. Solo desbloqueable por solicitud aprobada.
+  3. **`cerrada`** — terminal, definitiva. Aplica solo a semanas pasadas. Transición automática el lunes 00:00.
 
-## Solución: auto-rollover de semanas vencidas
+**Transiciones:**
 
-Antes de devolver la semana abierta, comparar `semana_fin` contra hoy. Si la semana ya terminó (hoy > sábado), cerrarla automáticamente y abrir las semanas siguientes hasta llegar a la semana que contiene hoy, trasladando saldos en cada salto. Solo en este flujo automático no se requiere acción del usuario; el cierre manual sigue funcionando igual.
+```text
+abierta  ──(residente/supervisor: Bloquear)──►  bloqueada
+bloqueada ──(supervisor/director aprueba solicitud)──►  abierta
+abierta   ──(cron lunes 00:00)──►  cerrada
+bloqueada ──(cron lunes 00:00)──►  cerrada
+cerrada   ──► (terminal, no se reabre)
+```
 
-### Cambios en `src/lib/api/almacen.functions.ts`
+## Base de datos
 
-1. **Nuevo helper `autoCerrarSemanasVencidas(supabase, companyId, obraId)`**:
-   - Loop: mientras exista una semana abierta cuya `semana_fin < hoy`:
-     - Marcarla `cerrada` con `cerrada_at = now()`, `cerrada_por = null` (cierre automático del sistema).
-     - Calcular lunes/sábado siguientes con los helpers existentes `siguienteLunes` / `sabadoDeSemana`.
-     - Crear (o reutilizar) la semana siguiente con estatus `abierta`.
-     - Trasladar saldos finales (`inv_inicial + recibido − utilizado`) por `(insumo_id, precio_unitario)` a la nueva semana — misma lógica que `cerrarSemana` ya implementa; extraerla a un helper compartido `trasladarSaldos(supabase, semanaOrigenId, semanaDestinoId)` para no duplicar código.
-   - Devuelve la semana abierta vigente al final del loop.
+**Migración 1 — enum:**
+- Agregar `'bloqueada'` al enum / check de `almacen_semanas.estatus`. (Hoy es texto con check `in ('abierta','cerrada')`; ampliar a `('abierta','bloqueada','cerrada')`.)
+- Dato existente: la fila del 8–14 jun queda como `cerrada` (correcto, ya pasó). La del 15–21 jun actual queda `abierta`.
 
-2. **`getOrCreateSemanaAbierta`**: al inicio, llamar a `autoCerrarSemanasVencidas` antes de hacer la búsqueda. Si todavía no existe ninguna semana, sigue creando la actual como hoy.
+**Migración 2 — tabla de solicitudes de desbloqueo:**
 
-3. **`cerrarSemana`**: refactorizar para usar el mismo helper `trasladarSaldos` (sin cambio funcional).
+```text
+almacen_semana_desbloqueo_solicitudes
+  id, company_id, obra_id, semana_id (FK almacen_semanas)
+  solicitado_por (FK auth.users), motivo (text), solicitado_at
+  estatus: 'pendiente' | 'aprobada' | 'rechazada'
+  resuelto_por (FK auth.users, nullable), resuelto_at, respuesta (text, nullable)
+  created_at, updated_at
+```
 
-### No cambia
+RLS:
+- Miembros de la obra pueden ver solicitudes de su obra.
+- Residente y supervisor pueden insertar (`is_residente_de_obra` o `is_supervisor_de_obra`).
+- Supervisor y director pueden actualizar (resolver).
 
-- `cerrarSemana` sigue disponible para cierre manual anticipado.
-- UI: no requiere cambios; al entrar a "Semana actual" se verá ya la semana que contiene hoy y las anteriores aparecerán en "Historial" como cerradas.
-- Permisos, cálculos de balance, contabilidad: sin cambios.
+**Migración 3 — cron auto-cierre lunes 00:00:**
+- `pg_cron`: cada lunes a las 00:00 (zona del proyecto), `UPDATE almacen_semanas SET estatus='cerrada' WHERE estatus IN ('abierta','bloqueada') AND semana_fin < CURRENT_DATE`.
+- Como red de seguridad, el server-fn `getSemanaActual` también ejecuta esta misma UPDATE al inicio (cubre el caso de que el cron falle o que nadie entre justo el lunes).
 
-### Nota sobre `cerrada_por`
+## Backend — `src/lib/api/almacen.functions.ts`
 
-Hoy la columna es nullable (RLS lo permite porque sólo escribimos desde server functions con service-role efectivo vía middleware autenticado). El cierre automático lo dejará en `null` para distinguirlo del cierre manual; si prefieres marcarlo con el usuario que disparó la consulta, lo cambiamos.
+1. **Renombrar conceptualmente `getOrCreateSemanaAbierta` → `getSemanaActual`** (lógica nueva):
+   - Auto-cerrar semanas vencidas (`semana_fin < hoy AND estatus != 'cerrada'`).
+   - Buscar semana cuyo `[inicio, fin]` contenga hoy. Si no existe, crearla con `estatus='abierta'` y sembrar saldos iniciales desde la última semana cerrada anterior.
+   - Devolver la fila tal cual (puede estar `abierta` o `bloqueada`).
 
-## Archivos modificados
+2. **Eliminar `cerrarSemana`** (era cierre manual; ahora solo cron lo hace).
 
-- `src/lib/api/almacen.functions.ts`
+3. **Nuevo `bloquearSemana({ semanaId })`**:
+   - Guard: caller es residente o supervisor de la obra; semana es la actual; estatus actual `abierta`.
+   - `UPDATE estatus='bloqueada'`.
+
+4. **Nuevo `solicitarDesbloqueoSemana({ semanaId, motivo })`**:
+   - Guard: caller es residente o supervisor; semana estatus `bloqueada`; no hay solicitud `pendiente` previa.
+   - Insertar solicitud + notificar a supervisor y director.
+
+5. **Nuevo `listSolicitudesDesbloqueo({ obraId, estatus? })`** — para el panel.
+
+6. **Nuevo `resolverSolicitudDesbloqueo({ solicitudId, accion: 'aprobar'|'rechazar', respuesta? })`**:
+   - Guard: caller es supervisor de la obra o director de la company.
+   - Si aprobar: `UPDATE solicitud SET estatus='aprobada'` + `UPDATE semana SET estatus='abierta'` + notificar al solicitante.
+   - Si rechazar: `UPDATE solicitud SET estatus='rechazada'` + notificar.
+
+7. **Guards de edición en `actualizarUtilizado` y `registrarRecepcion`:** rechazar con mensaje `"Semana bloqueada"` si `estatus != 'abierta'`.
+
+## UI — `SemanaActualPanel.tsx`
+
+- Quitar botón "Cerrar semana" y diálogo correspondiente.
+- Badge de estatus:
+  - `abierta` → verde "Abierta"
+  - `bloqueada` → ámbar "Bloqueada" con icono candado
+- Botón contextual derecho según estatus + rol:
+  - `abierta` + (residente|supervisor) → **"Bloquear semana"** (confirmación: "Una vez bloqueada solo podrá reabrirse con aprobación del supervisor").
+  - `bloqueada` + (residente|supervisor) sin solicitud pendiente → **"Solicitar desbloqueo"** (dialog con campo motivo).
+  - `bloqueada` + solicitud pendiente → texto "Desbloqueo solicitado el …" (sin botón).
+- Inputs de `utilizado` deshabilitados cuando `estatus='bloqueada'`.
+- Subtítulo `(lun–dom)` permanece.
+
+## UI — Panel de solicitudes (supervisor/director)
+
+- Nueva sección en `AlmacenModule` visible solo a supervisor/director: pestaña "Solicitudes" o bloque en `SemanaActualPanel` listando solicitudes `pendiente` con botones **Aprobar** / **Rechazar** y campo de respuesta opcional.
+
+## Archivos a tocar
+
+- `supabase/migrations/...` (3 migraciones)
+- `src/lib/api/almacen.functions.ts` — refactor de estado + nuevas server-fns
+- `src/components/almacen/SemanaActualPanel.tsx` — badge, botones contextuales, inputs deshabilitados
+- `src/components/almacen/AlmacenModule.tsx` — sección/pestaña de solicitudes para supervisor/director
+- `src/routes/api/public/hooks/cerrar-semanas-vencidas.ts` — endpoint llamado por `pg_cron` (red de seguridad además del SQL puro)
+
+## Notas
+
+- Mantener `cerrada_at` / `cerrada_por` para auditoría; con cierre automático ambos quedan `now()` / `null`.
+- El traslado de saldos finales a la nueva semana ya ocurre al crear la semana actual cuando no existe (lógica de seed actual), así que el cron solo cambia estatus; no necesita crear la siguiente semana — la próxima vez que alguien entre, `getSemanaActual` la crea.
