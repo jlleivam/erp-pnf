@@ -360,6 +360,40 @@ export const listCxPDestajoPendientes = createServerFn({ method: "GET" })
     }));
   });
 
+export const listCxPSubcontratoPendientes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { companyId, roles } = await getCtx(supabase, userId);
+    assertPayer(roles);
+
+    const { data, error } = await supabase
+      .from("cuentas_por_pagar")
+      .select("id, folio, fecha_emision, obra_id, beneficiario_nombre, concepto, monto_total, monto_pagado, estatus, origen_tipo, origen_id, obra:obras(id, nombre)")
+      .eq("company_id", companyId)
+      .eq("beneficiario_tipo", "tercero")
+      .eq("origen_tipo", "subcontrato_estimacion")
+      .in("estatus", ["pendiente", "parcial"])
+      .is("cancelado_at", null)
+      .order("fecha_emision", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      id: r.id,
+      folio: r.folio,
+      fecha_emision: r.fecha_emision,
+      obra_id: r.obra_id,
+      obra_nombre: r.obra?.nombre ?? null,
+      beneficiario_nombre: r.beneficiario_nombre,
+      concepto: r.concepto,
+      monto_total: Number(r.monto_total),
+      monto_pagado: Number(r.monto_pagado),
+      saldo: +(Number(r.monto_total) - Number(r.monto_pagado)).toFixed(2),
+      estatus: r.estatus,
+      origen_tipo: r.origen_tipo,
+      origen_id: r.origen_id,
+    }));
+  });
+
 const registrarCxPSchema = z.object({
   cxpId: z.string().uuid(),
   cuentaId: z.string().uuid(),
