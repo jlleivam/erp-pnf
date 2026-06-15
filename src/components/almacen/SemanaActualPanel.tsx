@@ -142,12 +142,12 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
             )}
           </div>
 
-          {!bloqueada && esResidenteOSupervisor && (
+          {!bloqueada && puedeEditar && (
             <Button size="sm" onClick={() => setBloquearOpen(true)} disabled={items.length === 0}>
               <Lock className="size-3.5 mr-1.5" /> Bloquear semana
             </Button>
           )}
-          {bloqueada && esResidenteOSupervisor && !solicitudPendiente && (
+          {bloqueada && puedeEditar && !solicitudPendiente && (
             <Button size="sm" variant="outline" onClick={() => setSolicitarOpen(true)}>
               <Unlock className="size-3.5 mr-1.5" /> Solicitar desbloqueo
             </Button>
