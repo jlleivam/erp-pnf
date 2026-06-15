@@ -1,28 +1,30 @@
-### Objetivo
-Diferenciar entre estimaciones autorizadas (cerradas) y pagos realmente efectuados al subcontratista.
+### Problema
+La cuenta **2120 Subcontratistas por pagar** muestra $0 a pesar de tener estimaciones autorizadas con Cuenta por Pagar pendiente.
 
-### Estado actual
-- Columna "Pagado" suma `monto_total` de estimaciones con `estatus = 'cerrada'`.
-- "Cerrada" significa autorizada para pago, no pagada efectivamente.
-- El pago real ocurre cuando la Cuenta por Pagar (`cxp_id` en la estimación) se paga (`cuentas_por_pagar.monto_pagado`).
+### Causa
+En `src/lib/contabilidad/balance.functions.ts`:
+1. Consulta `obra_subcontrato_estimaciones` filtrando por `estatus = 'cerrada'`, pero las estimaciones autorizadas usan `estatus = 'autorizada'`.
+2. Suma `monto_total` de la estimación (bruto), no el neto que efectivamente se debe al subcontratista.
+3. Descuenta pagos con `origen_tipo = 'subcontrato'`, pero los pagos reales se registran con `origen_tipo = 'subcontrato_estimacion'`.
+
+### Solución
+Alinear la lógica con la de **Destajistas por pagar (2110)** que sí funciona: consultar directamente `cuentas_por_pagar` filtrando por:
+- `beneficiario_tipo = 'tercero'`
+- `origen_tipo = 'subcontrato_estimacion'`
+- `estatus IN ('pendiente', 'parcial')`
+- `cancelado_at IS NULL`
+
+Calcular `subcontratistasPorPagar = Σ max(0, monto_total − monto_pagado)`.
 
 ### Cambios
+**Archivo:** `src/lib/contabilidad/balance.functions.ts`
 
-#### 1. Backend (`src/lib/api/subcontratos.functions.ts` → `listSubcontratos`)
-- Renombrar el cálculo actual de "pagado" a `autorizado_acumulado` (suma de estimaciones cerradas, lógica actual).
-- Calcular `pagado_acumulado` real: sumar `monto_pagado` de las `cuentas_por_pagar` referenciadas por `cxp_id` de las estimaciones del subcontrato. Si la estimación no tiene `cxp_id`, contribuye 0.
-- Devolver: `monto_total`, `estimado_acumulado`, `autorizado_acumulado`, `pagado_acumulado`.
-
-#### 2. UI (`src/components/subcontratos/SubcontratosModule.tsx`)
-- Agregar columna **Autorizado** entre Estimado y Pagado.
-- Columnas finales de derecha a izquierda: `Contratado · Estimado · Autorizado · Pagado`.
-- El `%` mostrado junto a Pagado se calcula como `pagado_acumulado / monto_total`.
-- Actualizar el tipo `Subcontrato` con `autorizado_acumulado: number`.
-- Las KPIs superiores (Contratado vigente, Pagado acumulado, Subcontratos activos) ya usan `pagado_acumulado`; ahora reflejarán pagos reales — sin cambios estructurales adicionales.
+1. Reemplazar `subEstimRes` por un query a `cuentas_por_pagar` con los filtros anteriores.
+2. Recalcular `subcontratistasPorPagar` con el mismo patrón que `destajistasPorPagar`.
+3. Eliminar el cálculo basado en `pagado("subcontrato")` (queda obsoleto).
 
 ### Sin cambios
-- Permisos, mutaciones, detalle del subcontrato (`SubcontratoDetalleSheet`), módulo de destajos.
-- Esquema de base de datos.
-
-### Notas
-- Como `cuentas_por_pagar` ya tiene `monto_pagado` mantenido por el flujo de pagos existente, no se requieren migraciones ni nuevas tablas.
+- UI del balance (`ContabilidadModule.tsx`).
+- Catálogo contable.
+- Flujos de creación de CxP de subcontratos.
+- Otras filas del balance.

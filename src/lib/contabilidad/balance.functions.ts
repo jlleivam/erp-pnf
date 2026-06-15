@@ -89,12 +89,16 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .eq("origen_tipo", "destajo_estimacion")
         .in("estatus", ["pendiente", "parcial"])
         .is("cancelado_at", null),
-      // Subcontratistas por pagar
+      // Subcontratistas por pagar: CxP pendientes/parciales de estimaciones de subcontrato
       supabase
-        .from("obra_subcontrato_estimaciones")
-        .select("monto_total, estatus")
+        .from("cuentas_por_pagar")
+        .select("monto_total, monto_pagado, beneficiario_tipo, origen_tipo, estatus, cancelado_at")
         .eq("company_id", companyId)
-        .eq("estatus", "cerrada"),
+        .eq("beneficiario_tipo", "tercero")
+        .eq("origen_tipo", "subcontrato_estimacion")
+        .in("estatus", ["pendiente", "parcial"])
+        .is("cancelado_at", null),
+
       // Nómina por pagar
       supabase
         .from("obra_nominas")
@@ -152,10 +156,11 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       (acc: number, r: any) => acc + Math.max(0, num(r.monto_total) - num(r.monto_pagado)),
       0,
     );
-    const subcontratistasPorPagar = Math.max(
+    const subcontratistasPorPagar = (subEstimRes.data ?? []).reduce(
+      (acc: number, r: any) => acc + Math.max(0, num(r.monto_total) - num(r.monto_pagado)),
       0,
-      sum(subEstimRes.data, "monto_total") - pagado("subcontrato"),
     );
+
     const nominaPorPagar = Math.max(0, sum(nominaRes.data, "monto_total") - pagado("nomina"));
     const gasolinaPorReembolsar = Math.max(
       0,
