@@ -1,24 +1,20 @@
-## Cambios en `src/components/subcontratos/SubcontratosModule.tsx`
+## Ajustar tabla de subcontratos sin scroll horizontal
 
-**Objetivo**: pantalla más compacta, tabla como protagonista, un subcontrato por renglón sin wrap del nombre del contratista.
+### Problema
+La tabla de subcontratos genera scroll horizontal en viewports de ~766 px porque las columnas de texto (Subcontrato, Contratista) se expanden según su contenido y la tarjeta contenedora tiene `overflow-x-auto`.
 
-### Header
-- Reducir título a `text-xl` y descripción a una sola línea más corta (o `line-clamp-1`).
-- Mover el botón "Nuevo subcontrato" a la fila del header (a la derecha del título) en `size="sm"`, eliminando el bloque vertical que hoy ocupa mucho espacio.
+### Solución
+1. **Eliminar `overflow-x-auto`** de la Card que envuelve la tabla.
+2. **Agregar `table-fixed`** al `<table>` para que las columnas respeten anchos explícitos y no se expandan por contenido.
+3. **Definir anchos fijos** en los `<th>`:
+   - `#`: `w-8` (oculta en pantallas pequeñas con `hidden md:table-cell`)
+   - Subcontrato: `w-[22%]`
+   - Contratista: `w-[26%]`
+   - Estatus: `w-[15%]`
+   - Contratado: `w-[15%]`
+   - Pagado: `w-[15%]`
+   - Acciones: `w-[7%]`
+4. **Botón "Abrir" como ícono solamente** en pantallas pequeñas (`hidden sm:inline` en el texto), reduciendo el ancho de la columna de acciones.
+5. **Truncar todo texto** con `truncate` en Subcontrato y Contratista para evitar desbordes.
 
-### KPIs
-- Compactar las 3 tarjetas: padding `p-3` en vez de `p-4`, label `text-[10px]`, monto `text-base font-semibold`.
-- Mantener grid de 3 columnas pero con `gap-3`.
-
-### Tabla (protagonista)
-- Reducir padding de celdas a `p-2` (de `p-3`).
-- Forzar una sola línea por subcontrato: añadir `whitespace-nowrap` + `truncate` a las celdas de texto (Subcontrato, Contratista) y darles `max-w` razonable.
-- Quitar la `descripcion` debajo del nombre del subcontrato (o moverla a `title` tooltip) para garantizar 1 renglón.
-- En la celda Pagado, poner monto y `%` en la misma línea (`$0.00 · 0%`) en vez de dos líneas.
-- Reducir tamaño del Badge de estatus (`text-xs px-2 py-0`).
-- Botón "Abrir" como `size="sm"` con menos padding; botón eliminar como ícono compacto.
-
-### Espaciado general
-- `space-y-6` → `space-y-4` en el contenedor raíz.
-
-Sin cambios funcionales, sin cambios de API ni de datos.
+No hay cambios de datos ni lógica, solo presentación.
