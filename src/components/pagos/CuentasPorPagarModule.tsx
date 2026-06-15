@@ -13,9 +13,11 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
-import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes } from "@/lib/api/pagos.functions";
+import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes, listCxPSubcontratoPendientes } from "@/lib/api/pagos.functions";
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
+import { listAnticiposSubcontratoPendientes } from "@/lib/api/subcontratos.functions";
 import { RegistrarPagoAnticipoDialog } from "./RegistrarPagoAnticipoDialog";
+import { RegistrarPagoAnticipoSubcontratoDialog } from "./RegistrarPagoAnticipoSubcontratoDialog";
 import { RegistrarPagoOCDialog } from "./RegistrarPagoOCDialog";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { formatMXN, formatDate } from "@/lib/format";
@@ -57,6 +59,17 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchEstimacionesCount(),
   });
 
+  const fetchAnticiposSubCount = useServerFn(listAnticiposSubcontratoPendientes);
+  const anticiposSubCountQ = useQuery({
+    queryKey: ["anticipos-subcontrato-pendientes"],
+    queryFn: () => fetchAnticiposSubCount(),
+  });
+  const fetchEstSubCount = useServerFn(listCxPSubcontratoPendientes);
+  const estSubCountQ = useQuery({
+    queryKey: ["cxp-subcontrato-pendientes"],
+    queryFn: () => fetchEstSubCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -67,6 +80,9 @@ export function CuentasPorPagarModule() {
   const anticiposPendientesCount =
     ((anticiposCountQ.data ?? []) as unknown[]).length
     + ((estimacionesCountQ.data ?? []) as unknown[]).length;
+  const subcontratosPendientesCount =
+    ((anticiposSubCountQ.data ?? []) as unknown[]).length
+    + ((estSubCountQ.data ?? []) as unknown[]).length;
 
 
   return (
@@ -96,7 +112,14 @@ export function CuentasPorPagarModule() {
               </span>
             )}
           </TabsTrigger>
-
+          <TabsTrigger value="subcontratos">
+            Subcontratos
+            {subcontratosPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {subcontratosPendientesCount > 99 ? "99+" : subcontratosPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="proveedores" className="space-y-4 mt-4">
@@ -163,6 +186,10 @@ export function CuentasPorPagarModule() {
 
         <TabsContent value="anticipos" className="mt-4">
           <AnticiposDestajoTab />
+        </TabsContent>
+
+        <TabsContent value="subcontratos" className="mt-4">
+          <AnticiposSubcontratoTab />
         </TabsContent>
       </Tabs>
 
@@ -531,5 +558,231 @@ function ProveedorDetalleSheet({
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+type AnticipoSubRow = {
+  anticipoId: string;
+  subcontratoId: string;
+  monto: number;
+  folio: string | null;
+  solicitadoAt: string;
+  notas: string | null;
+  solicitadoPorNombre: string;
+  subcontratoNombre: string;
+  subcontratoNumero: number | null;
+  subcontratoMontoTotal: number;
+  subcontratoAnticipoPct: number;
+  contratistaNombre: string;
+  obraNombre: string;
+};
+
+type UnifiedSubRow =
+  | {
+      key: string;
+      tipo: "anticipo";
+      fecha: string;
+      folio: string;
+      obra: string;
+      contratista: string;
+      concepto: string;
+      total: number;
+      pagado: number;
+      saldo: number;
+      estatus: "pendiente";
+      anticipo: AnticipoSubRow;
+    }
+  | {
+      key: string;
+      tipo: "estimacion";
+      fecha: string;
+      folio: string;
+      obra: string;
+      contratista: string;
+      concepto: string;
+      total: number;
+      pagado: number;
+      saldo: number;
+      estatus: "pendiente" | "parcial" | "pagada" | "cancelada";
+      cxp: CxPRow;
+    };
+
+function AnticiposSubcontratoTab() {
+  const fetchAnticipos = useServerFn(listAnticiposSubcontratoPendientes);
+  const fetchEstimaciones = useServerFn(listCxPSubcontratoPendientes);
+  const qc = useQueryClient();
+  const [pagar, setPagar] = useState<AnticipoSubRow | null>(null);
+  const [pagarCxP, setPagarCxP] = useState<CxPRow | null>(null);
+
+  const antQ = useQuery({
+    queryKey: ["anticipos-subcontrato-pendientes"],
+    queryFn: () => fetchAnticipos(),
+  });
+  const estQ = useQuery({
+    queryKey: ["cxp-subcontrato-pendientes"],
+    queryFn: () => fetchEstimaciones(),
+  });
+
+  const anticipos = (antQ.data ?? []) as AnticipoSubRow[];
+  const estimaciones = (estQ.data ?? []) as CxPRow[];
+
+  const unified: UnifiedSubRow[] = [
+    ...estimaciones.map<UnifiedSubRow>((r) => ({
+      key: `est-${r.id}`,
+      tipo: "estimacion",
+      fecha: r.fecha_emision,
+      folio: r.folio,
+      obra: r.obra_nombre ?? "—",
+      contratista: r.beneficiario_nombre,
+      concepto: r.concepto,
+      total: r.monto_total,
+      pagado: r.monto_pagado,
+      saldo: r.saldo,
+      estatus: r.estatus,
+      cxp: r,
+    })),
+    ...anticipos.map<UnifiedSubRow>((r) => ({
+      key: `ant-${r.anticipoId}`,
+      tipo: "anticipo",
+      fecha: r.solicitadoAt,
+      folio: r.subcontratoNumero != null ? `#${r.subcontratoNumero} · ${r.subcontratoNombre}` : r.subcontratoNombre,
+      obra: r.obraNombre,
+      contratista: r.contratistaNombre,
+      concepto: r.notas ? `Anticipo de subcontrato · ${r.notas}` : "Anticipo de subcontrato",
+      total: r.monto,
+      pagado: 0,
+      saldo: r.monto,
+      estatus: "pendiente",
+      anticipo: r,
+    })),
+  ].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+
+  const totalSaldo = unified.reduce((s, r) => s + r.saldo, 0);
+  const isLoading = antQ.isLoading || estQ.isLoading;
+
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["anticipos-subcontrato-pendientes"] });
+    qc.invalidateQueries({ queryKey: ["cxp-subcontrato-pendientes"] });
+    qc.invalidateQueries({ queryKey: ["subcontrato-anticipo"] });
+    qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
+    qc.invalidateQueries({ queryKey: ["balance"] });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h3 className="text-base font-semibold">Pagos a contratistas pendientes</h3>
+          <p className="text-xs text-muted-foreground">
+            Anticipos solicitados y estimaciones autorizadas pendientes de pago.
+          </p>
+        </div>
+        <Card className="px-4 py-2">
+          <p className="text-xs text-muted-foreground">Saldo total</p>
+          <p className="text-lg font-semibold">{formatMXN(totalSaldo)}</p>
+        </Card>
+      </div>
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Folio / Ref</TableHead>
+              <TableHead>Obra</TableHead>
+              <TableHead>Contratista</TableHead>
+              <TableHead>Concepto</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Pagado</TableHead>
+              <TableHead className="text-right">Saldo</TableHead>
+              <TableHead>Estatus</TableHead>
+              <TableHead className="text-right">Acción</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading && (
+              <TableRow><TableCell colSpan={11} className="text-center text-sm text-muted-foreground py-8">Cargando…</TableCell></TableRow>
+            )}
+            {!isLoading && unified.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={11} className="text-center text-sm text-muted-foreground py-8">
+                  <HandCoins className="size-8 mx-auto mb-2 text-muted-foreground/50" />
+                  Sin pagos a contratistas pendientes.
+                </TableCell>
+              </TableRow>
+            )}
+            {unified.map((r) => (
+              <TableRow key={r.key}>
+                <TableCell>
+                  <Badge
+                    className={
+                      r.tipo === "anticipo"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-slate-100 text-slate-700"
+                    }
+                  >
+                    {r.tipo === "anticipo" ? "Anticipo" : "Estimación"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-medium text-sm">{r.folio}</TableCell>
+                <TableCell className="text-xs">{r.obra}</TableCell>
+                <TableCell className="text-sm">{r.contratista}</TableCell>
+                <TableCell className="text-xs max-w-[260px] truncate" title={r.concepto}>{r.concepto}</TableCell>
+                <TableCell className="text-xs">{formatDate(r.fecha)}</TableCell>
+                <TableCell className="text-right">{formatMXN(r.total)}</TableCell>
+                <TableCell className="text-right">{formatMXN(r.pagado)}</TableCell>
+                <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
+                <TableCell>
+                  <Badge className={ESTADO_PAGO_BADGE[r.estatus === "pagada" ? "pagado" : r.estatus] ?? ""}>
+                    {r.estatus === "parcial" ? "Parcial" : r.estatus === "pagada" ? "Pagado" : "Pendiente"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {r.saldo > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (r.tipo === "anticipo") setPagar(r.anticipo);
+                        else setPagarCxP(r.cxp);
+                      }}
+                    >
+                      Registrar pago
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {pagar && (
+        <RegistrarPagoAnticipoSubcontratoDialog
+          subcontratoId={pagar.subcontratoId}
+          subcontratoNombre={pagar.subcontratoNombre}
+          contratistaNombre={pagar.contratistaNombre}
+          folio={pagar.folio}
+          montoTotalContrato={pagar.subcontratoMontoTotal}
+          anticipoPct={pagar.subcontratoAnticipoPct}
+          monto={pagar.monto}
+          open={!!pagar}
+          onOpenChange={(o) => !o && setPagar(null)}
+          onSaved={invalidateAll}
+        />
+      )}
+
+      {pagarCxP && (
+        <RegistrarPagoCxPDialog
+          cxpId={pagarCxP.id}
+          folio={pagarCxP.folio}
+          beneficiarioNombre={pagarCxP.beneficiario_nombre}
+          saldoPendiente={pagarCxP.saldo}
+          open={!!pagarCxP}
+          onOpenChange={(o) => !o && setPagarCxP(null)}
+          onSaved={invalidateAll}
+        />
+      )}
+    </div>
   );
 }
