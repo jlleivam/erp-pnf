@@ -89,83 +89,61 @@ async function trasladarSaldos(
   }
 }
 
-/** Cierra automáticamente semanas abiertas cuyo sábado ya pasó, abriendo la siguiente y trasladando saldos. */
+/** Cierra todas las semanas abiertas vencidas y elimina semanas futuras fantasma sin movimientos. */
 async function autoCerrarSemanasVencidas(
   supabase: any,
-  companyId: string,
+  _companyId: string,
   obraId: string,
 ) {
   const hoy = new Date().toISOString().slice(0, 10);
-  // Bucle defensivo (máx 520 iteraciones ~ 10 años) por si hay muchas semanas atrasadas
-  for (let i = 0; i < 520; i++) {
-    const { data: abierta } = await supabase
-      .from("almacen_semanas")
-      .select("id, semana_inicio, semana_fin")
-      .eq("obra_id", obraId)
-      .eq("estatus", "abierta")
-      .lt("semana_fin", hoy)
-      .order("semana_inicio", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (!abierta) return;
 
-    // Cerrar la semana vencida
-    await supabase
-      .from("almacen_semanas")
-      .update({ estatus: "cerrada", cerrada_at: new Date().toISOString(), cerrada_por: null })
-      .eq("id", abierta.id);
+  // 1. Cerrar todas las semanas abiertas con fin < hoy
+  await supabase
+    .from("almacen_semanas")
+    .update({ estatus: "cerrada", cerrada_at: new Date().toISOString(), cerrada_por: null })
+    .eq("obra_id", obraId)
+    .eq("estatus", "abierta")
+    .lt("semana_fin", hoy);
 
-    // Crear (o reutilizar) la siguiente semana
-    const nextLunes = siguienteLunes(abierta.semana_inicio);
-    const nextSabado = sabadoDeSemana(nextLunes);
-    let nextId: string;
-    const { data: existSig } = await supabase
-      .from("almacen_semanas")
-      .select("id")
-      .eq("obra_id", obraId)
-      .eq("semana_inicio", nextLunes)
-      .maybeSingle();
-    if (existSig) {
-      nextId = existSig.id;
-    } else {
-      const { data: nueva, error } = await supabase
-        .from("almacen_semanas")
-        .insert({
-          company_id: companyId,
-          obra_id: obraId,
-          semana_inicio: nextLunes,
-          semana_fin: nextSabado,
-          estatus: "abierta",
-        })
-        .select("id")
-        .single();
-      if (error) throw new Error(error.message);
-      nextId = nueva.id;
+  // 2. Eliminar semanas abiertas futuras sin movimientos (fantasma)
+  const { data: futuras } = await supabase
+    .from("almacen_semanas")
+    .select("id")
+    .eq("obra_id", obraId)
+    .eq("estatus", "abierta")
+    .gt("semana_inicio", hoy);
+  for (const f of (futuras ?? []) as Array<{ id: string }>) {
+    const { count } = await supabase
+      .from("almacen_movimientos_semana")
+      .select("id", { count: "exact", head: true })
+      .eq("semana_id", f.id);
+    if (!count || count === 0) {
+      await supabase.from("almacen_semanas").delete().eq("id", f.id);
     }
-
-    await trasladarSaldos(supabase, abierta.id, nextId);
   }
 }
 
-/** Encuentra o crea la semana abierta actual para una obra. */
+/** Encuentra o crea la semana abierta que contiene a hoy. */
 async function getOrCreateSemanaAbierta(
   supabase: any,
   companyId: string,
   obraId: string,
 ): Promise<{ id: string; semana_inicio: string; semana_fin: string }> {
-  // Auto-cerrar semanas vencidas antes de buscar la abierta vigente
   await autoCerrarSemanasVencidas(supabase, companyId, obraId);
 
-  // Busca cualquier semana abierta para la obra
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  // Buscar abierta cuyo rango contenga hoy
   const { data: abierta } = await supabase
     .from("almacen_semanas")
     .select("id, semana_inicio, semana_fin")
     .eq("obra_id", obraId)
     .eq("estatus", "abierta")
-    .order("semana_inicio", { ascending: false })
-    .limit(1)
+    .lte("semana_inicio", hoy)
+    .gte("semana_fin", hoy)
     .maybeSingle();
   if (abierta) return abierta;
+
 
 
   // No hay abierta: crear una para la semana actual
