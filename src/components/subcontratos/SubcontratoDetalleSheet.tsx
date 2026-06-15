@@ -8,7 +8,7 @@ import {
   autorizarPresupuestoSubcontrato,
   rechazarPresupuestoSubcontrato,
   reabrirPresupuestoSubcontrato,
-  actualizarTerminosSubcontrato,
+  
   getSubcontratoAnticipo,
   solicitarPagoAnticipoSubcontrato,
   cancelarSolicitudAnticipoSubcontrato,
