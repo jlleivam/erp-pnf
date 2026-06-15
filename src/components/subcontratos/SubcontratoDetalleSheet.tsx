@@ -70,11 +70,13 @@ const ESTATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | 
 export function SubcontratoDetalleSheet({
   subcontratoId,
   canAuthorize,
+  canEditDraft,
   onClose,
   onChanged,
 }: {
   subcontratoId: string;
   canAuthorize: boolean;
+  canEditDraft: boolean;
   onClose: () => void;
   onChanged?: () => void;
 }) {
