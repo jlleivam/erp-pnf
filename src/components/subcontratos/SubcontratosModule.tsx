@@ -130,12 +130,12 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
             <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left p-2 w-8 hidden md:table-cell">#</th>
-                <th className="text-left p-2 w-[22%]">Subcontrato</th>
-                <th className="text-left p-2 w-[26%]">Contratista</th>
-                <th className="text-left p-2 w-[15%]">Estatus</th>
-                <th className="text-right p-2 w-[15%]">Contratado</th>
-                <th className="text-right p-2 w-[15%]">Pagado</th>
-                <th className="text-right p-2 w-[7%]">Acciones</th>
+                <th className="text-left p-2 w-[24%]">Subcontrato</th>
+                <th className="text-left p-2 w-[28%]">Contratista</th>
+                <th className="text-left p-2 w-[14%]">Estatus</th>
+                <th className="text-right p-2 w-[12%]">Contratado</th>
+                <th className="text-right p-2 w-[11%]">Estimado</th>
+                <th className="text-right p-2 w-[11%]">Pagado</th>
               </tr>
             </thead>
             <tbody>
@@ -144,7 +144,11 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
                   ? (d.pagado_acumulado / d.monto_total) * 100
                   : 0;
                 return (
-                  <tr key={d.id} className="border-t border-border">
+                  <tr
+                    key={d.id}
+                    className="border-t border-border cursor-pointer hover:bg-muted/40 transition-colors"
+                    onClick={() => setViewingId(d.id)}
+                  >
                     <td className="p-2 tabular-nums hidden md:table-cell">{d.numero}</td>
                     <td className="p-2">
                       <p className="font-medium truncate" title={d.descripcion ? `${d.nombre} — ${d.descripcion}` : d.nombre}>
@@ -160,23 +164,12 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
                       </Badge>
                     </td>
                     <td className="p-2 text-right tabular-nums truncate">{formatMXN(d.monto_total)}</td>
+                    <td className="p-2 text-right tabular-nums truncate">{formatMXN(d.estimado_acumulado)}</td>
                     <td className="p-2 text-right tabular-nums truncate">
                       {formatMXN(d.pagado_acumulado)}
                       {d.monto_total > 0 && (
                         <span className="text-xs text-muted-foreground ml-1">· {pct.toFixed(0)}%</span>
                       )}
-                    </td>
-                    <td className="p-2 text-right">
-                      <div className="flex gap-1 justify-end">
-                        <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => setViewingId(d.id)}>
-                          <Eye className="size-3.5 sm:mr-1" /> <span className="hidden sm:inline">Abrir</span>
-                        </Button>
-                        {director && d.estatus_base === "borrador" && d.pagado_acumulado === 0 && (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setToDelete(d)}>
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 );
