@@ -1,33 +1,24 @@
-## Problema
+## Cambios en `src/components/subcontratos/SubcontratosModule.tsx`
 
-En `enviarPresupuestoSubcontrato` (src/lib/api/subcontratos.functions.ts, líneas 505–550), la notificación a Supervisores solo se dispara cuando `p.tipo === "adenda"` (orden de cambio). Cuando el Residente envía a autorización el **presupuesto base** del subcontrato (`tipo === "base"`, que es el flujo normal de "solicitar autorización del subcontrato"), el código actualiza el estatus a `enviado` pero **nunca llama a `notifySupervisoresOC`**, por eso al Supervisor no le llega nada.
+**Objetivo**: pantalla más compacta, tabla como protagonista, un subcontrato por renglón sin wrap del nombre del contratista.
 
-## Cambio
+### Header
+- Reducir título a `text-xl` y descripción a una sola línea más corta (o `line-clamp-1`).
+- Mover el botón "Nuevo subcontrato" a la fila del header (a la derecha del título) en `size="sm"`, eliminando el bloque vertical que hoy ocupa mucho espacio.
 
-En `enviarPresupuestoSubcontrato`, mover la llamada a `notifySupervisoresOC` fuera del `if (p.tipo === "adenda")` para que se ejecute en ambos casos, usando el tipo correcto:
+### KPIs
+- Compactar las 3 tarjetas: padding `p-3` en vez de `p-4`, label `text-[10px]`, monto `text-base font-semibold`.
+- Mantener grid de 3 columnas pero con `gap-3`.
 
-- `tipo === "base"` → notificación tipo `oc_subcontrato_solicitada` con título genérico ("Nuevo subcontrato por autorizar"), o se puede reutilizar el mismo tipo existente. Como el helper `notifySupervisoresOC` solo acepta los tipos ya definidos, lo más limpio es enviar `oc_subcontrato_solicitada` también para el base (el mensaje dirá "solicitó autorización de una OC de subcontrato", lo cual es funcionalmente correcto para el flujo actual y consistente con cómo ya está implementado para destajos/presupuesto base).
+### Tabla (protagonista)
+- Reducir padding de celdas a `p-2` (de `p-3`).
+- Forzar una sola línea por subcontrato: añadir `whitespace-nowrap` + `truncate` a las celdas de texto (Subcontrato, Contratista) y darles `max-w` razonable.
+- Quitar la `descripcion` debajo del nombre del subcontrato (o moverla a `title` tooltip) para garantizar 1 renglón.
+- En la celda Pagado, poner monto y `%` en la misma línea (`$0.00 · 0%`) en vez de dos líneas.
+- Reducir tamaño del Badge de estatus (`text-xs px-2 py-0`).
+- Botón "Abrir" como `size="sm"` con menos padding; botón eliminar como ícono compacto.
 
-```ts
-// reemplazar el bloque `if (p.tipo === "adenda") { ... }` por:
-try {
-  await notifySupervisoresOC(supabase, {
-    userId,
-    obraId: d0!.obra_id,
-    tipo: "oc_subcontrato_solicitada",
-    link: `/app/obras/${d0!.obra_id}`,
-  });
-} catch (e: any) {
-  console.error("[notificaciones] oc_subcontrato_solicitada error", e?.message);
-}
-```
+### Espaciado general
+- `space-y-6` → `space-y-4` en el contenedor raíz.
 
-## Alcance
-
-- Un único archivo: `src/lib/api/subcontratos.functions.ts`.
-- Sin cambios de esquema, sin cambios de UI.
-- No toca el flujo de autorización/rechazo (esos ya notifican correctamente al Residente).
-
-## Validación
-
-Después del cambio, al enviar a autorización un subcontrato base, los Supervisores de la obra deben recibir una notificación visible en la campana (`NotificacionesBell`) con link a la obra.
+Sin cambios funcionales, sin cambios de API ni de datos.
