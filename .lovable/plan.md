@@ -1,20 +1,22 @@
-## Cambios en la tabla de Subcontratos
+### Objetivo
+Que los montos de las columnas Contratado, Estimado y Pagado en la tabla de subcontratos se vean completos, sin truncamiento con "..."
 
-### 1. Backend — `src/lib/api/subcontratos.functions.ts` (`listSubcontratos`)
-- Quitar el filtro `.eq("estatus", "cerrada")` al traer estimaciones y, en su lugar, calcular dos acumulados:
-  - `estimado_acumulado` = suma de `monto_total` de **todas** las estimaciones (cualquier estatus).
-  - `pagado_acumulado` = suma de `monto_total` solo de estimaciones con estatus `cerrada` (comportamiento actual).
-- Exponer ambos campos en el objeto devuelto.
+### Diagnóstico
+- La tabla usa `table-fixed`, lo que fuerza anchos fijos a las columnas.
+- Las columnas monetarias tienen asignados solo 11-12% del ancho (Ej: en ~730px de viewport son ~80-90px).
+- Las celdas monetarias tienen la clase `truncate`, que corta el texto con "..." cuando no cabe.
+- Un monto formateado como "$32,700.00" + el porcentaje adjunto ("· 45%") requiere ~120-170px, mucho más de lo asignado.
 
-### 2. UI — `src/components/subcontratos/SubcontratosModule.tsx`
-- **Encabezados de tabla**: reemplazar la columna `Acciones` por `Estimado`. Orden final:
-  `# · Subcontrato · Contratista · Estatus · Contratado · Estimado · Pagado`
-- **Celdas**: agregar celda `Estimado` con `formatMXN(d.estimado_acumulado)` (alineada a la derecha, tabular-nums). Eliminar la celda de acciones (botón "Abrir" + botón eliminar).
-- **Fila clickeable**: agregar `onClick={() => setViewingId(d.id)}` y clases `cursor-pointer hover:bg-muted/40` al `<tr>` para abrir el detalle al hacer click en cualquier parte.
-- **Eliminar borrador**: como el botón de basura vivía en la columna de acciones, mover esa acción al `SubcontratoDetalleSheet` no es necesario — ya existe la acción de eliminar dentro del detalle. Si no existe, conservar solo ese botón en una mini-celda dedicada queda fuera de alcance; el botón se elimina de la lista (los borradores se podrán seguir eliminando desde el sheet de detalle, que ya soporta `eliminarSubcontrato`).
-- Ajustar los anchos de columna (`w-[%]`) para repartir el espacio liberado por la columna Acciones.
+### Cambios propuestos
+1. **Quitar `table-fixed`** de la tabla para que el navegador ajuste el ancho de cada columna según su contenido real.
+2. **Quitar `truncate`** de las celdas monetarias (`<td>` de Contratado, Estimado y Pagado) para que los montos se muestren completos.
+3. **Agregar `whitespace-nowrap`** a esas mismas celdas y a sus encabezados (`<th>`) para evitar que los números se rompan en varias líneas.
+4. **Controlar el ancho de las columnas de texto** (Subcontrato y Contratista) agregando `max-w-[200px]` a los `<p>` internos, para que sigan truncándose si son muy largos y no desborden la tabla.
+5. **Opcional:** si la tabla resulta más ancha que la pantalla, envolverla en un contenedor con `overflow-x-auto` para permitir scroll horizontal sin perder información.
 
-### 3. Sin cambios
-- KPIs superiores (Contratado vigente / Pagado acumulado / Subcontratos activos).
-- Permisos, server functions de mutación, sheets de detalle/captura.
-- Módulo de destajos (este cambio aplica solo a subcontratos).
+### Archivo a modificar
+- `src/components/subcontratos/SubcontratosModule.tsx`
+
+### Sin cambios en
+- Backend (`subcontratos.functions.ts`)
+- Ningún otro componente o flujo de permisos

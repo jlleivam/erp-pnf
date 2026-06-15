@@ -126,17 +126,17 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
           Aún no hay subcontratos. Crea uno para comenzar.
         </Card>
       ) : (
-        <Card>
-          <table className="w-full text-sm table-fixed">
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="text-left p-2 w-8 hidden md:table-cell">#</th>
-                <th className="text-left p-2 w-[24%]">Subcontrato</th>
-                <th className="text-left p-2 w-[28%]">Contratista</th>
-                <th className="text-left p-2 w-[14%]">Estatus</th>
-                <th className="text-right p-2 w-[12%]">Contratado</th>
-                <th className="text-right p-2 w-[11%]">Estimado</th>
-                <th className="text-right p-2 w-[11%]">Pagado</th>
+                <th className="text-left p-2 hidden md:table-cell">#</th>
+                <th className="text-left p-2">Subcontrato</th>
+                <th className="text-left p-2">Contratista</th>
+                <th className="text-left p-2">Estatus</th>
+                <th className="text-right p-2 whitespace-nowrap">Contratado</th>
+                <th className="text-right p-2 whitespace-nowrap">Estimado</th>
+                <th className="text-right p-2 whitespace-nowrap">Pagado</th>
               </tr>
             </thead>
             <tbody>
@@ -152,21 +152,21 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
                   >
                     <td className="p-2 tabular-nums hidden md:table-cell">{d.numero}</td>
                     <td className="p-2">
-                      <p className="font-medium truncate" title={d.descripcion ? `${d.nombre} — ${d.descripcion}` : d.nombre}>
+                      <p className="font-medium truncate max-w-[220px]" title={d.descripcion ? `${d.nombre} — ${d.descripcion}` : d.nombre}>
                         {d.nombre}
                       </p>
                     </td>
                     <td className="p-2">
-                      <p className="truncate" title={d.contratista_nombre}>{d.contratista_nombre}</p>
+                      <p className="truncate max-w-[220px]" title={d.contratista_nombre}>{d.contratista_nombre}</p>
                     </td>
                     <td className="p-2">
-                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]} className="text-xs px-2 py-0 truncate max-w-full">
+                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]} className="text-xs px-2 py-0 whitespace-nowrap">
                         {ESTATUS_LABEL[d.estatus_base]}
                       </Badge>
                     </td>
-                    <td className="p-2 text-right tabular-nums truncate">{formatMXN(d.monto_total)}</td>
-                    <td className="p-2 text-right tabular-nums truncate">{formatMXN(d.estimado_acumulado)}</td>
-                    <td className="p-2 text-right tabular-nums truncate">
+                    <td className="p-2 text-right tabular-nums whitespace-nowrap">{formatMXN(d.monto_total)}</td>
+                    <td className="p-2 text-right tabular-nums whitespace-nowrap">{formatMXN(d.estimado_acumulado)}</td>
+                    <td className="p-2 text-right tabular-nums whitespace-nowrap">
                       {formatMXN(d.pagado_acumulado)}
                       {d.monto_total > 0 && (
                         <span className="text-xs text-muted-foreground ml-1">· {pct.toFixed(0)}%</span>
@@ -178,6 +178,7 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
             </tbody>
           </table>
         </Card>
+
       )}
 
 
