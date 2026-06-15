@@ -274,8 +274,8 @@ export const eliminarDestajo = createServerFn({ method: "POST" })
       .from("obra_destajos").select("estatus, obra_id, company_id").eq("id", data.id).single();
     if (!d0) throw new Error("Destajo no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
     // Solo eliminar si todos los presupuestos están en borrador y no hay estimaciones cerradas
     const { data: ests } = await supabase
       .from("obra_destajo_estimaciones").select("id, estatus")
