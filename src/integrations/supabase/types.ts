@@ -151,6 +151,73 @@ export type Database = {
           },
         ]
       }
+      almacen_semana_desbloqueo_solicitudes: {
+        Row: {
+          company_id: string
+          created_at: string
+          estatus: string
+          id: string
+          motivo: string
+          obra_id: string
+          respuesta: string | null
+          resuelto_at: string | null
+          resuelto_por: string | null
+          semana_id: string
+          solicitado_por: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          estatus?: string
+          id?: string
+          motivo: string
+          obra_id: string
+          respuesta?: string | null
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          semana_id: string
+          solicitado_por: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          estatus?: string
+          id?: string
+          motivo?: string
+          obra_id?: string
+          respuesta?: string | null
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          semana_id?: string
+          solicitado_por?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "almacen_semana_desbloqueo_solicitudes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "almacen_semana_desbloqueo_solicitudes_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "almacen_semana_desbloqueo_solicitudes_semana_id_fkey"
+            columns: ["semana_id"]
+            isOneToOne: false
+            referencedRelation: "almacen_semanas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       almacen_semanas: {
         Row: {
           cerrada_at: string | null
@@ -3819,7 +3886,7 @@ export type Database = {
       }
     }
     Enums: {
-      almacen_semana_estatus: "abierta" | "cerrada"
+      almacen_semana_estatus: "abierta" | "cerrada" | "bloqueada"
       app_role:
         | "director"
         | "residente"
@@ -4055,7 +4122,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      almacen_semana_estatus: ["abierta", "cerrada"],
+      almacen_semana_estatus: ["abierta", "cerrada", "bloqueada"],
       app_role: [
         "director",
         "residente",
