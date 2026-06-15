@@ -124,28 +124,28 @@ async function autoCerrarSemanasVencidas(
 }
 
 
-/** Encuentra o crea la semana abierta que contiene a hoy. */
+/** Encuentra o crea la semana (abierta o bloqueada) que contiene a hoy. */
 async function getOrCreateSemanaAbierta(
   supabase: any,
   companyId: string,
   obraId: string,
-): Promise<{ id: string; semana_inicio: string; semana_fin: string }> {
+): Promise<{ id: string; semana_inicio: string; semana_fin: string; estatus: string }> {
   await autoCerrarSemanasVencidas(supabase, companyId, obraId);
 
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // Buscar abierta cuyo rango contenga hoy
-  const { data: abierta } = await supabase
+  // Buscar la semana (abierta o bloqueada) cuyo rango contenga hoy
+  const { data: actual } = await supabase
     .from("almacen_semanas")
-    .select("id, semana_inicio, semana_fin")
+    .select("id, semana_inicio, semana_fin, estatus")
     .eq("obra_id", obraId)
-    .eq("estatus", "abierta")
+    .in("estatus", ["abierta", "bloqueada"])
     .lte("semana_inicio", hoy)
     .gte("semana_fin", hoy)
     .maybeSingle();
-  if (abierta) return abierta;
+  if (actual) return actual;
 
-  // No hay abierta para hoy: reabrir la fila existente con ese lunes, o crearla
+  // No hay semana actual: crear con lunes/domingo de hoy
   const lunes = lunesDeSemana(new Date());
   const sabado = sabadoDeSemana(lunes);
 
@@ -156,7 +156,7 @@ async function getOrCreateSemanaAbierta(
     .eq("semana_inicio", lunes)
     .maybeSingle();
 
-  let nueva: { id: string; semana_inicio: string; semana_fin: string };
+  let nueva: { id: string; semana_inicio: string; semana_fin: string; estatus: string };
   let yaTeniaMovimientos = false;
 
   if (existente) {
@@ -175,7 +175,7 @@ async function getOrCreateSemanaAbierta(
         cerrada_por: null,
       })
       .eq("id", existente.id)
-      .select("id, semana_inicio, semana_fin")
+      .select("id, semana_inicio, semana_fin, estatus")
       .single();
     if (updErr) throw new Error(updErr.message);
     nueva = reabierta;
@@ -189,15 +189,13 @@ async function getOrCreateSemanaAbierta(
         semana_fin: sabado,
         estatus: "abierta",
       })
-      .select("id, semana_inicio, semana_fin")
+      .select("id, semana_inicio, semana_fin, estatus")
       .single();
     if (error) throw new Error(error.message);
     nueva = insertada;
   }
 
-  // Si la semana ya tenía movimientos, no la sembramos (evita duplicar saldos)
   if (yaTeniaMovimientos) return nueva;
-
 
   // Sembrar inv_inicial desde la última semana cerrada (si existe)
   const { data: prevCerrada } = await supabase
@@ -214,7 +212,6 @@ async function getOrCreateSemanaAbierta(
       .from("almacen_movimientos_semana")
       .select("insumo_id, inv_inicial, recibido, utilizado, precio_unitario")
       .eq("semana_id", prevCerrada.id);
-    // Trasladar un renglón por lote (insumo_id + precio_unitario) con saldo final ≠ 0
     const rows = (prevMov ?? [])
       .map((m: any) => {
         const final = Number(m.inv_inicial) + Number(m.recibido) - Number(m.utilizado);
@@ -240,6 +237,7 @@ async function getOrCreateSemanaAbierta(
   }
   return nueva;
 }
+
 
 /** Lista OCs de la obra pendientes de recibir total o parcialmente. */
 export const listOCsPorRecibir = createServerFn({ method: "POST" })
