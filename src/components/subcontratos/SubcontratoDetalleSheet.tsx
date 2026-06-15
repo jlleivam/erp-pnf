@@ -168,6 +168,7 @@ export function SubcontratoDetalleSheet({
                   <PresupuestoCard
                     p={base}
                     canAuthorize={canAuthorize}
+                    canEditDraft={canEditDraft}
                     onEdit={() => setEditingBaseId(base.id)}
                     onEnviar={() => enviarM.mutate({ data: { presupuestoId: base.id } })}
                     onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: base.id } })}
@@ -175,7 +176,7 @@ export function SubcontratoDetalleSheet({
                     onReabrir={() => reabrirM.mutate({ data: { presupuestoId: base.id } })}
                   />
                 )}
-                {baseAutorizada && (
+                {baseAutorizada && canEditDraft && (
                   <div>
                     <Button
                       size="sm"
@@ -191,6 +192,7 @@ export function SubcontratoDetalleSheet({
                     key={oc.id}
                     p={oc}
                     canAuthorize={canAuthorize}
+                    canEditDraft={canEditDraft}
                     onEdit={() => setEditingOcId(oc.id)}
                     onEnviar={() => enviarM.mutate({ data: { presupuestoId: oc.id } })}
                     onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: oc.id } })}
