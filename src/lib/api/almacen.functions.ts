@@ -578,7 +578,7 @@ export const bloquearSemana = createServerFn({ method: "POST" })
     if (sem.semana_inicio > hoy || sem.semana_fin < hoy) {
       throw new Error("Solo puedes bloquear la semana actual");
     }
-    await assertResidenteOSupervisor(supabase, userId, sem.obra_id);
+    await assertPuedeEditarAlmacen(supabase, userId, sem.obra_id, roles);
 
     const { error } = await supabase
       .from("almacen_semanas")
@@ -608,7 +608,7 @@ export const solicitarDesbloqueoSemana = createServerFn({ method: "POST" })
     if (!sem) throw new Error("Semana no encontrada");
     if (sem.company_id !== companyId) throw new Error("Semana no válida");
     if (sem.estatus !== "bloqueada") throw new Error("Solo se pueden desbloquear semanas bloqueadas");
-    await assertResidenteOSupervisor(supabase, userId, sem.obra_id);
+    await assertPuedeEditarAlmacen(supabase, userId, sem.obra_id, roles);
 
     // No permitir solicitudes duplicadas pendientes
     const { data: pendiente } = await supabase
