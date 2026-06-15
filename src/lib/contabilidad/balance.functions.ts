@@ -89,12 +89,16 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .eq("origen_tipo", "destajo_estimacion")
         .in("estatus", ["pendiente", "parcial"])
         .is("cancelado_at", null),
-      // Subcontratistas por pagar
+      // Subcontratistas por pagar: CxP pendientes/parciales de estimaciones de subcontrato
       supabase
-        .from("obra_subcontrato_estimaciones")
-        .select("monto_total, estatus")
+        .from("cuentas_por_pagar")
+        .select("monto_total, monto_pagado, beneficiario_tipo, origen_tipo, estatus, cancelado_at")
         .eq("company_id", companyId)
-        .eq("estatus", "cerrada"),
+        .eq("beneficiario_tipo", "tercero")
+        .eq("origen_tipo", "subcontrato_estimacion")
+        .in("estatus", ["pendiente", "parcial"])
+        .is("cancelado_at", null),
+
       // Nómina por pagar
       supabase
         .from("obra_nominas")
