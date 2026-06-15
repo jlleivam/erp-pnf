@@ -1,16 +1,18 @@
-## Problema
-
-En el sheet de "Presupuesto base" del subcontrato no se muestra el bloque "Condiciones del subcontrato" (Anticipo % / Fondo de garantía %) que sí aparece en el destajo.
-
-La data ya está disponible: `getSubcontratoPresupuesto` ya devuelve `obra_subcontratos.anticipo_pct`, `anticipo_monto` y `fondo_garantia_pct` junto al presupuesto. Solo falta renderizar el bloque en la UI.
-
 ## Cambio
 
-Editar `src/components/subcontratos/CapturaSubcontratoSheet.tsx` y agregar, justo debajo de la `Card` con la tabla de renglones y antes del footer de botones, el mismo bloque que tiene `CapturaDestajoSheet.tsx` (líneas 313–368), adaptado a subcontrato:
+Los términos del subcontrato (anticipo % y fondo de garantía %) se definen al crear el subcontrato y se congelan al autorizar el presupuesto base. Una vez creado, ya no deben poder editarse desde la pestaña "Términos".
 
-- Leer `presupuesto.obra_subcontratos.anticipo_pct` y `presupuesto.obra_subcontratos.fondo_garantia_pct`.
-- Calcular montos sobre `calc.montoTotal` cuando no hay errores.
-- Si ambos % son 0 → Card con "Sin anticipo ni fondo de garantía."
-- Si alguno > 0 → Card con título "Condiciones del subcontrato" y filas de Anticipo y/o Fondo de garantía mostrando %, monto y descripción.
+## Edición
 
-No se tocan server functions, esquema, ni lógica de cálculo — es un cambio puramente de presentación.
+`src/components/subcontratos/SubcontratoDetalleSheet.tsx` → componente `TerminosTab`:
+
+- Eliminar el botón "Editar términos" y todo el bloque de edición (form con inputs de % y botones Guardar/Cancelar, líneas ~631–688).
+- Eliminar el estado `editing`, `anticipoPct`, `fondoPct` y la mutación `updM` que usa `actualizarTerminosSubcontrato`.
+- Quitar el import `actualizarTerminosSubcontrato` y la prop `canEdit` (ya no se usa para edición de términos; se mantiene la lógica de "Solicitar pago" que usa `!q.isLoading` — esa sigue intacta usando la misma prop o reemplazándola por una variable local equivalente).
+
+Se conserva todo lo demás de la pestaña: tarjetas de Anticipo y Fondo de garantía con sus montos/saldos, badges de estado del anticipo, diálogo de "Solicitar pago" y botón de "Cancelar solicitud".
+
+## Notas
+
+- No se elimina la server function `actualizarTerminosSubcontrato` ni la migración relacionada — sólo se deja de exponer desde la UI. Si prefieres que también borre la server function, dímelo y lo incluyo.
+- No se tocan: creación de subcontrato (`NuevoSubcontratoDialog`), autorización del presupuesto base, cálculos de estimaciones, ni nada de pagos.
