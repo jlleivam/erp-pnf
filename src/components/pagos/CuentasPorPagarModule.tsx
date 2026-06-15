@@ -112,7 +112,14 @@ export function CuentasPorPagarModule() {
               </span>
             )}
           </TabsTrigger>
-
+          <TabsTrigger value="subcontratos">
+            Subcontratos
+            {subcontratosPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {subcontratosPendientesCount > 99 ? "99+" : subcontratosPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="proveedores" className="space-y-4 mt-4">
