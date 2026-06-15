@@ -91,14 +91,19 @@ export const listSubcontratos = createServerFn({ method: "POST" })
 
     const ids = sbc.map((d: any) => d.id);
     let pagadosMap = new Map<string, number>();
+    let estimadosMap = new Map<string, number>();
     let baseEstatusMap = new Map<string, string>();
     if (ids.length > 0) {
       const { data: ests } = await supabase
         .from("obra_subcontrato_estimaciones")
         .select("subcontrato_id, monto_total, estatus")
-        .in("subcontrato_id", ids).eq("estatus", "cerrada");
+        .in("subcontrato_id", ids);
       for (const e of ests ?? []) {
-        pagadosMap.set(e.subcontrato_id, (pagadosMap.get(e.subcontrato_id) ?? 0) + Number(e.monto_total));
+        const monto = Number(e.monto_total);
+        estimadosMap.set(e.subcontrato_id, (estimadosMap.get(e.subcontrato_id) ?? 0) + monto);
+        if (e.estatus === "cerrada") {
+          pagadosMap.set(e.subcontrato_id, (pagadosMap.get(e.subcontrato_id) ?? 0) + monto);
+        }
       }
       const { data: bases } = await supabase
         .from("obra_subcontrato_presupuestos")
@@ -113,6 +118,7 @@ export const listSubcontratos = createServerFn({ method: "POST" })
       ...d,
       contratista_nombre: tMap.get(d.contratista_id) ?? "—",
       pagado_acumulado: pagadosMap.get(d.id) ?? 0,
+      estimado_acumulado: estimadosMap.get(d.id) ?? 0,
       estatus_base: baseEstatusMap.get(d.id) ?? "borrador",
     }));
   });
