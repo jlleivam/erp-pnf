@@ -565,7 +565,7 @@ export const bloquearSemana = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ semanaId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId } = await getCtx(supabase, userId);
+    const { companyId, roles } = await getCtx(supabase, userId);
 
     const { data: sem } = await supabase
       .from("almacen_semanas")
@@ -599,7 +599,7 @@ export const solicitarDesbloqueoSemana = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId } = await getCtx(supabase, userId);
+    const { companyId, roles } = await getCtx(supabase, userId);
 
     const { data: sem } = await supabase
       .from("almacen_semanas")
