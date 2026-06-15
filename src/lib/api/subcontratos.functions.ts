@@ -469,8 +469,8 @@ export const guardarRenglonesOCSubcontrato = createServerFn({ method: "POST" })
     const { data: d0 } = await supabase
       .from("obra_subcontratos").select("obra_id").eq("id", pres.subcontrato_id).single();
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0!.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { baseRenglones, ocsRenglones } = await loadSubcontratoBaseYOcs(supabase, pres.subcontrato_id);
     const { vigente } = reconstruirVigente(baseRenglones, ocsRenglones);
