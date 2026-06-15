@@ -59,6 +59,17 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchEstimacionesCount(),
   });
 
+  const fetchAnticiposSubCount = useServerFn(listAnticiposSubcontratoPendientes);
+  const anticiposSubCountQ = useQuery({
+    queryKey: ["anticipos-subcontrato-pendientes"],
+    queryFn: () => fetchAnticiposSubCount(),
+  });
+  const fetchEstSubCount = useServerFn(listCxPSubcontratoPendientes);
+  const estSubCountQ = useQuery({
+    queryKey: ["cxp-subcontrato-pendientes"],
+    queryFn: () => fetchEstSubCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -69,6 +80,9 @@ export function CuentasPorPagarModule() {
   const anticiposPendientesCount =
     ((anticiposCountQ.data ?? []) as unknown[]).length
     + ((estimacionesCountQ.data ?? []) as unknown[]).length;
+  const subcontratosPendientesCount =
+    ((anticiposSubCountQ.data ?? []) as unknown[]).length
+    + ((estSubCountQ.data ?? []) as unknown[]).length;
 
 
   return (
