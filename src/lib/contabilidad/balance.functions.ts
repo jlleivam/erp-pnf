@@ -329,9 +329,10 @@ async function buildDetalle(
         ? await supabase.from("trabajadores").select("id, nombre_completo").in("id", trabIds)
         : { data: [] };
       const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
-      const destajoToTrab = new Map(
-        (destajos ?? []).map((d: any) => [d.id, d.destajista_id as string]),
+      const destajoToTrab = new Map<string, string>(
+        ((destajos ?? []) as any[]).map((d: any): [string, string] => [d.id, d.destajista_id]),
       );
+
       const acc = new Map<string, { etiqueta: string; saldo: number }>();
       for (const a of antRes.data ?? []) {
         const tid = destajoToTrab.get(a.destajo_id);
