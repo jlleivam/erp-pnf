@@ -72,11 +72,13 @@ const ESTATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | 
 export function DestajoDetalleSheet({
   destajoId,
   canAuthorize,
+  canEditDraft,
   onClose,
   onChanged,
 }: {
   destajoId: string;
   canAuthorize: boolean;
+  canEditDraft: boolean;
   onClose: () => void;
   onChanged?: () => void;
 }) {
