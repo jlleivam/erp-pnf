@@ -38,9 +38,11 @@ type Subcontrato = {
   estatus_base: "borrador" | "enviado" | "autorizado" | "rechazado";
   monto_total: number;
   pagado_acumulado: number;
+  autorizado_acumulado: number;
   estimado_acumulado: number;
   created_at: string;
 };
+
 
 const ESTATUS_LABEL: Record<Subcontrato["estatus"], string> = {
   borrador: "Borrador",
