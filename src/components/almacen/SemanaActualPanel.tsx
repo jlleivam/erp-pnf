@@ -40,8 +40,9 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
   const resolverFn = useServerFn(resolverSolicitudDesbloqueo);
 
   const { role, isDirector } = useObraRole(obraId);
-  const esResidenteOSupervisor = role === "residente" || role === "supervisor";
+  const puedeEditar = isDirector || role === "residente" || role === "supervisor";
   const puedeResolver = isDirector || role === "supervisor";
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["almacen", "semana-actual", obraId],
