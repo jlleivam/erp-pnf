@@ -367,15 +367,16 @@ async function buildDetalle(
         : { data: [] };
       const pMap = new Map<string, string>(((provRes.data ?? []) as any[]).map((p: any): [string, string] => [p.id, p.razon_social]));
       const acc = new Map<string, { etiqueta: string; folios: string[]; saldo: number }>();
-      for (const r of filas) {
+      for (const r of filas as any[]) {
         const saldo = Math.max(0, num(r.total) - num(r.monto_pagado));
         if (saldo <= 0) continue;
         const key = r.proveedor_id ?? "sin-proveedor";
-        const cur = acc.get(key) ?? {
+        const cur: { etiqueta: string; folios: string[]; saldo: number } = acc.get(key) ?? {
           etiqueta: pMap.get(r.proveedor_id) ?? "Sin proveedor",
           folios: [],
           saldo: 0,
         };
+
         cur.folios.push(r.folio);
         cur.saldo += saldo;
         acc.set(key, cur);
