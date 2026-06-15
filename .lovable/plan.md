@@ -1,41 +1,35 @@
-### Objetivo
-Hacer cada fila del Balance General desplegable. Al expandir una cuenta se muestra el desglose por origen (ej. 2100 → cada proveedor con su saldo abierto; 2120 → cada subcontratista con su CxP pendiente).
+## Problema
 
-### Arquitectura
+`getOrCreateSemanaAbierta` (en `src/lib/api/almacen.functions.ts`) busca *cualquier* semana abierta de la obra sin importar su fecha. Si nadie pulsa "Cerrar semana", la semana del 7–12 jun se queda abierta indefinidamente aunque ya estemos en una semana posterior.
 
-**Backend** — nuevo server fn `getDetalleCuenta` en `src/lib/contabilidad/balance.functions.ts`:
-- Input: `{ codigo: string }`.
-- Verifica empresa y rol (director/administrativo), igual que `getBalanceGeneral`.
-- Devuelve `{ codigo, items: Array<{ id?, etiqueta, referencia?, fecha?, saldo, linkModulo? }> }` ordenado por saldo desc.
-- Si la cuenta no tiene desglose disponible, devuelve `items: []`.
+## Solución: auto-rollover de semanas vencidas
 
-**Mapeo por cuenta** (cuentas con `disponible: true`):
+Antes de devolver la semana abierta, comparar `semana_fin` contra hoy. Si la semana ya terminó (hoy > sábado), cerrarla automáticamente y abrir las semanas siguientes hasta llegar a la semana que contiene hoy, trasladando saldos en cada salto. Solo en este flujo automático no se requiere acción del usuario; el cierre manual sigue funcionando igual.
 
-| Código | Fuente | Etiqueta | Referencia | Saldo |
-|---|---|---|---|---|
-| 1100 | `cuentas` tipo `bancaria` activas | nombre cuenta | banco | saldo_actual |
-| 1110 | `cuentas` tipo `caja_fuerte` activas | nombre cuenta | — | saldo_actual |
-| 1120 | `caja_chica_fondos` estatus `entregado` join `trabajadores` | nombre trabajador | folio fondo | monto_entregado |
-| 1210 | `obra_destajo_anticipos` pagados − amortizaciones, agrupado por trabajador | nombre trabajador | — | saldo positivo |
-| 2100 | `ordenes_compra` autorizadas/recibidas no pagadas, agrupadas por proveedor | razón social proveedor | folios | Σ(total − monto_pagado) |
-| 2110 | `cuentas_por_pagar` origen `destajo_estimacion`, beneficiario `trabajador`, pendiente/parcial, agrupado por trabajador | nombre trabajador | folios CxP | Σ(monto_total − monto_pagado) |
-| 2120 | `cuentas_por_pagar` origen `subcontrato_estimacion`, beneficiario `tercero`, pendiente/parcial, agrupado por tercero | razón social | folios CxP | Σ(monto_total − monto_pagado) |
-| 2130 | `obra_nominas` cerradas con saldo > 0 | semana/obra | folio | monto_total − pagado |
-| 2150 | `vales_gasolina` autorizados sin pagar | trabajador / unidad | folio | monto_autorizado − pagado |
-| 2160 | `caja_chica_reembolsos` enviado_admin sin pagar | trabajador | folio | monto_aprobado − pagado |
-| 3100 | `companies.capital_social` | "Capital social aportado" | — | capital_social |
-| 3200 | no aplica desglose (es residual calculado) | — | — | — |
+### Cambios en `src/lib/api/almacen.functions.ts`
 
-Cuentas con `disponible: false` (1200, 1220, 1300, 1400, 2140) no se vuelven expandibles.
+1. **Nuevo helper `autoCerrarSemanasVencidas(supabase, companyId, obraId)`**:
+   - Loop: mientras exista una semana abierta cuya `semana_fin < hoy`:
+     - Marcarla `cerrada` con `cerrada_at = now()`, `cerrada_por = null` (cierre automático del sistema).
+     - Calcular lunes/sábado siguientes con los helpers existentes `siguienteLunes` / `sabadoDeSemana`.
+     - Crear (o reutilizar) la semana siguiente con estatus `abierta`.
+     - Trasladar saldos finales (`inv_inicial + recibido − utilizado`) por `(insumo_id, precio_unitario)` a la nueva semana — misma lógica que `cerrarSemana` ya implementa; extraerla a un helper compartido `trasladarSaldos(supabase, semanaOrigenId, semanaDestinoId)` para no duplicar código.
+   - Devuelve la semana abierta vigente al final del loop.
 
-### Frontend
-`src/components/contabilidad/ContabilidadModule.tsx`:
-1. Cambiar `SaldoRow` a un componente `Collapsible` (shadcn) cuando `s.disponible && codigo !== "3200"`.
-2. Mostrar chevron a la izquierda del código; al expandir, hacer fetch con `useQuery` (key: `["balance-detalle", codigo]`, `enabled: isOpen`) llamando `getDetalleCuenta`.
-3. Render del detalle: lista con `etiqueta`, `referencia` (texto chico) y `saldo` (mono, alineado a la derecha). Skeleton mientras carga. Mensaje "Sin movimientos abiertos" si vacío.
-4. Si la fila ya tenía `linkModulo`, el contenedor sigue siendo clicable como antes — el botón "expandir" no debe disparar la navegación (separar el chevron del enlace para evitar conflicto).
+2. **`getOrCreateSemanaAbierta`**: al inicio, llamar a `autoCerrarSemanasVencidas` antes de hacer la búsqueda. Si todavía no existe ninguna semana, sigue creando la actual como hoy.
 
-### Sin cambios
-- Catálogo contable.
-- Cálculo de totales del balance (sigue usando `getBalanceGeneral`).
-- Permisos.
+3. **`cerrarSemana`**: refactorizar para usar el mismo helper `trasladarSaldos` (sin cambio funcional).
+
+### No cambia
+
+- `cerrarSemana` sigue disponible para cierre manual anticipado.
+- UI: no requiere cambios; al entrar a "Semana actual" se verá ya la semana que contiene hoy y las anteriores aparecerán en "Historial" como cerradas.
+- Permisos, cálculos de balance, contabilidad: sin cambios.
+
+### Nota sobre `cerrada_por`
+
+Hoy la columna es nullable (RLS lo permite porque sólo escribimos desde server functions con service-role efectivo vía middleware autenticado). El cierre automático lo dejará en `null` para distinguirlo del cierre manual; si prefieres marcarlo con el usuario que disparó la consulta, lo cambiamos.
+
+## Archivos modificados
+
+- `src/lib/api/almacen.functions.ts`
