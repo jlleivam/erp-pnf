@@ -138,6 +138,7 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
                 <th className="text-left p-2">Estatus</th>
                 <th className="text-right p-2 whitespace-nowrap">Contratado</th>
                 <th className="text-right p-2 whitespace-nowrap">Estimado</th>
+                <th className="text-right p-2 whitespace-nowrap">Autorizado</th>
                 <th className="text-right p-2 whitespace-nowrap">Pagado</th>
               </tr>
             </thead>
@@ -168,6 +169,7 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
                     </td>
                     <td className="p-2 text-right tabular-nums whitespace-nowrap">{formatMXN(d.monto_total)}</td>
                     <td className="p-2 text-right tabular-nums whitespace-nowrap">{formatMXN(d.estimado_acumulado)}</td>
+                    <td className="p-2 text-right tabular-nums whitespace-nowrap">{formatMXN(d.autorizado_acumulado)}</td>
                     <td className="p-2 text-right tabular-nums whitespace-nowrap">
                       {formatMXN(d.pagado_acumulado)}
                       {d.monto_total > 0 && (
@@ -180,6 +182,7 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
             </tbody>
           </table>
         </Card>
+
 
       )}
 
