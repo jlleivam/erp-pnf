@@ -186,7 +186,7 @@ export function DestajoDetalleSheet({
                     <RenglonesDestajoView presupuestoDestajoId={base.id} />
                   </div>
                 )}
-                {baseAutorizada && (
+                {baseAutorizada && canEditDraft && (
                   <div>
                     <Button
                       size="sm"
@@ -202,6 +202,7 @@ export function DestajoDetalleSheet({
                     <PresupuestoCard
                       p={oc}
                       canAuthorize={canAuthorize}
+                      canEditDraft={canEditDraft}
                       onEdit={() => setEditingOcId(oc.id)}
                       onEnviar={() => enviarM.mutate({ data: { presupuestoId: oc.id } })}
                       onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: oc.id } })}
