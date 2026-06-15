@@ -234,8 +234,8 @@ export const actualizarTerminosDestajo = createServerFn({ method: "POST" })
       .from("obra_destajos").select("obra_id, monto_total").eq("id", data.destajoId).single();
     if (!d0) throw new Error("Destajo no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     // Si ya hay anticipo registrado (pagado), no permitir cambiar el %
     const { data: ant } = await supabase
