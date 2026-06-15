@@ -401,7 +401,7 @@ async function buildDetalle(
         .in("estatus", ["pendiente", "parcial"])
         .is("cancelado_at", null);
       const acc = new Map<string, { etiqueta: string; folios: string[]; saldo: number }>();
-      for (const r of data ?? []) {
+      for (const r of (data ?? []) as any[]) {
         const saldo = Math.max(0, num(r.monto_total) - num(r.monto_pagado));
         if (saldo <= 0) continue;
         const key = r.beneficiario_id ?? r.id;
