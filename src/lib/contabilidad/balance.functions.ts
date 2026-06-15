@@ -287,8 +287,8 @@ async function buildDetalle(
           ? supabase.from("obras").select("id, nombre").in("id", obraIds)
           : Promise.resolve({ data: [] }),
       ]);
-      const tMap = new Map((trabRes.data ?? []).map((t: any) => [t.id, t.nombre_completo]));
-      const oMap = new Map((obraRes.data ?? []).map((o: any) => [o.id, o.nombre]));
+      const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
+      const oMap = new Map<string, string>(((obraRes.data ?? []) as any[]).map((o: any): [string, string] => [o.id, o.nombre]));
       return filas
         .filter((r: any) => num(r.monto_entregado) > 0)
         .map((r: any) => ({
@@ -328,7 +328,7 @@ async function buildDetalle(
       const trabRes = trabIds.length
         ? await supabase.from("trabajadores").select("id, nombre_completo").in("id", trabIds)
         : { data: [] };
-      const tMap = new Map((trabRes.data ?? []).map((t: any) => [t.id, t.nombre_completo]));
+      const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
       const destajoToTrab = new Map(
         (destajos ?? []).map((d: any) => [d.id, d.destajista_id as string]),
       );
@@ -364,7 +364,7 @@ async function buildDetalle(
       const provRes = provIds.length
         ? await supabase.from("terceros").select("id, razon_social").in("id", provIds)
         : { data: [] };
-      const pMap = new Map((provRes.data ?? []).map((p: any) => [p.id, p.razon_social]));
+      const pMap = new Map<string, string>(((provRes.data ?? []) as any[]).map((p: any): [string, string] => [p.id, p.razon_social]));
       const acc = new Map<string, { etiqueta: string; folios: string[]; saldo: number }>();
       for (const r of filas) {
         const saldo = Math.max(0, num(r.total) - num(r.monto_pagado));
@@ -448,7 +448,7 @@ async function buildDetalle(
       const obraRes = obraIds.length
         ? await supabase.from("obras").select("id, nombre").in("id", obraIds)
         : { data: [] };
-      const oMap = new Map((obraRes.data ?? []).map((o: any) => [o.id, o.nombre]));
+      const oMap = new Map<string, string>(((obraRes.data ?? []) as any[]).map((o: any): [string, string] => [o.id, o.nombre]));
       return (nomRes.data ?? [])
         .map((n: any) => ({
           id: n.id,
@@ -483,7 +483,7 @@ async function buildDetalle(
       const obraRes = obraIds.length
         ? await supabase.from("obras").select("id, nombre").in("id", obraIds)
         : { data: [] };
-      const oMap = new Map((obraRes.data ?? []).map((o: any) => [o.id, o.nombre]));
+      const oMap = new Map<string, string>(((obraRes.data ?? []) as any[]).map((o: any): [string, string] => [o.id, o.nombre]));
       return (valesRes.data ?? [])
         .map((v: any) => ({
           id: v.id,
@@ -518,7 +518,7 @@ async function buildDetalle(
       const trabRes = trabIds.length
         ? await supabase.from("trabajadores").select("id, nombre_completo").in("id", trabIds)
         : { data: [] };
-      const tMap = new Map((trabRes.data ?? []).map((t: any) => [t.id, t.nombre_completo]));
+      const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
       return (reembRes.data ?? [])
         .map((r: any) => ({
           id: r.id,
