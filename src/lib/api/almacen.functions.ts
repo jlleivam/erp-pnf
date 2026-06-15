@@ -543,14 +543,21 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-async function assertResidenteOSupervisor(supabase: any, userId: string, obraId: string) {
+async function assertPuedeEditarAlmacen(
+  supabase: any,
+  userId: string,
+  obraId: string,
+  roles: string[],
+) {
+  if (roles.includes("director")) return;
   const { data: member } = await supabase
     .from("obra_team").select("role")
     .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
   if (!member || !["residente", "supervisor"].includes(member.role)) {
-    throw new Error("Solo el residente o supervisor de la obra pueden realizar esta acción");
+    throw new Error("Solo residente, supervisor o director pueden modificar el almacén");
   }
 }
+
 
 /** Bloquea la semana actual (no editable hasta que el supervisor la desbloquee). */
 export const bloquearSemana = createServerFn({ method: "POST" })
