@@ -532,7 +532,7 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     if (!mov) throw new Error("Movimiento no encontrado");
     const s = (mov as any).semana;
     if (!s || s.company_id !== companyId) throw new Error("Movimiento no válido");
-    if (s.estatus !== "abierta") throw new Error("La semana ya está cerrada");
+    if (s.estatus !== "abierta") throw new Error("La semana está bloqueada o cerrada");
     await assertObraAccess(supabase, userId, s.obra_id, companyId, roles);
 
     const { error } = await supabase
