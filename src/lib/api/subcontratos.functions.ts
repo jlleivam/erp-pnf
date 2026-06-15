@@ -90,19 +90,37 @@ export const listSubcontratos = createServerFn({ method: "POST" })
     const tMap = new Map(ts.map((t: any) => [t.id, t.razon_social]));
 
     const ids = sbc.map((d: any) => d.id);
+    let autorizadosMap = new Map<string, number>();
     let pagadosMap = new Map<string, number>();
     let estimadosMap = new Map<string, number>();
     let baseEstatusMap = new Map<string, string>();
     if (ids.length > 0) {
       const { data: ests } = await supabase
         .from("obra_subcontrato_estimaciones")
-        .select("subcontrato_id, monto_total, estatus")
+        .select("id, subcontrato_id, monto_total, estatus, cxp_id")
         .in("subcontrato_id", ids);
+      const cxpIds: string[] = [];
+      const cxpToSub = new Map<string, string>();
       for (const e of ests ?? []) {
         const monto = Number(e.monto_total);
         estimadosMap.set(e.subcontrato_id, (estimadosMap.get(e.subcontrato_id) ?? 0) + monto);
         if (e.estatus === "cerrada") {
-          pagadosMap.set(e.subcontrato_id, (pagadosMap.get(e.subcontrato_id) ?? 0) + monto);
+          autorizadosMap.set(e.subcontrato_id, (autorizadosMap.get(e.subcontrato_id) ?? 0) + monto);
+        }
+        if (e.cxp_id) {
+          cxpIds.push(e.cxp_id);
+          cxpToSub.set(e.cxp_id, e.subcontrato_id);
+        }
+      }
+      if (cxpIds.length > 0) {
+        const { data: cxps } = await supabase
+          .from("cuentas_por_pagar")
+          .select("id, monto_pagado")
+          .in("id", cxpIds);
+        for (const c of cxps ?? []) {
+          const subId = cxpToSub.get(c.id);
+          if (!subId) continue;
+          pagadosMap.set(subId, (pagadosMap.get(subId) ?? 0) + Number(c.monto_pagado ?? 0));
         }
       }
       const { data: bases } = await supabase
@@ -118,10 +136,12 @@ export const listSubcontratos = createServerFn({ method: "POST" })
       ...d,
       contratista_nombre: tMap.get(d.contratista_id) ?? "—",
       pagado_acumulado: pagadosMap.get(d.id) ?? 0,
+      autorizado_acumulado: autorizadosMap.get(d.id) ?? 0,
       estimado_acumulado: estimadosMap.get(d.id) ?? 0,
       estatus_base: baseEstatusMap.get(d.id) ?? "borrador",
     }));
   });
+
 
 export const getSubcontrato = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

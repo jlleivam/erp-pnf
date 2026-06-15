@@ -1,22 +1,28 @@
 ### Objetivo
-Que los montos de las columnas Contratado, Estimado y Pagado en la tabla de subcontratos se vean completos, sin truncamiento con "..."
+Diferenciar entre estimaciones autorizadas (cerradas) y pagos realmente efectuados al subcontratista.
 
-### Diagnóstico
-- La tabla usa `table-fixed`, lo que fuerza anchos fijos a las columnas.
-- Las columnas monetarias tienen asignados solo 11-12% del ancho (Ej: en ~730px de viewport son ~80-90px).
-- Las celdas monetarias tienen la clase `truncate`, que corta el texto con "..." cuando no cabe.
-- Un monto formateado como "$32,700.00" + el porcentaje adjunto ("· 45%") requiere ~120-170px, mucho más de lo asignado.
+### Estado actual
+- Columna "Pagado" suma `monto_total` de estimaciones con `estatus = 'cerrada'`.
+- "Cerrada" significa autorizada para pago, no pagada efectivamente.
+- El pago real ocurre cuando la Cuenta por Pagar (`cxp_id` en la estimación) se paga (`cuentas_por_pagar.monto_pagado`).
 
-### Cambios propuestos
-1. **Quitar `table-fixed`** de la tabla para que el navegador ajuste el ancho de cada columna según su contenido real.
-2. **Quitar `truncate`** de las celdas monetarias (`<td>` de Contratado, Estimado y Pagado) para que los montos se muestren completos.
-3. **Agregar `whitespace-nowrap`** a esas mismas celdas y a sus encabezados (`<th>`) para evitar que los números se rompan en varias líneas.
-4. **Controlar el ancho de las columnas de texto** (Subcontrato y Contratista) agregando `max-w-[200px]` a los `<p>` internos, para que sigan truncándose si son muy largos y no desborden la tabla.
-5. **Opcional:** si la tabla resulta más ancha que la pantalla, envolverla en un contenedor con `overflow-x-auto` para permitir scroll horizontal sin perder información.
+### Cambios
 
-### Archivo a modificar
-- `src/components/subcontratos/SubcontratosModule.tsx`
+#### 1. Backend (`src/lib/api/subcontratos.functions.ts` → `listSubcontratos`)
+- Renombrar el cálculo actual de "pagado" a `autorizado_acumulado` (suma de estimaciones cerradas, lógica actual).
+- Calcular `pagado_acumulado` real: sumar `monto_pagado` de las `cuentas_por_pagar` referenciadas por `cxp_id` de las estimaciones del subcontrato. Si la estimación no tiene `cxp_id`, contribuye 0.
+- Devolver: `monto_total`, `estimado_acumulado`, `autorizado_acumulado`, `pagado_acumulado`.
 
-### Sin cambios en
-- Backend (`subcontratos.functions.ts`)
-- Ningún otro componente o flujo de permisos
+#### 2. UI (`src/components/subcontratos/SubcontratosModule.tsx`)
+- Agregar columna **Autorizado** entre Estimado y Pagado.
+- Columnas finales de derecha a izquierda: `Contratado · Estimado · Autorizado · Pagado`.
+- El `%` mostrado junto a Pagado se calcula como `pagado_acumulado / monto_total`.
+- Actualizar el tipo `Subcontrato` con `autorizado_acumulado: number`.
+- Las KPIs superiores (Contratado vigente, Pagado acumulado, Subcontratos activos) ya usan `pagado_acumulado`; ahora reflejarán pagos reales — sin cambios estructurales adicionales.
+
+### Sin cambios
+- Permisos, mutaciones, detalle del subcontrato (`SubcontratoDetalleSheet`), módulo de destajos.
+- Esquema de base de datos.
+
+### Notas
+- Como `cuentas_por_pagar` ya tiene `monto_pagado` mantenido por el flujo de pagos existente, no se requieren migraciones ni nuevas tablas.
