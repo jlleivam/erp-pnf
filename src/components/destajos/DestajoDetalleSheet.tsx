@@ -176,6 +176,7 @@ export function DestajoDetalleSheet({
                     <PresupuestoCard
                       p={base}
                       canAuthorize={canAuthorize}
+                      canEditDraft={canEditDraft}
                       onEdit={() => setEditingBaseId(base.id)}
                       onEnviar={() => enviarM.mutate({ data: { presupuestoId: base.id } })}
                       onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: base.id } })}
