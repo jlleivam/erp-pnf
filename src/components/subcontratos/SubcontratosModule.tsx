@@ -56,7 +56,8 @@ const ESTATUS_VARIANT: Record<Subcontrato["estatus"], "default" | "secondary" | 
 
 export function SubcontratosModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
-  const { isSupervisor } = useObraRole(obraId);
+  const { isSupervisor, isResidente } = useObraRole(obraId);
+  const canEditDraft = director || isResidente;
   const qc = useQueryClient();
   const fetchList = useServerFn(listSubcontratos);
   const listQ = useQuery({
