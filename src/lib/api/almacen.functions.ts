@@ -527,7 +527,7 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     const s = (mov as any).semana;
     if (!s || s.company_id !== companyId) throw new Error("Movimiento no válido");
     if (s.estatus !== "abierta") throw new Error("La semana está bloqueada o cerrada");
-    await assertObraAccess(supabase, userId, s.obra_id, companyId, roles);
+    await assertPuedeEditarAlmacen(supabase, userId, s.obra_id, roles);
 
     const { error } = await supabase
       .from("almacen_movimientos_semana")
