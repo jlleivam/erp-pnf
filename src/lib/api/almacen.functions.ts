@@ -676,13 +676,19 @@ export const listSolicitudesDesbloqueo = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("almacen_semana_desbloqueo_solicitudes")
-      .select("id, semana_id, motivo, estatus, respuesta, solicitado_por, resuelto_por, resuelto_at, created_at, semana:almacen_semanas(semana_inicio, semana_fin), solicitante:profiles!almacen_semana_desbloqueo_solicitudes_solicitado_por_fkey(nombre_completo, email)")
+      .select("id, semana_id, motivo, estatus, respuesta, solicitado_por, resuelto_por, resuelto_at, created_at, semana:almacen_semanas(semana_inicio, semana_fin)")
       .eq("obra_id", data.obraId)
       .order("created_at", { ascending: false });
     if (data.estatus) q = q.eq("estatus", data.estatus);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const ids = Array.from(new Set((rows ?? []).map((r) => r.solicitado_por).filter(Boolean))) as string[];
+    const profilesMap = new Map<string, { nombre_completo: string | null; email: string | null }>();
+    if (ids.length > 0) {
+      const { data: profs } = await supabase.from("profiles").select("id, nombre_completo, email").in("id", ids);
+      (profs ?? []).forEach((p) => profilesMap.set(p.id, { nombre_completo: p.nombre_completo, email: p.email }));
+    }
+    return (rows ?? []).map((r) => ({ ...r, solicitante: r.solicitado_por ? profilesMap.get(r.solicitado_por) ?? null : null }));
   });
 
 /** Aprueba o rechaza una solicitud de desbloqueo. */
