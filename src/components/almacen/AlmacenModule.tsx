@@ -114,8 +114,13 @@ function PorRecibirTab({ obraId, onRecibir }: { obraId: string; onRecibir: (id: 
                   {badge && <Badge className={badge.className}>{badge.label}</Badge>}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" onClick={() => onRecibir(oc.id)}>Registrar recepción</Button>
+                  {puedeRecibir ? (
+                    <Button size="sm" onClick={() => onRecibir(oc.id)}>Registrar recepción</Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </TableCell>
+
               </TableRow>
             );
           })}
