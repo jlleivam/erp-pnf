@@ -97,12 +97,12 @@ async function autoCerrarSemanasVencidas(
 ) {
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // 1. Cerrar todas las semanas abiertas con fin < hoy
+  // 1. Cerrar (definitivamente) semanas abiertas/bloqueadas con fin < hoy
   await supabase
     .from("almacen_semanas")
     .update({ estatus: "cerrada", cerrada_at: new Date().toISOString(), cerrada_por: null })
     .eq("obra_id", obraId)
-    .eq("estatus", "abierta")
+    .in("estatus", ["abierta", "bloqueada"])
     .lt("semana_fin", hoy);
 
   // 2. Eliminar semanas abiertas futuras sin movimientos (fantasma)
@@ -122,6 +122,7 @@ async function autoCerrarSemanasVencidas(
     }
   }
 }
+
 
 /** Encuentra o crea la semana abierta que contiene a hoy. */
 async function getOrCreateSemanaAbierta(
