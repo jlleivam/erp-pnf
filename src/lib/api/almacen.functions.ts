@@ -327,6 +327,10 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
     }
 
     const semana = await getOrCreateSemanaAbierta(supabase, companyId, oc.obra_id);
+    if (semana.estatus !== "abierta") {
+      throw new Error("La semana está bloqueada. Solicita al supervisor que la desbloquee para registrar recepciones.");
+    }
+
 
     // Insertar cabecera
     const { data: rec, error: recErr } = await supabase
