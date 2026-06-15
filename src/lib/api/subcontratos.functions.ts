@@ -223,8 +223,8 @@ export const actualizarTerminosSubcontrato = createServerFn({ method: "POST" })
       .from("obra_subcontratos").select("obra_id, monto_total").eq("id", data.subcontratoId).single();
     if (!d0) throw new Error("Subcontrato no encontrado");
     const { isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, d0.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { data: ant } = await supabase
       .from("obra_subcontrato_anticipos").select("id, pagado").eq("subcontrato_id", data.subcontratoId).maybeSingle();
