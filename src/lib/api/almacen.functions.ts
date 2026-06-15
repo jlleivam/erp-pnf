@@ -144,23 +144,59 @@ async function getOrCreateSemanaAbierta(
     .maybeSingle();
   if (abierta) return abierta;
 
-
-
-  // No hay abierta: crear una para la semana actual
+  // No hay abierta para hoy: reabrir la fila existente con ese lunes, o crearla
   const lunes = lunesDeSemana(new Date());
   const sabado = sabadoDeSemana(lunes);
-  const { data: nueva, error } = await supabase
+
+  const { data: existente } = await supabase
     .from("almacen_semanas")
-    .insert({
-      company_id: companyId,
-      obra_id: obraId,
-      semana_inicio: lunes,
-      semana_fin: sabado,
-      estatus: "abierta",
-    })
-    .select("id, semana_inicio, semana_fin")
-    .single();
-  if (error) throw new Error(error.message);
+    .select("id, semana_inicio, semana_fin, estatus")
+    .eq("obra_id", obraId)
+    .eq("semana_inicio", lunes)
+    .maybeSingle();
+
+  let nueva: { id: string; semana_inicio: string; semana_fin: string };
+  let yaTeniaMovimientos = false;
+
+  if (existente) {
+    const { count } = await supabase
+      .from("almacen_movimientos_semana")
+      .select("id", { count: "exact", head: true })
+      .eq("semana_id", existente.id);
+    yaTeniaMovimientos = (count ?? 0) > 0;
+
+    const { data: reabierta, error: updErr } = await supabase
+      .from("almacen_semanas")
+      .update({
+        estatus: "abierta",
+        semana_fin: sabado,
+        cerrada_at: null,
+        cerrada_por: null,
+      })
+      .eq("id", existente.id)
+      .select("id, semana_inicio, semana_fin")
+      .single();
+    if (updErr) throw new Error(updErr.message);
+    nueva = reabierta;
+  } else {
+    const { data: insertada, error } = await supabase
+      .from("almacen_semanas")
+      .insert({
+        company_id: companyId,
+        obra_id: obraId,
+        semana_inicio: lunes,
+        semana_fin: sabado,
+        estatus: "abierta",
+      })
+      .select("id, semana_inicio, semana_fin")
+      .single();
+    if (error) throw new Error(error.message);
+    nueva = insertada;
+  }
+
+  // Si la semana ya tenía movimientos, no la sembramos (evita duplicar saldos)
+  if (yaTeniaMovimientos) return nueva;
+
 
   // Sembrar inv_inicial desde la última semana cerrada (si existe)
   const { data: prevCerrada } = await supabase
