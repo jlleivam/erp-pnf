@@ -98,7 +98,7 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
               <Tooltip>
                 <TooltipTrigger asChild><span>{btn}</span></TooltipTrigger>
                 <TooltipContent>
-                  Disponible al terminar la semana (sáb {formatDate(data.semana.semana_fin)})
+                  Disponible al terminar la semana (dom {formatDate(data.semana.semana_fin)})
                 </TooltipContent>
               </Tooltip>
             );

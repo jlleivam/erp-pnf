@@ -31,7 +31,7 @@ export function AlmacenModule({ obraId }: Props) {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Almacén de obra</h1>
         <p className="text-sm text-muted-foreground">
-          Recepción de material, control semanal de inventario (lun–sáb) y consumo.
+          Recepción de material, control semanal de inventario (lun–dom) y consumo.
         </p>
       </div>
 
