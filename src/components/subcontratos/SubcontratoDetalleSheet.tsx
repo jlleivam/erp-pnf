@@ -263,6 +263,7 @@ export function SubcontratoDetalleSheet({
 function PresupuestoCard({
   p,
   canAuthorize,
+  canEditDraft,
   onEdit,
   onEnviar,
   onAutorizar,
@@ -271,6 +272,7 @@ function PresupuestoCard({
 }: {
   p: Presupuesto;
   canAuthorize: boolean;
+  canEditDraft: boolean;
   onEdit: () => void;
   onEnviar: () => void;
   onAutorizar: () => void;
@@ -301,7 +303,7 @@ function PresupuestoCard({
         </div>
       </div>
       <div className="flex gap-2 mt-4 flex-wrap">
-        {p.estatus === "borrador" && (
+        {p.estatus === "borrador" && canEditDraft && (
           <>
             <Button size="sm" onClick={onEdit}>Editar</Button>
             <Button size="sm" variant="outline" onClick={onEnviar}>
@@ -324,7 +326,7 @@ function PresupuestoCard({
             Esperando autorización del supervisor.
           </p>
         )}
-        {p.estatus === "rechazado" && (
+        {p.estatus === "rechazado" && canEditDraft && (
           <Button size="sm" variant="outline" onClick={onReabrir}>
             <RefreshCw className="size-4 mr-1" /> Reabrir como borrador
           </Button>
