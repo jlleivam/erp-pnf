@@ -34,9 +34,10 @@ function lunesDeSemana(d: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** Devuelve el domingo (fin de semana lun–dom) del lunes dado, en YYYY-MM-DD. */
 function sabadoDeSemana(lunesIso: string): string {
   const d = new Date(lunesIso + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + 5);
+  d.setUTCDate(d.getUTCDate() + 6);
   return d.toISOString().slice(0, 10);
 }
 
