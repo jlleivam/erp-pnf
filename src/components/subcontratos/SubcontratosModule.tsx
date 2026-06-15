@@ -96,9 +96,11 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
             Trabajos contratados con un tercero con presupuesto, órdenes de cambio y estimaciones semanales.
           </p>
         </div>
-        <Button size="sm" onClick={() => setCreating(true)} className="shrink-0">
-          <Plus className="size-4 mr-1" /> Nuevo
-        </Button>
+        {canEditDraft && (
+          <Button size="sm" onClick={() => setCreating(true)} className="shrink-0">
+            <Plus className="size-4 mr-1" /> Nuevo
+          </Button>
+        )}
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
