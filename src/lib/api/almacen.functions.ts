@@ -540,6 +540,10 @@ export const cerrarSemana = createServerFn({ method: "POST" })
     if (!sem) throw new Error("Semana no encontrada");
     if (sem.company_id !== companyId) throw new Error("Semana no válida");
     if (sem.estatus !== "abierta") throw new Error("La semana ya estaba cerrada");
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (sem.semana_fin >= hoy) {
+      throw new Error("No puedes cerrar una semana que aún no termina");
+    }
     await assertObraAccess(supabase, userId, sem.obra_id, companyId, roles);
 
     // Marcar como cerrada

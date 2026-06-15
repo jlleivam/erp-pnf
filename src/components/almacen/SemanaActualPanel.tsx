@@ -81,9 +81,28 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
               </span>
             )}
           </div>
-          <Button size="sm" onClick={() => setCerrarOpen(true)} disabled={items.length === 0}>
-            <Lock className="size-3.5 mr-1.5" /> Cerrar semana
-          </Button>
+          {(() => {
+            const hoy = new Date().toISOString().slice(0, 10);
+            const semanaTerminada = data.semana.semana_fin < hoy;
+            const btn = (
+              <Button
+                size="sm"
+                onClick={() => setCerrarOpen(true)}
+                disabled={items.length === 0 || !semanaTerminada}
+              >
+                <Lock className="size-3.5 mr-1.5" /> Cerrar semana
+              </Button>
+            );
+            if (semanaTerminada) return btn;
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild><span>{btn}</span></TooltipTrigger>
+                <TooltipContent>
+                  Disponible al terminar la semana (sáb {formatDate(data.semana.semana_fin)})
+                </TooltipContent>
+              </Tooltip>
+            );
+          })()}
         </Card>
 
         <Card>
