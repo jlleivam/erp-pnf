@@ -334,8 +334,8 @@ export const guardarRenglonesSubcontrato = createServerFn({ method: "POST" })
     const { isDirector } = await getRoles(supabase, userId);
     const { data: d0 } = await supabase
       .from("obra_subcontratos").select("obra_id").eq("id", pres.subcontrato_id).single();
-    const member = await isMemberObra(supabase, userId, d0!.obra_id);
-    if (!isDirector && !member) throw new Error("Sin permisos");
+    const obraRole = await getObraRole(supabase, userId, d0!.obra_id);
+    if (!isDirector && !obraRole.isResidente) throw new Error("Sin permisos");
 
     const { renglones, errores, montoTotal } = procesarRenglones(data.renglones as RenglonInput[]);
     if (errores.length > 0) {
