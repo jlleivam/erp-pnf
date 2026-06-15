@@ -206,6 +206,36 @@ type CxPRow = {
   origen_id: string | null;
 };
 
+type UnifiedRow =
+  | {
+      key: string;
+      tipo: "anticipo";
+      fecha: string;
+      folio: string;
+      obra: string;
+      destajista: string;
+      concepto: string;
+      total: number;
+      pagado: number;
+      saldo: number;
+      estatus: "pendiente";
+      anticipo: AnticipoRow;
+    }
+  | {
+      key: string;
+      tipo: "estimacion";
+      fecha: string;
+      folio: string;
+      obra: string;
+      destajista: string;
+      concepto: string;
+      total: number;
+      pagado: number;
+      saldo: number;
+      estatus: "pendiente" | "parcial" | "pagada" | "cancelada";
+      cxp: CxPRow;
+    };
+
 function AnticiposDestajoTab() {
   const fetchAnticipos = useServerFn(listAnticiposDestajoPendientes);
   const fetchEstimaciones = useServerFn(listCxPDestajoPendientes);
@@ -222,10 +252,42 @@ function AnticiposDestajoTab() {
     queryFn: () => fetchEstimaciones(),
   });
 
-  const rows = (antQ.data ?? []) as AnticipoRow[];
-  const estRows = (estQ.data ?? []) as CxPRow[];
-  const totalAnticipos = rows.reduce((s, r) => s + r.monto, 0);
-  const totalEstimaciones = estRows.reduce((s, r) => s + r.saldo, 0);
+  const anticipos = (antQ.data ?? []) as AnticipoRow[];
+  const estimaciones = (estQ.data ?? []) as CxPRow[];
+
+  const unified: UnifiedRow[] = [
+    ...estimaciones.map<UnifiedRow>((r) => ({
+      key: `est-${r.id}`,
+      tipo: "estimacion",
+      fecha: r.fecha_emision,
+      folio: r.folio,
+      obra: r.obra_nombre ?? "—",
+      destajista: r.beneficiario_nombre,
+      concepto: r.concepto,
+      total: r.monto_total,
+      pagado: r.monto_pagado,
+      saldo: r.saldo,
+      estatus: r.estatus,
+      cxp: r,
+    })),
+    ...anticipos.map<UnifiedRow>((r) => ({
+      key: `ant-${r.anticipoId}`,
+      tipo: "anticipo",
+      fecha: r.solicitadoAt,
+      folio: r.destajoNumero != null ? `#${r.destajoNumero} · ${r.destajoNombre}` : r.destajoNombre,
+      obra: r.obraNombre,
+      destajista: r.destajistaNombre,
+      concepto: r.notas ? `Anticipo de destajo · ${r.notas}` : "Anticipo de destajo",
+      total: r.monto,
+      pagado: 0,
+      saldo: r.monto,
+      estatus: "pendiente",
+      anticipo: r,
+    })),
+  ].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+
+  const totalSaldo = unified.reduce((s, r) => s + r.saldo, 0);
+  const isLoading = antQ.isLoading || estQ.isLoading;
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["anticipos-destajo-pendientes"] });
@@ -236,136 +298,93 @@ function AnticiposDestajoTab() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Estimaciones por pagar */}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <h3 className="text-base font-semibold">Estimaciones por pagar</h3>
-            <p className="text-xs text-muted-foreground">
-              Cuentas por pagar generadas al autorizar estimaciones de destajo.
-            </p>
-          </div>
-          <Card className="px-4 py-2">
-            <p className="text-xs text-muted-foreground">Saldo total</p>
-            <p className="text-lg font-semibold">{formatMXN(totalEstimaciones)}</p>
-          </Card>
+    <div className="space-y-4">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h3 className="text-base font-semibold">Pagos a destajistas pendientes</h3>
+          <p className="text-xs text-muted-foreground">
+            Anticipos solicitados y estimaciones autorizadas pendientes de pago.
+          </p>
         </div>
-
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Folio</TableHead>
-                <TableHead>Obra</TableHead>
-                <TableHead>Destajista</TableHead>
-                <TableHead>Concepto</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Pagado</TableHead>
-                <TableHead className="text-right">Saldo</TableHead>
-                <TableHead>Estatus</TableHead>
-                <TableHead className="text-right">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {estQ.isLoading && (
-                <TableRow><TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">Cargando…</TableCell></TableRow>
-              )}
-              {!estQ.isLoading && estRows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">
-                    <HandCoins className="size-8 mx-auto mb-2 text-muted-foreground/50" />
-                    Sin estimaciones por pagar.
-                  </TableCell>
-                </TableRow>
-              )}
-              {estRows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.folio}</TableCell>
-                  <TableCell className="text-xs">{r.obra_nombre ?? "—"}</TableCell>
-                  <TableCell className="text-sm">{r.beneficiario_nombre}</TableCell>
-                  <TableCell className="text-xs max-w-[260px] truncate" title={r.concepto}>{r.concepto}</TableCell>
-                  <TableCell className="text-xs">{formatDate(r.fecha_emision)}</TableCell>
-                  <TableCell className="text-right">{formatMXN(r.monto_total)}</TableCell>
-                  <TableCell className="text-right">{formatMXN(r.monto_pagado)}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
-                  <TableCell>
-                    <Badge className={ESTADO_PAGO_BADGE[r.estatus === "pagada" ? "pagado" : r.estatus] ?? ""}>
-                      {r.estatus === "parcial" ? "Parcial" : r.estatus === "pagada" ? "Pagado" : "Pendiente"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {r.saldo > 0 && (
-                      <Button size="sm" onClick={() => setPagarCxP(r)}>Registrar pago</Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <Card className="px-4 py-2">
+          <p className="text-xs text-muted-foreground">Saldo total</p>
+          <p className="text-lg font-semibold">{formatMXN(totalSaldo)}</p>
         </Card>
-      </section>
+      </div>
 
-      {/* Anticipos */}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <h3 className="text-base font-semibold">Anticipos pendientes</h3>
-            <p className="text-xs text-muted-foreground">
-              Solicitudes de anticipo de destajo enviadas por residentes.
-            </p>
-          </div>
-          <Card className="px-4 py-2">
-            <p className="text-xs text-muted-foreground">Total solicitado</p>
-            <p className="text-lg font-semibold">{formatMXN(totalAnticipos)}</p>
-          </Card>
-        </div>
-
-        <Card>
-          <Table>
-            <TableHeader>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Folio / Ref</TableHead>
+              <TableHead>Obra</TableHead>
+              <TableHead>Destajista</TableHead>
+              <TableHead>Concepto</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Pagado</TableHead>
+              <TableHead className="text-right">Saldo</TableHead>
+              <TableHead>Estatus</TableHead>
+              <TableHead className="text-right">Acción</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading && (
+              <TableRow><TableCell colSpan={11} className="text-center text-sm text-muted-foreground py-8">Cargando…</TableCell></TableRow>
+            )}
+            {!isLoading && unified.length === 0 && (
               <TableRow>
-                <TableHead>Obra</TableHead>
-                <TableHead>Destajo</TableHead>
-                <TableHead>Destajista</TableHead>
-                <TableHead>Solicitado</TableHead>
-                <TableHead>Por</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead className="text-right">Acción</TableHead>
+                <TableCell colSpan={11} className="text-center text-sm text-muted-foreground py-8">
+                  <HandCoins className="size-8 mx-auto mb-2 text-muted-foreground/50" />
+                  Sin pagos a destajistas pendientes.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {antQ.isLoading && (
-                <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">Cargando…</TableCell></TableRow>
-              )}
-              {!antQ.isLoading && rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
-                    <HandCoins className="size-8 mx-auto mb-2 text-muted-foreground/50" />
-                    Sin solicitudes de anticipo pendientes.
-                  </TableCell>
-                </TableRow>
-              )}
-              {rows.map((r) => (
-                <TableRow key={r.anticipoId}>
-                  <TableCell className="text-sm">{r.obraNombre}</TableCell>
-                  <TableCell className="font-medium">
-                    {r.destajoNumero != null ? `#${r.destajoNumero} · ` : ""}{r.destajoNombre}
-                  </TableCell>
-                  <TableCell className="text-sm">{r.destajistaNombre}</TableCell>
-                  <TableCell className="text-xs">{formatDate(r.solicitadoAt)}</TableCell>
-                  <TableCell className="text-xs">{r.solicitadoPorNombre}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatMXN(r.monto)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" onClick={() => setPagar(r)}>Registrar pago</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      </section>
+            )}
+            {unified.map((r) => (
+              <TableRow key={r.key}>
+                <TableCell>
+                  <Badge
+                    className={
+                      r.tipo === "anticipo"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-slate-100 text-slate-700"
+                    }
+                  >
+                    {r.tipo === "anticipo" ? "Anticipo" : "Estimación"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-medium text-sm">{r.folio}</TableCell>
+                <TableCell className="text-xs">{r.obra}</TableCell>
+                <TableCell className="text-sm">{r.destajista}</TableCell>
+                <TableCell className="text-xs max-w-[260px] truncate" title={r.concepto}>{r.concepto}</TableCell>
+                <TableCell className="text-xs">{formatDate(r.fecha)}</TableCell>
+                <TableCell className="text-right">{formatMXN(r.total)}</TableCell>
+                <TableCell className="text-right">{formatMXN(r.pagado)}</TableCell>
+                <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
+                <TableCell>
+                  <Badge className={ESTADO_PAGO_BADGE[r.estatus === "pagada" ? "pagado" : r.estatus] ?? ""}>
+                    {r.estatus === "parcial" ? "Parcial" : r.estatus === "pagada" ? "Pagado" : "Pendiente"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {r.saldo > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (r.tipo === "anticipo") setPagar(r.anticipo);
+                        else setPagarCxP(r.cxp);
+                      }}
+                    >
+                      Registrar pago
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
 
       {pagar && (
         <RegistrarPagoAnticipoDialog
