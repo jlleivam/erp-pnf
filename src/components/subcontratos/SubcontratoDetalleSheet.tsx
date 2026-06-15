@@ -447,21 +447,6 @@ function TerminosTab({
     enabled: !!subcontrato?.id,
   });
 
-  const [editing, setEditing] = useState(false);
-  const [anticipoPct, setAnticipoPct] = useState<string>(String(subcontrato?.anticipo_pct ?? 0));
-  const [fondoPct, setFondoPct] = useState<string>(String(subcontrato?.fondo_garantia_pct ?? 0));
-
-  const update = useServerFn(actualizarTerminosSubcontrato);
-  const updM = useMutation({
-    mutationFn: update,
-    onSuccess: () => {
-      toast.success("Términos actualizados");
-      setEditing(false);
-      qc.invalidateQueries({ queryKey: ["subcontrato-anticipo", subcontrato?.id] });
-      onChanged();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const solicitar = useServerFn(solicitarPagoAnticipoSubcontrato);
   const cancelar = useServerFn(cancelarSolicitudAnticipoSubcontrato);
