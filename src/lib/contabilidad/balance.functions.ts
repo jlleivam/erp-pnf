@@ -156,10 +156,11 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       (acc: number, r: any) => acc + Math.max(0, num(r.monto_total) - num(r.monto_pagado)),
       0,
     );
-    const subcontratistasPorPagar = Math.max(
+    const subcontratistasPorPagar = (subEstimRes.data ?? []).reduce(
+      (acc: number, r: any) => acc + Math.max(0, num(r.monto_total) - num(r.monto_pagado)),
       0,
-      sum(subEstimRes.data, "monto_total") - pagado("subcontrato"),
     );
+
     const nominaPorPagar = Math.max(0, sum(nominaRes.data, "monto_total") - pagado("nomina"));
     const gasolinaPorReembolsar = Math.max(
       0,
