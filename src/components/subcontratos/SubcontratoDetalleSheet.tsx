@@ -613,65 +613,6 @@ function TerminosTab({
         </p>
       </Card>
 
-      {!editing ? (
-        <Button size="sm" variant="outline" disabled={!canEdit} onClick={() => setEditing(true)}>
-          Editar términos
-        </Button>
-      ) : (
-        <Card className="p-4 space-y-3">
-          <div>
-            <Label className="text-sm">Anticipo (%)</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min={0}
-              max={100}
-              value={anticipoPct}
-              onChange={(e) => setAnticipoPct(e.target.value)}
-              className="w-32 mt-1"
-            />
-          </div>
-          <div>
-            <Label className="text-sm">Fondo de garantía (%)</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min={0}
-              max={100}
-              value={fondoPct}
-              onChange={(e) => setFondoPct(e.target.value)}
-              className="w-32 mt-1"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              disabled={updM.isPending}
-              onClick={() =>
-                updM.mutate({
-                  data: {
-                    subcontratoId: subcontrato.id,
-                    anticipoPct: Number(anticipoPct || 0),
-                    fondoGarantiaPct: Number(fondoPct || 0),
-                  },
-                })
-              }
-            >
-              {updM.isPending ? "Guardando…" : "Guardar"}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
-              Cancelar
-            </Button>
-          </div>
-          {anticipoRegistro?.pagado && (
-            <p className="text-xs text-destructive">
-              El anticipo ya fue marcado como pagado; no podrás cambiar el %.
-            </p>
-          )}
-        </Card>
-      )}
     </div>
   );
 }
