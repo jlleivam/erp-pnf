@@ -110,9 +110,11 @@ export function DestajosModule({ obraId }: { obraId: string }) {
     <div className="space-y-4">
       <header className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-xl font-semibold tracking-tight">Destajos</h1>
-        <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus className="size-4 mr-1" /> Nuevo destajo
-        </Button>
+        {canEditDraft && (
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus className="size-4 mr-1" /> Nuevo destajo
+          </Button>
+        )}
       </header>
 
       <Card className="flex divide-x divide-border">
