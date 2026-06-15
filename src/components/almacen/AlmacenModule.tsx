@@ -14,6 +14,8 @@ import {
 } from "@/lib/api/almacen.functions";
 import { RecepcionDialog } from "./RecepcionDialog";
 import { SemanaActualPanel } from "./SemanaActualPanel";
+import { useObraRole } from "@/hooks/useObraRole";
+
 
 interface Props { obraId: string }
 
@@ -68,10 +70,13 @@ export function AlmacenModule({ obraId }: Props) {
 
 function PorRecibirTab({ obraId, onRecibir }: { obraId: string; onRecibir: (id: string) => void }) {
   const fn = useServerFn(listOCsPorRecibir);
+  const { role, isDirector } = useObraRole(obraId);
+  const puedeRecibir = isDirector || role === "residente" || role === "supervisor";
   const { data, isLoading } = useQuery({
     queryKey: ["almacen", "por-recibir", obraId],
     queryFn: () => fn({ data: { obraId } }),
   });
+
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
   const ocs = data ?? [];
@@ -109,8 +114,13 @@ function PorRecibirTab({ obraId, onRecibir }: { obraId: string; onRecibir: (id: 
                   {badge && <Badge className={badge.className}>{badge.label}</Badge>}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" onClick={() => onRecibir(oc.id)}>Registrar recepción</Button>
+                  {puedeRecibir ? (
+                    <Button size="sm" onClick={() => onRecibir(oc.id)}>Registrar recepción</Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </TableCell>
+
               </TableRow>
             );
           })}

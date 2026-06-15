@@ -40,8 +40,9 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
   const resolverFn = useServerFn(resolverSolicitudDesbloqueo);
 
   const { role, isDirector } = useObraRole(obraId);
-  const esResidenteOSupervisor = role === "residente" || role === "supervisor";
+  const puedeEditar = isDirector || role === "residente" || role === "supervisor";
   const puedeResolver = isDirector || role === "supervisor";
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["almacen", "semana-actual", obraId],
@@ -141,12 +142,12 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
             )}
           </div>
 
-          {!bloqueada && esResidenteOSupervisor && (
+          {!bloqueada && puedeEditar && (
             <Button size="sm" onClick={() => setBloquearOpen(true)} disabled={items.length === 0}>
               <Lock className="size-3.5 mr-1.5" /> Bloquear semana
             </Button>
           )}
-          {bloqueada && esResidenteOSupervisor && !solicitudPendiente && (
+          {bloqueada && puedeEditar && !solicitudPendiente && (
             <Button size="sm" variant="outline" onClick={() => setSolicitarOpen(true)}>
               <Unlock className="size-3.5 mr-1.5" /> Solicitar desbloqueo
             </Button>
@@ -218,7 +219,7 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
                 <MovRow
                   key={m.id}
                   mov={m}
-                  disabled={bloqueada}
+                  disabled={bloqueada || !puedeEditar}
                   onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
                 />
               ))}

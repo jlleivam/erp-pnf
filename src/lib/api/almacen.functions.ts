@@ -317,14 +317,8 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
     if (!["enviada", "recibida_parcial"].includes(oc.estatus)) {
       throw new Error("La OC no está disponible para recepción");
     }
-    if (!roles.includes("director")) {
-      const { data: member } = await supabase
-        .from("obra_team").select("id")
-        .eq("obra_id", oc.obra_id).eq("user_id", userId).eq("role", "residente").maybeSingle();
-      if (!member) {
-        throw new Error("Solo el director o el residente de la obra pueden registrar recepciones");
-      }
-    }
+    await assertPuedeEditarAlmacen(supabase, userId, oc.obra_id, roles);
+
 
     const semana = await getOrCreateSemanaAbierta(supabase, companyId, oc.obra_id);
     if (semana.estatus !== "abierta") {
@@ -533,7 +527,7 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     const s = (mov as any).semana;
     if (!s || s.company_id !== companyId) throw new Error("Movimiento no válido");
     if (s.estatus !== "abierta") throw new Error("La semana está bloqueada o cerrada");
-    await assertObraAccess(supabase, userId, s.obra_id, companyId, roles);
+    await assertPuedeEditarAlmacen(supabase, userId, s.obra_id, roles);
 
     const { error } = await supabase
       .from("almacen_movimientos_semana")
@@ -543,14 +537,21 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-async function assertResidenteOSupervisor(supabase: any, userId: string, obraId: string) {
+async function assertPuedeEditarAlmacen(
+  supabase: any,
+  userId: string,
+  obraId: string,
+  roles: string[],
+) {
+  if (roles.includes("director")) return;
   const { data: member } = await supabase
     .from("obra_team").select("role")
     .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
   if (!member || !["residente", "supervisor"].includes(member.role)) {
-    throw new Error("Solo el residente o supervisor de la obra pueden realizar esta acción");
+    throw new Error("Solo residente, supervisor o director pueden modificar el almacén");
   }
 }
+
 
 /** Bloquea la semana actual (no editable hasta que el supervisor la desbloquee). */
 export const bloquearSemana = createServerFn({ method: "POST" })
@@ -558,7 +559,7 @@ export const bloquearSemana = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ semanaId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId } = await getCtx(supabase, userId);
+    const { companyId, roles } = await getCtx(supabase, userId);
 
     const { data: sem } = await supabase
       .from("almacen_semanas")
@@ -571,7 +572,7 @@ export const bloquearSemana = createServerFn({ method: "POST" })
     if (sem.semana_inicio > hoy || sem.semana_fin < hoy) {
       throw new Error("Solo puedes bloquear la semana actual");
     }
-    await assertResidenteOSupervisor(supabase, userId, sem.obra_id);
+    await assertPuedeEditarAlmacen(supabase, userId, sem.obra_id, roles);
 
     const { error } = await supabase
       .from("almacen_semanas")
@@ -592,7 +593,7 @@ export const solicitarDesbloqueoSemana = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId } = await getCtx(supabase, userId);
+    const { companyId, roles } = await getCtx(supabase, userId);
 
     const { data: sem } = await supabase
       .from("almacen_semanas")
@@ -601,7 +602,7 @@ export const solicitarDesbloqueoSemana = createServerFn({ method: "POST" })
     if (!sem) throw new Error("Semana no encontrada");
     if (sem.company_id !== companyId) throw new Error("Semana no válida");
     if (sem.estatus !== "bloqueada") throw new Error("Solo se pueden desbloquear semanas bloqueadas");
-    await assertResidenteOSupervisor(supabase, userId, sem.obra_id);
+    await assertPuedeEditarAlmacen(supabase, userId, sem.obra_id, roles);
 
     // No permitir solicitudes duplicadas pendientes
     const { data: pendiente } = await supabase
