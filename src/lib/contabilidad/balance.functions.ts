@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CATALOGO_CONTABLE } from "./catalogo";
+
 
 type SaldoCategoria = {
   codigo: string;
@@ -224,3 +226,325 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       },
     };
   });
+
+// ============================================================
+// Desglose por cuenta contable
+// ============================================================
+
+export type DetalleItem = {
+  id: string;
+  etiqueta: string;
+  referencia?: string;
+  saldo: number;
+};
+
+export const getDetalleCuenta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ codigo: z.string().min(3).max(10) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const companyId = await getMyCompanyId(supabase, userId);
+    await ensureAdmin(supabase, userId, companyId);
+    const items = await buildDetalle(supabase, companyId, data.codigo);
+    items.sort((a, b) => b.saldo - a.saldo);
+    return { codigo: data.codigo, items };
+  });
+
+async function buildDetalle(
+  supabase: any,
+  companyId: string,
+  codigo: string,
+): Promise<DetalleItem[]> {
+  switch (codigo) {
+    case "1100":
+    case "1110": {
+      const tipo = codigo === "1100" ? "bancaria" : "caja_fuerte";
+      const { data } = await supabase
+        .from("cuentas")
+        .select("id, nombre, saldo_actual")
+        .eq("company_id", companyId)
+        .eq("activa", true)
+        .eq("tipo", tipo);
+      return (data ?? [])
+        .filter((r: any) => num(r.saldo_actual) !== 0)
+        .map((r: any) => ({ id: r.id, etiqueta: r.nombre, saldo: num(r.saldo_actual) }));
+    }
+
+    case "1120": {
+      const { data } = await supabase
+        .from("caja_chica_fondos")
+        .select("id, monto_entregado, residente_id, obra_id")
+        .eq("company_id", companyId)
+        .eq("estatus", "entregado");
+      const filas = data ?? [];
+      const residenteIds = Array.from(new Set(filas.map((r: any) => r.residente_id).filter(Boolean)));
+      const obraIds = Array.from(new Set(filas.map((r: any) => r.obra_id).filter(Boolean)));
+      const [trabRes, obraRes] = await Promise.all([
+        residenteIds.length
+          ? supabase.from("trabajadores").select("id, nombre_completo").in("id", residenteIds)
+          : Promise.resolve({ data: [] }),
+        obraIds.length
+          ? supabase.from("obras").select("id, nombre").in("id", obraIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
+      const oMap = new Map<string, string>(((obraRes.data ?? []) as any[]).map((o: any): [string, string] => [o.id, o.nombre]));
+      return filas
+        .filter((r: any) => num(r.monto_entregado) > 0)
+        .map((r: any) => ({
+          id: r.id,
+          etiqueta: tMap.get(r.residente_id) ?? "Residente",
+          referencia: oMap.get(r.obra_id),
+          saldo: num(r.monto_entregado),
+        }));
+    }
+
+    case "1210": {
+      const [antRes, estRes] = await Promise.all([
+        supabase
+          .from("obra_destajo_anticipos")
+          .select("destajo_id, monto, pagado")
+          .eq("company_id", companyId)
+          .eq("pagado", true),
+        supabase
+          .from("obra_destajo_estimaciones")
+          .select("destajo_id, amortizacion_anticipo")
+          .eq("company_id", companyId),
+      ]);
+      const destajoIds = Array.from(
+        new Set([
+          ...(antRes.data ?? []).map((r: any) => r.destajo_id),
+          ...(estRes.data ?? []).map((r: any) => r.destajo_id),
+        ]),
+      );
+      if (destajoIds.length === 0) return [];
+      const { data: destajos } = await supabase
+        .from("obra_destajos")
+        .select("id, destajista_id, nombre, obra_id")
+        .in("id", destajoIds);
+      const trabIds = Array.from(
+        new Set((destajos ?? []).map((d: any) => d.destajista_id).filter(Boolean)),
+      );
+      const trabRes = trabIds.length
+        ? await supabase.from("trabajadores").select("id, nombre_completo").in("id", trabIds)
+        : { data: [] };
+      const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
+      const destajoToTrab = new Map<string, string>(
+        ((destajos ?? []) as any[]).map((d: any): [string, string] => [d.id, d.destajista_id]),
+      );
+
+      const acc = new Map<string, { etiqueta: string; saldo: number }>();
+      for (const a of antRes.data ?? []) {
+        const tid = destajoToTrab.get(a.destajo_id);
+        if (!tid) continue;
+        const cur = acc.get(tid) ?? { etiqueta: tMap.get(tid) ?? "Destajista", saldo: 0 };
+        cur.saldo += num(a.monto);
+        acc.set(tid, cur);
+      }
+      for (const e of estRes.data ?? []) {
+        const tid = destajoToTrab.get(e.destajo_id);
+        if (!tid) continue;
+        const cur = acc.get(tid);
+        if (!cur) continue;
+        cur.saldo -= num(e.amortizacion_anticipo);
+      }
+      return Array.from(acc.entries())
+        .filter(([, v]) => v.saldo > 0.01)
+        .map(([id, v]) => ({ id, etiqueta: v.etiqueta, saldo: v.saldo }));
+    }
+
+    case "2100": {
+      const { data: ocs } = await supabase
+        .from("ordenes_compra")
+        .select("id, folio, total, monto_pagado, proveedor_id")
+        .eq("company_id", companyId)
+        .in("estatus", ["autorizada", "enviada", "recibida_parcial", "recibida"])
+        .neq("estado_pago", "pagado");
+      const filas = ocs ?? [];
+      const provIds = Array.from(new Set(filas.map((r: any) => r.proveedor_id).filter(Boolean)));
+      const provRes = provIds.length
+        ? await supabase.from("terceros").select("id, razon_social").in("id", provIds)
+        : { data: [] };
+      const pMap = new Map<string, string>(((provRes.data ?? []) as any[]).map((p: any): [string, string] => [p.id, p.razon_social]));
+      const acc = new Map<string, { etiqueta: string; folios: string[]; saldo: number }>();
+      for (const r of filas as any[]) {
+        const saldo = Math.max(0, num(r.total) - num(r.monto_pagado));
+        if (saldo <= 0) continue;
+        const key = r.proveedor_id ?? "sin-proveedor";
+        const cur: { etiqueta: string; folios: string[]; saldo: number } = acc.get(key) ?? {
+          etiqueta: pMap.get(r.proveedor_id) ?? "Sin proveedor",
+          folios: [],
+          saldo: 0,
+        };
+
+        cur.folios.push(r.folio);
+        cur.saldo += saldo;
+        acc.set(key, cur);
+      }
+      return Array.from(acc.entries()).map(([id, v]) => ({
+        id,
+        etiqueta: v.etiqueta,
+        referencia: v.folios.join(", "),
+        saldo: v.saldo,
+      }));
+    }
+
+    case "2110":
+    case "2120": {
+      const origen = codigo === "2110" ? "destajo_estimacion" : "subcontrato_estimacion";
+      const benefTipo = codigo === "2110" ? "trabajador" : "tercero";
+      const { data } = await supabase
+        .from("cuentas_por_pagar")
+        .select("id, folio, monto_total, monto_pagado, beneficiario_id, beneficiario_nombre")
+        .eq("company_id", companyId)
+        .eq("beneficiario_tipo", benefTipo)
+        .eq("origen_tipo", origen)
+        .in("estatus", ["pendiente", "parcial"])
+        .is("cancelado_at", null);
+      const acc = new Map<string, { etiqueta: string; folios: string[]; saldo: number }>();
+      for (const r of (data ?? []) as any[]) {
+        const saldo = Math.max(0, num(r.monto_total) - num(r.monto_pagado));
+        if (saldo <= 0) continue;
+        const key = r.beneficiario_id ?? r.id;
+        const cur: { etiqueta: string; folios: string[]; saldo: number } = acc.get(key) ?? {
+          etiqueta: r.beneficiario_nombre ?? "—",
+          folios: [],
+          saldo: 0,
+        };
+
+        cur.folios.push(r.folio);
+        cur.saldo += saldo;
+        acc.set(key, cur);
+      }
+      return Array.from(acc.entries()).map(([id, v]) => ({
+        id,
+        etiqueta: v.etiqueta,
+        referencia: v.folios.join(", "),
+        saldo: v.saldo,
+      }));
+    }
+
+    case "2130": {
+      const [nomRes, pagosRes] = await Promise.all([
+        supabase
+          .from("obra_nominas")
+          .select("id, monto_total, semana_inicio, semana_fin, obra_id")
+          .eq("company_id", companyId)
+          .eq("estatus", "cerrada"),
+        supabase
+          .from("pagos")
+          .select("origen_id, monto, cancelado_at")
+          .eq("company_id", companyId)
+          .eq("origen_tipo", "nomina")
+          .is("cancelado_at", null),
+      ]);
+      const pagosByNomina = new Map<string, number>();
+      for (const p of pagosRes.data ?? []) {
+        pagosByNomina.set(
+          p.origen_id,
+          (pagosByNomina.get(p.origen_id) ?? 0) + num(p.monto),
+        );
+      }
+      const obraIds = Array.from(
+        new Set((nomRes.data ?? []).map((n: any) => n.obra_id).filter(Boolean)),
+      );
+      const obraRes = obraIds.length
+        ? await supabase.from("obras").select("id, nombre").in("id", obraIds)
+        : { data: [] };
+      const oMap = new Map<string, string>(((obraRes.data ?? []) as any[]).map((o: any): [string, string] => [o.id, o.nombre]));
+      return (nomRes.data ?? [])
+        .map((n: any) => ({
+          id: n.id,
+          etiqueta: oMap.get(n.obra_id) ?? "Nómina",
+          referencia: `Semana ${n.semana_inicio} → ${n.semana_fin}`,
+          saldo: Math.max(0, num(n.monto_total) - (pagosByNomina.get(n.id) ?? 0)),
+        }))
+        .filter((r: DetalleItem) => r.saldo > 0.01);
+    }
+
+    case "2150": {
+      const [valesRes, pagosRes] = await Promise.all([
+        supabase
+          .from("vales_gasolina")
+          .select("id, folio, monto_autorizado, obra_id")
+          .eq("company_id", companyId)
+          .eq("estatus", "autorizado"),
+        supabase
+          .from("pagos")
+          .select("origen_id, monto, cancelado_at")
+          .eq("company_id", companyId)
+          .eq("origen_tipo", "gasolina")
+          .is("cancelado_at", null),
+      ]);
+      const pagosByVale = new Map<string, number>();
+      for (const p of pagosRes.data ?? []) {
+        pagosByVale.set(p.origen_id, (pagosByVale.get(p.origen_id) ?? 0) + num(p.monto));
+      }
+      const obraIds = Array.from(
+        new Set((valesRes.data ?? []).map((v: any) => v.obra_id).filter(Boolean)),
+      );
+      const obraRes = obraIds.length
+        ? await supabase.from("obras").select("id, nombre").in("id", obraIds)
+        : { data: [] };
+      const oMap = new Map<string, string>(((obraRes.data ?? []) as any[]).map((o: any): [string, string] => [o.id, o.nombre]));
+      return (valesRes.data ?? [])
+        .map((v: any) => ({
+          id: v.id,
+          etiqueta: v.folio,
+          referencia: oMap.get(v.obra_id),
+          saldo: Math.max(0, num(v.monto_autorizado) - (pagosByVale.get(v.id) ?? 0)),
+        }))
+        .filter((r: DetalleItem) => r.saldo > 0.01);
+    }
+
+    case "2160": {
+      const [reembRes, pagosRes] = await Promise.all([
+        supabase
+          .from("caja_chica_reembolsos")
+          .select("id, folio, monto_aprobado, residente_id, obra_id")
+          .eq("company_id", companyId)
+          .in("estatus", ["enviado_admin"]),
+        supabase
+          .from("pagos")
+          .select("origen_id, monto, cancelado_at")
+          .eq("company_id", companyId)
+          .eq("origen_tipo", "caja_chica")
+          .is("cancelado_at", null),
+      ]);
+      const pagosByReemb = new Map<string, number>();
+      for (const p of pagosRes.data ?? []) {
+        pagosByReemb.set(p.origen_id, (pagosByReemb.get(p.origen_id) ?? 0) + num(p.monto));
+      }
+      const trabIds = Array.from(
+        new Set((reembRes.data ?? []).map((r: any) => r.residente_id).filter(Boolean)),
+      );
+      const trabRes = trabIds.length
+        ? await supabase.from("trabajadores").select("id, nombre_completo").in("id", trabIds)
+        : { data: [] };
+      const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
+      return (reembRes.data ?? [])
+        .map((r: any) => ({
+          id: r.id,
+          etiqueta: tMap.get(r.residente_id) ?? r.folio,
+          referencia: r.folio,
+          saldo: Math.max(0, num(r.monto_aprobado) - (pagosByReemb.get(r.id) ?? 0)),
+        }))
+        .filter((r: DetalleItem) => r.saldo > 0.01);
+    }
+
+    case "3100": {
+      const { data } = await supabase
+        .from("companies")
+        .select("capital_social, razon_social")
+        .eq("id", companyId)
+        .maybeSingle();
+      const monto = num(data?.capital_social);
+      if (monto <= 0) return [];
+      return [{ id: companyId, etiqueta: data?.razon_social ?? "Capital social", saldo: monto }];
+    }
+
+    default:
+      return [];
+  }
+}
+
