@@ -58,7 +58,8 @@ const ESTATUS_VARIANT: Record<Destajo["estatus"], "default" | "secondary" | "des
 
 export function DestajosModule({ obraId }: { obraId: string }) {
   const director = useEffectiveIsDirector();
-  const { isSupervisor } = useObraRole(obraId);
+  const { isSupervisor, isResidente } = useObraRole(obraId);
+  const canEditDraft = director || isResidente;
   const qc = useQueryClient();
   const fetchList = useServerFn(listDestajos);
   const listQ = useQuery({
