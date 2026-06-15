@@ -46,12 +46,115 @@ function siguienteLunes(lunesIso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Traslada saldos finales (inv_inicial + recibido − utilizado) de una semana a otra. */
+async function trasladarSaldos(
+  supabase: any,
+  semanaOrigenId: string,
+  semanaDestinoId: string,
+) {
+  const { data: movs } = await supabase
+    .from("almacen_movimientos_semana")
+    .select("insumo_id, inv_inicial, recibido, utilizado, precio_unitario")
+    .eq("semana_id", semanaOrigenId);
+  const traslados = ((movs ?? []) as any[])
+    .map((m) => {
+      const final = Number(m.inv_inicial) + Number(m.recibido) - Number(m.utilizado);
+      return { insumo_id: m.insumo_id, inv_inicial: final, precio_unitario: Number(m.precio_unitario) };
+    })
+    .filter((m) => Number(m.inv_inicial) !== 0);
+  for (const t of traslados) {
+    const { data: existe } = await supabase
+      .from("almacen_movimientos_semana")
+      .select("id, inv_inicial")
+      .eq("semana_id", semanaDestinoId)
+      .eq("insumo_id", t.insumo_id)
+      .eq("precio_unitario", t.precio_unitario)
+      .maybeSingle();
+    if (existe) {
+      await supabase
+        .from("almacen_movimientos_semana")
+        .update({ inv_inicial: Number(existe.inv_inicial) + t.inv_inicial })
+        .eq("id", existe.id);
+    } else {
+      await supabase.from("almacen_movimientos_semana").insert({
+        semana_id: semanaDestinoId,
+        insumo_id: t.insumo_id,
+        inv_inicial: t.inv_inicial,
+        recibido: 0,
+        utilizado: 0,
+        precio_unitario: t.precio_unitario,
+      });
+    }
+  }
+}
+
+/** Cierra automáticamente semanas abiertas cuyo sábado ya pasó, abriendo la siguiente y trasladando saldos. */
+async function autoCerrarSemanasVencidas(
+  supabase: any,
+  companyId: string,
+  obraId: string,
+) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  // Bucle defensivo (máx 520 iteraciones ~ 10 años) por si hay muchas semanas atrasadas
+  for (let i = 0; i < 520; i++) {
+    const { data: abierta } = await supabase
+      .from("almacen_semanas")
+      .select("id, semana_inicio, semana_fin")
+      .eq("obra_id", obraId)
+      .eq("estatus", "abierta")
+      .lt("semana_fin", hoy)
+      .order("semana_inicio", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!abierta) return;
+
+    // Cerrar la semana vencida
+    await supabase
+      .from("almacen_semanas")
+      .update({ estatus: "cerrada", cerrada_at: new Date().toISOString(), cerrada_por: null })
+      .eq("id", abierta.id);
+
+    // Crear (o reutilizar) la siguiente semana
+    const nextLunes = siguienteLunes(abierta.semana_inicio);
+    const nextSabado = sabadoDeSemana(nextLunes);
+    let nextId: string;
+    const { data: existSig } = await supabase
+      .from("almacen_semanas")
+      .select("id")
+      .eq("obra_id", obraId)
+      .eq("semana_inicio", nextLunes)
+      .maybeSingle();
+    if (existSig) {
+      nextId = existSig.id;
+    } else {
+      const { data: nueva, error } = await supabase
+        .from("almacen_semanas")
+        .insert({
+          company_id: companyId,
+          obra_id: obraId,
+          semana_inicio: nextLunes,
+          semana_fin: nextSabado,
+          estatus: "abierta",
+        })
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      nextId = nueva.id;
+    }
+
+    await trasladarSaldos(supabase, abierta.id, nextId);
+  }
+}
+
 /** Encuentra o crea la semana abierta actual para una obra. */
 async function getOrCreateSemanaAbierta(
   supabase: any,
   companyId: string,
   obraId: string,
 ): Promise<{ id: string; semana_inicio: string; semana_fin: string }> {
+  // Auto-cerrar semanas vencidas antes de buscar la abierta vigente
+  await autoCerrarSemanasVencidas(supabase, companyId, obraId);
+
   // Busca cualquier semana abierta para la obra
   const { data: abierta } = await supabase
     .from("almacen_semanas")
@@ -62,6 +165,7 @@ async function getOrCreateSemanaAbierta(
     .limit(1)
     .maybeSingle();
   if (abierta) return abierta;
+
 
   // No hay abierta: crear una para la semana actual
   const lunes = lunesDeSemana(new Date());
