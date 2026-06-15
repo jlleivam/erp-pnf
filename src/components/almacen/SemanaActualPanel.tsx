@@ -219,7 +219,7 @@ export function SemanaActualPanel({ obraId }: { obraId: string }) {
                 <MovRow
                   key={m.id}
                   mov={m}
-                  disabled={bloqueada}
+                  disabled={bloqueada || !puedeEditar}
                   onSave={(val) => updateMut.mutate({ movimientoId: m.id, utilizado: val })}
                 />
               ))}
