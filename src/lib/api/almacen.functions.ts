@@ -97,12 +97,12 @@ async function autoCerrarSemanasVencidas(
 ) {
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // 1. Cerrar todas las semanas abiertas con fin < hoy
+  // 1. Cerrar (definitivamente) semanas abiertas/bloqueadas con fin < hoy
   await supabase
     .from("almacen_semanas")
     .update({ estatus: "cerrada", cerrada_at: new Date().toISOString(), cerrada_por: null })
     .eq("obra_id", obraId)
-    .eq("estatus", "abierta")
+    .in("estatus", ["abierta", "bloqueada"])
     .lt("semana_fin", hoy);
 
   // 2. Eliminar semanas abiertas futuras sin movimientos (fantasma)
@@ -123,28 +123,29 @@ async function autoCerrarSemanasVencidas(
   }
 }
 
-/** Encuentra o crea la semana abierta que contiene a hoy. */
+
+/** Encuentra o crea la semana (abierta o bloqueada) que contiene a hoy. */
 async function getOrCreateSemanaAbierta(
   supabase: any,
   companyId: string,
   obraId: string,
-): Promise<{ id: string; semana_inicio: string; semana_fin: string }> {
+): Promise<{ id: string; semana_inicio: string; semana_fin: string; estatus: string }> {
   await autoCerrarSemanasVencidas(supabase, companyId, obraId);
 
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // Buscar abierta cuyo rango contenga hoy
-  const { data: abierta } = await supabase
+  // Buscar la semana (abierta o bloqueada) cuyo rango contenga hoy
+  const { data: actual } = await supabase
     .from("almacen_semanas")
-    .select("id, semana_inicio, semana_fin")
+    .select("id, semana_inicio, semana_fin, estatus")
     .eq("obra_id", obraId)
-    .eq("estatus", "abierta")
+    .in("estatus", ["abierta", "bloqueada"])
     .lte("semana_inicio", hoy)
     .gte("semana_fin", hoy)
     .maybeSingle();
-  if (abierta) return abierta;
+  if (actual) return actual;
 
-  // No hay abierta para hoy: reabrir la fila existente con ese lunes, o crearla
+  // No hay semana actual: crear con lunes/domingo de hoy
   const lunes = lunesDeSemana(new Date());
   const sabado = sabadoDeSemana(lunes);
 
@@ -155,7 +156,7 @@ async function getOrCreateSemanaAbierta(
     .eq("semana_inicio", lunes)
     .maybeSingle();
 
-  let nueva: { id: string; semana_inicio: string; semana_fin: string };
+  let nueva: { id: string; semana_inicio: string; semana_fin: string; estatus: string };
   let yaTeniaMovimientos = false;
 
   if (existente) {
@@ -174,7 +175,7 @@ async function getOrCreateSemanaAbierta(
         cerrada_por: null,
       })
       .eq("id", existente.id)
-      .select("id, semana_inicio, semana_fin")
+      .select("id, semana_inicio, semana_fin, estatus")
       .single();
     if (updErr) throw new Error(updErr.message);
     nueva = reabierta;
@@ -188,15 +189,13 @@ async function getOrCreateSemanaAbierta(
         semana_fin: sabado,
         estatus: "abierta",
       })
-      .select("id, semana_inicio, semana_fin")
+      .select("id, semana_inicio, semana_fin, estatus")
       .single();
     if (error) throw new Error(error.message);
     nueva = insertada;
   }
 
-  // Si la semana ya tenía movimientos, no la sembramos (evita duplicar saldos)
   if (yaTeniaMovimientos) return nueva;
-
 
   // Sembrar inv_inicial desde la última semana cerrada (si existe)
   const { data: prevCerrada } = await supabase
@@ -213,7 +212,6 @@ async function getOrCreateSemanaAbierta(
       .from("almacen_movimientos_semana")
       .select("insumo_id, inv_inicial, recibido, utilizado, precio_unitario")
       .eq("semana_id", prevCerrada.id);
-    // Trasladar un renglón por lote (insumo_id + precio_unitario) con saldo final ≠ 0
     const rows = (prevMov ?? [])
       .map((m: any) => {
         const final = Number(m.inv_inicial) + Number(m.recibido) - Number(m.utilizado);
@@ -239,6 +237,7 @@ async function getOrCreateSemanaAbierta(
   }
   return nueva;
 }
+
 
 /** Lista OCs de la obra pendientes de recibir total o parcialmente. */
 export const listOCsPorRecibir = createServerFn({ method: "POST" })
@@ -328,6 +327,10 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
     }
 
     const semana = await getOrCreateSemanaAbierta(supabase, companyId, oc.obra_id);
+    if (semana.estatus !== "abierta") {
+      throw new Error("La semana está bloqueada. Solicita al supervisor que la desbloquee para registrar recepciones.");
+    }
+
 
     // Insertar cabecera
     const { data: rec, error: recErr } = await supabase
@@ -529,7 +532,7 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     if (!mov) throw new Error("Movimiento no encontrado");
     const s = (mov as any).semana;
     if (!s || s.company_id !== companyId) throw new Error("Movimiento no válido");
-    if (s.estatus !== "abierta") throw new Error("La semana ya está cerrada");
+    if (s.estatus !== "abierta") throw new Error("La semana está bloqueada o cerrada");
     await assertObraAccess(supabase, userId, s.obra_id, companyId, roles);
 
     const { error } = await supabase
@@ -540,13 +543,22 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Cierra la semana abierta: marca cerrada, crea siguiente, traslada saldos. */
-export const cerrarSemana = createServerFn({ method: "POST" })
+async function assertResidenteOSupervisor(supabase: any, userId: string, obraId: string) {
+  const { data: member } = await supabase
+    .from("obra_team").select("role")
+    .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
+  if (!member || !["residente", "supervisor"].includes(member.role)) {
+    throw new Error("Solo el residente o supervisor de la obra pueden realizar esta acción");
+  }
+}
+
+/** Bloquea la semana actual (no editable hasta que el supervisor la desbloquee). */
+export const bloquearSemana = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ semanaId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
+    const { companyId } = await getCtx(supabase, userId);
 
     const { data: sem } = await supabase
       .from("almacen_semanas")
@@ -554,88 +566,206 @@ export const cerrarSemana = createServerFn({ method: "POST" })
       .eq("id", data.semanaId).maybeSingle();
     if (!sem) throw new Error("Semana no encontrada");
     if (sem.company_id !== companyId) throw new Error("Semana no válida");
-    if (sem.estatus !== "abierta") throw new Error("La semana ya estaba cerrada");
+    if (sem.estatus !== "abierta") throw new Error("La semana no está abierta");
     const hoy = new Date().toISOString().slice(0, 10);
-    if (sem.semana_fin >= hoy) {
-      throw new Error("No puedes cerrar una semana que aún no termina");
+    if (sem.semana_inicio > hoy || sem.semana_fin < hoy) {
+      throw new Error("Solo puedes bloquear la semana actual");
     }
-    await assertObraAccess(supabase, userId, sem.obra_id, companyId, roles);
+    await assertResidenteOSupervisor(supabase, userId, sem.obra_id);
 
-    // Marcar como cerrada
-    const { error: closeErr } = await supabase
+    const { error } = await supabase
       .from("almacen_semanas")
-      .update({
-        estatus: "cerrada",
-        cerrada_at: new Date().toISOString(),
-        cerrada_por: userId,
-      })
+      .update({ estatus: "bloqueada" })
       .eq("id", sem.id);
-    if (closeErr) throw new Error(closeErr.message);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
 
-    // Crear siguiente semana (o reutilizar si ya existía)
-    const nextLunes = siguienteLunes(sem.semana_inicio);
-    const nextSabado = sabadoDeSemana(nextLunes);
-    let nextSemanaId: string;
-    const { data: existSig } = await supabase
+/** Solicita al supervisor/director que desbloquee la semana. */
+export const solicitarDesbloqueoSemana = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      semanaId: z.string().uuid(),
+      motivo: z.string().trim().min(3).max(500),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId } = await getCtx(supabase, userId);
+
+    const { data: sem } = await supabase
       .from("almacen_semanas")
+      .select("id, obra_id, company_id, estatus")
+      .eq("id", data.semanaId).maybeSingle();
+    if (!sem) throw new Error("Semana no encontrada");
+    if (sem.company_id !== companyId) throw new Error("Semana no válida");
+    if (sem.estatus !== "bloqueada") throw new Error("Solo se pueden desbloquear semanas bloqueadas");
+    await assertResidenteOSupervisor(supabase, userId, sem.obra_id);
+
+    // No permitir solicitudes duplicadas pendientes
+    const { data: pendiente } = await supabase
+      .from("almacen_semana_desbloqueo_solicitudes")
       .select("id")
-      .eq("obra_id", sem.obra_id)
-      .eq("semana_inicio", nextLunes)
+      .eq("semana_id", sem.id)
+      .eq("estatus", "pendiente")
       .maybeSingle();
-    if (existSig) {
-      nextSemanaId = existSig.id;
-    } else {
-      const { data: nueva, error: nuevaErr } = await supabase
-        .from("almacen_semanas")
-        .insert({
-          company_id: companyId,
-          obra_id: sem.obra_id,
-          semana_inicio: nextLunes,
-          semana_fin: nextSabado,
-          estatus: "abierta",
-        })
-        .select("id").single();
-      if (nuevaErr) throw new Error(nuevaErr.message);
-      nextSemanaId = nueva.id;
+    if (pendiente) throw new Error("Ya hay una solicitud pendiente para esta semana");
+
+    const { data: sol, error } = await supabase
+      .from("almacen_semana_desbloqueo_solicitudes")
+      .insert({
+        company_id: companyId,
+        obra_id: sem.obra_id,
+        semana_id: sem.id,
+        solicitado_por: userId,
+        motivo: data.motivo,
+        estatus: "pendiente",
+      })
+      .select("id").single();
+    if (error) throw new Error(error.message);
+
+    // Notificar a supervisor de la obra + directores
+    try {
+      const { data: superv } = await supabase
+        .from("obra_team")
+        .select("user_id")
+        .eq("obra_id", sem.obra_id)
+        .eq("role", "supervisor");
+      const { data: directores } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", companyId)
+        .eq("role", "director");
+      const destinatarios = Array.from(new Set([
+        ...((superv ?? []) as any[]).map((r) => r.user_id),
+        ...((directores ?? []) as any[]).map((r) => r.user_id),
+      ].filter((u) => u && u !== userId)));
+      if (destinatarios.length > 0) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("notificaciones").insert(
+          destinatarios.map((uid) => ({
+            user_id: uid,
+            company_id: companyId,
+            obra_id: sem.obra_id,
+            tipo: "almacen_desbloqueo_solicitado",
+            titulo: "Solicitud de desbloqueo de semana",
+            mensaje: `Se solicitó desbloquear una semana del almacén. Motivo: ${data.motivo}`,
+            link: `/app/obras/${sem.obra_id}/almacen-obra`,
+          })),
+        );
+      }
+    } catch (e: any) {
+      console.error("[notificaciones] desbloqueo solicitud", e?.message);
     }
 
-    // Trasladar saldos
-    const { data: movs } = await supabase
-      .from("almacen_movimientos_semana")
-      .select("insumo_id, inv_inicial, recibido, utilizado, precio_unitario")
-      .eq("semana_id", sem.id);
-    const traslados = ((movs ?? []) as any[])
-      .map((m) => {
-        const final = Number(m.inv_inicial) + Number(m.recibido) - Number(m.utilizado);
-        return { insumo_id: m.insumo_id, inv_inicial: final, precio_unitario: m.precio_unitario };
-      })
-      .filter((m) => Number(m.inv_inicial) !== 0);
+    return { ok: true, solicitudId: sol.id };
+  });
 
-    for (const t of traslados) {
-      const { data: existe } = await supabase
-        .from("almacen_movimientos_semana")
-        .select("id, inv_inicial")
-        .eq("semana_id", nextSemanaId)
-        .eq("insumo_id", t.insumo_id)
-        .maybeSingle();
-      if (existe) {
-        await supabase
-          .from("almacen_movimientos_semana")
-          .update({ inv_inicial: Number(existe.inv_inicial) + t.inv_inicial })
-          .eq("id", existe.id);
-      } else {
-        await supabase.from("almacen_movimientos_semana").insert({
-          semana_id: nextSemanaId,
-          insumo_id: t.insumo_id,
-          inv_inicial: t.inv_inicial,
-          recibido: 0,
-          utilizado: 0,
-          precio_unitario: t.precio_unitario,
-        });
+/** Lista solicitudes de desbloqueo de una obra (opcionalmente filtradas por estatus). */
+export const listSolicitudesDesbloqueo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      obraId: z.string().uuid(),
+      estatus: z.enum(["pendiente", "aprobada", "rechazada"]).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let q = supabase
+      .from("almacen_semana_desbloqueo_solicitudes")
+      .select("id, semana_id, motivo, estatus, respuesta, solicitado_por, resuelto_por, resuelto_at, created_at, semana:almacen_semanas(semana_inicio, semana_fin), solicitante:profiles!almacen_semana_desbloqueo_solicitudes_solicitado_por_fkey(nombre_completo, email)")
+      .eq("obra_id", data.obraId)
+      .order("created_at", { ascending: false });
+    if (data.estatus) q = q.eq("estatus", data.estatus);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+/** Aprueba o rechaza una solicitud de desbloqueo. */
+export const resolverSolicitudDesbloqueo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      solicitudId: z.string().uuid(),
+      accion: z.enum(["aprobar", "rechazar"]),
+      respuesta: z.string().trim().max(500).optional().nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId, roles } = await getCtx(supabase, userId);
+
+    const { data: sol } = await supabase
+      .from("almacen_semana_desbloqueo_solicitudes")
+      .select("id, semana_id, obra_id, company_id, estatus, solicitado_por")
+      .eq("id", data.solicitudId).maybeSingle();
+    if (!sol) throw new Error("Solicitud no encontrada");
+    if (sol.company_id !== companyId) throw new Error("Solicitud no válida");
+    if (sol.estatus !== "pendiente") throw new Error("La solicitud ya fue resuelta");
+
+    // Solo supervisor de la obra o director de la company
+    const esDirector = roles.includes("director");
+    if (!esDirector) {
+      const { data: member } = await supabase
+        .from("obra_team").select("role")
+        .eq("obra_id", sol.obra_id).eq("user_id", userId).maybeSingle();
+      if (!member || member.role !== "supervisor") {
+        throw new Error("Solo supervisor o director pueden resolver solicitudes");
       }
     }
-    return { ok: true, siguienteSemanaId: nextSemanaId };
+
+    const nuevoEstatus = data.accion === "aprobar" ? "aprobada" : "rechazada";
+    const { error: updSolErr } = await supabase
+      .from("almacen_semana_desbloqueo_solicitudes")
+      .update({
+        estatus: nuevoEstatus,
+        respuesta: data.respuesta ?? null,
+        resuelto_por: userId,
+        resuelto_at: new Date().toISOString(),
+      })
+      .eq("id", sol.id);
+    if (updSolErr) throw new Error(updSolErr.message);
+
+    if (data.accion === "aprobar") {
+      // Desbloquear la semana (solo si sigue bloqueada y es la semana actual)
+      const hoy = new Date().toISOString().slice(0, 10);
+      const { data: sem } = await supabase
+        .from("almacen_semanas")
+        .select("id, estatus, semana_inicio, semana_fin")
+        .eq("id", sol.semana_id).maybeSingle();
+      if (sem && sem.estatus === "bloqueada" && sem.semana_inicio <= hoy && sem.semana_fin >= hoy) {
+        await supabase
+          .from("almacen_semanas")
+          .update({ estatus: "abierta" })
+          .eq("id", sem.id);
+      }
+    }
+
+    // Notificar al solicitante
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("notificaciones").insert({
+        user_id: sol.solicitado_por,
+        company_id: companyId,
+        obra_id: sol.obra_id,
+        tipo: data.accion === "aprobar" ? "almacen_desbloqueo_aprobado" : "almacen_desbloqueo_rechazado",
+        titulo: data.accion === "aprobar" ? "Desbloqueo aprobado" : "Desbloqueo rechazado",
+        mensaje: data.accion === "aprobar"
+          ? "Tu solicitud de desbloqueo fue aprobada. Ya puedes editar la semana."
+          : `Tu solicitud de desbloqueo fue rechazada.${data.respuesta ? ` Motivo: ${data.respuesta}` : ""}`,
+        link: `/app/obras/${sol.obra_id}/almacen-obra`,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] resolucion desbloqueo", e?.message);
+    }
+
+    return { ok: true };
   });
+
+
 
 /** Historial de semanas cerradas. */
 export const listHistorialSemanas = createServerFn({ method: "POST" })
