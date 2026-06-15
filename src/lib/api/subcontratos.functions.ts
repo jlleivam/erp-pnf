@@ -154,8 +154,9 @@ export const crearSubcontrato = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, isDirector } = await getRoles(supabase, userId);
-    const member = await isMemberObra(supabase, userId, data.obraId);
-    if (!isDirector && !member) throw new Error("Sin permisos para crear subcontratos en esta obra");
+    const obraRole = await getObraRole(supabase, userId, data.obraId);
+    if (!isDirector && !obraRole.isResidente)
+      throw new Error("Sin permisos para crear subcontratos en esta obra");
 
     // Validar contratista
     const { data: tercero } = await supabase
