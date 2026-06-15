@@ -87,33 +87,31 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
   const activos = subcontratos.filter((d) => d.estatus_base === "autorizado").length;
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Subcontratos</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Trabajos contratados con un tercero (contratista) con presupuesto, órdenes
-            de cambio y estimaciones semanales de avance. El contratista se encarga de
-            sus propias altas ante el IMSS.
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight">Subcontratos</h1>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+            Trabajos contratados con un tercero con presupuesto, órdenes de cambio y estimaciones semanales.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="size-4 mr-1" /> Nuevo subcontrato
+        <Button size="sm" onClick={() => setCreating(true)} className="shrink-0">
+          <Plus className="size-4 mr-1" /> Nuevo
         </Button>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Contratado vigente</p>
-          <p className="mt-2 text-xl font-semibold">{formatMXN(contratado)}</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card className="p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Contratado vigente</p>
+          <p className="mt-1 text-base font-semibold tabular-nums">{formatMXN(contratado)}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Pagado acumulado</p>
-          <p className="mt-2 text-xl font-semibold">{formatMXN(pagado)}</p>
+        <Card className="p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pagado acumulado</p>
+          <p className="mt-1 text-base font-semibold tabular-nums">{formatMXN(pagado)}</p>
         </Card>
-        <Card className="p-4 border-primary/30 bg-primary/5">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Subcontratos activos</p>
-          <p className="mt-2 text-xl font-semibold">{activos}</p>
+        <Card className="p-3 border-primary/30 bg-primary/5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Subcontratos activos</p>
+          <p className="mt-1 text-base font-semibold tabular-nums">{activos}</p>
         </Card>
       </div>
 
@@ -128,13 +126,13 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="text-left p-3 w-12">#</th>
-                <th className="text-left p-3">Subcontrato</th>
-                <th className="text-left p-3">Contratista</th>
-                <th className="text-left p-3 w-44">Estatus</th>
-                <th className="text-right p-3 w-36">Contratado</th>
-                <th className="text-right p-3 w-36">Pagado</th>
-                <th className="text-right p-3 w-44">Acciones</th>
+                <th className="text-left p-2 w-10">#</th>
+                <th className="text-left p-2">Subcontrato</th>
+                <th className="text-left p-2">Contratista</th>
+                <th className="text-left p-2 w-40">Estatus</th>
+                <th className="text-right p-2 w-32">Contratado</th>
+                <th className="text-right p-2 w-36">Pagado</th>
+                <th className="text-right p-2 w-28">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -144,34 +142,35 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
                   : 0;
                 return (
                   <tr key={d.id} className="border-t border-border">
-                    <td className="p-3 tabular-nums">{d.numero}</td>
-                    <td className="p-3">
-                      <p className="font-medium">{d.nombre}</p>
-                      {d.descripcion && (
-                        <p className="text-xs text-muted-foreground">{d.descripcion}</p>
-                      )}
+                    <td className="p-2 tabular-nums">{d.numero}</td>
+                    <td className="p-2 max-w-[220px]">
+                      <p className="font-medium truncate" title={d.descripcion ? `${d.nombre} — ${d.descripcion}` : d.nombre}>
+                        {d.nombre}
+                      </p>
                     </td>
-                    <td className="p-3">{d.contratista_nombre}</td>
-                    <td className="p-3">
-                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]}>
+                    <td className="p-2 max-w-[200px]">
+                      <p className="truncate" title={d.contratista_nombre}>{d.contratista_nombre}</p>
+                    </td>
+                    <td className="p-2">
+                      <Badge variant={ESTATUS_VARIANT[d.estatus_base]} className="text-xs px-2 py-0">
                         {ESTATUS_LABEL[d.estatus_base]}
                       </Badge>
                     </td>
-                    <td className="p-3 text-right tabular-nums">{formatMXN(d.monto_total)}</td>
-                    <td className="p-3 text-right tabular-nums">
+                    <td className="p-2 text-right tabular-nums whitespace-nowrap">{formatMXN(d.monto_total)}</td>
+                    <td className="p-2 text-right tabular-nums whitespace-nowrap">
                       {formatMXN(d.pagado_acumulado)}
                       {d.monto_total > 0 && (
-                        <div className="text-xs text-muted-foreground">{pct.toFixed(0)}%</div>
+                        <span className="text-xs text-muted-foreground ml-1">· {pct.toFixed(0)}%</span>
                       )}
                     </td>
-                    <td className="p-3 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setViewingId(d.id)}>
-                          <Eye className="size-4 mr-1" /> Abrir
+                    <td className="p-2 text-right">
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => setViewingId(d.id)}>
+                          <Eye className="size-3.5 mr-1" /> Abrir
                         </Button>
                         {director && d.estatus_base === "borrador" && d.pagado_acumulado === 0 && (
-                          <Button size="sm" variant="ghost" onClick={() => setToDelete(d)}>
-                            <Trash2 className="size-4" />
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setToDelete(d)}>
+                            <Trash2 className="size-3.5" />
                           </Button>
                         )}
                       </div>
@@ -183,6 +182,7 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
           </table>
         </Card>
       )}
+
 
       {creating && (
         <NuevoSubcontratoDialog
