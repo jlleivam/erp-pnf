@@ -405,11 +405,12 @@ async function buildDetalle(
         const saldo = Math.max(0, num(r.monto_total) - num(r.monto_pagado));
         if (saldo <= 0) continue;
         const key = r.beneficiario_id ?? r.id;
-        const cur = acc.get(key) ?? {
+        const cur: { etiqueta: string; folios: string[]; saldo: number } = acc.get(key) ?? {
           etiqueta: r.beneficiario_nombre ?? "—",
           folios: [],
           saldo: 0,
         };
+
         cur.folios.push(r.folio);
         cur.saldo += saldo;
         acc.set(key, cur);
