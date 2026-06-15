@@ -2116,7 +2116,7 @@ export const pagarAnticipoDestajo = createServerFn({ method: "POST" })
 
     // 5) asiento contable (doble partida)
     const asientoId = crypto.randomUUID();
-    const cuentaAbono = cuenta.tipo === "caja_fuerte" ? "Caja" : "Bancos";
+    const cuentaAbono = cuenta.tipo === "caja_fuerte" ? "Caja fuerte" : "Bancos";
     const refAsiento = ant.folio || data.referencia || null;
     const { error: asErr } = await supabaseAdmin
       .from("asientos_contables")
