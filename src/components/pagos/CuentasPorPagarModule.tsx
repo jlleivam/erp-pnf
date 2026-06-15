@@ -187,6 +187,10 @@ export function CuentasPorPagarModule() {
         <TabsContent value="anticipos" className="mt-4">
           <AnticiposDestajoTab />
         </TabsContent>
+
+        <TabsContent value="subcontratos" className="mt-4">
+          <AnticiposSubcontratoTab />
+        </TabsContent>
       </Tabs>
 
       {selected && (
