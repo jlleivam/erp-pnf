@@ -203,6 +203,7 @@ export function SubcontratosModule({ obraId }: { obraId: string }) {
         <SubcontratoDetalleSheet
           subcontratoId={viewingId}
           canAuthorize={director || isSupervisor}
+          canEditDraft={canEditDraft}
           onClose={() => setViewingId(null)}
           onChanged={() => qc.invalidateQueries({ queryKey: ["subcontratos", obraId] })}
         />
