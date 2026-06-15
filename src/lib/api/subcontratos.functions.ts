@@ -533,17 +533,15 @@ export const enviarPresupuestoSubcontrato = createServerFn({ method: "POST" })
       .eq("id", data.presupuestoId);
     if (error) throw new Error(error.message);
 
-    if (p.tipo === "adenda") {
-      try {
-        await notifySupervisoresOC(supabase, {
-          userId,
-          obraId: d0!.obra_id,
-          tipo: "oc_subcontrato_solicitada",
-          link: `/app/obras/${d0!.obra_id}`,
-        });
-      } catch (e: any) {
-        console.error("[notificaciones] oc_subcontrato_solicitada error", e?.message);
-      }
+    try {
+      await notifySupervisoresOC(supabase, {
+        userId,
+        obraId: d0!.obra_id,
+        tipo: "oc_subcontrato_solicitada",
+        link: `/app/obras/${d0!.obra_id}`,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] oc_subcontrato_solicitada error", e?.message);
     }
 
     return { ok: true };
