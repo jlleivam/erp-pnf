@@ -156,12 +156,12 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
                       <Button size="sm" variant="outline" onClick={() => setViewing(e.id)}>
                         <FileText className="size-4 mr-1" /> Ver
                       </Button>
-                      {esActiva(e) && (
+                      {esActiva(e) && canEdit && (
                         <Button size="sm" onClick={() => setEditing(e.semana_inicio)}>
                           Editar
                         </Button>
                       )}
-                      {esActiva(e) && director && (
+                      {esActiva(e) && canEdit && (
                         <Button
                           size="sm"
                           variant="ghost"
