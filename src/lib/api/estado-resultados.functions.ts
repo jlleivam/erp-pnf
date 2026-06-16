@@ -547,14 +547,19 @@ async function calcularBuckets(
   for (const g of cajaRes.data ?? []) {
     const b = bucketFor(buckets, g.fecha);
     if (!b) continue;
-    const monto = num(g.monto);
+    const montoTotal = num(g.monto);
+    const monto = montoGastoObra(montoTotal, g.tipo_comprobante);
     b.costos.cajaChica += monto;
+    const metaParts = [g.fecha, g.tipo_comprobante, g.descripcion].filter(Boolean) as string[];
+    if (monto !== montoTotal) {
+      metaParts.push(`pagado $${montoTotal.toFixed(2)} · base $${monto.toFixed(2)}`);
+    }
     b.detalle.cajaChica.push({
       id: g.id,
       titulo: g.concepto,
       monto,
       estatus: g.estatus,
-      meta: [g.fecha, g.tipo_comprobante, g.descripcion].filter(Boolean).join(" · "),
+      meta: metaParts.join(" · "),
     });
   }
 
