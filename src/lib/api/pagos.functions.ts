@@ -433,12 +433,19 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
     // Lee CxP
     const { data: cxp, error: cxpErr } = await supabaseAdmin
       .from("cuentas_por_pagar")
-      .select("id, company_id, folio, beneficiario_nombre, beneficiario_tipo, origen_tipo, monto_total, monto_pagado, estatus, cancelado_at")
+      .select("id, company_id, obra_id, folio, beneficiario_nombre, beneficiario_tipo, beneficiario_id, origen_tipo, origen_id, monto_total, monto_pagado, estatus, cancelado_at")
       .eq("id", data.cxpId).maybeSingle();
     if (cxpErr) throw new Error(cxpErr.message);
     if (!cxp || cxp.company_id !== companyId) throw new Error("Cuenta por pagar no encontrada");
     if (cxp.cancelado_at) throw new Error("La cuenta por pagar está cancelada");
     if (cxp.estatus === "pagada") throw new Error("La cuenta por pagar ya está pagada");
+
+    // Fondo de caja chica: solo se paga en efectivo desde caja fuerte
+    if (cxp.origen_tipo === "caja_chica_fondo") {
+      if (cuenta.tipo !== "caja_fuerte" || data.metodo !== "efectivo") {
+        throw new Error("El fondo de caja chica solo se entrega en efectivo desde caja fuerte");
+      }
+    }
 
     const total = Number(cxp.monto_total);
     const pagado = Number(cxp.monto_pagado);
@@ -526,7 +533,9 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
           ? "Cuentas por pagar - Subcontratistas"
           : cxp.origen_tipo === "nomina"
             ? "Nómina por pagar"
-            : "Cuentas por pagar";
+            : cxp.origen_tipo === "caja_chica_fondo"
+              ? "Cuentas por pagar - Caja chica"
+              : "Cuentas por pagar";
     const cuentaActivo = cuenta.tipo === "bancaria" ? "Bancos" : "Caja fuerte";
 
     const asientoId = crypto.randomUUID();
@@ -560,5 +569,68 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
     ];
     await supabaseAdmin.from("asientos_contables").insert(renglones);
 
+    // 7. Hook por origen: caja chica fondo → marcar fondo como entregado y notificar
+    if (cxp.origen_tipo === "caja_chica_fondo" && nuevoEstado === "pagada" && cxp.origen_id) {
+      await supabaseAdmin
+        .from("caja_chica_fondos")
+        .update({
+          estatus: "entregado",
+          monto_entregado: nuevoPagado,
+          entregado_por: userId,
+          entregado_at: new Date().toISOString(),
+        })
+        .eq("id", cxp.origen_id);
+
+      if (cxp.beneficiario_id) {
+        await supabaseAdmin.from("notificaciones").insert({
+          user_id: cxp.beneficiario_id,
+          company_id: companyId,
+          obra_id: cxp.obra_id,
+          tipo: "caja_chica_fondo_entregado",
+          titulo: "Fondo de caja chica entregado",
+          mensaje: `Recibiste $${data.monto.toFixed(2)} en efectivo (${cxp.folio})`,
+          link: cxp.obra_id ? `/app/obras/${cxp.obra_id}/caja-chica` : "/app",
+        });
+      }
+    }
+
     return { id: pago.id };
+  });
+
+// ============================================================
+// CxP de fondo de caja chica pendientes
+// ============================================================
+
+export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { companyId, roles } = await getCtx(supabase, userId);
+    assertPayer(roles);
+
+    const { data, error } = await supabase
+      .from("cuentas_por_pagar")
+      .select("id, folio, fecha_emision, obra_id, beneficiario_id, beneficiario_nombre, concepto, monto_total, monto_pagado, estatus, origen_tipo, origen_id, obra:obras(id, nombre)")
+      .eq("company_id", companyId)
+      .eq("origen_tipo", "caja_chica_fondo")
+      .in("estatus", ["pendiente", "parcial"])
+      .is("cancelado_at", null)
+      .order("fecha_emision", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      id: r.id,
+      folio: r.folio,
+      fecha_emision: r.fecha_emision,
+      obra_id: r.obra_id,
+      obra_nombre: r.obra?.nombre ?? null,
+      beneficiario_id: r.beneficiario_id,
+      beneficiario_nombre: r.beneficiario_nombre,
+      concepto: r.concepto,
+      monto_total: Number(r.monto_total),
+      monto_pagado: Number(r.monto_pagado),
+      saldo: +(Number(r.monto_total) - Number(r.monto_pagado)).toFixed(2),
+      estatus: r.estatus,
+      origen_tipo: r.origen_tipo,
+      origen_id: r.origen_id,
+    }));
   });
