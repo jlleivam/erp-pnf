@@ -411,6 +411,11 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
                     {f.residente_nombre ?? "—"} · {formatDate(f.solicitado_at)}
                   </div>
                   {f.notas && <div className="text-sm mt-1">{f.notas}</div>}
+                  {f.motivo_rechazo && (
+                    <div className="text-xs text-destructive mt-1">
+                      Motivo: {f.motivo_rechazo}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-muted-foreground">Solicitado</div>
@@ -425,11 +430,28 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
                   )}
                 </div>
               </div>
-              {f.estatus === "pendiente" && (director || isAdmin) && (
-                <div className="mt-2">
-                  <Button size="sm" onClick={() => setEntregarFondo(f)}>
-                    <Banknote className="w-3.5 h-3.5 mr-1" /> Confirmar entrega
+              {f.estatus === "pendiente_autorizacion" && (director || isSupervisor) && (
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => autorizarM.mutate(f.id)}
+                    disabled={autorizarM.isPending}
+                  >
+                    <Banknote className="w-3.5 h-3.5 mr-1" /> Autorizar
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive"
+                    onClick={() => { setRechazandoFondo(f); setMotivoRechazo(""); }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Rechazar
+                  </Button>
+                </div>
+              )}
+              {f.estatus === "autorizado" && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Esperando pago en Cuentas por pagar.
                 </div>
               )}
             </Card>
