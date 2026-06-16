@@ -1,20 +1,59 @@
-## Ajustes a la reclasificación de comprobante
+## Contexto
 
-### 1. Restringir a gastos aprobados
-- En `reclasificarComprobanteGasto` (server): exigir `estatus === "aprobado"` además de las validaciones actuales. Si está `rechazado`, `borrador`, `solicitado` o `reembolsado`, error.
-- En `RevisarReembolsoSheet`: mostrar el botón **"Reclasificar"** sólo si `g.estatus === "aprobado"` (además de los chequeos actuales de rol y `reemb.estatus === "enviado_admin"`).
+La pestaña **Cuentas por pagar → Caja chica** sólo está listando un tipo de pasivo:
 
-### 2. Permitir reclasificación en ambos sentidos
-- Ampliar el enum del input a `["factura", "nota", "ninguno"]`.
-- Validar que `nuevoTipo !== tipo_comprobante actual` (sin no-ops).
-- Guardar el valor original en `comprobante_reclasificado_de` la primera vez. Si se reclasifica de nuevo, conservar el `de` original (es la trazabilidad histórica) y sólo actualizar motivo / usuario / fecha.
-- En la UI, el selector mostrará las dos opciones que **no** son el tipo actual del gasto:
-  - Si es `factura` → opciones: Nota, Sin comprobante.
-  - Si es `nota` → opciones: Factura, Sin comprobante.
-  - Si es `ninguno` → opciones: Factura, Nota.
-- El texto auxiliar pasa a ser neutro: "El monto a reponer al residente no cambia. El costo a la obra se ajusta según el tipo de comprobante (factura descuenta el IVA acreditable)."
-- Mostrar el botón aunque ya esté reclasificado, para permitir cambiar otra vez (la línea amarilla "Reclasificado de …" sigue visible con el motivo más reciente).
+- ✅ Muestra: `cuentas_por_pagar` con `origen_tipo = caja_chica_fondo` (solicitudes de **fondo** autorizadas pendientes de entregar al residente).
+- ❌ No muestra: `caja_chica_reembolsos` con `estatus = enviado_admin` (reembolsos semanales aprobados por el supervisor que el administrativo debe reponer al residente).
 
-### Resultado
-- Los gastos rechazados ya no muestran el bloque de reclasificación.
-- El administrativo puede reclasificar en cualquier dirección (factura ↔ nota ↔ sin comprobante) mientras el reembolso esté en `enviado_admin` y el gasto esté `aprobado`, con motivo obligatorio.
+Ambos son pasivos reales: en el balance el reembolso ya cuenta como **2160 Caja chica por reembolsar**, pero el administrativo no lo ve en su bandeja de "por pagar". Por eso el usuario dice "está autorizado y no me aparece".
+
+## Cambios
+
+### 1. Backend — extender `listCxPCajaChicaFondoPendientes`
+
+Renombrar el endpoint a `listCajaChicaPorPagar` (manteniendo un alias exportado con el nombre viejo para no romper otros lugares) y devolver **dos colecciones**:
+
+```ts
+{
+  fondos: [...filas actuales con tipo: "fondo"...],
+  reembolsos: [
+    {
+      tipo: "reembolso",
+      id: reembolso.id,
+      folio: reembolso.folio,
+      fecha_emision: reembolso.enviado_admin_at ?? created_at,
+      obra_id, obra_nombre,
+      beneficiario_id: residente_id,
+      beneficiario_nombre: residente_nombre,
+      concepto: `Reembolso semana ${semana_inicio}–${semana_fin}`,
+      monto_total: monto_aprobado,
+      monto_pagado: 0,
+      saldo: monto_aprobado,
+      estatus: "enviado_admin",
+    }
+  ]
+}
+```
+
+Los reembolsos se obtienen de `caja_chica_reembolsos` con `estatus = 'enviado_admin'` filtrados por `company_id`, enriqueciendo `obra.nombre` y `residente.nombre`.
+
+### 2. Frontend — `CajaChicaPorPagarTab`
+
+- Unir las dos listas en una sola tabla y agregar columna **Tipo** con badge: `Fondo` / `Reembolso`.
+- Buscar funciona contra folio / obra / residente (igual que hoy).
+- El **Saldo total** suma ambos.
+- Botón "Registrar pago":
+  - **Fondo** → abre el `RegistrarPagoCxPDialog` actual (sin cambios).
+  - **Reembolso** → abre el `ReponerReembolsoDialog` ya existente (recibe el objeto reembolso). El dialog se reutiliza tal cual: ya invalida queries y notifica al residente.
+- `onSaved` invalida `["caja-chica-por-pagar"]`, `["balance"]` y `["caja-chica"]` (igual que hoy).
+- El badge de cantidad arriba del tab (`Caja chica`) debe reflejar la suma fondos + reembolsos.
+
+### 3. Sin cambios en
+
+- El cálculo del balance (`2160` ya consideraba `enviado_admin`).
+- La lógica del flujo de aprobación (residente solicita → supervisor cierra → ya queda en `enviado_admin`).
+- Ningún cambio de base de datos.
+
+## Resultado
+
+Cuando el supervisor envía el reembolso al administrativo, éste lo ve inmediatamente en su pestaña **Cuentas por pagar → Caja chica** junto con los fondos pendientes, y puede pagarlo desde ahí con el mismo flujo (preselección de caja fuerte + efectivo).
