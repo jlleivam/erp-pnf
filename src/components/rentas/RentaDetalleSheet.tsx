@@ -130,6 +130,19 @@ export function RentaDetalleSheet({
   const delPago = useServerFn(eliminarPago);
   const delPagoM = useMutation({
     mutationFn: delPago,
+    onSuccess: () => { toast.success("Periodo eliminado"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const recalc = useServerFn(recalcularPeriodos);
+  const recalcM = useMutation({
+    mutationFn: recalc,
+    onSuccess: (r: any) => {
+      toast.success(r?.generados > 0 ? `${r.generados} periodo(s) generados` : "Sin periodos nuevos");
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
     onSuccess: () => { toast.success("Pago eliminado"); refresh(); },
     onError: (e: Error) => toast.error(e.message),
   });
