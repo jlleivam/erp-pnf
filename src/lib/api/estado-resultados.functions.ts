@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calcularSemana, toISODate } from "@/lib/estimacion-utils";
+import { montoGastoObra } from "@/lib/api/caja-chica.functions";
 
 // ============================================================
 // Tipos
