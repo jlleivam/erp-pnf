@@ -54,10 +54,9 @@ const ESTATUS_VARIANT: Record<Renta["estatus"], "default" | "secondary" | "destr
 };
 
 export function RentasModule({ obraId }: { obraId: string }) {
-  const director = useEffectiveIsDirector();
-  const roles = useEffectiveRoles();
-  const isSupervisor = roles.includes("supervisor");
-  const isAdministrativo = roles.includes("administrativo");
+  const { isResidente, isSupervisor, isDirector, isAdministrativo } = useObraRole(obraId);
+  const puedeSolicitar = isDirector || isSupervisor || isResidente;
+  const director = isDirector;
 
   const qc = useQueryClient();
   const fetchList = useServerFn(listRentas);
