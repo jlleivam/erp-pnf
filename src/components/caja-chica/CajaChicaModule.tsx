@@ -507,6 +507,8 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
           <SolicitarFondoDialog
             open={solicitarFondo} onOpenChange={setSolicitarFondo}
             obraId={obraId}
+            montoBase={saldo ? Number(saldo.montoBase) : undefined}
+            disponible={saldo ? Number(saldo.montoBase) - Number(saldo.entregado) : undefined}
             onSaved={() => qc.invalidateQueries({ queryKey: baseKey })}
           />
           <AsignarMontoBaseDialog
