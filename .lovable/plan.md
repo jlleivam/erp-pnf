@@ -1,34 +1,17 @@
-## Objetivo
-
-Distinguir entre **monto pagado** (lo que se le repone al residente) y **gasto a la obra** (lo que se carga al costo de la obra) según el tipo de comprobante del gasto de caja chica:
-
-| Tipo de comprobante | Reembolso al residente | Gasto a la obra |
-|---|---|---|
-| Factura | monto total | **base sin IVA** = monto ÷ 1.16 |
-| Nota | monto total | **monto total** (no hay IVA acreditable) |
-| Sin comprobante (ninguno) | monto total | **monto total** |
-
-El IVA acreditable de la factura sí se paga, pero no es costo de obra — es un activo recuperable.
+Restringir la creación/edición de gastos de caja chica a residentes (y director). El administrativo no debe poder crear ni editar gastos en una obra.
 
 ## Cambios
 
-### `src/lib/api/caja-chica.functions.ts` (helper)
-- Agregar y exportar helper puro `montoGastoObra(monto, tipoComprobante)`:
-  - `factura` → `+(monto / 1.16).toFixed(2)`
-  - resto → `monto` tal cual.
-- Usar tasa IVA = 16% en una constante `IVA_RATE = 0.16`.
+### `src/lib/api/caja-chica.functions.ts`
+- En `crearGastoCajaChica.handler`: además de la membresía, exigir `ctx.isDirector || isResidenteDeObra(supabase, userId, obraId)`. Si el `obra_team.role` del usuario en esa obra no es `residente` (y no es director), rechazar con "Solo el residente puede registrar gastos de caja chica".
+- `actualizarGastoCajaChica` ya valida `residente_id === userId`, pero agregamos un guard equivalente para director (sigue editando si residente; director puede editar borradores).
+- `eliminarGastoCajaChica`: mismo guard (solo el residente dueño o director).
 
-### `src/lib/api/estado-resultados.functions.ts`
-- En el `select` de `caja_chica_gastos` ya viene `tipo_comprobante`. En el bucle de "Caja chica" (~línea 547), reemplazar `const monto = num(g.monto)` por `const monto = montoGastoObra(num(g.monto), g.tipo_comprobante)` para que el costo de obra refleje base sin IVA cuando hay factura.
-- En `detalle.cajaChica.meta`, mostrar también el monto total pagado cuando difiera (ej. `"$130.00 con IVA · base $112.07"`).
-
-### UI — mostrar gasto a obra
-- `src/components/caja-chica/CajaChicaModule.tsx`: en cada renglón de gasto, debajo del monto total agregar una línea pequeña *"Gasto a obra: $X.XX"* cuando difiera del monto pagado (sólo facturas).
-- `src/components/caja-chica/RevisarReembolsoSheet.tsx`: igual, mostrar "Gasto a obra" por gasto y un subtotal de gasto a obra del reembolso completo.
-- `src/components/caja-chica/GastoForm.tsx`: al seleccionar tipo de comprobante = factura y haber capturado monto, mostrar una nota de ayuda *"Gasto a obra (sin IVA): $X.XX"* debajo del select.
+### `src/components/caja-chica/CajaChicaModule.tsx`
+- Calcular `puedeCrearGasto = scope === "obra" && (director || isResidente)`. Ocultar el botón "Nuevo gasto" y los botones de Editar/Eliminar cuando no aplica.
+- Ocultar la pestaña "Mis gastos" para administrativo en scope `obra` (queda en Reembolsos/Fondos). Default `tab` se ajusta a `reembolsos` cuando no puede ver "Mis gastos".
 
 ## Fuera de alcance
 
-- El monto del **reembolso al residente** (`caja_chica_reembolsos.monto_solicitado/aprobado/reembolsado`) y el pasivo en balance NO cambian — siguen siendo el total pagado en efectivo.
-- No se crea cuenta separada de "IVA acreditable" en este pase (el flujo contable detallado puede agregarse después si lo requieren).
-- No se modifica la estructura de la tabla `caja_chica_gastos`.
+- No se modifican policies de RLS (la validación queda en server function, suficiente porque toda escritura pasa por ahí).
+- Supervisor mantiene su acceso actual (sin botón de crear, ya que no es residente).

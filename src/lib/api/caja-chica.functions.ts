@@ -49,6 +49,13 @@ async function isMemberObra(supabase: any, userId: string, obraId: string) {
   return !!data;
 }
 
+async function isResidenteDeObra(supabase: any, userId: string, obraId: string) {
+  const { data } = await supabase
+    .from("obra_team").select("role")
+    .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
+  return data?.role === "residente";
+}
+
 async function notify(rows: Array<{
   user_id: string; company_id: string; obra_id?: string | null;
   tipo: string; titulo: string; mensaje: string; link?: string | null;
@@ -321,8 +328,10 @@ export const crearGastoCajaChica = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const ctx = await getCtx(supabase, userId);
-    const member = await isMemberObra(supabase, userId, data.obraId);
-    if (!member && !ctx.isDirector) throw new Error("Sin acceso a esta obra");
+    const esResidente = await isResidenteDeObra(supabase, userId, data.obraId);
+    if (!ctx.isDirector && !esResidente) {
+      throw new Error("Solo el residente de la obra puede registrar gastos de caja chica");
+    }
 
     const { error } = await supabase
       .from("caja_chica_gastos")
