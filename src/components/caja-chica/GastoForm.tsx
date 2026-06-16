@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/auth";
 import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
+import { montoGastoObra } from "@/lib/api/caja-chica.functions";
 
 export type GastoFormValue = {
   fecha: string;
@@ -107,6 +108,16 @@ export function GastoForm({
             <SelectItem value="ninguno">Sin comprobante</SelectItem>
           </SelectContent>
         </Select>
+        {value.tipoComprobante === "factura" && Number(value.monto) > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Gasto a obra (sin IVA): ${montoGastoObra(Number(value.monto), "factura").toFixed(2)} · IVA acreditable: ${(Number(value.monto) - montoGastoObra(Number(value.monto), "factura")).toFixed(2)}
+          </p>
+        )}
+        {value.tipoComprobante !== "factura" && Number(value.monto) > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Gasto a obra: ${Number(value.monto).toFixed(2)} (sin IVA acreditable)
+          </p>
+        )}
       </div>
       <div className="space-y-1">
         <Label>Evidencia (foto)</Label>

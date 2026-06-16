@@ -24,6 +24,7 @@ import {
 import { Plus, Pencil, Trash2, Send, Banknote, Wallet, Receipt, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN, formatDate } from "@/lib/format";
+import { montoGastoObra } from "@/lib/api/caja-chica.functions";
 import { NuevoGastoDialog } from "./NuevoGastoDialog";
 import { EditarGastoDialog } from "./EditarGastoDialog";
 import { SolicitarReembolsoDialog } from "./SolicitarReembolsoDialog";
@@ -243,6 +244,11 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
                   </div>
                   <div className="text-right">
                     <div className="font-semibold">{formatMXN(Number(g.monto))}</div>
+                    {g.tipo_comprobante === "factura" && (
+                      <div className="text-[11px] text-muted-foreground">
+                        Obra: {formatMXN(montoGastoObra(Number(g.monto), g.tipo_comprobante))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 mt-2">

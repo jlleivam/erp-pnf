@@ -19,6 +19,7 @@ import {
 import { Check, X, Send, Eye, FileText, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN, formatDate } from "@/lib/format";
+import { montoGastoObra } from "@/lib/api/caja-chica.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 const BUCKET = "caja-chica-evidencias";
@@ -151,6 +152,11 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
                     </div>
                     <div className="text-right">
                       <div className="font-semibold">{formatMXN(Number(g.monto))}</div>
+                      {g.tipo_comprobante === "factura" && (
+                        <div className="text-[11px] text-muted-foreground">
+                          Obra: {formatMXN(montoGastoObra(Number(g.monto), g.tipo_comprobante))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
