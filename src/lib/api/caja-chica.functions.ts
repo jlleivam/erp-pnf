@@ -191,10 +191,44 @@ export const solicitarFondoCajaChica = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const ctx = await getCtx(supabase, userId);
-    const member = await isMemberObra(supabase, userId, data.obraId);
-    if (!member && !ctx.isDirector) throw new Error("Sin acceso a esta obra");
+    const esResidente = await isResidenteDeObra(supabase, userId, data.obraId);
+    if (!esResidente && !ctx.isDirector) {
+      throw new Error("Solo el residente de la obra puede solicitar el fondo");
+    }
 
-    const { error } = await supabase
+    // Validar monto_base asignado por el director
+    const { data: asig } = await supabase
+      .from("caja_chica_asignaciones")
+      .select("monto_base")
+      .eq("obra_id", data.obraId)
+      .eq("residente_id", userId)
+      .eq("activo", true)
+      .maybeSingle();
+    const montoBase = Number(asig?.monto_base ?? 0);
+    if (!asig || montoBase <= 0) {
+      throw new Error("El director aún no ha configurado el monto base de caja chica para esta obra");
+    }
+
+    // Fondos vivos: pendientes de autorización, autorizados o entregados (aún no reembolsados)
+    const { data: fondosVivos } = await supabase
+      .from("caja_chica_fondos")
+      .select("monto_solicitado, monto_entregado, estatus")
+      .eq("obra_id", data.obraId)
+      .eq("residente_id", userId)
+      .in("estatus", ["pendiente", "pendiente_autorizacion", "autorizado", "entregado"]);
+    const usado = (fondosVivos ?? []).reduce(
+      (a: number, f: any) =>
+        a + Number(f.monto_entregado ?? f.monto_solicitado ?? 0),
+      0,
+    );
+    const disponible = +(montoBase - usado).toFixed(2);
+    if (data.monto > disponible + 0.01) {
+      throw new Error(
+        `El monto solicitado ($${data.monto.toFixed(2)}) excede el disponible ($${disponible.toFixed(2)}) del monto base de $${montoBase.toFixed(2)}`,
+      );
+    }
+
+    const { data: inserted, error } = await supabase
       .from("caja_chica_fondos")
       .insert({
         company_id: ctx.companyId,
@@ -203,15 +237,24 @@ export const solicitarFondoCajaChica = createServerFn({ method: "POST" })
         monto_solicitado: data.monto,
         solicitado_por: userId,
         notas: data.notas ?? null,
-      });
+        estatus: "pendiente_autorizacion",
+      })
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
 
-    const { data: admins } = await supabase
+    // Notificar a supervisores de la obra + directores
+    const { data: supervisores } = await supabase
+      .from("obra_team").select("user_id")
+      .eq("obra_id", data.obraId).eq("role", "supervisor");
+    const { data: directors } = await supabase
       .from("user_roles").select("user_id")
-      .eq("company_id", ctx.companyId)
-      .in("role", ["administrativo", "director"]);
-    const targets = Array.from(new Set((admins ?? []).map((s: any) => s.user_id as string)))
-      .filter((id) => id !== userId);
+      .eq("company_id", ctx.companyId).eq("role", "director");
+    const targets = Array.from(new Set([
+      ...((supervisores ?? []).map((s: any) => s.user_id as string)),
+      ...((directors ?? []).map((s: any) => s.user_id as string)),
+    ])).filter((id) => id !== userId);
+
     await notify(targets.map((uid) => ({
       user_id: uid,
       company_id: ctx.companyId,
@@ -219,8 +262,174 @@ export const solicitarFondoCajaChica = createServerFn({ method: "POST" })
       tipo: "caja_chica_fondo_solicitado",
       titulo: "Solicitud de fondo de caja chica",
       mensaje: `Residente solicita $${data.monto.toFixed(2)} en efectivo`,
-      link: `/app/admin/caja-chica`,
+      link: `/app/obras/${data.obraId}/caja-chica`,
     })));
+    return { ok: true, id: inserted.id };
+  });
+
+export const autorizarFondoCajaChica = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const ctx = await getCtx(supabase, userId);
+
+    const { data: fondo } = await supabase
+      .from("caja_chica_fondos")
+      .select("id, estatus, residente_id, obra_id, company_id, monto_solicitado")
+      .eq("id", data.id).maybeSingle();
+    if (!fondo) throw new Error("Fondo no encontrado");
+    if (fondo.estatus !== "pendiente_autorizacion") {
+      throw new Error("El fondo no está pendiente de autorización");
+    }
+
+    // Solo supervisor de la obra o director
+    const { data: team } = await supabase
+      .from("obra_team").select("role")
+      .eq("obra_id", fondo.obra_id).eq("user_id", userId).maybeSingle();
+    const esSupervisor = team?.role === "supervisor";
+    if (!esSupervisor && !ctx.isDirector) {
+      throw new Error("Solo el supervisor de la obra o el director puede autorizar");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Resolver nombre del residente
+    const { data: resProfile } = await supabase
+      .from("profiles").select("nombre_completo, email")
+      .eq("id", fondo.residente_id).maybeSingle();
+    const beneficiarioNombre =
+      resProfile?.nombre_completo || resProfile?.email || "Residente";
+
+    // Folio CxP
+    const { data: folioData, error: folioErr } = await supabaseAdmin
+      .rpc("siguiente_folio_cxp", { _company_id: fondo.company_id });
+    if (folioErr) throw new Error(folioErr.message);
+    const folio = folioData as unknown as string;
+
+    const hoy = new Date().toISOString().slice(0, 10);
+    const { data: cxp, error: cxpErr } = await supabaseAdmin
+      .from("cuentas_por_pagar")
+      .insert({
+        company_id: fondo.company_id,
+        obra_id: fondo.obra_id,
+        folio,
+        fecha_emision: hoy,
+        fecha_vencimiento: hoy,
+        beneficiario_tipo: "residente",
+        beneficiario_id: fondo.residente_id,
+        beneficiario_nombre: beneficiarioNombre,
+        concepto: `Fondo de caja chica`,
+        origen_tipo: "caja_chica_fondo",
+        origen_id: fondo.id,
+        monto_total: fondo.monto_solicitado,
+        monto_pagado: 0,
+        estatus: "pendiente",
+        creado_por: userId,
+      })
+      .select("id")
+      .single();
+    if (cxpErr) throw new Error(cxpErr.message);
+
+    const { error: updErr } = await supabase
+      .from("caja_chica_fondos")
+      .update({
+        estatus: "autorizado",
+        autorizado_por: userId,
+        autorizado_at: new Date().toISOString(),
+        cxp_id: cxp.id,
+      })
+      .eq("id", fondo.id);
+    if (updErr) throw new Error(updErr.message);
+
+    // Notificar a administrativos + residente
+    const { data: admins } = await supabase
+      .from("user_roles").select("user_id")
+      .eq("company_id", fondo.company_id)
+      .eq("role", "administrativo");
+    const targets = Array.from(new Set([
+      ...((admins ?? []).map((s: any) => s.user_id as string)),
+      fondo.residente_id,
+    ])).filter((id) => id !== userId);
+
+    await notify([
+      ...targets
+        .filter((id) => id !== fondo.residente_id)
+        .map((uid) => ({
+          user_id: uid,
+          company_id: fondo.company_id,
+          obra_id: fondo.obra_id,
+          tipo: "caja_chica_fondo_autorizado",
+          titulo: "Fondo de caja chica autorizado",
+          mensaje: `Pagar ${folio} · $${Number(fondo.monto_solicitado).toFixed(2)} al residente`,
+          link: `/app/admin/pagos`,
+        })),
+      {
+        user_id: fondo.residente_id,
+        company_id: fondo.company_id,
+        obra_id: fondo.obra_id,
+        tipo: "caja_chica_fondo_autorizado",
+        titulo: "Tu fondo fue autorizado",
+        mensaje: `En espera del pago en efectivo (${folio})`,
+        link: `/app/obras/${fondo.obra_id}/caja-chica`,
+      },
+    ]);
+
+    return { ok: true, cxpId: cxp.id, folio };
+  });
+
+export const rechazarFondoCajaChica = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      motivo: z.string().trim().min(2).max(500),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const ctx = await getCtx(supabase, userId);
+
+    const { data: fondo } = await supabase
+      .from("caja_chica_fondos")
+      .select("estatus, residente_id, obra_id, company_id, monto_solicitado")
+      .eq("id", data.id).maybeSingle();
+    if (!fondo) throw new Error("Fondo no encontrado");
+    if (fondo.estatus !== "pendiente_autorizacion") {
+      throw new Error("El fondo no está pendiente de autorización");
+    }
+
+    const { data: team } = await supabase
+      .from("obra_team").select("role")
+      .eq("obra_id", fondo.obra_id).eq("user_id", userId).maybeSingle();
+    const esSupervisor = team?.role === "supervisor";
+    if (!esSupervisor && !ctx.isDirector) {
+      throw new Error("Solo el supervisor de la obra o el director puede rechazar");
+    }
+
+    const { error } = await supabase
+      .from("caja_chica_fondos")
+      .update({
+        estatus: "rechazado",
+        rechazado_por: userId,
+        rechazado_at: new Date().toISOString(),
+        motivo_rechazo: data.motivo,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    await notify([{
+      user_id: fondo.residente_id,
+      company_id: fondo.company_id,
+      obra_id: fondo.obra_id,
+      tipo: "caja_chica_fondo_rechazado",
+      titulo: "Solicitud de fondo rechazada",
+      mensaje: data.motivo,
+      link: `/app/obras/${fondo.obra_id}/caja-chica`,
+    }]);
+
     return { ok: true };
   });
 

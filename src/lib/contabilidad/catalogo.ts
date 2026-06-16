@@ -150,6 +150,14 @@ export const CATALOGO_CONTABLE: CategoriaContable[] = [
     descripcion: "Reembolsos de caja chica aprobados pendientes de reponer.",
     disponible: true,
   },
+  {
+    codigo: "2170",
+    nombre: "Cuentas por pagar - Caja chica",
+    grupo: "pasivo",
+    subgrupo: "corto_plazo",
+    descripcion: "Fondos de caja chica autorizados pendientes de entregar al residente.",
+    disponible: true,
+  },
 
   // ===== CAPITAL =====
   {

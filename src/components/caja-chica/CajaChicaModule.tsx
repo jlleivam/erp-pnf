@@ -8,6 +8,8 @@ import {
   listAsignacionesCajaChica,
   eliminarGastoCajaChica,
   entregarFondoCajaChica,
+  autorizarFondoCajaChica,
+  rechazarFondoCajaChica,
   reponerReembolsoCajaChica,
   getSaldoCajaChica,
 } from "@/lib/api/caja-chica.functions";
@@ -62,10 +64,20 @@ const REEMB_ESTATUS_VARIANT: Record<string, "default"|"secondary"|"destructive"|
 };
 
 const FONDO_ESTATUS_LABEL: Record<string, string> = {
-  pendiente: "Pendiente", entregado: "Entregado", cancelado: "Cancelado",
+  pendiente: "Pendiente",
+  pendiente_autorizacion: "Pendiente autorización",
+  autorizado: "Autorizado · esperando pago",
+  entregado: "Entregado",
+  rechazado: "Rechazado",
+  cancelado: "Cancelado",
 };
 const FONDO_ESTATUS_VARIANT: Record<string, "default"|"secondary"|"destructive"|"outline"> = {
-  pendiente: "outline", entregado: "secondary", cancelado: "destructive",
+  pendiente: "outline",
+  pendiente_autorizacion: "outline",
+  autorizado: "default",
+  entregado: "secondary",
+  rechazado: "destructive",
+  cancelado: "destructive",
 };
 
 type Props = {
@@ -126,6 +138,29 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
 
+  const autorizarFn = useServerFn(autorizarFondoCajaChica);
+  const autorizarM = useMutation({
+    mutationFn: (id: string) => autorizarFn({ data: { id } }),
+    onSuccess: (r: any) => {
+      toast.success(`Fondo autorizado (${r?.folio ?? "CxP"})`);
+      qc.invalidateQueries({ queryKey: baseKey });
+      qc.invalidateQueries({ queryKey: ["caja-chica-por-pagar"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
+  const rechazarFn = useServerFn(rechazarFondoCajaChica);
+  const rechazarM = useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
+      rechazarFn({ data: { id, motivo } }),
+    onSuccess: () => {
+      toast.success("Solicitud rechazada");
+      qc.invalidateQueries({ queryKey: baseKey });
+      setRechazandoFondo(null);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
   const [creatingGasto, setCreatingGasto] = useState(false);
   const [editingGasto, setEditingGasto] = useState<any | null>(null);
   const [toDelete, setToDelete] = useState<any | null>(null);
@@ -135,6 +170,8 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const [asignarMonto, setAsignarMonto] = useState(false);
   const [reponerR, setReponerR] = useState<any | null>(null);
   const [revisarR, setRevisarR] = useState<any | null>(null);
+  const [rechazandoFondo, setRechazandoFondo] = useState<any | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const puedeCrearGasto = scope === "obra" && (director || isResidente);
   const verMisGastos = scope === "obra" && (director || isResidente);
@@ -374,6 +411,11 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
                     {f.residente_nombre ?? "—"} · {formatDate(f.solicitado_at)}
                   </div>
                   {f.notas && <div className="text-sm mt-1">{f.notas}</div>}
+                  {f.motivo_rechazo && (
+                    <div className="text-xs text-destructive mt-1">
+                      Motivo: {f.motivo_rechazo}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-muted-foreground">Solicitado</div>
@@ -388,11 +430,28 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
                   )}
                 </div>
               </div>
-              {f.estatus === "pendiente" && (director || isAdmin) && (
-                <div className="mt-2">
-                  <Button size="sm" onClick={() => setEntregarFondo(f)}>
-                    <Banknote className="w-3.5 h-3.5 mr-1" /> Confirmar entrega
+              {f.estatus === "pendiente_autorizacion" && (director || isSupervisor) && (
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => autorizarM.mutate(f.id)}
+                    disabled={autorizarM.isPending}
+                  >
+                    <Banknote className="w-3.5 h-3.5 mr-1" /> Autorizar
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive"
+                    onClick={() => { setRechazandoFondo(f); setMotivoRechazo(""); }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Rechazar
+                  </Button>
+                </div>
+              )}
+              {f.estatus === "autorizado" && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Esperando pago en Cuentas por pagar.
                 </div>
               )}
             </Card>
@@ -490,6 +549,38 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
               onClick={() => toDelete && eliminarM.mutate({ data: { id: toDelete.id } })}
             >
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!rechazandoFondo}
+        onOpenChange={(v) => { if (!v) { setRechazandoFondo(null); setMotivoRechazo(""); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rechazar solicitud de fondo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Indícale al residente por qué se rechaza esta solicitud.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <textarea
+            className="w-full border rounded p-2 text-sm min-h-[80px]"
+            placeholder="Motivo del rechazo"
+            value={motivoRechazo}
+            onChange={(e) => setMotivoRechazo(e.target.value)}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={motivoRechazo.trim().length < 2 || rechazarM.isPending}
+              onClick={() =>
+                rechazandoFondo &&
+                rechazarM.mutate({ id: rechazandoFondo.id, motivo: motivoRechazo.trim() })
+              }
+            >
+              Rechazar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

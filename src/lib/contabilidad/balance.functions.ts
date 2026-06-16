@@ -55,6 +55,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       nominaRes,
       gasolinaRes,
       cajaChicaReembRes,
+      cajaChicaFondoCxPRes,
       pagosRes,
     ] = await Promise.all([
       supabase.from("companies").select("capital_social").eq("id", companyId).maybeSingle(),
@@ -119,6 +120,14 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .select("monto_aprobado, estatus")
         .eq("company_id", companyId)
         .in("estatus", ["enviado_admin"]),
+      // CxP de fondos de caja chica (pendientes / parciales)
+      supabase
+        .from("cuentas_por_pagar")
+        .select("monto_total, monto_pagado, estatus, cancelado_at")
+        .eq("company_id", companyId)
+        .eq("origen_tipo", "caja_chica_fondo")
+        .in("estatus", ["pendiente", "parcial"])
+        .is("cancelado_at", null),
       // Pagos por origen para descontar de pasivos
       supabase
         .from("pagos")
@@ -172,6 +181,11 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       0,
       sum(cajaChicaReembRes.data, "monto_aprobado") - pagado("caja_chica"),
     );
+    const cajaChicaFondoPorPagar = (cajaChicaFondoCxPRes.data ?? []).reduce(
+      (acc: number, r: any) => acc + Math.max(0, num(r.monto_total) - num(r.monto_pagado)),
+      0,
+    );
+
 
     // ----- CAPITAL -----
     const capitalSocial = num(companyRes.data?.capital_social);
@@ -193,6 +207,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       "2140": { codigo: "2140", saldo: 0, disponible: false },
       "2150": { codigo: "2150", saldo: gasolinaPorReembolsar, disponible: true },
       "2160": { codigo: "2160", saldo: cajaChicaPorReembolsar, disponible: true },
+      "2170": { codigo: "2170", saldo: cajaChicaFondoPorPagar, disponible: true },
       "3100": { codigo: "3100", saldo: capitalSocial, disponible: true },
     };
 

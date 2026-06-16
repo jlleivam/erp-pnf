@@ -354,60 +354,86 @@ export type Database = {
       }
       caja_chica_fondos: {
         Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
           cancelado_at: string | null
           cancelado_por: string | null
           company_id: string
           created_at: string
+          cxp_id: string | null
           entregado_at: string | null
           entregado_por: string | null
           estatus: Database["public"]["Enums"]["caja_chica_fondo_estatus"]
           id: string
           monto_entregado: number | null
           monto_solicitado: number
+          motivo_rechazo: string | null
           notas: string | null
           obra_id: string
+          rechazado_at: string | null
+          rechazado_por: string | null
           residente_id: string
           solicitado_at: string
           solicitado_por: string
           updated_at: string
         }
         Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
           cancelado_at?: string | null
           cancelado_por?: string | null
           company_id: string
           created_at?: string
+          cxp_id?: string | null
           entregado_at?: string | null
           entregado_por?: string | null
           estatus?: Database["public"]["Enums"]["caja_chica_fondo_estatus"]
           id?: string
           monto_entregado?: number | null
           monto_solicitado: number
+          motivo_rechazo?: string | null
           notas?: string | null
           obra_id: string
+          rechazado_at?: string | null
+          rechazado_por?: string | null
           residente_id: string
           solicitado_at?: string
           solicitado_por: string
           updated_at?: string
         }
         Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
           cancelado_at?: string | null
           cancelado_por?: string | null
           company_id?: string
           created_at?: string
+          cxp_id?: string | null
           entregado_at?: string | null
           entregado_por?: string | null
           estatus?: Database["public"]["Enums"]["caja_chica_fondo_estatus"]
           id?: string
           monto_entregado?: number | null
           monto_solicitado?: number
+          motivo_rechazo?: string | null
           notas?: string | null
           obra_id?: string
+          rechazado_at?: string | null
+          rechazado_por?: string | null
           residente_id?: string
           solicitado_at?: string
           solicitado_por?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "caja_chica_fondos_cxp_id_fkey"
+            columns: ["cxp_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_por_pagar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       caja_chica_gastos: {
         Row: {
@@ -3916,7 +3942,13 @@ export type Database = {
         | "auxiliar"
         | "administrativo"
         | "supervisor"
-      caja_chica_fondo_estatus: "pendiente" | "entregado" | "cancelado"
+      caja_chica_fondo_estatus:
+        | "pendiente"
+        | "entregado"
+        | "cancelado"
+        | "pendiente_autorizacion"
+        | "autorizado"
+        | "rechazado"
       caja_chica_gasto_estatus:
         | "borrador"
         | "solicitado"
@@ -3930,7 +3962,7 @@ export type Database = {
         | "enviado_admin"
         | "repuesto"
         | "rechazado"
-      cxp_beneficiario_tipo: "trabajador" | "tercero"
+      cxp_beneficiario_tipo: "trabajador" | "tercero" | "residente"
       cxp_estatus: "pendiente" | "parcial" | "pagada" | "cancelada"
       destajo_doc_estatus: "borrador" | "enviado" | "autorizado" | "rechazado"
       destajo_estimacion_estatus:
@@ -4153,7 +4185,14 @@ export const Constants = {
         "administrativo",
         "supervisor",
       ],
-      caja_chica_fondo_estatus: ["pendiente", "entregado", "cancelado"],
+      caja_chica_fondo_estatus: [
+        "pendiente",
+        "entregado",
+        "cancelado",
+        "pendiente_autorizacion",
+        "autorizado",
+        "rechazado",
+      ],
       caja_chica_gasto_estatus: [
         "borrador",
         "solicitado",
@@ -4169,7 +4208,7 @@ export const Constants = {
         "repuesto",
         "rechazado",
       ],
-      cxp_beneficiario_tipo: ["trabajador", "tercero"],
+      cxp_beneficiario_tipo: ["trabajador", "tercero", "residente"],
       cxp_estatus: ["pendiente", "parcial", "pagada", "cancelada"],
       destajo_doc_estatus: ["borrador", "enviado", "autorizado", "rechazado"],
       destajo_estimacion_estatus: [

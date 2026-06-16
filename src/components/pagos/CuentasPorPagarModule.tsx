@@ -17,11 +17,13 @@ import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendiente
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
 import { listAnticiposSubcontratoPendientes } from "@/lib/api/subcontratos.functions";
 import { listValesPorPagar } from "@/lib/api/vales-gasolina.functions";
+import { listCxPCajaChicaFondoPendientes } from "@/lib/api/pagos.functions";
 import { RegistrarPagoAnticipoDialog } from "./RegistrarPagoAnticipoDialog";
 import { RegistrarPagoAnticipoSubcontratoDialog } from "./RegistrarPagoAnticipoSubcontratoDialog";
 import { RegistrarPagoOCDialog } from "./RegistrarPagoOCDialog";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { GasolinasPorPagarTab } from "./GasolinasPorPagarTab";
+import { CajaChicaPorPagarTab } from "./CajaChicaPorPagarTab";
 import { formatMXN, formatDate } from "@/lib/format";
 
 type Row = {
@@ -78,6 +80,12 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchValesCount(),
   });
 
+  const fetchCajaChicaCount = useServerFn(listCxPCajaChicaFondoPendientes);
+  const cajaChicaCountQ = useQuery({
+    queryKey: ["caja-chica-por-pagar"],
+    queryFn: () => fetchCajaChicaCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -92,6 +100,7 @@ export function CuentasPorPagarModule() {
     ((anticiposSubCountQ.data ?? []) as unknown[]).length
     + ((estSubCountQ.data ?? []) as unknown[]).length;
   const gasolinasPendientesCount = ((valesCountQ.data ?? []) as unknown[]).length;
+  const cajaChicaPendientesCount = ((cajaChicaCountQ.data ?? []) as unknown[]).length;
 
 
   return (
@@ -134,6 +143,14 @@ export function CuentasPorPagarModule() {
             {gasolinasPendientesCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
                 {gasolinasPendientesCount > 99 ? "99+" : gasolinasPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="caja-chica">
+            Caja chica
+            {cajaChicaPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {cajaChicaPendientesCount > 99 ? "99+" : cajaChicaPendientesCount}
               </span>
             )}
           </TabsTrigger>
@@ -211,6 +228,10 @@ export function CuentasPorPagarModule() {
 
         <TabsContent value="gasolinas" className="mt-4">
           <GasolinasPorPagarTab />
+        </TabsContent>
+
+        <TabsContent value="caja-chica" className="mt-4">
+          <CajaChicaPorPagarTab />
         </TabsContent>
       </Tabs>
 
