@@ -40,6 +40,7 @@ export function CajaChicaPorPagarTab() {
   const [q, setQ] = useState("");
   const [pagarFondo, setPagarFondo] = useState<Row | null>(null);
   const [reponerReemb, setReponerReemb] = useState<Row | null>(null);
+  const [verReembolsoId, setVerReembolsoId] = useState<string | null>(null);
 
   const cxpQ = useQuery({
     queryKey: ["caja-chica-por-pagar"],
