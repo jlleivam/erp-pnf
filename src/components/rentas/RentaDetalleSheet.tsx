@@ -213,7 +213,7 @@ export function RentaDetalleSheet({
               <Item label="Acumulado" value={formatMXN(data.monto_acumulado)} hint={`${data.dias_acumulados} días`} />
             </Card>
 
-            <Tabs defaultValue="vigencia">
+            <Tabs defaultValue={defaultTab ?? "vigencia"}>
               <TabsList>
                 <TabsTrigger value="cotizacion">Cotización</TabsTrigger>
                 <TabsTrigger value="vigencia">Vigencia</TabsTrigger>
