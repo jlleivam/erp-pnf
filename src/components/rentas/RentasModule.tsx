@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listRentas, eliminarRenta } from "@/lib/api/rentas.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { listRentas } from "@/lib/api/rentas.functions";
 import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Plus, Eye, Trash2, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, AlertTriangle } from "lucide-react";
 import { formatMXN, formatDate } from "@/lib/format";
 import { NuevaRentaDialog } from "./NuevaRentaDialog";
 import { RentaDetalleSheet } from "./RentaDetalleSheet";
