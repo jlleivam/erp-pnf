@@ -598,7 +598,7 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
   });
 
 // ============================================================
-// CxP de fondo de caja chica pendientes
+// CxP de caja chica pendientes (fondos + reembolsos enviado_admin)
 // ============================================================
 
 export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
@@ -608,7 +608,8 @@ export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
     const { companyId, roles } = await getCtx(supabase, userId);
     assertPayer(roles);
 
-    const { data, error } = await supabase
+    // 1) Fondos pendientes (CxP con origen caja_chica_fondo)
+    const { data: cxpRows, error } = await supabase
       .from("cuentas_por_pagar")
       .select("id, folio, fecha_emision, obra_id, beneficiario_id, beneficiario_nombre, concepto, monto_total, monto_pagado, estatus, origen_tipo, origen_id, obra:obras(id, nombre)")
       .eq("company_id", companyId)
@@ -617,7 +618,9 @@ export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
       .is("cancelado_at", null)
       .order("fecha_emision", { ascending: false });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((r: any) => ({
+
+    const fondos = (cxpRows ?? []).map((r: any) => ({
+      tipo: "fondo" as const,
       id: r.id,
       folio: r.folio,
       fecha_emision: r.fecha_emision,
@@ -633,4 +636,54 @@ export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
       origen_tipo: r.origen_tipo,
       origen_id: r.origen_id,
     }));
+
+    // 2) Reembolsos enviados al administrativo (pendientes de reponer)
+    const { data: reembRows, error: errR } = await supabase
+      .from("caja_chica_reembolsos")
+      .select("id, folio, residente_id, obra_id, semana_inicio, semana_fin, monto_aprobado, estatus, enviado_admin_at, created_at, obra:obras(id, nombre)")
+      .eq("company_id", companyId)
+      .eq("estatus", "enviado_admin")
+      .order("enviado_admin_at", { ascending: false });
+    if (errR) throw new Error(errR.message);
+
+    const rArr = reembRows ?? [];
+    const residenteIds = Array.from(
+      new Set(rArr.map((r: any) => r.residente_id).filter(Boolean))
+    ) as string[];
+    const usersMap = new Map<string, string>();
+    if (residenteIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles").select("id, nombre_completo, email").in("id", residenteIds);
+      for (const p of profs ?? []) {
+        usersMap.set(p.id, p.nombre_completo || p.email || "—");
+      }
+    }
+
+    const reembolsos = rArr.map((r: any) => {
+      const monto = Number(r.monto_aprobado ?? 0);
+      return {
+        tipo: "reembolso" as const,
+        id: r.id,
+        folio: r.folio,
+        fecha_emision: r.enviado_admin_at ?? r.created_at,
+        obra_id: r.obra_id,
+        obra_nombre: r.obra?.nombre ?? null,
+        beneficiario_id: r.residente_id,
+        beneficiario_nombre: usersMap.get(r.residente_id) ?? "—",
+        concepto: `Reembolso semana ${r.semana_inicio}–${r.semana_fin}`,
+        monto_total: monto,
+        monto_pagado: 0,
+        saldo: monto,
+        estatus: r.estatus,
+        origen_tipo: "caja_chica_reembolso",
+        origen_id: r.id,
+        semana_inicio: r.semana_inicio,
+        semana_fin: r.semana_fin,
+        monto_aprobado: monto,
+      };
+    });
+
+    return [...fondos, ...reembolsos].sort((a, b) =>
+      String(b.fecha_emision ?? "").localeCompare(String(a.fecha_emision ?? ""))
+    );
   });
