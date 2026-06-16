@@ -243,6 +243,11 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
                   </div>
                   <div className="text-right">
                     <div className="font-semibold">{formatMXN(Number(g.monto))}</div>
+                    {g.tipo_comprobante === "factura" && (
+                      <div className="text-[11px] text-muted-foreground">
+                        Obra: {formatMXN(montoGastoObra(Number(g.monto), g.tipo_comprobante))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 mt-2">
