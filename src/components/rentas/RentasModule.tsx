@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listRentas, eliminarRenta } from "@/lib/api/rentas.functions";
-import { useEffectiveIsDirector, useEffectiveRoles } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,10 +54,9 @@ const ESTATUS_VARIANT: Record<Renta["estatus"], "default" | "secondary" | "destr
 };
 
 export function RentasModule({ obraId }: { obraId: string }) {
-  const director = useEffectiveIsDirector();
-  const roles = useEffectiveRoles();
-  const isSupervisor = roles.includes("supervisor");
-  const isAdministrativo = roles.includes("administrativo");
+  const { isResidente, isSupervisor, isDirector, isAdministrativo } = useObraRole(obraId);
+  const puedeSolicitar = isDirector || isSupervisor || isResidente;
+  const director = isDirector;
 
   const qc = useQueryClient();
   const fetchList = useServerFn(listRentas);
@@ -98,9 +97,11 @@ export function RentasModule({ obraId }: { obraId: string }) {
             cotiza, el supervisor autoriza. Marca la llegada y reporta averías o inactividad.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="size-4 mr-1" /> Nueva solicitud
-        </Button>
+        {puedeSolicitar && (
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="size-4 mr-1" /> Nueva solicitud
+          </Button>
+        )}
       </header>
 
       <div className="grid gap-4 sm:grid-cols-3">

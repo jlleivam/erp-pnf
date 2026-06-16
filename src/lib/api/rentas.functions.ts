@@ -150,10 +150,18 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, isDirector, isSupervisor, isAdministrativo } = await getCtx(supabase, userId);
-    const member = await isMemberObra(supabase, userId, data.obraId);
-    if (!isDirector && !isSupervisor && !isAdministrativo && !member) {
-      throw new Error("No tienes permisos en esta obra");
+    const { companyId, isDirector } = await getCtx(supabase, userId);
+    if (!isDirector) {
+      const { data: teamRow } = await supabase
+        .from("obra_team")
+        .select("role")
+        .eq("obra_id", data.obraId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      const role = (teamRow as any)?.role as string | undefined;
+      if (role !== "residente" && role !== "supervisor") {
+        throw new Error("Solo el residente, supervisor o director puede crear solicitudes de renta");
+      }
     }
 
     // Validar que el insumo pertenezca a la compañía, esté autorizado y disponible para renta
