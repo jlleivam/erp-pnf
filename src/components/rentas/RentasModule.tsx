@@ -129,18 +129,17 @@ export function RentasModule({ obraId }: { obraId: string }) {
           Aún no hay rentas. Crea una solicitud para comenzar.
         </Card>
       ) : (
-        <Card className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <Card>
+          <table className="w-full text-sm table-fixed">
             <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="text-left p-3 w-12">#</th>
-                <th className="text-left p-3">Equipo</th>
-                <th className="text-left p-3">Proveedor</th>
-                <th className="text-left p-3 w-32">Estatus</th>
-                <th className="text-left p-3 w-32">Llegada</th>
-                <th className="text-left p-3 w-32">Vence</th>
-                <th className="text-right p-3 w-36">Acumulado</th>
-                <th className="text-right p-3 w-44">Acciones</th>
+                <th className="text-left py-2 px-3 w-10">#</th>
+                <th className="text-left py-2 px-3">Equipo</th>
+                <th className="text-left py-2 px-3 w-32 hidden sm:table-cell">Proveedor</th>
+                <th className="text-left py-2 px-3 w-24">Estatus</th>
+                <th className="text-left py-2 px-3 w-24 hidden md:table-cell">Llegada</th>
+                <th className="text-left py-2 px-3 w-24">Vence</th>
+                <th className="text-right py-2 px-3 w-28">Acumulado</th>
               </tr>
             </thead>
             <tbody>
@@ -149,54 +148,60 @@ export function RentasModule({ obraId }: { obraId: string }) {
                   r.estatus === "activa" &&
                   r.dias_restantes != null &&
                   r.dias_restantes <= r.dias_aviso_vencimiento;
+                const handleOpen = () => setViewingId(r.id);
                 return (
-                  <tr key={r.id} className="border-t border-border">
-                    <td className="p-3 tabular-nums">{r.numero}</td>
-                    <td className="p-3">
-                      <p className="font-medium">{r.equipo}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {r.cantidad > 1 ? `${r.cantidad} unidades · ` : ""}
-                        {r.periodicidad ?? "sin periodicidad"}
-                      </p>
+                  <tr
+                    key={r.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={handleOpen}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleOpen();
+                      }
+                    }}
+                    className="border-t border-border cursor-pointer hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
+                  >
+                    <td className="py-2 px-3 tabular-nums align-middle">{r.numero}</td>
+                    <td className="py-2 px-3 align-middle">
+                      <div className="truncate">
+                        <span className="font-medium">{r.equipo}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {" · "}
+                          {r.cantidad > 1 ? `${r.cantidad}u · ` : ""}
+                          {r.periodicidad ?? "sin periodicidad"}
+                        </span>
+                      </div>
                     </td>
-                    <td className="p-3">{r.proveedor_nombre ?? "—"}</td>
-                    <td className="p-3">
+                    <td className="py-2 px-3 align-middle truncate hidden sm:table-cell">
+                      {r.proveedor_nombre ?? "—"}
+                    </td>
+                    <td className="py-2 px-3 align-middle">
                       <Badge variant={ESTATUS_VARIANT[r.estatus]}>
                         {ESTATUS_LABEL[r.estatus]}
                       </Badge>
                     </td>
-                    <td className="p-3">{formatDate(r.fecha_llegada_real)}</td>
-                    <td className="p-3">
+                    <td className="py-2 px-3 align-middle hidden md:table-cell">
+                      {formatDate(r.fecha_llegada_real)}
+                    </td>
+                    <td className="py-2 px-3 align-middle">
                       <span className={alerta ? "text-yellow-600 font-medium" : ""}>
                         {formatDate(r.fecha_fin_programada)}
                       </span>
                       {alerta && r.dias_restantes != null && (
-                        <p className="text-xs text-yellow-600">
+                        <div className="text-[11px] text-yellow-600 leading-tight">
                           {r.dias_restantes < 0
-                            ? `Vencida hace ${Math.abs(r.dias_restantes)} días`
-                            : `En ${r.dias_restantes} días`}
-                        </p>
-                      )}
-                    </td>
-                    <td className="p-3 text-right tabular-nums">
-                      {formatMXN(r.monto_acumulado)}
-                      {r.dias_acumulados > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          {r.dias_acumulados} días
+                            ? `−${Math.abs(r.dias_restantes)}d`
+                            : `${r.dias_restantes}d`}
                         </div>
                       )}
                     </td>
-                    <td className="p-3 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setViewingId(r.id)}>
-                          <Eye className="size-4 mr-1" /> Abrir
-                        </Button>
-                        {director && r.estatus === "borrador" && (
-                          <Button size="sm" variant="ghost" onClick={() => setToDelete(r)}>
-                            <Trash2 className="size-4" />
-                          </Button>
-                        )}
-                      </div>
+                    <td className="py-2 px-3 text-right tabular-nums align-middle">
+                      {formatMXN(r.monto_acumulado)}
+                      {r.dias_acumulados > 0 && (
+                        <span className="text-xs text-muted-foreground"> ({r.dias_acumulados}d)</span>
+                      )}
                     </td>
                   </tr>
                 );
