@@ -308,8 +308,13 @@ export function CapturaEstimacionSheet({
             {!soloLectura && (
               <div className="flex gap-2 mt-4 flex-wrap justify-end sticky bottom-0 bg-background py-3">
                 <Button
-                  disabled={guardarM.isPending}
+                  disabled={guardarM.isPending || computed.erroresPorClave.size > 0}
                   onClick={handleGuardar}
+                  title={
+                    computed.erroresPorClave.size > 0
+                      ? "Hay conceptos que exceden el vigente. Corrige antes de guardar."
+                      : undefined
+                  }
                 >
                   <Save className="size-4 mr-1" />
                   {guardarM.isPending ? "Guardando…" : "Guardar"}
