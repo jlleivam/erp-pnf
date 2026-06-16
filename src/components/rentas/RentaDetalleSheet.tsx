@@ -530,11 +530,15 @@ export function RentaDetalleSheet({
             onSaved={() => { setCreandoEvento(false); refresh(); }}
           />
         )}
-        {creandoPago && (
-          <RegistrarPagoDialog
-            rentaId={rentaId}
-            onClose={() => setCreandoPago(false)}
-            onSaved={() => { setCreandoPago(false); refresh(); }}
+        {pagandoCxP && (
+          <RegistrarPagoCxPDialog
+            cxpId={pagandoCxP.cxpId}
+            folio={pagandoCxP.folio}
+            beneficiarioNombre={pagandoCxP.beneficiario}
+            saldoPendiente={pagandoCxP.saldo}
+            open
+            onOpenChange={(o) => !o && setPagandoCxP(null)}
+            onSaved={() => { setPagandoCxP(null); refresh(); }}
           />
         )}
         {rechazando && (
