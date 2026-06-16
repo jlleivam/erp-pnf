@@ -9,6 +9,7 @@ import {
   rechazarRenovacion,
   eliminarEvento,
   eliminarPago,
+  recalcularPeriodos,
 } from "@/lib/api/rentas.functions";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  AlertTriangle, CheckCircle2, XCircle, Plus, Truck, RotateCcw, PackageCheck, Trash2,
+  AlertTriangle, CheckCircle2, XCircle, Plus, Truck, RotateCcw, PackageCheck, Trash2, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN, formatDate } from "@/lib/format";
@@ -27,7 +28,7 @@ import { MarcarLlegadaDialog } from "./MarcarLlegadaDialog";
 import { RenovarRentaDialog } from "./RenovarRentaDialog";
 import { DevolverRentaDialog } from "./DevolverRentaDialog";
 import { RegistrarEventoDialog } from "./RegistrarEventoDialog";
-import { RegistrarPagoDialog } from "./RegistrarPagoDialog";
+import { RegistrarPagoCxPDialog } from "@/components/pagos/RegistrarPagoCxPDialog";
 import { RechazarDialog } from "./RechazarDialog";
 
 const ESTATUS_LABEL: Record<string, string> = {
@@ -57,6 +58,7 @@ export function RentaDetalleSheet({
   rentaId,
   canAuthorize,
   canCotizar,
+  canPagar,
   defaultTab,
   onClose,
   onChanged,
@@ -64,6 +66,7 @@ export function RentaDetalleSheet({
   rentaId: string;
   canAuthorize: boolean;
   canCotizar: boolean;
+  canPagar: boolean;
   defaultTab?: string;
   onClose: () => void;
   onChanged?: () => void;
@@ -80,7 +83,7 @@ export function RentaDetalleSheet({
   const [renovando, setRenovando] = useState(false);
   const [devolviendo, setDevolviendo] = useState(false);
   const [creandoEvento, setCreandoEvento] = useState(false);
-  const [creandoPago, setCreandoPago] = useState(false);
+  const [pagandoCxP, setPagandoCxP] = useState<{ cxpId: string; folio: string; saldo: number; beneficiario: string } | null>(null);
   const [rechazando, setRechazando] = useState(false);
   const [rechazandoRenovId, setRechazandoRenovId] = useState<string | null>(null);
 
@@ -127,7 +130,17 @@ export function RentaDetalleSheet({
   const delPago = useServerFn(eliminarPago);
   const delPagoM = useMutation({
     mutationFn: delPago,
-    onSuccess: () => { toast.success("Pago eliminado"); refresh(); },
+    onSuccess: () => { toast.success("Periodo eliminado"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const recalc = useServerFn(recalcularPeriodos);
+  const recalcM = useMutation({
+    mutationFn: recalc,
+    onSuccess: (r: any) => {
+      toast.success(r?.generados > 0 ? `${r.generados} periodo(s) generados` : "Sin periodos nuevos");
+      refresh();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -360,50 +373,122 @@ export function RentaDetalleSheet({
                 )}
               </TabsContent>
 
-              {/* PAGOS */}
+              {/* PAGOS — periodos devengados */}
               <TabsContent value="pagos" className="mt-4 space-y-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <Button size="sm" onClick={() => setCreandoPago(true)}>
-                    <Plus className="size-4 mr-1" /> Registrar pago
-                  </Button>
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Total pagado: </span>
-                    <strong>{formatMXN(data.total_pagado)}</strong>
-                  </p>
+                  {canPagar && (
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={() => recalcM.mutate({ data: { rentaId } })}
+                      disabled={recalcM.isPending}
+                    >
+                      <RefreshCw className="size-4 mr-1" />
+                      {recalcM.isPending ? "Recalculando…" : "Recalcular periodos"}
+                    </Button>
+                  )}
+                  <div className="text-sm grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 ml-auto">
+                    <span className="text-muted-foreground">Devengado:</span>
+                    <strong className="text-right tabular-nums col-span-1 sm:col-span-2">{formatMXN(data.total_devengado ?? 0)}</strong>
+                    <span className="text-muted-foreground">Pagado:</span>
+                    <strong className="text-right tabular-nums col-span-1 sm:col-span-2">{formatMXN(data.total_pagado)}</strong>
+                    <span className="text-muted-foreground">Por pagar:</span>
+                    <strong className="text-right tabular-nums col-span-1 sm:col-span-2">
+                      {formatMXN(Math.max(0, Number(data.total_devengado ?? 0) - Number(data.total_pagado)))}
+                    </strong>
+                  </div>
                 </div>
                 {pagos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Sin pagos registrados.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Aún no hay periodos devengados. Se generarán automáticamente cuando la renta esté activa, o usa "Recalcular periodos".
+                  </p>
                 ) : (
                   <Card className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
                         <tr>
                           <th className="text-left p-2">Periodo</th>
-                          <th className="text-left p-2">Pagado el</th>
-                          <th className="text-left p-2">Referencia</th>
+                          <th className="text-left p-2">CxP</th>
+                          <th className="text-left p-2">Vence</th>
+                          <th className="text-left p-2">Estatus</th>
                           <th className="text-right p-2">Monto</th>
-                          <th className="w-10"></th>
+                          <th className="text-right p-2"></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {pagos.map((p) => (
-                          <tr key={p.id} className="border-t border-border">
-                            <td className="p-2">
-                              {formatDate(p.periodo_inicio)} – {formatDate(p.periodo_fin)}
-                            </td>
-                            <td className="p-2">{formatDate(p.pagado_at)}</td>
-                            <td className="p-2">{p.referencia ?? "—"}</td>
-                            <td className="p-2 text-right tabular-nums">{formatMXN(p.monto)}</td>
-                            <td className="p-2 text-right">
-                              <Button
-                                size="sm" variant="ghost"
-                                onClick={() => delPagoM.mutate({ data: { id: p.id } })}
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
+                        {pagos.map((p: any) => {
+                          const saldo = p.cxp
+                            ? Math.max(0, Number(p.cxp.monto_total) - Number(p.cxp.monto_pagado))
+                            : Number(p.monto);
+                          const pagado = p.estatus === "pagado" || (p.cxp && saldo <= 0.01);
+                          const cxpEstatus = p.cxp?.estatus ?? p.estatus;
+                          const vencida =
+                            !pagado && p.fecha_vencimiento &&
+                            new Date(p.fecha_vencimiento) < new Date();
+                          return (
+                            <tr key={p.id} className="border-t border-border">
+                              <td className="p-2">
+                                {formatDate(p.periodo_inicio)} – {formatDate(p.periodo_fin)}
+                              </td>
+                              <td className="p-2 font-mono text-xs">
+                                {p.cxp?.folio ?? "—"}
+                              </td>
+                              <td className="p-2">
+                                <span className={vencida ? "text-destructive font-medium" : ""}>
+                                  {formatDate(p.fecha_vencimiento)}
+                                </span>
+                              </td>
+                              <td className="p-2">
+                                <Badge
+                                  variant={
+                                    pagado ? "default"
+                                    : vencida ? "destructive"
+                                    : cxpEstatus === "pagada_parcial" ? "outline"
+                                    : "secondary"
+                                  }
+                                >
+                                  {pagado ? "Pagado"
+                                    : cxpEstatus === "pagada_parcial" ? "Parcial"
+                                    : vencida ? "Vencido"
+                                    : "Pendiente"}
+                                </Badge>
+                              </td>
+                              <td className="p-2 text-right tabular-nums">
+                                {formatMXN(p.monto)}
+                                {!pagado && p.cxp && saldo !== Number(p.monto) && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo {formatMXN(saldo)}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-2 text-right whitespace-nowrap">
+                                {!pagado && canPagar && p.cxp && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      setPagandoCxP({
+                                        cxpId: p.cxp.id,
+                                        folio: p.cxp.folio,
+                                        saldo,
+                                        beneficiario: renta.proveedor?.razon_social ?? "Proveedor",
+                                      })
+                                    }
+                                  >
+                                    Pagar
+                                  </Button>
+                                )}
+                                {!pagado && (
+                                  <Button
+                                    size="sm" variant="ghost"
+                                    onClick={() => delPagoM.mutate({ data: { id: p.id } })}
+                                    title="Eliminar periodo (solo director)"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </Card>
@@ -455,11 +540,15 @@ export function RentaDetalleSheet({
             onSaved={() => { setCreandoEvento(false); refresh(); }}
           />
         )}
-        {creandoPago && (
-          <RegistrarPagoDialog
-            rentaId={rentaId}
-            onClose={() => setCreandoPago(false)}
-            onSaved={() => { setCreandoPago(false); refresh(); }}
+        {pagandoCxP && (
+          <RegistrarPagoCxPDialog
+            cxpId={pagandoCxP.cxpId}
+            folio={pagandoCxP.folio}
+            beneficiarioNombre={pagandoCxP.beneficiario}
+            saldoPendiente={pagandoCxP.saldo}
+            open
+            onOpenChange={(o) => !o && setPagandoCxP(null)}
+            onSaved={() => { setPagandoCxP(null); refresh(); }}
           />
         )}
         {rechazando && (
