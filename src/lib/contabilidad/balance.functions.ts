@@ -117,7 +117,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       // Caja chica reembolsos aprobados sin reponer
       supabase
         .from("caja_chica_reembolsos")
-        .select("monto_aprobado, estatus")
+        .select("monto_aprobado, residente_id, estatus")
         .eq("company_id", companyId)
         .in("estatus", ["enviado_admin"]),
       // CxP de fondos de caja chica (pendientes / parciales)
