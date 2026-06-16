@@ -16,10 +16,12 @@ import {
 import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes, listCxPSubcontratoPendientes } from "@/lib/api/pagos.functions";
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
 import { listAnticiposSubcontratoPendientes } from "@/lib/api/subcontratos.functions";
+import { listValesPorPagar } from "@/lib/api/vales-gasolina.functions";
 import { RegistrarPagoAnticipoDialog } from "./RegistrarPagoAnticipoDialog";
 import { RegistrarPagoAnticipoSubcontratoDialog } from "./RegistrarPagoAnticipoSubcontratoDialog";
 import { RegistrarPagoOCDialog } from "./RegistrarPagoOCDialog";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
+import { GasolinasPorPagarTab } from "./GasolinasPorPagarTab";
 import { formatMXN, formatDate } from "@/lib/format";
 
 type Row = {
@@ -70,6 +72,12 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchEstSubCount(),
   });
 
+  const fetchValesCount = useServerFn(listValesPorPagar);
+  const valesCountQ = useQuery({
+    queryKey: ["vales-por-pagar"],
+    queryFn: () => fetchValesCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -83,6 +91,7 @@ export function CuentasPorPagarModule() {
   const subcontratosPendientesCount =
     ((anticiposSubCountQ.data ?? []) as unknown[]).length
     + ((estSubCountQ.data ?? []) as unknown[]).length;
+  const gasolinasPendientesCount = ((valesCountQ.data ?? []) as unknown[]).length;
 
 
   return (
@@ -117,6 +126,14 @@ export function CuentasPorPagarModule() {
             {subcontratosPendientesCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
                 {subcontratosPendientesCount > 99 ? "99+" : subcontratosPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="gasolinas">
+            Gasolinas
+            {gasolinasPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {gasolinasPendientesCount > 99 ? "99+" : gasolinasPendientesCount}
               </span>
             )}
           </TabsTrigger>
@@ -190,6 +207,10 @@ export function CuentasPorPagarModule() {
 
         <TabsContent value="subcontratos" className="mt-4">
           <AnticiposSubcontratoTab />
+        </TabsContent>
+
+        <TabsContent value="gasolinas" className="mt-4">
+          <GasolinasPorPagarTab />
         </TabsContent>
       </Tabs>
 
