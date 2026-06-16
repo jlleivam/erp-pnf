@@ -290,12 +290,27 @@ async function buildDetalle(
     }
 
     case "1120": {
-      const { data } = await supabase
-        .from("caja_chica_fondos")
-        .select("id, monto_entregado, residente_id, obra_id")
-        .eq("company_id", companyId)
-        .eq("estatus", "entregado");
-      const filas = data ?? [];
+      const [fondosRes, reembRes] = await Promise.all([
+        supabase
+          .from("caja_chica_fondos")
+          .select("id, monto_entregado, residente_id, obra_id")
+          .eq("company_id", companyId)
+          .eq("estatus", "entregado"),
+        supabase
+          .from("caja_chica_reembolsos")
+          .select("residente_id, monto_aprobado")
+          .eq("company_id", companyId)
+          .eq("estatus", "enviado_admin"),
+      ]);
+      const filas = fondosRes.data ?? [];
+      const pendientesPorResidente = new Map<string, number>();
+      for (const r of reembRes.data ?? []) {
+        if (!r.residente_id) continue;
+        pendientesPorResidente.set(
+          r.residente_id,
+          (pendientesPorResidente.get(r.residente_id) ?? 0) + num(r.monto_aprobado),
+        );
+      }
       const residenteIds = Array.from(new Set(filas.map((r: any) => r.residente_id).filter(Boolean)));
       const obraIds = Array.from(new Set(filas.map((r: any) => r.obra_id).filter(Boolean)));
       const [trabRes, obraRes] = await Promise.all([
@@ -309,13 +324,17 @@ async function buildDetalle(
       const tMap = new Map<string, string>(((trabRes.data ?? []) as any[]).map((t: any): [string, string] => [t.id, t.nombre_completo]));
       const oMap = new Map<string, string>(((obraRes.data ?? []) as any[]).map((o: any): [string, string] => [o.id, o.nombre]));
       return filas
-        .filter((r: any) => num(r.monto_entregado) > 0)
-        .map((r: any) => ({
-          id: r.id,
-          etiqueta: tMap.get(r.residente_id) ?? "Residente",
-          referencia: oMap.get(r.obra_id),
-          saldo: num(r.monto_entregado),
-        }));
+        .map((r: any) => {
+          const pendiente = pendientesPorResidente.get(r.residente_id) ?? 0;
+          const saldo = Math.max(0, num(r.monto_entregado) - pendiente);
+          return {
+            id: r.id,
+            etiqueta: tMap.get(r.residente_id) ?? "Residente",
+            referencia: oMap.get(r.obra_id),
+            saldo,
+          };
+        })
+        .filter((r) => r.saldo > 0);
     }
 
     case "1210": {
