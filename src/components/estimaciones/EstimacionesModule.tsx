@@ -6,7 +6,7 @@ import {
   eliminarEstimacion,
 } from "@/lib/api/estimaciones.functions";
 import { calcularSemana, formatRangoSemana } from "@/lib/estimacion-utils";
-import { useEffectiveIsDirector } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,8 @@ type Estimacion = {
 };
 
 export function EstimacionesModule({ obraId }: { obraId: string }) {
-  const director = useEffectiveIsDirector();
+  const { isResidente, isSupervisor } = useObraRole(obraId);
+  const canEdit = isResidente || isSupervisor;
   const qc = useQueryClient();
   const fetchList = useServerFn(listEstimaciones);
   const listQ = useQuery({
@@ -87,9 +88,11 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setOpenNueva(true)}>
-            <Plus className="size-4 mr-1" /> Nueva estimación
-          </Button>
+          {canEdit && (
+            <Button onClick={() => setOpenNueva(true)}>
+              <Plus className="size-4 mr-1" /> Nueva estimación
+            </Button>
+          )}
         </div>
       </header>
 
@@ -153,12 +156,12 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
                       <Button size="sm" variant="outline" onClick={() => setViewing(e.id)}>
                         <FileText className="size-4 mr-1" /> Ver
                       </Button>
-                      {esActiva(e) && (
+                      {esActiva(e) && canEdit && (
                         <Button size="sm" onClick={() => setEditing(e.semana_inicio)}>
                           Editar
                         </Button>
                       )}
-                      {esActiva(e) && director && (
+                      {esActiva(e) && canEdit && (
                         <Button
                           size="sm"
                           variant="ghost"
