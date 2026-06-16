@@ -136,7 +136,11 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const [reponerR, setReponerR] = useState<any | null>(null);
   const [revisarR, setRevisarR] = useState<any | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [tab, setTab] = useState<string>(scope === "admin" ? "reembolsos" : "mis-gastos");
+  const puedeCrearGasto = scope === "obra" && (director || isResidente);
+  const verMisGastos = scope === "obra" && (director || isResidente);
+  const [tab, setTab] = useState<string>(
+    scope === "admin" || !verMisGastos ? "reembolsos" : "mis-gastos",
+  );
 
   const gastosAll: any[] = (gastosQ.data as any) ?? [];
   const borradores = useMemo(() => gastosAll.filter((g) => g.estatus === "borrador"), [gastosAll]);
@@ -191,18 +195,20 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap">
-          {scope === "obra" && <TabsTrigger value="mis-gastos">Mis gastos</TabsTrigger>}
+          {verMisGastos && <TabsTrigger value="mis-gastos">Mis gastos</TabsTrigger>}
           <TabsTrigger value="reembolsos">Reembolsos</TabsTrigger>
           <TabsTrigger value="fondos">Fondos</TabsTrigger>
           {canSeeAsignaciones && <TabsTrigger value="asignaciones">Asignaciones</TabsTrigger>}
         </TabsList>
 
-        {scope === "obra" && (
+        {verMisGastos && (
           <TabsContent value="mis-gastos" className="space-y-3 mt-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" onClick={() => setCreatingGasto(true)}>
-                <Plus className="w-4 h-4 mr-1" /> Nuevo gasto
-              </Button>
+              {puedeCrearGasto && (
+                <Button size="sm" onClick={() => setCreatingGasto(true)}>
+                  <Plus className="w-4 h-4 mr-1" /> Nuevo gasto
+                </Button>
+              )}
               {selectedIds.length > 0 && (
                 <Button size="sm" variant="default" onClick={() => setSolicitarReemb(true)}>
                   <Send className="w-4 h-4 mr-1" />
