@@ -329,6 +329,7 @@ export const marcarLlegada = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+    await supabase.rpc("generar_periodos_renta", { _renta_id: data.id });
     return { ok: true };
   });
 
@@ -352,6 +353,7 @@ export const marcarDevolucion = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+    await supabase.rpc("generar_periodos_renta", { _renta_id: data.id });
     return { ok: true };
   });
 
