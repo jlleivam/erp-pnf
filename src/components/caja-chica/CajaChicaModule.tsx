@@ -138,6 +138,29 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
 
+  const autorizarFn = useServerFn(autorizarFondoCajaChica);
+  const autorizarM = useMutation({
+    mutationFn: (id: string) => autorizarFn({ data: { id } }),
+    onSuccess: (r: any) => {
+      toast.success(`Fondo autorizado (${r?.folio ?? "CxP"})`);
+      qc.invalidateQueries({ queryKey: baseKey });
+      qc.invalidateQueries({ queryKey: ["caja-chica-por-pagar"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
+  const rechazarFn = useServerFn(rechazarFondoCajaChica);
+  const rechazarM = useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
+      rechazarFn({ data: { id, motivo } }),
+    onSuccess: () => {
+      toast.success("Solicitud rechazada");
+      qc.invalidateQueries({ queryKey: baseKey });
+      setRechazandoFondo(null);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
   const [creatingGasto, setCreatingGasto] = useState(false);
   const [editingGasto, setEditingGasto] = useState<any | null>(null);
   const [toDelete, setToDelete] = useState<any | null>(null);
@@ -147,6 +170,8 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const [asignarMonto, setAsignarMonto] = useState(false);
   const [reponerR, setReponerR] = useState<any | null>(null);
   const [revisarR, setRevisarR] = useState<any | null>(null);
+  const [rechazandoFondo, setRechazandoFondo] = useState<any | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const puedeCrearGasto = scope === "obra" && (director || isResidente);
   const verMisGastos = scope === "obra" && (director || isResidente);
