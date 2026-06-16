@@ -57,12 +57,14 @@ export function RentaDetalleSheet({
   rentaId,
   canAuthorize,
   canCotizar,
+  defaultTab,
   onClose,
   onChanged,
 }: {
   rentaId: string;
   canAuthorize: boolean;
   canCotizar: boolean;
+  defaultTab?: string;
   onClose: () => void;
   onChanged?: () => void;
 }) {
