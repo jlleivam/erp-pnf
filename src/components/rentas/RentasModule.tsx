@@ -97,9 +97,11 @@ export function RentasModule({ obraId }: { obraId: string }) {
             cotiza, el supervisor autoriza. Marca la llegada y reporta averías o inactividad.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="size-4 mr-1" /> Nueva solicitud
-        </Button>
+        {puedeSolicitar && (
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="size-4 mr-1" /> Nueva solicitud
+          </Button>
+        )}
       </header>
 
       <div className="grid gap-4 sm:grid-cols-3">
