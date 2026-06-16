@@ -438,6 +438,10 @@ export type Database = {
       caja_chica_gastos: {
         Row: {
           company_id: string
+          comprobante_reclasificado_at: string | null
+          comprobante_reclasificado_de: string | null
+          comprobante_reclasificado_motivo: string | null
+          comprobante_reclasificado_por: string | null
           concepto: string
           created_at: string
           descripcion: string | null
@@ -457,6 +461,10 @@ export type Database = {
         }
         Insert: {
           company_id: string
+          comprobante_reclasificado_at?: string | null
+          comprobante_reclasificado_de?: string | null
+          comprobante_reclasificado_motivo?: string | null
+          comprobante_reclasificado_por?: string | null
           concepto: string
           created_at?: string
           descripcion?: string | null
@@ -476,6 +484,10 @@ export type Database = {
         }
         Update: {
           company_id?: string
+          comprobante_reclasificado_at?: string | null
+          comprobante_reclasificado_de?: string | null
+          comprobante_reclasificado_motivo?: string | null
+          comprobante_reclasificado_por?: string | null
           concepto?: string
           created_at?: string
           descripcion?: string | null
