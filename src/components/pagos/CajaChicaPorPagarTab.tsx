@@ -13,6 +13,7 @@ import { listCxPCajaChicaFondoPendientes } from "@/lib/api/pagos.functions";
 import { formatMXN, formatDate } from "@/lib/format";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { ReponerReembolsoDialog } from "@/components/caja-chica/ReponerReembolsoDialog";
+import { RevisarReembolsoSheet } from "@/components/caja-chica/RevisarReembolsoSheet";
 
 type Row = {
   tipo: "fondo" | "reembolso";
