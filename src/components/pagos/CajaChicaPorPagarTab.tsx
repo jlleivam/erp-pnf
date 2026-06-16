@@ -5,14 +5,17 @@ import { Wallet, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { listCxPCajaChicaFondoPendientes } from "@/lib/api/pagos.functions";
 import { formatMXN, formatDate } from "@/lib/format";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
+import { ReponerReembolsoDialog } from "@/components/caja-chica/ReponerReembolsoDialog";
 
 type Row = {
+  tipo: "fondo" | "reembolso";
   id: string;
   folio: string;
   fecha_emision: string;
@@ -25,13 +28,17 @@ type Row = {
   monto_pagado: number;
   saldo: number;
   estatus: string;
+  monto_aprobado?: number;
+  semana_inicio?: string;
+  semana_fin?: string;
 };
 
 export function CajaChicaPorPagarTab() {
   const fetchCxP = useServerFn(listCxPCajaChicaFondoPendientes);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [pagar, setPagar] = useState<Row | null>(null);
+  const [pagarFondo, setPagarFondo] = useState<Row | null>(null);
+  const [reponerReemb, setReponerReemb] = useState<Row | null>(null);
 
   const cxpQ = useQuery({
     queryKey: ["caja-chica-por-pagar"],
@@ -52,7 +59,8 @@ export function CajaChicaPorPagarTab() {
   const totalSaldo = useMemo(() => all.reduce((s, r) => s + r.saldo, 0), [all]);
 
   const onSaved = () => {
-    setPagar(null);
+    setPagarFondo(null);
+    setReponerReemb(null);
     qc.invalidateQueries({ queryKey: ["caja-chica-por-pagar"] });
     qc.invalidateQueries({ queryKey: ["cuentas-activas"] });
     qc.invalidateQueries({ queryKey: ["balance"] });
@@ -63,9 +71,9 @@ export function CajaChicaPorPagarTab() {
     <div className="space-y-4">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h3 className="text-base font-semibold">Fondos de caja chica por pagar</h3>
+          <h3 className="text-base font-semibold">Caja chica por pagar</h3>
           <p className="text-xs text-muted-foreground">
-            Solicitudes ya autorizadas por el supervisor. Paga en efectivo desde la caja fuerte.
+            Fondos autorizados pendientes de entregar y reembolsos semanales pendientes de reponer.
           </p>
         </div>
         <Card className="px-4 py-2">
@@ -88,6 +96,7 @@ export function CajaChicaPorPagarTab() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Tipo</TableHead>
               <TableHead>Folio</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Obra</TableHead>
@@ -101,21 +110,26 @@ export function CajaChicaPorPagarTab() {
           <TableBody>
             {cxpQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-8">
                   Cargando…
                 </TableCell>
               </TableRow>
             )}
             {!cxpQ.isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-8">
                   <Wallet className="size-8 mx-auto mb-2 text-muted-foreground/50" />
-                  Sin fondos de caja chica pendientes.
+                  Sin pendientes de caja chica.
                 </TableCell>
               </TableRow>
             )}
             {filtered.map((r) => (
-              <TableRow key={r.id}>
+              <TableRow key={`${r.tipo}-${r.id}`}>
+                <TableCell>
+                  <Badge variant={r.tipo === "fondo" ? "secondary" : "default"}>
+                    {r.tipo === "fondo" ? "Fondo" : "Reembolso"}
+                  </Badge>
+                </TableCell>
                 <TableCell className="font-medium">{r.folio}</TableCell>
                 <TableCell className="text-xs">{formatDate(r.fecha_emision)}</TableCell>
                 <TableCell className="text-xs">{r.obra_nombre ?? "—"}</TableCell>
@@ -124,7 +138,11 @@ export function CajaChicaPorPagarTab() {
                 <TableCell className="text-right">{formatMXN(r.monto_pagado)}</TableCell>
                 <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" onClick={() => setPagar(r)}>Registrar pago</Button>
+                  {r.tipo === "fondo" ? (
+                    <Button size="sm" onClick={() => setPagarFondo(r)}>Registrar pago</Button>
+                  ) : (
+                    <Button size="sm" onClick={() => setReponerReemb(r)}>Reponer</Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -132,16 +150,29 @@ export function CajaChicaPorPagarTab() {
         </Table>
       </Card>
 
-      {pagar && (
+      {pagarFondo && (
         <RegistrarPagoCxPDialog
-          open={!!pagar}
-          onOpenChange={(o) => { if (!o) setPagar(null); }}
-          cxpId={pagar.id}
-          folio={pagar.folio}
-          beneficiarioNombre={pagar.beneficiario_nombre}
-          saldoPendiente={pagar.saldo}
+          open={!!pagarFondo}
+          onOpenChange={(o) => { if (!o) setPagarFondo(null); }}
+          cxpId={pagarFondo.id}
+          folio={pagarFondo.folio}
+          beneficiarioNombre={pagarFondo.beneficiario_nombre}
+          saldoPendiente={pagarFondo.saldo}
           onSaved={onSaved}
           defaultCuentaTipo="caja_fuerte"
+        />
+      )}
+
+      {reponerReemb && (
+        <ReponerReembolsoDialog
+          open={!!reponerReemb}
+          onOpenChange={(o) => { if (!o) setReponerReemb(null); }}
+          reembolso={{
+            id: reponerReemb.id,
+            folio: reponerReemb.folio,
+            monto_aprobado: reponerReemb.monto_aprobado ?? reponerReemb.monto_total,
+          }}
+          onSaved={onSaved}
         />
       )}
     </div>
