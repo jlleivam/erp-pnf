@@ -264,6 +264,18 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
       })
       .select("id").single();
     if (error) throw new Error(error.message);
+
+    await notifyRentaRoles(supabase, {
+      companyId,
+      obraId: data.obraId,
+      excludeUserId: userId,
+      roles: ["administrativo", "director"],
+      tipo: "renta_solicitada",
+      titulo: `Nueva solicitud de renta #${siguiente}`,
+      mensaje: `${equipoLabel} — pendiente de cotizar`,
+      link: `/app/obras/${data.obraId}/rentas`,
+    });
+
     return { id: ins.id as string };
   });
 
