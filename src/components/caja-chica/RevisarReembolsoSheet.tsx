@@ -6,8 +6,10 @@ import {
   revisarGastoReembolso,
   cerrarRevisionReembolso,
   rechazarReembolsoCajaChica,
+  reclasificarComprobanteGasto,
 } from "@/lib/api/caja-chica.functions";
 import { useEffectiveIsDirector, useEffectiveRoles } from "@/stores/auth";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -40,7 +42,10 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
   const director = useEffectiveIsDirector();
   const roles = useEffectiveRoles();
   const isSupervisor = roles.includes("supervisor");
+  const isAdmin = roles.includes("administrativo");
   const canReview = director || isSupervisor;
+  const canReclasificar = director || isAdmin;
+
 
   const qc = useQueryClient();
   const fetchOne = useServerFn(getReembolsoCajaChica);
@@ -78,9 +83,17 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
     onSuccess: () => { toast.success("Reembolso rechazado"); invalidate(); onOpenChange(false); },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
+  const reclasificar = useServerFn(reclasificarComprobanteGasto);
+  const reclasificarM = useMutation({
+    mutationFn: reclasificar,
+    onSuccess: () => { toast.success("Gasto reclasificado"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
 
   const [rechazoMotivoPorGasto, setRechazoMotivoPorGasto] = useState<Record<string, string>>({});
   const [rechazoTodo, setRechazoTodo] = useState("");
+  const [reclasifPorGasto, setReclasifPorGasto] = useState<Record<string, { open: boolean; tipo: "nota" | "ninguno"; motivo: string }>>({});
+
 
   async function verEvidencia(path: string) {
     const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60);
@@ -144,11 +157,20 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
                       {g.descripcion && (
                         <div className="text-sm text-muted-foreground mt-1">{g.descripcion}</div>
                       )}
+                      {g.comprobante_reclasificado_de && (
+                        <div className="text-xs text-amber-600 mt-1">
+                          Reclasificado de {g.comprobante_reclasificado_de} → {g.tipo_comprobante}
+                          {g.comprobante_reclasificado_motivo && (
+                            <>: {g.comprobante_reclasificado_motivo}</>
+                          )}
+                        </div>
+                      )}
                       {g.motivo_rechazo && (
                         <div className="text-xs text-destructive mt-1">
                           {g.motivo_rechazo}
                         </div>
                       )}
+
                     </div>
                     <div className="text-right">
                       <div className="font-semibold">{formatMXN(Number(g.monto))}</div>
@@ -220,9 +242,82 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
                       </div>
                     );
                   })()}
+
+                  {canReclasificar
+                    && reemb.estatus === "enviado_admin"
+                    && g.tipo_comprobante === "factura"
+                    && !g.comprobante_reclasificado_de && (() => {
+                    const state = reclasifPorGasto[g.id] ?? { open: false, tipo: "nota" as const, motivo: "" };
+                    const isPending = reclasificarM.isPending
+                      && (reclasificarM.variables as any)?.data?.gastoId === g.id;
+                    if (!state.open) {
+                      return (
+                        <Button
+                          size="sm" variant="outline"
+                          onClick={() => setReclasifPorGasto((s) => ({
+                            ...s, [g.id]: { open: true, tipo: "nota", motivo: "" },
+                          }))}
+                        >
+                          <FileText className="w-3.5 h-3.5 mr-1" /> Reclasificar factura
+                        </Button>
+                      );
+                    }
+                    return (
+                      <div className="border-t pt-2 space-y-2">
+                        <div className="text-xs font-medium">Reclasificar comprobante</div>
+                        <div className="flex gap-2 flex-wrap">
+                          <select
+                            className="border rounded px-2 py-1 text-sm bg-background"
+                            value={state.tipo}
+                            onChange={(e) => setReclasifPorGasto((s) => ({
+                              ...s, [g.id]: { ...state, tipo: e.target.value as "nota" | "ninguno" },
+                            }))}
+                            disabled={isPending}
+                          >
+                            <option value="nota">Nota</option>
+                            <option value="ninguno">Sin comprobante</option>
+                          </select>
+                        </div>
+                        <Textarea
+                          rows={2} placeholder="Motivo del cambio…"
+                          value={state.motivo}
+                          onChange={(e) => setReclasifPorGasto((s) => ({
+                            ...s, [g.id]: { ...state, motivo: e.target.value },
+                          }))}
+                          disabled={isPending}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm" disabled={isPending}
+                            onClick={() => {
+                              const motivo = state.motivo.trim();
+                              if (motivo.length < 3) return toast.error("Motivo requerido");
+                              reclasificarM.mutate({
+                                data: { gastoId: g.id, nuevoTipo: state.tipo, motivo },
+                              });
+                            }}
+                          >
+                            {isPending ? "Guardando…" : "Confirmar"}
+                          </Button>
+                          <Button
+                            size="sm" variant="ghost" disabled={isPending}
+                            onClick={() => setReclasifPorGasto((s) => ({
+                              ...s, [g.id]: { ...state, open: false },
+                            }))}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          El monto a reponer al residente no cambia. El costo a la obra se ajusta porque ya no se descuenta el IVA acreditable.
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
+
 
             {canClose && (
               <div className="border-t pt-4 space-y-3">
