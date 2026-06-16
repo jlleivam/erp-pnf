@@ -157,11 +157,20 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
                       {g.descripcion && (
                         <div className="text-sm text-muted-foreground mt-1">{g.descripcion}</div>
                       )}
+                      {g.comprobante_reclasificado_de && (
+                        <div className="text-xs text-amber-600 mt-1">
+                          Reclasificado de {g.comprobante_reclasificado_de} → {g.tipo_comprobante}
+                          {g.comprobante_reclasificado_motivo && (
+                            <>: {g.comprobante_reclasificado_motivo}</>
+                          )}
+                        </div>
+                      )}
                       {g.motivo_rechazo && (
                         <div className="text-xs text-destructive mt-1">
                           {g.motivo_rechazo}
                         </div>
                       )}
+
                     </div>
                     <div className="text-right">
                       <div className="font-semibold">{formatMXN(Number(g.monto))}</div>
