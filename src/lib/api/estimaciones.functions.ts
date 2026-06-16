@@ -17,11 +17,13 @@ async function getCompanyAndAccess(supabase: any, userId: string, obraId: string
   const isDirector = !!dir;
 
   const { data: team } = await supabase
-    .from("obra_team").select("id")
+    .from("obra_team").select("role")
     .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
+  const obraRole = (team?.role as string | null) ?? null;
   const isObraMember = !!team;
+  const isEditorObra = obraRole === "residente" || obraRole === "supervisor";
 
-  return { companyId, isDirector, isObraMember, canEdit: isDirector || isObraMember };
+  return { companyId, isDirector, isObraMember, obraRole, canEdit: isEditorObra };
 }
 
 async function loadVigente(supabase: any, obraId: string) {
