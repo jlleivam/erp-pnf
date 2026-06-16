@@ -112,7 +112,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .from("vales_gasolina")
         .select("monto_autorizado, estatus")
         .eq("company_id", companyId)
-        .eq("estatus", "autorizado"),
+        .in("estatus", ["autorizado", "entregado", "confirmado"]),
       // Caja chica reembolsos aprobados sin reponer
       supabase
         .from("caja_chica_reembolsos")
