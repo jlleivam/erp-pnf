@@ -363,53 +363,127 @@ export function RentaDetalleSheet({
                 )}
               </TabsContent>
 
-              {/* PAGOS */}
+              {/* PAGOS — periodos devengados */}
               <TabsContent value="pagos" className="mt-4 space-y-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <Button size="sm" onClick={() => setCreandoPago(true)}>
-                    <Plus className="size-4 mr-1" /> Registrar pago
-                  </Button>
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Total pagado: </span>
-                    <strong>{formatMXN(data.total_pagado)}</strong>
-                  </p>
+                  {canPagar && (
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={() => recalcM.mutate({ data: { rentaId } })}
+                      disabled={recalcM.isPending}
+                    >
+                      <RefreshCw className="size-4 mr-1" />
+                      {recalcM.isPending ? "Recalculando…" : "Recalcular periodos"}
+                    </Button>
+                  )}
+                  <div className="text-sm grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 ml-auto">
+                    <span className="text-muted-foreground">Devengado:</span>
+                    <strong className="text-right tabular-nums col-span-1 sm:col-span-2">{formatMXN(data.total_devengado ?? 0)}</strong>
+                    <span className="text-muted-foreground">Pagado:</span>
+                    <strong className="text-right tabular-nums col-span-1 sm:col-span-2">{formatMXN(data.total_pagado)}</strong>
+                    <span className="text-muted-foreground">Por pagar:</span>
+                    <strong className="text-right tabular-nums col-span-1 sm:col-span-2">
+                      {formatMXN(Math.max(0, Number(data.total_devengado ?? 0) - Number(data.total_pagado)))}
+                    </strong>
+                  </div>
                 </div>
                 {pagos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Sin pagos registrados.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Aún no hay periodos devengados. Se generarán automáticamente cuando la renta esté activa, o usa "Recalcular periodos".
+                  </p>
                 ) : (
                   <Card className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
                         <tr>
                           <th className="text-left p-2">Periodo</th>
-                          <th className="text-left p-2">Pagado el</th>
-                          <th className="text-left p-2">Referencia</th>
+                          <th className="text-left p-2">CxP</th>
+                          <th className="text-left p-2">Vence</th>
+                          <th className="text-left p-2">Estatus</th>
                           <th className="text-right p-2">Monto</th>
-                          <th className="w-10"></th>
+                          <th className="text-right p-2"></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {pagos.map((p) => (
-                          <tr key={p.id} className="border-t border-border">
-                            <td className="p-2">
-                              {formatDate(p.periodo_inicio)} – {formatDate(p.periodo_fin)}
-                            </td>
-                            <td className="p-2">{formatDate(p.pagado_at)}</td>
-                            <td className="p-2">{p.referencia ?? "—"}</td>
-                            <td className="p-2 text-right tabular-nums">{formatMXN(p.monto)}</td>
-                            <td className="p-2 text-right">
-                              <Button
-                                size="sm" variant="ghost"
-                                onClick={() => delPagoM.mutate({ data: { id: p.id } })}
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
+                        {pagos.map((p: any) => {
+                          const saldo = p.cxp
+                            ? Math.max(0, Number(p.cxp.monto_total) - Number(p.cxp.monto_pagado))
+                            : Number(p.monto);
+                          const pagado = p.estatus === "pagado" || (p.cxp && saldo <= 0.01);
+                          const cxpEstatus = p.cxp?.estatus ?? p.estatus;
+                          const vencida =
+                            !pagado && p.fecha_vencimiento &&
+                            new Date(p.fecha_vencimiento) < new Date();
+                          return (
+                            <tr key={p.id} className="border-t border-border">
+                              <td className="p-2">
+                                {formatDate(p.periodo_inicio)} – {formatDate(p.periodo_fin)}
+                              </td>
+                              <td className="p-2 font-mono text-xs">
+                                {p.cxp?.folio ?? "—"}
+                              </td>
+                              <td className="p-2">
+                                <span className={vencida ? "text-destructive font-medium" : ""}>
+                                  {formatDate(p.fecha_vencimiento)}
+                                </span>
+                              </td>
+                              <td className="p-2">
+                                <Badge
+                                  variant={
+                                    pagado ? "default"
+                                    : vencida ? "destructive"
+                                    : cxpEstatus === "pagada_parcial" ? "outline"
+                                    : "secondary"
+                                  }
+                                >
+                                  {pagado ? "Pagado"
+                                    : cxpEstatus === "pagada_parcial" ? "Parcial"
+                                    : vencida ? "Vencido"
+                                    : "Pendiente"}
+                                </Badge>
+                              </td>
+                              <td className="p-2 text-right tabular-nums">
+                                {formatMXN(p.monto)}
+                                {!pagado && p.cxp && saldo !== Number(p.monto) && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Saldo {formatMXN(saldo)}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-2 text-right whitespace-nowrap">
+                                {!pagado && canPagar && p.cxp && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      setPagandoCxP({
+                                        cxpId: p.cxp.id,
+                                        folio: p.cxp.folio,
+                                        saldo,
+                                        beneficiario: renta.proveedor?.razon_social ?? "Proveedor",
+                                      })
+                                    }
+                                  >
+                                    Pagar
+                                  </Button>
+                                )}
+                                {!pagado && (
+                                  <Button
+                                    size="sm" variant="ghost"
+                                    onClick={() => delPagoM.mutate({ data: { id: p.id } })}
+                                    title="Eliminar periodo (solo director)"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </Card>
+                )}
+              </TabsContent>
                 )}
               </TabsContent>
             </Tabs>
