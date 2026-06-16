@@ -145,7 +145,11 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       .filter((c: any) => c.tipo === "caja_fuerte")
       .reduce((acc: number, c: any) => acc + num(c.saldo_actual), 0);
 
-    const cajaChica = sum(cajaChicaRes.data, "monto_entregado");
+    const reembPendientesTotal = sum(cajaChicaReembRes.data, "monto_aprobado");
+    const cajaChica = Math.max(
+      0,
+      sum(cajaChicaRes.data, "monto_entregado") - reembPendientesTotal,
+    );
 
     const anticiposDestajoBruto = sum(anticiposDestajoRes.data, "monto");
     const amortizadoDestajo = sum(destajoEstimAmortRes.data, "amortizacion_anticipo");
