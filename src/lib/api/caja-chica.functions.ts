@@ -922,6 +922,69 @@ export const reponerReembolsoCajaChica = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const reclasificarComprobanteGasto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      gastoId: z.string().uuid(),
+      nuevoTipo: z.enum(["nota", "ninguno"]),
+      motivo: z.string().trim().min(3).max(500),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const ctx = await getCtx(supabase, userId);
+    if (!ctx.isDirector && !ctx.isAdministrativo) {
+      throw new Error("Solo administrativo o director reclasifica");
+    }
+    const { data: g } = await supabase
+      .from("caja_chica_gastos")
+      .select("id, concepto, tipo_comprobante, reembolso_id, residente_id, obra_id, company_id, revisado_por")
+      .eq("id", data.gastoId).maybeSingle();
+    if (!g) throw new Error("Gasto no encontrado");
+    if (g.tipo_comprobante !== "factura") {
+      throw new Error("Solo se puede reclasificar un gasto con factura");
+    }
+    if (!g.reembolso_id) throw new Error("Gasto sin reembolso");
+    const { data: r } = await supabase
+      .from("caja_chica_reembolsos").select("estatus, folio")
+      .eq("id", g.reembolso_id).maybeSingle();
+    if (!r) throw new Error("Reembolso no encontrado");
+    if (r.estatus !== "enviado_admin") {
+      throw new Error("Solo se puede reclasificar antes de reponer");
+    }
+
+    const { error } = await supabase
+      .from("caja_chica_gastos")
+      .update({
+        tipo_comprobante: data.nuevoTipo,
+        comprobante_reclasificado_de: "factura",
+        comprobante_reclasificado_motivo: data.motivo,
+        comprobante_reclasificado_por: userId,
+        comprobante_reclasificado_at: new Date().toISOString(),
+      })
+      .eq("id", data.gastoId);
+    if (error) throw new Error(error.message);
+
+    const targets = Array.from(new Set(
+      [g.residente_id, g.revisado_por].filter(Boolean) as string[]
+    ));
+    const tipoLabel = data.nuevoTipo === "nota" ? "nota" : "sin comprobante";
+    await notify(targets.map((uid) => ({
+      user_id: uid,
+      company_id: g.company_id,
+      obra_id: g.obra_id,
+      tipo: "caja_chica_gasto_reclasificado",
+      titulo: `Gasto reclasificado en ${r.folio}`,
+      mensaje: `"${g.concepto}" pasó de factura a ${tipoLabel}. Motivo: ${data.motivo}`,
+      link: `/app/admin/caja-chica`,
+    })));
+
+    return { ok: true };
+  });
+
+
+
 export const rechazarReembolsoCajaChica = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
