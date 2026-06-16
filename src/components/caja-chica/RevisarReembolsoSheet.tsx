@@ -92,7 +92,7 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
 
   const [rechazoMotivoPorGasto, setRechazoMotivoPorGasto] = useState<Record<string, string>>({});
   const [rechazoTodo, setRechazoTodo] = useState("");
-  const [reclasifPorGasto, setReclasifPorGasto] = useState<Record<string, { open: boolean; tipo: "nota" | "ninguno"; motivo: string }>>({});
+  const [reclasifPorGasto, setReclasifPorGasto] = useState<Record<string, { open: boolean; tipo: "factura" | "nota" | "ninguno"; motivo: string }>>({});
 
 
   async function verEvidencia(path: string) {
