@@ -513,6 +513,8 @@ export function RentaDetalleSheet({
         {llegando && (
           <MarcarLlegadaDialog
             rentaId={rentaId}
+            periodicidad={renta?.periodicidad ?? null}
+            periodosEstimados={renta?.periodos_estimados ?? null}
             onClose={() => setLlegando(false)}
             onSaved={() => { setLlegando(false); refresh(); }}
           />
