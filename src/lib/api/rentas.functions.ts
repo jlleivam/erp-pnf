@@ -116,17 +116,37 @@ export const getRenta = createServerFn({ method: "POST" })
           .eq("renta_id", data.id).order("periodo_inicio", { ascending: true }),
       ]);
 
+    // Enriquecer pagos con info de su CxP
+    const cxpIds = (pagos ?? []).map((p: any) => p.cxp_id).filter(Boolean);
+    let cxpMap = new Map<string, any>();
+    if (cxpIds.length > 0) {
+      const { data: cxps } = await supabase
+        .from("cuentas_por_pagar")
+        .select("id, folio, monto_total, monto_pagado, saldo, estatus, fecha_vencimiento")
+        .in("id", cxpIds);
+      cxpMap = new Map((cxps ?? []).map((c: any) => [c.id, c]));
+    }
+    const pagosEnriquecidos = (pagos ?? []).map((p: any) => ({
+      ...p,
+      cxp: p.cxp_id ? (cxpMap.get(p.cxp_id) ?? null) : null,
+    }));
+
     const acc = calcAcumulado(renta);
-    const totalPagado = (pagos ?? []).reduce((s: number, p: any) => s + Number(p.monto), 0);
+    const totalPagado = pagosEnriquecidos.reduce(
+      (s: number, p: any) => s + Number(p.cxp?.monto_pagado ?? (p.estatus === "pagado" ? p.monto : 0)),
+      0,
+    );
+    const totalDevengado = pagosEnriquecidos.reduce((s: number, p: any) => s + Number(p.monto), 0);
     return {
       renta: { ...renta, proveedor },
       renovaciones: renovaciones ?? [],
       eventos: eventos ?? [],
-      pagos: pagos ?? [],
+      pagos: pagosEnriquecidos,
       dias_acumulados: acc.dias,
       monto_acumulado: acc.monto,
       dias_restantes: acc.diasRestantes,
       total_pagado: totalPagado,
+      total_devengado: totalDevengado,
     };
   });
 
