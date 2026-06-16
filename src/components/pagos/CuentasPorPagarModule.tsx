@@ -80,6 +80,12 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchValesCount(),
   });
 
+  const fetchCajaChicaCount = useServerFn(listCxPCajaChicaFondoPendientes);
+  const cajaChicaCountQ = useQuery({
+    queryKey: ["caja-chica-por-pagar"],
+    queryFn: () => fetchCajaChicaCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -94,6 +100,7 @@ export function CuentasPorPagarModule() {
     ((anticiposSubCountQ.data ?? []) as unknown[]).length
     + ((estSubCountQ.data ?? []) as unknown[]).length;
   const gasolinasPendientesCount = ((valesCountQ.data ?? []) as unknown[]).length;
+  const cajaChicaPendientesCount = ((cajaChicaCountQ.data ?? []) as unknown[]).length;
 
 
   return (
