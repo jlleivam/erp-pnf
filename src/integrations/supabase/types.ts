@@ -3864,6 +3864,8 @@ export type Database = {
     }
     Functions: {
       current_company_id: { Args: never; Returns: string }
+      devengar_asientos_renta: { Args: { _renta_id: string }; Returns: number }
+      devengar_asientos_rentas_activas: { Args: never; Returns: number }
       generar_periodos_renta: { Args: { _renta_id: string }; Returns: number }
       generar_periodos_rentas_activas: { Args: never; Returns: number }
       has_role: {
