@@ -46,7 +46,8 @@ type Estimacion = {
 };
 
 export function EstimacionesModule({ obraId }: { obraId: string }) {
-  const director = useEffectiveIsDirector();
+  const { isResidente, isSupervisor } = useObraRole(obraId);
+  const canEdit = isResidente || isSupervisor;
   const qc = useQueryClient();
   const fetchList = useServerFn(listEstimaciones);
   const listQ = useQuery({
