@@ -75,18 +75,6 @@ export function AutorizarValeDialog({ open, onOpenChange, vale }: Props) {
             <div><span className="text-muted-foreground">Solicitado: </span>{formatMXN(vale.monto_solicitado)}</div>
             <div className="text-muted-foreground">{vale.descripcion}</div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant={mode === "autorizar" ? "default" : "outline"}
-              onClick={() => setMode("autorizar")}
-              size="sm"
-            >Autorizar</Button>
-            <Button
-              variant={mode === "rechazar" ? "destructive" : "outline"}
-              onClick={() => setMode("rechazar")}
-              size="sm"
-            >Rechazar</Button>
-          </div>
           {mode === "autorizar" ? (
             <div className="space-y-1">
               <Label>Monto autorizado (MXN)</Label>
@@ -101,7 +89,17 @@ export function AutorizarValeDialog({ open, onOpenChange, vale }: Props) {
             </div>
           ) : (
             <div className="space-y-1">
-              <Label>Motivo de rechazo</Label>
+              <div className="flex items-center justify-between">
+                <Label>Motivo de rechazo</Label>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setMode("autorizar")}
+                >
+                  Volver
+                </Button>
+              </div>
               <Textarea
                 value={motivo} onChange={(e) => setMotivo(e.target.value)}
                 rows={3}
@@ -111,13 +109,31 @@ export function AutorizarValeDialog({ open, onOpenChange, vale }: Props) {
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button
-            onClick={handle}
-            variant={mode === "rechazar" ? "destructive" : "default"}
-            disabled={autM.isPending || recM.isPending}
-          >
-            {mode === "autorizar" ? "Autorizar" : "Rechazar"}
-          </Button>
+          {mode === "autorizar" ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setMode("rechazar")}
+                disabled={autM.isPending}
+              >
+                Rechazar
+              </Button>
+              <Button
+                onClick={handle}
+                disabled={autM.isPending}
+              >
+                Autorizar
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="destructive"
+              onClick={handle}
+              disabled={recM.isPending}
+            >
+              Confirmar rechazo
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
