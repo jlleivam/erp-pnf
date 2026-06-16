@@ -334,7 +334,7 @@ async function buildDetalle(
             saldo,
           };
         })
-        .filter((r) => r.saldo > 0);
+        .filter((r: any) => r.saldo > 0);
     }
 
     case "1210": {
