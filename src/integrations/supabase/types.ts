@@ -2263,10 +2263,14 @@ export type Database = {
         Row: {
           creado_por: string
           created_at: string
+          cxp_id: string | null
+          dias_vencimiento: number
+          estatus: string
+          fecha_vencimiento: string | null
           id: string
           monto: number
           notas: string | null
-          pagado_at: string
+          pagado_at: string | null
           periodo_fin: string
           periodo_inicio: string
           referencia: string | null
@@ -2275,10 +2279,14 @@ export type Database = {
         Insert: {
           creado_por: string
           created_at?: string
+          cxp_id?: string | null
+          dias_vencimiento?: number
+          estatus?: string
+          fecha_vencimiento?: string | null
           id?: string
           monto?: number
           notas?: string | null
-          pagado_at?: string
+          pagado_at?: string | null
           periodo_fin: string
           periodo_inicio: string
           referencia?: string | null
@@ -2287,16 +2295,27 @@ export type Database = {
         Update: {
           creado_por?: string
           created_at?: string
+          cxp_id?: string | null
+          dias_vencimiento?: number
+          estatus?: string
+          fecha_vencimiento?: string | null
           id?: string
           monto?: number
           notas?: string | null
-          pagado_at?: string
+          pagado_at?: string | null
           periodo_fin?: string
           periodo_inicio?: string
           referencia?: string | null
           renta_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "obra_renta_pagos_cxp_id_fkey"
+            columns: ["cxp_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_por_pagar"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "obra_renta_pagos_renta_id_fkey"
             columns: ["renta_id"]
@@ -3845,6 +3864,8 @@ export type Database = {
     }
     Functions: {
       current_company_id: { Args: never; Returns: string }
+      generar_periodos_renta: { Args: { _renta_id: string }; Returns: number }
+      generar_periodos_rentas_activas: { Args: never; Returns: number }
       has_role: {
         Args: {
           _company_id: string
