@@ -338,22 +338,60 @@ export const ligarCodigoVale = createServerFn({ method: "POST" })
       throw new Error("Solo administrativo o director liga el código");
     }
     const { data: vale } = await supabase
-      .from("vales_gasolina").select("estatus, folio, solicitado_por, obra_id, company_id")
+      .from("vales_gasolina")
+      .select("estatus, folio, solicitado_por, obra_id, company_id, monto_autorizado, monto_solicitado, tipo_combustible")
       .eq("id", data.id).maybeSingle();
     if (!vale) throw new Error("Vale no encontrado");
     if (vale.estatus !== "autorizado") {
       throw new Error("Solo se liga un vale autorizado");
     }
+    const ligadoAt = new Date().toISOString();
     const { error } = await supabase
       .from("vales_gasolina")
       .update({
         estatus: "entregado",
         codigo_vale: data.codigoVale,
         ligado_por: userId,
-        ligado_at: new Date().toISOString(),
+        ligado_at: ligadoAt,
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    // Registrar pasivo en contabilidad (partida doble)
+    const monto = Number(vale.monto_autorizado ?? vale.monto_solicitado ?? 0);
+    if (monto > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const asientoId = crypto.randomUUID();
+      const fechaAsiento = ligadoAt.slice(0, 10);
+      const concepto = `Vale ${vale.folio} — ${vale.tipo_combustible}`;
+      const base = {
+        company_id: vale.company_id,
+        asiento_id: asientoId,
+        fecha: fechaAsiento,
+        concepto,
+        referencia: vale.folio,
+        origen_tipo: "vale_gasolina_entregado",
+        origen_id: data.id,
+        creado_por: userId,
+      };
+      const { error: asErr } = await supabaseAdmin.from("asientos_contables").insert([
+        { ...base, tipo_movimiento: "cargo", cuenta_contable: "Costo de obra - Gasolinas", monto },
+        { ...base, tipo_movimiento: "abono", cuenta_contable: "Cuentas por pagar - Gasolinas", monto },
+      ]);
+      if (asErr) {
+        // Rollback del update del vale
+        await supabase
+          .from("vales_gasolina")
+          .update({
+            estatus: "autorizado",
+            codigo_vale: null,
+            ligado_por: null,
+            ligado_at: null,
+          })
+          .eq("id", data.id);
+        throw new Error(asErr.message);
+      }
+    }
 
     await notify([{
       user_id: vale.solicitado_por,
