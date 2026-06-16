@@ -297,12 +297,12 @@ export const cotizarRenta = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector, isAdministrativo } = await getCtx(supabase, userId);
+    const { companyId, isDirector, isAdministrativo } = await getCtx(supabase, userId);
     if (!isDirector && !isAdministrativo) {
       throw new Error("Solo el administrativo o director puede cotizar");
     }
     const { data: renta } = await supabase
-      .from("obra_rentas").select("estatus").eq("id", data.id).maybeSingle();
+      .from("obra_rentas").select("estatus, obra_id, numero, equipo").eq("id", data.id).maybeSingle();
     if (!renta) throw new Error("Renta no encontrada");
     if (renta.estatus !== "borrador" && renta.estatus !== "rechazada") {
       throw new Error("Solo se puede cotizar una renta en borrador o rechazada");
@@ -322,6 +322,18 @@ export const cotizarRenta = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    await notifyRentaRoles(supabase, {
+      companyId,
+      obraId: renta.obra_id,
+      excludeUserId: userId,
+      roles: ["supervisor", "director"],
+      tipo: "renta_cotizada",
+      titulo: `Renta #${renta.numero} pendiente de autorizar`,
+      mensaje: `${renta.equipo} — cotizada, requiere tu autorización`,
+      link: `/app/obras/${renta.obra_id}/rentas`,
+    });
+
     return { ok: true };
   });
 
