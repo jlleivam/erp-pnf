@@ -112,7 +112,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .from("vales_gasolina")
         .select("monto_autorizado, estatus")
         .eq("company_id", companyId)
-        .eq("estatus", "autorizado"),
+        .in("estatus", ["autorizado", "entregado", "confirmado"]),
       // Caja chica reembolsos aprobados sin reponer
       supabase
         .from("caja_chica_reembolsos")
@@ -468,7 +468,7 @@ async function buildDetalle(
           .from("vales_gasolina")
           .select("id, folio, monto_autorizado, obra_id")
           .eq("company_id", companyId)
-          .eq("estatus", "autorizado"),
+          .in("estatus", ["autorizado", "entregado", "confirmado"]),
         supabase
           .from("pagos")
           .select("origen_id, monto, cancelado_at")
