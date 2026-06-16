@@ -42,7 +42,10 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
   const director = useEffectiveIsDirector();
   const roles = useEffectiveRoles();
   const isSupervisor = roles.includes("supervisor");
+  const isAdmin = roles.includes("administrativo");
   const canReview = director || isSupervisor;
+  const canReclasificar = director || isAdmin;
+
 
   const qc = useQueryClient();
   const fetchOne = useServerFn(getReembolsoCajaChica);
