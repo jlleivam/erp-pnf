@@ -141,6 +141,7 @@ export function CajaChicaPorPagarTab() {
           beneficiarioNombre={pagar.beneficiario_nombre}
           saldoPendiente={pagar.saldo}
           onSaved={onSaved}
+          defaultCuentaTipo="caja_fuerte"
         />
       )}
     </div>

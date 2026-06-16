@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -34,10 +34,11 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onSaved?: () => void;
+  defaultCuentaTipo?: "caja_fuerte" | "bancaria";
 }
 
 export function RegistrarPagoCxPDialog({
-  cxpId, folio, beneficiarioNombre, saldoPendiente, open, onOpenChange, onSaved,
+  cxpId, folio, beneficiarioNombre, saldoPendiente, open, onOpenChange, onSaved, defaultCuentaTipo,
 }: Props) {
   const hoy = new Date().toISOString().slice(0, 10);
   const fetchCuentas = useServerFn(listCuentas);
@@ -62,6 +63,15 @@ export function RegistrarPagoCxPDialog({
   const [notas, setNotas] = useState<string>("");
 
   const cuentaSel = cuentas.find((c) => c.id === cuentaId);
+
+  useEffect(() => {
+    if (!open || cuentaId || !defaultCuentaTipo || cuentas.length === 0) return;
+    const match = cuentas.find((c) => c.tipo === defaultCuentaTipo);
+    if (match) {
+      setCuentaId(match.id);
+      if (match.tipo === "caja_fuerte") setMetodo("efectivo");
+    }
+  }, [open, cuentaId, defaultCuentaTipo, cuentas]);
 
   const handleCuentaChange = (id: string) => {
     setCuentaId(id);
