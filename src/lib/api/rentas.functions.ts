@@ -30,6 +30,47 @@ async function isMemberObra(supabase: any, userId: string, obraId: string) {
   return !!data;
 }
 
+async function notifyRentaRoles(
+  supabase: any,
+  opts: {
+    companyId: string;
+    obraId: string;
+    excludeUserId: string;
+    roles: string[];
+    extraUserIds?: (string | null | undefined)[];
+    tipo: string;
+    titulo: string;
+    mensaje: string;
+    link: string;
+  },
+) {
+  try {
+    const { data: rows } = await supabase
+      .from("user_roles").select("user_id")
+      .eq("company_id", opts.companyId).in("role", opts.roles);
+    const fromRoles = (rows ?? []).map((r: any) => r.user_id as string);
+    const extras = (opts.extraUserIds ?? []).filter((u): u is string => !!u);
+    const destinatarios = Array.from(new Set([...fromRoles, ...extras]))
+      .filter((u) => u !== opts.excludeUserId);
+    if (destinatarios.length === 0) return;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("notificaciones").insert(
+      destinatarios.map((uid) => ({
+        user_id: uid,
+        company_id: opts.companyId,
+        obra_id: opts.obraId,
+        tipo: opts.tipo,
+        titulo: opts.titulo,
+        mensaje: opts.mensaje,
+        link: opts.link,
+      })),
+    );
+    if (error) console.error("[notificaciones] insert failed", error.message);
+  } catch (e: any) {
+    console.error("[notificaciones] renta error", e?.message);
+  }
+}
+
 const PERIODOS_POR_AÑO: Record<string, number> = {
   diaria: 1,
   semanal: 7,
