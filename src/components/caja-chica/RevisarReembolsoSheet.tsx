@@ -19,6 +19,7 @@ import {
 import { Check, X, Send, Eye, FileText, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN, formatDate } from "@/lib/format";
+import { montoGastoObra } from "@/lib/api/caja-chica.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 const BUCKET = "caja-chica-evidencias";

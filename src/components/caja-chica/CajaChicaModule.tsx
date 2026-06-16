@@ -24,6 +24,7 @@ import {
 import { Plus, Pencil, Trash2, Send, Banknote, Wallet, Receipt, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN, formatDate } from "@/lib/format";
+import { montoGastoObra } from "@/lib/api/caja-chica.functions";
 import { NuevoGastoDialog } from "./NuevoGastoDialog";
 import { EditarGastoDialog } from "./EditarGastoDialog";
 import { SolicitarReembolsoDialog } from "./SolicitarReembolsoDialog";
