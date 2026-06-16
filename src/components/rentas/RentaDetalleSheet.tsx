@@ -9,6 +9,7 @@ import {
   rechazarRenovacion,
   eliminarEvento,
   eliminarPago,
+  recalcularPeriodos,
 } from "@/lib/api/rentas.functions";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  AlertTriangle, CheckCircle2, XCircle, Plus, Truck, RotateCcw, PackageCheck, Trash2,
+  AlertTriangle, CheckCircle2, XCircle, Plus, Truck, RotateCcw, PackageCheck, Trash2, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN, formatDate } from "@/lib/format";
@@ -27,7 +28,7 @@ import { MarcarLlegadaDialog } from "./MarcarLlegadaDialog";
 import { RenovarRentaDialog } from "./RenovarRentaDialog";
 import { DevolverRentaDialog } from "./DevolverRentaDialog";
 import { RegistrarEventoDialog } from "./RegistrarEventoDialog";
-import { RegistrarPagoDialog } from "./RegistrarPagoDialog";
+import { RegistrarPagoCxPDialog } from "@/components/pagos/RegistrarPagoCxPDialog";
 import { RechazarDialog } from "./RechazarDialog";
 
 const ESTATUS_LABEL: Record<string, string> = {
