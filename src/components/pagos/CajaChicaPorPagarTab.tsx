@@ -184,6 +184,13 @@ export function CajaChicaPorPagarTab() {
           onSaved={onSaved}
         />
       )}
+
+      <RevisarReembolsoSheet
+        open={!!verReembolsoId}
+        onOpenChange={(o) => { if (!o) setVerReembolsoId(null); }}
+        reembolsoId={verReembolsoId}
+        onChanged={() => qc.invalidateQueries({ queryKey: ["caja-chica-por-pagar"] })}
+      />
     </div>
   );
 }
