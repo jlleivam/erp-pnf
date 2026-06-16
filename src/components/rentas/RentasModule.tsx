@@ -62,18 +62,6 @@ export function RentasModule({ obraId }: { obraId: string }) {
 
   const [creating, setCreating] = useState(false);
   const [viewingId, setViewingId] = useState<string | null>(null);
-  const [toDelete, setToDelete] = useState<Renta | null>(null);
-
-  const remove = useServerFn(eliminarRenta);
-  const removeM = useMutation({
-    mutationFn: remove,
-    onSuccess: () => {
-      toast.success("Renta eliminada");
-      qc.invalidateQueries({ queryKey: ["rentas", obraId] });
-      setToDelete(null);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const rentas = (listQ.data ?? []) as Renta[];
   const activas = rentas.filter((r) => r.estatus === "activa");
