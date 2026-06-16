@@ -143,9 +143,6 @@ export function RentaDetalleSheet({
     },
     onError: (e: Error) => toast.error(e.message),
   });
-    onSuccess: () => { toast.success("Pago eliminado"); refresh(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const data = q.data as any;
   const renta = data?.renta;
