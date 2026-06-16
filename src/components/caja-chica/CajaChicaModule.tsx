@@ -8,6 +8,8 @@ import {
   listAsignacionesCajaChica,
   eliminarGastoCajaChica,
   entregarFondoCajaChica,
+  autorizarFondoCajaChica,
+  rechazarFondoCajaChica,
   reponerReembolsoCajaChica,
   getSaldoCajaChica,
 } from "@/lib/api/caja-chica.functions";
