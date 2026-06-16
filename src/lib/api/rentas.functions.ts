@@ -497,45 +497,52 @@ export const eliminarEvento = createServerFn({ method: "POST" })
   });
 
 // ============================================================
-// PAGOS
+// PERIODOS DE PAGO (devengado)
 // ============================================================
 
-export const registrarPago = createServerFn({ method: "POST" })
+export const recalcularPeriodos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({
-      rentaId: z.string().uuid(),
-      periodoInicio: z.string(),
-      periodoFin: z.string(),
-      monto: z.number().nonnegative(),
-      referencia: z.string().trim().max(255).optional(),
-      pagadoAt: z.string().optional(),
-      notas: z.string().trim().max(500).optional(),
-    }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ rentaId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase
-      .from("obra_renta_pagos")
-      .insert({
-        renta_id: data.rentaId,
-        periodo_inicio: data.periodoInicio,
-        periodo_fin: data.periodoFin,
-        monto: data.monto,
-        referencia: data.referencia ?? null,
-        pagado_at: data.pagadoAt ?? new Date().toISOString().slice(0, 10),
-        notas: data.notas ?? null,
-        creado_por: userId,
-      });
+    const { isDirector, isAdministrativo } = await getCtx(supabase, userId);
+    if (!isDirector && !isAdministrativo) {
+      throw new Error("Solo el administrativo o director puede recalcular periodos");
+    }
+    const { data: generados, error } = await supabase
+      .rpc("generar_periodos_renta", { _renta_id: data.rentaId });
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { generados: Number(generados ?? 0) };
   });
 
 export const eliminarPago = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const { isDirector } = await getCtx(supabase, userId);
+    if (!isDirector) throw new Error("Solo el director puede eliminar periodos");
+    const { data: pago } = await supabase
+      .from("obra_renta_pagos")
+      .select("id, estatus, cxp_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!pago) throw new Error("Periodo no encontrado");
+    if (pago.estatus === "pagado") {
+      throw new Error("No se puede eliminar un periodo ya pagado; cancela el pago primero");
+    }
+    if (pago.cxp_id) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: cxp } = await supabaseAdmin
+        .from("cuentas_por_pagar")
+        .select("monto_pagado")
+        .eq("id", pago.cxp_id)
+        .maybeSingle();
+      if (cxp && Number(cxp.monto_pagado) > 0) {
+        throw new Error("La cuenta por pagar tiene pagos aplicados");
+      }
+      await supabaseAdmin.from("cuentas_por_pagar").delete().eq("id", pago.cxp_id);
+    }
     const { error } = await supabase.from("obra_renta_pagos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
