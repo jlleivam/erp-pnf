@@ -62,10 +62,20 @@ const REEMB_ESTATUS_VARIANT: Record<string, "default"|"secondary"|"destructive"|
 };
 
 const FONDO_ESTATUS_LABEL: Record<string, string> = {
-  pendiente: "Pendiente", entregado: "Entregado", cancelado: "Cancelado",
+  pendiente: "Pendiente",
+  pendiente_autorizacion: "Pendiente autorización",
+  autorizado: "Autorizado · esperando pago",
+  entregado: "Entregado",
+  rechazado: "Rechazado",
+  cancelado: "Cancelado",
 };
 const FONDO_ESTATUS_VARIANT: Record<string, "default"|"secondary"|"destructive"|"outline"> = {
-  pendiente: "outline", entregado: "secondary", cancelado: "destructive",
+  pendiente: "outline",
+  pendiente_autorizacion: "outline",
+  autorizado: "default",
+  entregado: "secondary",
+  rechazado: "destructive",
+  cancelado: "destructive",
 };
 
 type Props = {
