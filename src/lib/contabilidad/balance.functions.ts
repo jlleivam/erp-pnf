@@ -468,7 +468,7 @@ async function buildDetalle(
           .from("vales_gasolina")
           .select("id, folio, monto_autorizado, obra_id")
           .eq("company_id", companyId)
-          .eq("estatus", "autorizado"),
+          .in("estatus", ["autorizado", "entregado", "confirmado"]),
         supabase
           .from("pagos")
           .select("origen_id, monto, cancelado_at")
