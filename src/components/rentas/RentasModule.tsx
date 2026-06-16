@@ -211,6 +211,7 @@ export function RentasModule({ obraId }: { obraId: string }) {
           rentaId={viewingId}
           canAuthorize={director || isSupervisor}
           canCotizar={director || isAdministrativo}
+          defaultTab={isAdministrativo ? "cotizacion" : "vigencia"}
           onClose={() => setViewingId(null)}
           onChanged={() => qc.invalidateQueries({ queryKey: ["rentas", obraId] })}
         />
