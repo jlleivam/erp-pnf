@@ -640,7 +640,7 @@ export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
     // 2) Reembolsos enviados al administrativo (pendientes de reponer)
     const { data: reembRows, error: errR } = await supabase
       .from("caja_chica_reembolsos")
-      .select("id, folio, residente_id, obra_id, semana_inicio, semana_fin, monto_aprobado, estatus, enviado_admin_at, created_at, obra:obras(id, nombre)")
+      .select("id, folio, residente_id, obra_id, semana_inicio, semana_fin, monto_aprobado, estatus, enviado_admin_at, created_at")
       .eq("company_id", companyId)
       .eq("estatus", "enviado_admin")
       .order("enviado_admin_at", { ascending: false });
@@ -659,6 +659,14 @@ export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
       }
     }
 
+    const obraIds = Array.from(new Set(rArr.map((r: any) => r.obra_id).filter(Boolean))) as string[];
+    const obrasMap = new Map<string, string>();
+    if (obraIds.length) {
+      const { data: obrasData } = await supabase
+        .from("obras").select("id, nombre").in("id", obraIds);
+      for (const o of obrasData ?? []) obrasMap.set(o.id, o.nombre);
+    }
+
     const reembolsos = rArr.map((r: any) => {
       const monto = Number(r.monto_aprobado ?? 0);
       return {
@@ -667,7 +675,7 @@ export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
         folio: r.folio,
         fecha_emision: r.enviado_admin_at ?? r.created_at,
         obra_id: r.obra_id,
-        obra_nombre: r.obra?.nombre ?? null,
+        obra_nombre: obrasMap.get(r.obra_id) ?? null,
         beneficiario_id: r.residente_id,
         beneficiario_nombre: usersMap.get(r.residente_id) ?? "—",
         concepto: `Reembolso semana ${r.semana_inicio}–${r.semana_fin}`,
