@@ -1,26 +1,30 @@
 ## Problema
 
-En `src/lib/api/estado-resultados.functions.ts`, la consulta de rentas usa:
+En `src/lib/api/estado-resultados.functions.ts`, el prorrateo de rentas calcula el overlap con la semana usando:
 
 ```ts
-.not("estatus", "in", "(borrador,rechazada,cancelada)")
+const fin = r.fecha_devolucion_real ?? r.fecha_fin_programada ?? hoyISO;
 ```
 
-Pero el enum `renta_estatus` en la base de datos solo tiene: `borrador, cotizada, autorizada, rechazada, activa, devuelta`. **No existe el valor `cancelada`**.
-
-Esto hace que PostgREST devuelva un error (`invalid input value for enum renta_estatus: "cancelada"`), por lo que `rentasRes.data` queda vacío y el renglón de Rentas en el Estado de Resultados siempre aparece en $0, aunque la renta esté activa y ya tenga días devengados.
+Eso suma como costo todos los días desde la llegada hasta el fin programado, incluyendo días futuros. Por eso hoy (1er día) reporta $1,714.29 (6 días Lun-Sáb) en vez de $285.71.
 
 ## Solución
 
-Eliminar `cancelada` del filtro en `estado-resultados.functions.ts`:
+Cambiar `fin` para que tope en hoy mientras la renta sigue activa:
 
 ```ts
-.not("estatus", "in", "(borrador,rechazada)")
+const finReal = r.fecha_devolucion_real ?? hoyISO; // si sigue activa, hasta hoy
+const fin = finReal < hoyISO ? finReal : hoyISO;
 ```
 
-Es un cambio de una sola línea. Una vez aplicado, las rentas activas/devueltas se incluirán y el prorrateo diario (`tarifa / días_periodo × días_overlap`) llenará el renglón de Rentas en la semana y en el acumulado.
+Equivalente más simple: `const fin = r.fecha_devolucion_real ?? hoyISO;` (ignoramos `fecha_fin_programada` para devengo; solo cuenta lo ya transcurrido).
+
+Así:
+- Día 1 (hoy = llegada): overlap = 1 → $285.71
+- Día 2: overlap = 2 → $571.42
+- …hasta que se registre devolución, donde el fin queda fijo.
 
 ## Fuera de alcance
 
-- No se modifica la lógica de prorrateo ni los asientos contables diarios (ya implementados).
-- No se toca el enum (no hay necesidad de agregar `cancelada`).
+- No se toca la función SQL `devengar_asientos_renta` — ya devenga solo hasta `LEAST(hoy, fecha_devolucion_real)`, lo cual es consistente.
+- No se modifica la lógica de períodos / CxP.

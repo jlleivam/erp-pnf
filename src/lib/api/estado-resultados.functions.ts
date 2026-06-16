@@ -493,7 +493,7 @@ async function calcularBuckets(
   for (const r of rentasRes.data ?? []) {
     const inicio = r.fecha_llegada_real ?? r.fecha_estimada_inicio;
     if (!inicio) continue;
-    const fin = r.fecha_devolucion_real ?? r.fecha_fin_programada ?? hoyISO;
+    const fin = r.fecha_devolucion_real ?? hoyISO;
     const tdUnit = tarifaDiaria(num(r.tarifa_unitaria), r.periodicidad);
     const cant = num(r.cantidad || 1);
     const td = tdUnit * cant;
