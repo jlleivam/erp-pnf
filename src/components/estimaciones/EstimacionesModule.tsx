@@ -88,9 +88,11 @@ export function EstimacionesModule({ obraId }: { obraId: string }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setOpenNueva(true)}>
-            <Plus className="size-4 mr-1" /> Nueva estimación
-          </Button>
+          {canEdit && (
+            <Button onClick={() => setOpenNueva(true)}>
+              <Plus className="size-4 mr-1" /> Nueva estimación
+            </Button>
+          )}
         </div>
       </header>
 
