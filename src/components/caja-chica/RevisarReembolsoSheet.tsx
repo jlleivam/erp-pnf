@@ -83,9 +83,17 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
     onSuccess: () => { toast.success("Reembolso rechazado"); invalidate(); onOpenChange(false); },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
+  const reclasificar = useServerFn(reclasificarComprobanteGasto);
+  const reclasificarM = useMutation({
+    mutationFn: reclasificar,
+    onSuccess: () => { toast.success("Gasto reclasificado"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
 
   const [rechazoMotivoPorGasto, setRechazoMotivoPorGasto] = useState<Record<string, string>>({});
   const [rechazoTodo, setRechazoTodo] = useState("");
+  const [reclasifPorGasto, setReclasifPorGasto] = useState<Record<string, { open: boolean; tipo: "nota" | "ninguno"; motivo: string }>>({});
+
 
   async function verEvidencia(path: string) {
     const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60);
