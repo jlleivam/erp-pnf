@@ -30,6 +30,47 @@ async function isMemberObra(supabase: any, userId: string, obraId: string) {
   return !!data;
 }
 
+async function notifyRentaRoles(
+  supabase: any,
+  opts: {
+    companyId: string;
+    obraId: string;
+    excludeUserId: string;
+    roles: string[];
+    extraUserIds?: (string | null | undefined)[];
+    tipo: string;
+    titulo: string;
+    mensaje: string;
+    link: string;
+  },
+) {
+  try {
+    const { data: rows } = await supabase
+      .from("user_roles").select("user_id")
+      .eq("company_id", opts.companyId).in("role", opts.roles);
+    const fromRoles = (rows ?? []).map((r: any) => r.user_id as string);
+    const extras = (opts.extraUserIds ?? []).filter((u): u is string => !!u);
+    const destinatarios = Array.from(new Set([...fromRoles, ...extras]))
+      .filter((u) => u !== opts.excludeUserId);
+    if (destinatarios.length === 0) return;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("notificaciones").insert(
+      destinatarios.map((uid) => ({
+        user_id: uid,
+        company_id: opts.companyId,
+        obra_id: opts.obraId,
+        tipo: opts.tipo,
+        titulo: opts.titulo,
+        mensaje: opts.mensaje,
+        link: opts.link,
+      })),
+    );
+    if (error) console.error("[notificaciones] insert failed", error.message);
+  } catch (e: any) {
+    console.error("[notificaciones] renta error", e?.message);
+  }
+}
+
 const PERIODOS_POR_AÑO: Record<string, number> = {
   diaria: 1,
   semanal: 7,
@@ -223,6 +264,18 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
       })
       .select("id").single();
     if (error) throw new Error(error.message);
+
+    await notifyRentaRoles(supabase, {
+      companyId,
+      obraId: data.obraId,
+      excludeUserId: userId,
+      roles: ["administrativo", "director"],
+      tipo: "renta_solicitada",
+      titulo: `Nueva solicitud de renta #${siguiente}`,
+      mensaje: `${equipoLabel} — pendiente de cotizar`,
+      link: `/app/obras/${data.obraId}/rentas`,
+    });
+
     return { id: ins.id as string };
   });
 
@@ -244,12 +297,12 @@ export const cotizarRenta = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector, isAdministrativo } = await getCtx(supabase, userId);
+    const { companyId, isDirector, isAdministrativo } = await getCtx(supabase, userId);
     if (!isDirector && !isAdministrativo) {
       throw new Error("Solo el administrativo o director puede cotizar");
     }
     const { data: renta } = await supabase
-      .from("obra_rentas").select("estatus").eq("id", data.id).maybeSingle();
+      .from("obra_rentas").select("estatus, obra_id, numero, equipo").eq("id", data.id).maybeSingle();
     if (!renta) throw new Error("Renta no encontrada");
     if (renta.estatus !== "borrador" && renta.estatus !== "rechazada") {
       throw new Error("Solo se puede cotizar una renta en borrador o rechazada");
@@ -269,6 +322,18 @@ export const cotizarRenta = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    await notifyRentaRoles(supabase, {
+      companyId,
+      obraId: renta.obra_id,
+      excludeUserId: userId,
+      roles: ["supervisor", "director"],
+      tipo: "renta_cotizada",
+      titulo: `Renta #${renta.numero} pendiente de autorizar`,
+      mensaje: `${renta.equipo} — cotizada, requiere tu autorización`,
+      link: `/app/obras/${renta.obra_id}/rentas`,
+    });
+
     return { ok: true };
   });
 
@@ -281,10 +346,10 @@ export const autorizarRenta = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector, isSupervisor } = await getCtx(supabase, userId);
+    const { companyId, isDirector, isSupervisor } = await getCtx(supabase, userId);
     if (!isDirector && !isSupervisor) throw new Error("Solo supervisor o director autoriza");
     const { data: renta } = await supabase
-      .from("obra_rentas").select("estatus").eq("id", data.id).maybeSingle();
+      .from("obra_rentas").select("estatus, obra_id, numero, equipo, creado_por").eq("id", data.id).maybeSingle();
     if (renta?.estatus !== "cotizada") throw new Error("Solo se autoriza una renta cotizada");
     const { error } = await supabase
       .from("obra_rentas")
@@ -295,6 +360,19 @@ export const autorizarRenta = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    await notifyRentaRoles(supabase, {
+      companyId,
+      obraId: renta.obra_id,
+      excludeUserId: userId,
+      roles: ["administrativo", "director"],
+      extraUserIds: [renta.creado_por],
+      tipo: "renta_autorizada",
+      titulo: `Renta #${renta.numero} autorizada`,
+      mensaje: `${renta.equipo} autorizada — lista para gestionar llegada`,
+      link: `/app/obras/${renta.obra_id}/rentas`,
+    });
+
     return { ok: true };
   });
 

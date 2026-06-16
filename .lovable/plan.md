@@ -1,75 +1,43 @@
-## Pagos de renta: la mejor manera
+## Notificaciones de rentas
 
-Hoy los pagos viven aislados (tabla `obra_renta_pagos`, formulario manual, sin afectar bancos ni contabilidad). El resto del sistema (subcontratos, OC, destajos) ya tiene un flujo canónico: **CxP → pago bancario → movimiento de cuenta → asiento contable**. La propuesta es alinear rentas a ese mismo flujo, con generación automática por periodicidad.
+Agregar notificaciones in-app en los tres pasos del flujo, siguiendo el patrón ya usado en cotizaciones/OC (insert directo a `public.notificaciones` con `supabaseAdmin`, dentro de un `try/catch` para no romper la operación principal).
 
-### Modelo conceptual
+### Cambios — `src/lib/api/rentas.functions.ts`
 
-Una renta activa **devenga** cargo periodo a periodo según su `periodicidad` (diaria/semanal/quincenal/mensual). Cada periodo se materializa como una **CxP** al proveedor, que el administrativo paga con el flujo estándar del módulo de Pagos.
+**1. `crearRenta` (residente envía solicitud)**
+Después del insert exitoso, notificar a todos los usuarios con rol `administrativo` o `director` de la compañía:
+- `tipo`: `renta_solicitada`
+- `titulo`: `Nueva solicitud de renta #<numero>`
+- `mensaje`: `<equipo> · obra <nombre> — pendiente de cotizar`
+- `link`: `/app/obras/<obraId>/rentas`
+- `obra_id`: la obra
 
-```text
-Renta activa
-   │
-   │  cron diario + al cambiar estatus
-   ▼
-Genera periodos devengados ──► CxP (1 por periodo, folio CxP-YYYY-####)
-                                    │
-                                    │  Administrativo paga
-                                    ▼
-                       registrarPagoCxP (ya existe)
-                          ├── pagos
-                          ├── cuenta_movimientos
-                          ├── asientos_contables
-                          └── obra_renta_pagos (vínculo)
-```
+**2. `cotizarRenta` (admin cotiza)**
+Después del update a `cotizada`, notificar a supervisores + directores de la compañía (excluyendo al propio admin):
+- `tipo`: `renta_cotizada`
+- `titulo`: `Renta #<numero> pendiente de autorizar`
+- `mensaje`: `<equipo> — cotizada por <admin>, requiere tu autorización`
+- `link`: `/app/obras/<obraId>/rentas`
 
-### Reglas de devengo
+**3. `autorizarRenta` (supervisor autoriza)**
+Después del update a `autorizada`, notificar a:
+- el `creado_por` (residente que solicitó)
+- todos los administrativos + directores de la compañía
+Excluyendo al propio supervisor; deduplicar por `user_id`.
+- `tipo`: `renta_autorizada`
+- `titulo`: `Renta #<numero> autorizada`
+- `mensaje`: `<equipo> autorizada — lista para gestionar llegada`
+- `link`: `/app/obras/<obraId>/rentas`
 
-- Inicio: `fecha_llegada_real`. Cierre: `fecha_devolucion_real` o "hoy".
-- Cada periodo cerrado genera **una** CxP con `origen_tipo = 'renta_periodo'`, `origen_id = obra_renta_pagos.id`, fecha_vencimiento = fin del periodo + N días (configurable por renta, default 15).
-- Monto = `tarifa_unitaria × cantidad × días_del_periodo / días_por_periodicidad`. Periodos incompletos (último periodo abierto, devolución a mitad de mes) se prorratean.
-- Si hay un evento de **inactividad** que cubre todo el periodo, no se genera CxP. Si lo cubre parcialmente, se descuenta esa fracción.
-- Renovación con tarifa nueva ⇒ la tarifa nueva aplica desde la fecha de la renovación.
-- Idempotente: la generación usa una clave única `(renta_id, periodo_inicio, periodo_fin)` en `obra_renta_pagos`, así correr el cron dos veces no duplica.
+### Detalles técnicos
 
-### Permisos
+- Cargar `obraId`, `numero`, `equipo` y `creado_por` en cada handler (en `cotizar`/`autorizar` se hace un `select` extra a `obra_rentas` para traer los campos faltantes).
+- Usar el helper inline ya existente en el archivo (no hay helper extraído; replicar el patrón de `cotizaciones.functions.ts` con `await import("@/integrations/supabase/client.server")`).
+- Envolver cada bloque de notificación en `try/catch` con `console.error("[notificaciones] …")` para no fallar la transición de estado si la inserción de notificación falla.
+- Deduplicar destinatarios y excluir al `userId` que ejecuta la acción.
 
-- **Generar** periodos: sistema (cron) + on-demand desde el detalle (botón "Recalcular periodos") visible para administrativo/director.
-- **Registrar pago** (marcar CxP como pagada): **solo administrativo y director**. Se quita el botón "Registrar pago" del residente/supervisor.
-- **Eliminar** pago: solo director (igual que en el resto del sistema).
+### Fuera de alcance
 
-### Cambios técnicos
-
-**Base de datos** (una migración)
-- `obra_renta_pagos`: agregar `cxp_id uuid null references cuentas_por_pagar`, `estatus text default 'pendiente' check in ('pendiente','pagado','cancelado')`, `dias_vencimiento int default 15`. Hacer `pagado_at` nullable, `monto` editable. Índice único `(renta_id, periodo_inicio, periodo_fin)`.
-- `cuentas_por_pagar.origen_tipo`: aceptar el nuevo valor `'renta_periodo'` (es text, sin cambio de schema).
-- Función `public.generar_periodos_renta(_renta_id uuid)` (security definer): calcula y hace upsert de los periodos devengados de una renta.
-- Función `public.generar_periodos_rentas_activas()`: itera todas las rentas `activa` de todas las empresas y llama a la anterior. Se invoca por cron.
-
-**Backend (`src/lib/api/rentas.functions.ts`)**
-- Nueva `recalcularPeriodos({ rentaId })` — administrativo/director. Llama a la RPC `generar_periodos_renta`.
-- Modificar `registrarPago` para que reciba un `pagoId` (periodo ya devengado) + `cuentaId/fecha/metodo/referencia`, y delegue en el flujo de `registrarPagoCxP` (creando la CxP on-demand si todavía no existe). Restringir a administrativo/director.
-- `eliminarPago`: solo director, y solo si la CxP no tiene pagos aplicados.
-- `getRenta`: devolver cada pago con su `cxp` (folio, estatus, saldo) y `estatus_periodo` (pendiente/pagado/parcial).
-
-**Cron** (`src/routes/api/public/hooks/devengar-rentas.ts` + pg_cron)
-- Endpoint público que llama a `generar_periodos_rentas_activas`. pg_cron diario 06:00. Auth con `apikey` (anon).
-
-**UI (`RentaDetalleSheet.tsx`, pestaña Pagos)**
-- Tabla de **periodos devengados** (no de "pagos manuales"): columnas Periodo, Monto, Vence, CxP, Estatus, Acción.
-- Acción "Pagar" en cada renglón pendiente → abre `RegistrarPagoCxPDialog` ya existente, prellenado con monto pendiente y CxP.
-- Resumen: Devengado, Pagado, Por pagar, Vencido.
-- Botón "Recalcular periodos" (admin/director) para forzar regeneración manual.
-- Esconder por completo el botón "Registrar pago" del flujo viejo para residente/supervisor.
-
-### Por qué este diseño
-
-- **Una sola verdad de cobros**: tesorería ve las CxP de renta junto a las de subcontratos y OC, con el mismo folio, los mismos reportes de antigüedad y el mismo flujo de pago.
-- **Sin doble captura**: el admin no decide periodo ni monto, solo marca "ya pagué". Menos errores.
-- **Auditable**: cada periodo es un renglón con su CxP, su asiento y su movimiento bancario.
-- **Cubre los casos raros**: inactividad, renovaciones a mitad de mes y devolución parcial se reflejan automáticamente en el devengo.
-
-### Fuera de alcance (próximas iteraciones)
-
-- Conciliación automática con XML/PDF del proveedor.
-- Notificación al admin cuando una CxP de renta vence.
-- Reporte cross-obra de gasto de rentas por proveedor.
+- Rechazos, renovaciones, llegada y devolución (puedo agregarlos después si lo pides).
+- Notificaciones por email (sólo in-app, igual que el resto del sistema).
+- Realtime push (las notificaciones aparecen al refrescar el badge ya existente).
