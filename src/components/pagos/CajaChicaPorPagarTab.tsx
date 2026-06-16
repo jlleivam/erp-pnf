@@ -13,6 +13,7 @@ import { listCxPCajaChicaFondoPendientes } from "@/lib/api/pagos.functions";
 import { formatMXN, formatDate } from "@/lib/format";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { ReponerReembolsoDialog } from "@/components/caja-chica/ReponerReembolsoDialog";
+import { RevisarReembolsoSheet } from "@/components/caja-chica/RevisarReembolsoSheet";
 
 type Row = {
   tipo: "fondo" | "reembolso";
@@ -39,6 +40,7 @@ export function CajaChicaPorPagarTab() {
   const [q, setQ] = useState("");
   const [pagarFondo, setPagarFondo] = useState<Row | null>(null);
   const [reponerReemb, setReponerReemb] = useState<Row | null>(null);
+  const [verReembolsoId, setVerReembolsoId] = useState<string | null>(null);
 
   const cxpQ = useQuery({
     queryKey: ["caja-chica-por-pagar"],
@@ -123,29 +125,36 @@ export function CajaChicaPorPagarTab() {
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((r) => (
-              <TableRow key={`${r.tipo}-${r.id}`}>
-                <TableCell>
-                  <Badge variant={r.tipo === "fondo" ? "secondary" : "default"}>
-                    {r.tipo === "fondo" ? "Fondo" : "Reembolso"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-medium">{r.folio}</TableCell>
-                <TableCell className="text-xs">{formatDate(r.fecha_emision)}</TableCell>
-                <TableCell className="text-xs">{r.obra_nombre ?? "—"}</TableCell>
-                <TableCell className="text-xs">{r.beneficiario_nombre}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.monto_total)}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.monto_pagado)}</TableCell>
-                <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
-                <TableCell className="text-right">
-                  {r.tipo === "fondo" ? (
-                    <Button size="sm" onClick={() => setPagarFondo(r)}>Registrar pago</Button>
-                  ) : (
-                    <Button size="sm" onClick={() => setReponerReemb(r)}>Reponer</Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            {filtered.map((r) => {
+              const isReemb = r.tipo === "reembolso";
+              return (
+                <TableRow
+                  key={`${r.tipo}-${r.id}`}
+                  className={isReemb ? "cursor-pointer hover:bg-muted/30" : undefined}
+                  onClick={isReemb ? () => setVerReembolsoId(r.id) : undefined}
+                >
+                  <TableCell>
+                    <Badge variant={isReemb ? "default" : "secondary"}>
+                      {isReemb ? "Reembolso" : "Fondo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{r.folio}</TableCell>
+                  <TableCell className="text-xs">{formatDate(r.fecha_emision)}</TableCell>
+                  <TableCell className="text-xs">{r.obra_nombre ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{r.beneficiario_nombre}</TableCell>
+                  <TableCell className="text-right">{formatMXN(r.monto_total)}</TableCell>
+                  <TableCell className="text-right">{formatMXN(r.monto_pagado)}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
+                  <TableCell className="text-right">
+                    {isReemb ? (
+                      <Button size="sm" onClick={(e) => { e.stopPropagation(); setReponerReemb(r); }}>Reponer</Button>
+                    ) : (
+                      <Button size="sm" onClick={() => setPagarFondo(r)}>Registrar pago</Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Card>
@@ -175,6 +184,13 @@ export function CajaChicaPorPagarTab() {
           onSaved={onSaved}
         />
       )}
+
+      <RevisarReembolsoSheet
+        open={!!verReembolsoId}
+        onOpenChange={(o) => { if (!o) setVerReembolsoId(null); }}
+        reembolsoId={verReembolsoId}
+        onChanged={() => qc.invalidateQueries({ queryKey: ["caja-chica-por-pagar"] })}
+      />
     </div>
   );
 }
