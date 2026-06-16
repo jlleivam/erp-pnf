@@ -1,33 +1,39 @@
 ## Cambio
 
-Restringir las acciones de **escritura** del almacén a residente, supervisor y director. El administrativo queda en **solo lectura**.
+El administrativo ya no puede crear solicitudes de renta. Las solicitudes son responsabilidad del **residente** de la obra. Por consistencia con almacén, también permitimos al **director** y al **supervisor** crear solicitudes (mismo patrón "escritura operativa"). El administrativo conserva su rol de **cotizar**.
 
-## Acciones afectadas (escritura → residente/supervisor/director)
+## Backend — `src/lib/api/rentas.functions.ts`
 
-En `src/lib/api/almacen.functions.ts`:
+En `crearSolicitudRenta` (líneas 151-157), reemplazar el chequeo actual:
 
-1. **`registrarRecepcion`** — hoy permite director o residente. Ampliar a: residente, supervisor o director.
-2. **`actualizarUtilizado`** — hoy usa `assertObraAccess` (deja pasar también a administrativo). Restringir a residente, supervisor o director.
-3. **`bloquearSemana`** — hoy es residente/supervisor. Ampliar para incluir director.
-4. **`solicitarDesbloqueoSemana`** — hoy es residente/supervisor. Ampliar para incluir director (un director también puede pedir desbloqueo, aunque normalmente él lo aprueba directo).
-5. **`resolverSolicitudDesbloqueo`** — sin cambios: supervisor de la obra o director.
+```ts
+if (!isDirector && !isSupervisor && !isAdministrativo && !member) {
+  throw new Error("No tienes permisos en esta obra");
+}
+```
 
-Se centraliza el chequeo en un helper `assertPuedeEditarAlmacen(supabase, userId, obraId, roles)`:
-- `roles.includes("director")` → permitido.
-- O miembro de la obra con rol `residente` o `supervisor`.
-- Cualquier otro caso (incluido `administrativo`) → rechazado con "Solo residente, supervisor o director pueden modificar el almacén".
+por una validación que excluya al administrativo puro:
 
-## Acciones de lectura (sin cambios)
+- Permitido si `isDirector`.
+- Permitido si el usuario es miembro de `obra_team` con rol `residente` o `supervisor`.
+- Cualquier otro caso (incluido administrativo sin rol de obra) → `"Solo el residente, supervisor o director puede crear solicitudes de renta"`.
 
-`listOCsPorRecibir`, `getOCParaRecepcion`, `getSemanaActual`, `listHistorialSemanas`, `getSemana`, `listSolicitudesDesbloqueo` siguen usando `assertObraAccess` (director, administrativo, o miembro de obra).
+Para esto se consulta `obra_team.role` (ya hay un patrón equivalente en `almacen.functions.ts` con `assertPuedeEditarAlmacen`). No se toca cotización, autorización, llegada, eventos ni pagos.
 
-## UI
+## UI — `src/components/rentas/RentasModule.tsx`
 
-- `SemanaActualPanel.tsx`: deshabilitar input de "utilizado" y ocultar botones de bloquear/solicitar desbloqueo cuando el usuario no es residente, supervisor ni director. (Ya hay `useObraRole`; agregar `isDirector` al check.)
-- `AlmacenModule.tsx` (pestaña "Por recibir"): ocultar el botón "Registrar recepción" cuando el usuario es solo administrativo.
+- Reemplazar la lectura `useEffectiveRoles` / `useEffectiveIsDirector` por `useObraRole(obraId)` (mismo hook que ya usa almacén) para obtener `isResidente`, `isSupervisor`, `isDirector`, `isAdministrativo`.
+- Calcular `puedeSolicitar = isDirector || isSupervisor || isResidente`.
+- Mostrar el botón "Nueva solicitud" solo cuando `puedeSolicitar`.
+- Mantener `canCotizar = isDirector || isAdministrativo` y `canAuthorize = isDirector || isSupervisor` para `RentaDetalleSheet` (sin cambios funcionales más allá de la fuente del rol).
+- El botón eliminar (borrador) sigue solo para director.
 
 ## Archivos a tocar
 
-- `src/lib/api/almacen.functions.ts`
-- `src/components/almacen/SemanaActualPanel.tsx`
-- `src/components/almacen/AlmacenModule.tsx`
+- `src/lib/api/rentas.functions.ts`
+- `src/components/rentas/RentasModule.tsx`
+
+## Fuera de alcance
+
+- `NuevaRentaDialog.tsx`: sin cambios (ya no es alcanzable por administrativo desde la UI, y el backend lo bloquea).
+- Resto del flujo de rentas (cotizar, autorizar, llegada, renovar, devolver, eventos, pagos): sin cambios.
