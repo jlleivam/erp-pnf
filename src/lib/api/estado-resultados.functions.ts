@@ -217,7 +217,7 @@ async function calcularBuckets(
         "id, numero, equipo, cantidad, tarifa_unitaria, periodicidad, fecha_estimada_inicio, fecha_llegada_real, fecha_fin_programada, fecha_devolucion_real, estatus",
       )
       .eq("obra_id", obraId)
-      .not("estatus", "in", "(borrador,rechazada,cancelada)"),
+      .not("estatus", "in", "(borrador,rechazada)"),
     supabase
       .from("vales_gasolina")
       .select(
