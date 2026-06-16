@@ -245,9 +245,13 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
 
                   {canReclasificar
                     && reemb.estatus === "enviado_admin"
-                    && g.tipo_comprobante === "factura"
-                    && !g.comprobante_reclasificado_de && (() => {
-                    const state = reclasifPorGasto[g.id] ?? { open: false, tipo: "nota" as const, motivo: "" };
+                    && g.estatus === "aprobado" && (() => {
+                    const opciones = (["factura", "nota", "ninguno"] as const)
+                      .filter((t) => t !== g.tipo_comprobante);
+                    const labelOf = (t: string) =>
+                      t === "factura" ? "Factura" : t === "nota" ? "Nota" : "Sin comprobante";
+                    const state = reclasifPorGasto[g.id]
+                      ?? { open: false, tipo: opciones[0], motivo: "" };
                     const isPending = reclasificarM.isPending
                       && (reclasificarM.variables as any)?.data?.gastoId === g.id;
                     if (!state.open) {
@@ -255,27 +259,31 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
                         <Button
                           size="sm" variant="outline"
                           onClick={() => setReclasifPorGasto((s) => ({
-                            ...s, [g.id]: { open: true, tipo: "nota", motivo: "" },
+                            ...s, [g.id]: { open: true, tipo: opciones[0], motivo: "" },
                           }))}
                         >
-                          <FileText className="w-3.5 h-3.5 mr-1" /> Reclasificar factura
+                          <FileText className="w-3.5 h-3.5 mr-1" />
+                          {g.comprobante_reclasificado_de ? "Reclasificar de nuevo" : "Reclasificar comprobante"}
                         </Button>
                       );
                     }
                     return (
                       <div className="border-t pt-2 space-y-2">
-                        <div className="text-xs font-medium">Reclasificar comprobante</div>
+                        <div className="text-xs font-medium">
+                          Reclasificar comprobante (actual: {labelOf(g.tipo_comprobante)})
+                        </div>
                         <div className="flex gap-2 flex-wrap">
                           <select
                             className="border rounded px-2 py-1 text-sm bg-background"
                             value={state.tipo}
                             onChange={(e) => setReclasifPorGasto((s) => ({
-                              ...s, [g.id]: { ...state, tipo: e.target.value as "nota" | "ninguno" },
+                              ...s, [g.id]: { ...state, tipo: e.target.value as "factura" | "nota" | "ninguno" },
                             }))}
                             disabled={isPending}
                           >
-                            <option value="nota">Nota</option>
-                            <option value="ninguno">Sin comprobante</option>
+                            {opciones.map((t) => (
+                              <option key={t} value={t}>{labelOf(t)}</option>
+                            ))}
                           </select>
                         </div>
                         <Textarea
@@ -309,11 +317,12 @@ export function RevisarReembolsoSheet({ open, onOpenChange, reembolsoId, onChang
                           </Button>
                         </div>
                         <p className="text-[11px] text-muted-foreground">
-                          El monto a reponer al residente no cambia. El costo a la obra se ajusta porque ya no se descuenta el IVA acreditable.
+                          El monto a reponer al residente no cambia. El costo a la obra se ajusta según el tipo de comprobante (factura descuenta el IVA acreditable).
                         </p>
                       </div>
                     );
                   })()}
+
                 </div>
               ))}
             </div>
