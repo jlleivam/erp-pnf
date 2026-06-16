@@ -927,7 +927,7 @@ export const reclasificarComprobanteGasto = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       gastoId: z.string().uuid(),
-      nuevoTipo: z.enum(["nota", "ninguno"]),
+      nuevoTipo: z.enum(["factura", "nota", "ninguno"]),
       motivo: z.string().trim().min(3).max(500),
     }).parse(d)
   )
@@ -939,11 +939,14 @@ export const reclasificarComprobanteGasto = createServerFn({ method: "POST" })
     }
     const { data: g } = await supabase
       .from("caja_chica_gastos")
-      .select("id, concepto, tipo_comprobante, reembolso_id, residente_id, obra_id, company_id, revisado_por")
+      .select("id, concepto, estatus, tipo_comprobante, reembolso_id, residente_id, obra_id, company_id, revisado_por, comprobante_reclasificado_de")
       .eq("id", data.gastoId).maybeSingle();
     if (!g) throw new Error("Gasto no encontrado");
-    if (g.tipo_comprobante !== "factura") {
-      throw new Error("Solo se puede reclasificar un gasto con factura");
+    if (g.estatus !== "aprobado") {
+      throw new Error("Solo se puede reclasificar un gasto aprobado");
+    }
+    if (g.tipo_comprobante === data.nuevoTipo) {
+      throw new Error("El gasto ya tiene ese tipo de comprobante");
     }
     if (!g.reembolso_id) throw new Error("Gasto sin reembolso");
     const { data: r } = await supabase
@@ -954,11 +957,13 @@ export const reclasificarComprobanteGasto = createServerFn({ method: "POST" })
       throw new Error("Solo se puede reclasificar antes de reponer");
     }
 
+    const tipoOriginal: string = g.comprobante_reclasificado_de ?? g.tipo_comprobante;
+
     const { error } = await supabase
       .from("caja_chica_gastos")
       .update({
         tipo_comprobante: data.nuevoTipo,
-        comprobante_reclasificado_de: "factura",
+        comprobante_reclasificado_de: tipoOriginal,
         comprobante_reclasificado_motivo: data.motivo,
         comprobante_reclasificado_por: userId,
         comprobante_reclasificado_at: new Date().toISOString(),
@@ -969,19 +974,21 @@ export const reclasificarComprobanteGasto = createServerFn({ method: "POST" })
     const targets = Array.from(new Set(
       [g.residente_id, g.revisado_por].filter(Boolean) as string[]
     ));
-    const tipoLabel = data.nuevoTipo === "nota" ? "nota" : "sin comprobante";
+    const labelOf = (t: string) =>
+      t === "factura" ? "factura" : t === "nota" ? "nota" : "sin comprobante";
     await notify(targets.map((uid) => ({
       user_id: uid,
       company_id: g.company_id,
       obra_id: g.obra_id,
       tipo: "caja_chica_gasto_reclasificado",
       titulo: `Gasto reclasificado en ${r.folio}`,
-      mensaje: `"${g.concepto}" pasó de factura a ${tipoLabel}. Motivo: ${data.motivo}`,
+      mensaje: `"${g.concepto}" pasó de ${labelOf(g.tipo_comprobante)} a ${labelOf(data.nuevoTipo)}. Motivo: ${data.motivo}`,
       link: `/app/admin/caja-chica`,
     })));
 
     return { ok: true };
   });
+
 
 
 
