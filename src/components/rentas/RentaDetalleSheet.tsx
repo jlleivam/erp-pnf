@@ -83,7 +83,7 @@ export function RentaDetalleSheet({
   const [renovando, setRenovando] = useState(false);
   const [devolviendo, setDevolviendo] = useState(false);
   const [creandoEvento, setCreandoEvento] = useState(false);
-  const [creandoPago, setCreandoPago] = useState(false);
+  const [pagandoCxP, setPagandoCxP] = useState<{ cxpId: string; folio: string; saldo: number; beneficiario: string } | null>(null);
   const [rechazando, setRechazando] = useState(false);
   const [rechazandoRenovId, setRechazandoRenovId] = useState<string | null>(null);
 
