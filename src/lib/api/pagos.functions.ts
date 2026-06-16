@@ -640,7 +640,7 @@ export const listCxPCajaChicaFondoPendientes = createServerFn({ method: "GET" })
     // 2) Reembolsos enviados al administrativo (pendientes de reponer)
     const { data: reembRows, error: errR } = await supabase
       .from("caja_chica_reembolsos")
-      .select("id, folio, residente_id, obra_id, semana_inicio, semana_fin, monto_aprobado, estatus, enviado_admin_at, created_at, obra:obras(id, nombre)")
+      .select("id, folio, residente_id, obra_id, semana_inicio, semana_fin, monto_aprobado, estatus, enviado_admin_at, created_at")
       .eq("company_id", companyId)
       .eq("estatus", "enviado_admin")
       .order("enviado_admin_at", { ascending: false });
