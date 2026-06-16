@@ -6,7 +6,7 @@ import {
   eliminarEstimacion,
 } from "@/lib/api/estimaciones.functions";
 import { calcularSemana, formatRangoSemana } from "@/lib/estimacion-utils";
-import { useEffectiveIsDirector } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
