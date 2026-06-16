@@ -553,6 +553,38 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={!!rechazandoFondo}
+        onOpenChange={(v) => { if (!v) { setRechazandoFondo(null); setMotivoRechazo(""); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rechazar solicitud de fondo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Indícale al residente por qué se rechaza esta solicitud.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <textarea
+            className="w-full border rounded p-2 text-sm min-h-[80px]"
+            placeholder="Motivo del rechazo"
+            value={motivoRechazo}
+            onChange={(e) => setMotivoRechazo(e.target.value)}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={motivoRechazo.trim().length < 2 || rechazarM.isPending}
+              onClick={() =>
+                rechazandoFondo &&
+                rechazarM.mutate({ id: rechazandoFondo.id, motivo: motivoRechazo.trim() })
+              }
+            >
+              Rechazar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
