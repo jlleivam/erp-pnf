@@ -233,24 +233,6 @@ export function RentasModule({ obraId }: { obraId: string }) {
         />
       )}
 
-      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar renta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará "{toDelete?.equipo}" junto con sus eventos y pagos. No se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => toDelete && removeM.mutate({ data: { id: toDelete.id } })}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
