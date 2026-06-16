@@ -484,8 +484,6 @@ export function RentaDetalleSheet({
                   </Card>
                 )}
               </TabsContent>
-                )}
-              </TabsContent>
             </Tabs>
           </div>
         )}
