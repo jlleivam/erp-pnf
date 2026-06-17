@@ -173,8 +173,8 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const [rechazandoFondo, setRechazandoFondo] = useState<any | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const puedeCrearGasto = scope === "obra" && (director || isResidente);
-  const verMisGastos = scope === "obra" && (director || isResidente);
+  const puedeCrearGasto = scope === "obra" && obraRole.isResidente;
+  const verMisGastos = scope === "obra" && obraRole.isResidente;
   const [tab, setTab] = useState<string>(
     scope === "admin" || !verMisGastos ? "reembolsos" : "mis-gastos",
   );
