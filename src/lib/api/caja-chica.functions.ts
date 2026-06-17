@@ -538,7 +538,7 @@ export const crearGastoCajaChica = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const ctx = await getCtx(supabase, userId);
     const esResidente = await isResidenteDeObra(supabase, userId, data.obraId);
-    if (!ctx.isDirector && !esResidente) {
+    if (!esResidente) {
       throw new Error("Solo el residente de la obra puede registrar gastos de caja chica");
     }
 
