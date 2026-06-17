@@ -55,6 +55,7 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       nominaRes,
       gasolinaRes,
       cajaChicaReembRes,
+      cajaChicaGastosRes,
       cajaChicaFondoCxPRes,
       pagosRes,
     ] = await Promise.all([
