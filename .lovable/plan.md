@@ -1,41 +1,42 @@
 ## Diagnóstico
 
-Hoy `1120 Caja chica` se calcula como `sum(monto_entregado)` de los fondos en estatus `entregado`. Es estático: nunca refleja que el residente ya gastó parte de ese efectivo. Por eso después de aprobar y reponer un reembolso, la cuenta 1120 sigue igual.
+El reembolso `CC-2026-0001` quedó a nombre de Pedro Velazquez porque en `solicitarReembolsoCajaChica` (y `crearGastoCajaChica`) la autorización es demasiado laxa:
 
-El usuario quiere que 1120 represente el **efectivo realmente disponible del residente**: el fondo entregado minus lo que ya gastó y aún no le ha sido repuesto.
+- `crearGastoCajaChica` (línea 540-541): permite **residente o director**.
+- `solicitarReembolsoCajaChica` (línea 700-701): permite **cualquier miembro del obra_team o director**.
+- En ambos casos se guarda `residente_id = userId` (el caller), no el residente real de la obra.
 
-## Modelo
+Pedro (administrativo) es miembro del `obra_team` de esa obra, así que pasó la validación del reembolso y quedó registrado como "residente" del movimiento.
 
-Para cada residente con fondo entregado:
+Caja chica es un fondo personal del residente. Administrativo, supervisor y director no deben capturar gastos ni solicitar reembolsos en su nombre.
 
-```
-1120 = monto_entregado
-       − Σ gastos aprobados pendientes de reposición
-```
+## Cambios
 
-Operativamente, "gastos aprobados pendientes de reposición" = `monto_aprobado` de los reembolsos en estatus `enviado_admin` (el supervisor ya aprobó, el admin aún no repone).
+**1. `src/lib/api/caja-chica.functions.ts` — endurecer permisos**
 
-Ciclo:
-1. Residente recibe fondo (estatus `entregado`): 1120 = 3,000.
-2. Residente gasta $180 → supervisor aprueba el reembolso (`enviado_admin`): 1120 baja a 2,820, 2160 sube a 180.
-3. Admin repone: el reembolso pasa a `repuesto`, sale de `enviado_admin` → 1120 vuelve a 3,000, 2160 baja a 0, 1110 baja $180.
+- `crearGastoCajaChica`: exigir `isResidenteDeObra(userId, obraId)`. Quitar el bypass de director. Mensaje: "Solo el residente de la obra puede registrar gastos de caja chica".
+- `actualizarGastoCajaChica` / `eliminarGastoCajaChica`: ya validan `g.residente_id !== userId`; añadir además `isResidenteDeObra` para que un ex-residente no pueda editar.
+- `solicitarReembolsoCajaChica`: exigir `isResidenteDeObra`. Quitar el bypass de director y la rama `isMemberObra`. La validación `g.residente_id !== userId` se mantiene.
+- Revisar otras funciones del archivo por consistencia (sin cambiar permisos donde sí corresponde admin/supervisor: revisar, aprobar, reponer).
 
-El balance sigue cuadrando porque el descuento de 1120 se compensa con el alta de 2160 (que ya existía).
+**2. UI — ocultar acciones para no-residentes**
 
-## Cambio
+- `src/components/caja-chica/CajaChicaModule.tsx` y diálogos relacionados (`NuevoGastoDialog`, `SolicitarReembolsoDialog`): mostrar los botones de "Nuevo gasto" y "Solicitar reembolso" solo cuando el usuario es el residente de la obra. Para los demás roles, dejar visible el listado en modo lectura.
 
-### `src/lib/contabilidad/balance.functions.ts`
+**3. Limpieza del dato existente (decisión del usuario)**
 
-1. Cambiar la query `cajaChicaReembRes` para seleccionar también `residente_id` (sigue filtrando por `estatus = enviado_admin`).
-2. Reescribir el cálculo de `cajaChica`:
-   ```ts
-   const reembPendientes = sum(cajaChicaReembRes.data, "monto_aprobado");
-   const cajaChica = Math.max(0, sum(cajaChicaRes.data, "monto_entregado") - reembPendientes);
-   ```
-3. En el detalle (`case "1120"` dentro de `buildDetalle`):
-   - Cargar también los reembolsos `enviado_admin` (campos: `residente_id`, `monto_aprobado`).
-   - Para cada fondo, restar la suma de reembolsos pendientes de ese mismo `residente_id`.
-   - Excluir filas cuyo saldo resultante sea ≤ 0.
-   - Etiqueta: nombre del residente (igual); referencia: obra.
+El reembolso `CC-2026-0001` y sus 2 gastos quedaron con `residente_id` incorrecto. Dos opciones, **a confirmar antes de implementar**:
 
-Sin cambios en otras cuentas ni en el flujo de reposición — al pasar el reembolso de `enviado_admin` a `repuesto`, automáticamente sale del set considerado y 1120 vuelve a su valor anterior.
+- **(A)** Borrar `CC-2026-0001` y sus gastos para que Arturo lo recapture correctamente. Implica revertir el pago de reposición (si ya afectó cuentas) — no recomendado si ya hubo movimiento bancario real.
+- **(B)** Migración puntual de datos: `UPDATE` para reasignar `residente_id` de esos gastos y del reembolso al residente actual de la obra (Arturo). El asiento contable y el monto del reembolso quedan intactos; solo cambia el "dueño" del registro.
+
+Recomiendo **(B)** porque el dinero ya se movió y los montos son correctos; solo está mal atribuido el residente.
+
+## Fuera de alcance
+
+- No modificamos la lógica de balance ni la cuenta 1120: una vez corregido el `residente_id`, el descuento por residente que ya añadimos cuadra automáticamente.
+- No cambiamos roles ni `obra_team`.
+
+## Pregunta para confirmar
+
+¿Vamos con la opción **(B)** (reasignar `residente_id` del reembolso y gastos existentes al residente actual de la obra) o prefieres **(A)** (borrar y recapturar)?
