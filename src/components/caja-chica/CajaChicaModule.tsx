@@ -92,6 +92,7 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const isSupervisor = roles.includes("supervisor");
   const isAdmin = roles.includes("administrativo");
   const isResidente = roles.includes("residente");
+  const obraRole = useObraRole(scope === "obra" ? obraId : null);
 
   const qc = useQueryClient();
 
