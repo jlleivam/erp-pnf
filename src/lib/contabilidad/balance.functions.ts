@@ -297,25 +297,25 @@ async function buildDetalle(
     }
 
     case "1120": {
-      const [fondosRes, reembRes] = await Promise.all([
+      const [fondosRes, gastosRes] = await Promise.all([
         supabase
           .from("caja_chica_fondos")
           .select("id, monto_entregado, residente_id, obra_id")
           .eq("company_id", companyId)
           .eq("estatus", "entregado"),
         supabase
-          .from("caja_chica_reembolsos")
-          .select("residente_id, monto_aprobado")
+          .from("caja_chica_gastos")
+          .select("residente_id, monto, estatus")
           .eq("company_id", companyId)
-          .eq("estatus", "enviado_admin"),
+          .in("estatus", ["solicitado", "aprobado", "reembolsado"]),
       ]);
       const filas = fondosRes.data ?? [];
       const pendientesPorResidente = new Map<string, number>();
-      for (const r of reembRes.data ?? []) {
+      for (const r of gastosRes.data ?? []) {
         if (!r.residente_id) continue;
         pendientesPorResidente.set(
           r.residente_id,
-          (pendientesPorResidente.get(r.residente_id) ?? 0) + num(r.monto_aprobado),
+          (pendientesPorResidente.get(r.residente_id) ?? 0) + num(r.monto),
         );
       }
       const residenteIds = Array.from(new Set(filas.map((r: any) => r.residente_id).filter(Boolean)));
