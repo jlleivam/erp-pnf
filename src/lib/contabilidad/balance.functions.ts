@@ -114,12 +114,18 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
         .select("monto_autorizado, estatus")
         .eq("company_id", companyId)
         .in("estatus", ["entregado", "confirmado"]),
-      // Caja chica reembolsos aprobados sin reponer
+      // Caja chica reembolsos pendientes de reponer (pasivo 2160)
       supabase
         .from("caja_chica_reembolsos")
         .select("monto_aprobado, residente_id, estatus")
         .eq("company_id", companyId)
         .in("estatus", ["enviado_admin"]),
+      // Caja chica gastos que ya consumieron efectivo del residente
+      supabase
+        .from("caja_chica_gastos")
+        .select("monto, residente_id, estatus")
+        .eq("company_id", companyId)
+        .in("estatus", ["solicitado", "aprobado", "reembolsado"]),
       // CxP de fondos de caja chica (pendientes / parciales)
       supabase
         .from("cuentas_por_pagar")
