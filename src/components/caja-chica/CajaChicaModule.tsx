@@ -14,6 +14,7 @@ import {
   getSaldoCajaChica,
 } from "@/lib/api/caja-chica.functions";
 import { useEffectiveIsDirector, useEffectiveRoles, useAuthStore } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +93,7 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const isSupervisor = roles.includes("supervisor");
   const isAdmin = roles.includes("administrativo");
   const isResidente = roles.includes("residente");
+  const obraRole = useObraRole(scope === "obra" ? obraId : null);
 
   const qc = useQueryClient();
 
@@ -173,8 +175,8 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const [rechazandoFondo, setRechazandoFondo] = useState<any | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const puedeCrearGasto = scope === "obra" && (director || isResidente);
-  const verMisGastos = scope === "obra" && (director || isResidente);
+  const puedeCrearGasto = scope === "obra" && obraRole.isResidente;
+  const verMisGastos = scope === "obra" && obraRole.isResidente;
   const [tab, setTab] = useState<string>(
     scope === "admin" || !verMisGastos ? "reembolsos" : "mis-gastos",
   );

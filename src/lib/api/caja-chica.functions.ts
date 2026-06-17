@@ -538,7 +538,7 @@ export const crearGastoCajaChica = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const ctx = await getCtx(supabase, userId);
     const esResidente = await isResidenteDeObra(supabase, userId, data.obraId);
-    if (!ctx.isDirector && !esResidente) {
+    if (!esResidente) {
       throw new Error("Solo el residente de la obra puede registrar gastos de caja chica");
     }
 
@@ -697,8 +697,8 @@ export const solicitarReembolsoCajaChica = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const ctx = await getCtx(supabase, userId);
-    const member = await isMemberObra(supabase, userId, data.obraId);
-    if (!member && !ctx.isDirector) throw new Error("Sin acceso a esta obra");
+    const esResidente = await isResidenteDeObra(supabase, userId, data.obraId);
+    if (!esResidente) throw new Error("Solo el residente de la obra puede solicitar reembolsos de caja chica");
 
     // Validar que los gastos sean borradores propios de esta obra
     const { data: gs } = await supabase
