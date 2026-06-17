@@ -14,6 +14,7 @@ import {
   getSaldoCajaChica,
 } from "@/lib/api/caja-chica.functions";
 import { useEffectiveIsDirector, useEffectiveRoles, useAuthStore } from "@/stores/auth";
+import { useObraRole } from "@/hooks/useObraRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
