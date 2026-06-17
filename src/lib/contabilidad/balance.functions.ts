@@ -152,10 +152,10 @@ export const getBalanceGeneral = createServerFn({ method: "GET" })
       .filter((c: any) => c.tipo === "caja_fuerte")
       .reduce((acc: number, c: any) => acc + num(c.saldo_actual), 0);
 
-    const reembPendientesTotal = sum(cajaChicaReembRes.data, "monto_aprobado");
+    const gastosConsumidosTotal = sum(cajaChicaGastosRes.data, "monto");
     const cajaChica = Math.max(
       0,
-      sum(cajaChicaRes.data, "monto_entregado") - reembPendientesTotal,
+      sum(cajaChicaRes.data, "monto_entregado") - gastosConsumidosTotal,
     );
 
     const anticiposDestajoBruto = sum(anticiposDestajoRes.data, "monto");
