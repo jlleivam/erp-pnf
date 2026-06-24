@@ -221,7 +221,7 @@ export function GastosOficinaModule() {
                     <Users className="h-4 w-4 mr-1" /> Gestionar personal
                   </Button>
                   <Button size="sm" onClick={() => setNominaOpen(true)}>
-                    <CalendarPlus className="h-4 w-4 mr-1" /> Generar nómina del periodo
+                    <CalendarPlus className="h-4 w-4 mr-1" /> Generar nómina semanal
                   </Button>
                 </>
               )}
