@@ -106,6 +106,7 @@ export function CuentasPorPagarModule() {
 
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Cuentas por pagar</h1>
