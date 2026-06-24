@@ -314,13 +314,8 @@ export function TerceroDetalle({
 
               {/* ============ HISTORIAL ============ */}
               <TabsContent value="historial" className="mt-6 space-y-4">
-                {esProveedor && (
-                  <Card className="p-4 space-y-2">
-                    <h4 className="text-sm font-medium">Órdenes de compra recientes</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Se alimenta automáticamente desde órdenes de compra.
-                    </p>
-                  </Card>
+                {esProveedor && tercero && (
+                  <EstadoCuentaProveedor terceroId={tercero.id} />
                 )}
                 {esProveedor && (
                   <Card className="p-4 space-y-2">
