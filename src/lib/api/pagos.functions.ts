@@ -535,7 +535,9 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
             ? "Nómina por pagar"
             : cxp.origen_tipo === "caja_chica_fondo"
               ? "Cuentas por pagar - Caja chica"
-              : "Cuentas por pagar";
+              : cxp.origen_tipo === "gasto_oficina"
+                ? "Gastos de administración"
+                : "Cuentas por pagar";
     const cuentaActivo = cuenta.tipo === "bancaria" ? "Bancos" : "Caja fuerte";
 
     const asientoId = crypto.randomUUID();
