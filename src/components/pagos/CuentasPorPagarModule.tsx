@@ -246,6 +246,7 @@ export function CuentasPorPagarModule() {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }
 
