@@ -83,8 +83,7 @@ export const listGastosOficina = createServerFn({ method: "POST" })
         notas, evidencia_url, estatus, cxp_id, motivo_rechazo,
         solicitado_por, aprobado_por, aprobado_at, created_at,
         proveedor:terceros!gastos_oficina_proveedor_id_fkey(razon_social),
-        trabajador:trabajadores!gastos_oficina_beneficiario_trabajador_id_fkey(nombre_completo),
-        solicitante:profiles!gastos_oficina_solicitado_por_fkey(nombre_completo)
+        trabajador:trabajadores!gastos_oficina_beneficiario_trabajador_id_fkey(nombre_completo)
       `)
       .eq("company_id", companyId)
       .order("created_at", { ascending: false });
@@ -94,6 +93,16 @@ export const listGastosOficina = createServerFn({ method: "POST" })
     }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
+
+    // Resolver nombres de solicitantes en una sola consulta
+    const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.solicitado_por).filter(Boolean)));
+    const nameMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles").select("id, nombre_completo").in("id", userIds);
+      for (const p of profs ?? []) nameMap.set(p.id, p.nombre_completo);
+    }
+
     return (rows ?? []).map((r: any) => ({
       id: r.id,
       folio: r.folio,
@@ -114,7 +123,7 @@ export const listGastosOficina = createServerFn({ method: "POST" })
       cxp_id: r.cxp_id,
       motivo_rechazo: r.motivo_rechazo,
       solicitado_por: r.solicitado_por,
-      solicitado_por_nombre: r.solicitante?.nombre_completo ?? null,
+      solicitado_por_nombre: nameMap.get(r.solicitado_por) ?? null,
       aprobado_por: r.aprobado_por,
       aprobado_at: r.aprobado_at,
       created_at: r.created_at,
