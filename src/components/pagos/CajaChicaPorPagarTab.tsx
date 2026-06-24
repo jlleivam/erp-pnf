@@ -14,6 +14,7 @@ import { formatMXN, formatDate } from "@/lib/format";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { ReponerReembolsoDialog } from "@/components/caja-chica/ReponerReembolsoDialog";
 import { RevisarReembolsoSheet } from "@/components/caja-chica/RevisarReembolsoSheet";
+import { TruncatedCell } from "./TruncatedCell";
 
 type Row = {
   tipo: "fondo" | "reembolso";
