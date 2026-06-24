@@ -13,6 +13,8 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { TruncatedCell } from "./TruncatedCell";
 import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes, listCxPSubcontratoPendientes } from "@/lib/api/pagos.functions";
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
 import { listAnticiposSubcontratoPendientes } from "@/lib/api/subcontratos.functions";
@@ -104,6 +106,7 @@ export function CuentasPorPagarModule() {
 
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Cuentas por pagar</h1>
@@ -202,15 +205,17 @@ export function CuentasPorPagarModule() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelected(r)}
                   >
-                    <TableCell className="font-medium">{r.razon_social}</TableCell>
-                    <TableCell className="text-right">{formatMXN(r.total_ordenado)}</TableCell>
-                    <TableCell className="text-right">{formatMXN(r.total_pagado)}</TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="font-medium max-w-[280px]">
+                      <TruncatedCell>{r.razon_social}</TruncatedCell>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{formatMXN(r.total_ordenado)}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{formatMXN(r.total_pagado)}</TableCell>
+                    <TableCell className="text-right font-semibold whitespace-nowrap">
                       <span className={r.saldo_pendiente > 0 ? "text-rose-700" : ""}>
                         {formatMXN(r.saldo_pendiente)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">{r.oc_pendientes_count}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{r.oc_pendientes_count}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -243,6 +248,7 @@ export function CuentasPorPagarModule() {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }
 
@@ -412,7 +418,7 @@ function AnticiposDestajoTab() {
             )}
             {unified.map((r) => (
               <TableRow key={r.key}>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge
                     className={
                       r.tipo === "anticipo"
@@ -423,20 +429,28 @@ function AnticiposDestajoTab() {
                     {r.tipo === "anticipo" ? "Anticipo" : "Estimación"}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-medium text-sm">{r.folio}</TableCell>
-                <TableCell className="text-xs">{r.obra}</TableCell>
-                <TableCell className="text-sm">{r.destajista}</TableCell>
-                <TableCell className="text-xs max-w-[260px] truncate" title={r.concepto}>{r.concepto}</TableCell>
-                <TableCell className="text-xs">{formatDate(r.fecha)}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.total)}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.pagado)}</TableCell>
-                <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
-                <TableCell>
+                <TableCell className="font-medium text-sm max-w-[200px]">
+                  <TruncatedCell>{r.folio}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs max-w-[180px]">
+                  <TruncatedCell>{r.obra}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-sm max-w-[180px]">
+                  <TruncatedCell>{r.destajista}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs max-w-[260px]">
+                  <TruncatedCell>{r.concepto}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{formatDate(r.fecha)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(r.total)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(r.pagado)}</TableCell>
+                <TableCell className="text-right font-semibold whitespace-nowrap">{formatMXN(r.saldo)}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge className={ESTADO_PAGO_BADGE[r.estatus === "pagada" ? "pagado" : r.estatus] ?? ""}>
                     {r.estatus === "parcial" ? "Parcial" : r.estatus === "pagada" ? "Pagado" : "Pendiente"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right whitespace-nowrap">
                   {r.saldo > 0 && (
                     <Button
                       size="sm"
@@ -555,18 +569,22 @@ function ProveedorDetalleSheet({
                     const pend = +(total - pagado).toFixed(2);
                     return (
                       <TableRow key={oc.id}>
-                        <TableCell className="font-medium">{oc.folio}</TableCell>
-                        <TableCell className="text-xs">{oc.obra?.nombre ?? "—"}</TableCell>
-                        <TableCell className="text-xs">{formatDate(oc.created_at)}</TableCell>
-                        <TableCell className="text-right">{formatMXN(total)}</TableCell>
-                        <TableCell className="text-right">{formatMXN(pagado)}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatMXN(pend)}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium max-w-[140px]">
+                          <TruncatedCell>{oc.folio}</TruncatedCell>
+                        </TableCell>
+                        <TableCell className="text-xs max-w-[160px]">
+                          <TruncatedCell>{oc.obra?.nombre ?? "—"}</TruncatedCell>
+                        </TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">{formatDate(oc.created_at)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatMXN(total)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatMXN(pagado)}</TableCell>
+                        <TableCell className="text-right font-semibold whitespace-nowrap">{formatMXN(pend)}</TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Badge className={ESTADO_PAGO_BADGE[oc.estado_pago]}>
                             {oc.estado_pago === "pagado" ? "Pagado" : oc.estado_pago === "parcial" ? "Parcial" : "Pendiente"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right whitespace-nowrap">
                           {pend > 0 && (
                             <Button
                               size="sm"
@@ -756,7 +774,7 @@ function AnticiposSubcontratoTab() {
             )}
             {unified.map((r) => (
               <TableRow key={r.key}>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge
                     className={
                       r.tipo === "anticipo"
@@ -767,20 +785,28 @@ function AnticiposSubcontratoTab() {
                     {r.tipo === "anticipo" ? "Anticipo" : "Estimación"}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-medium text-sm">{r.folio}</TableCell>
-                <TableCell className="text-xs">{r.obra}</TableCell>
-                <TableCell className="text-sm">{r.contratista}</TableCell>
-                <TableCell className="text-xs max-w-[260px] truncate" title={r.concepto}>{r.concepto}</TableCell>
-                <TableCell className="text-xs">{formatDate(r.fecha)}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.total)}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.pagado)}</TableCell>
-                <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
-                <TableCell>
+                <TableCell className="font-medium text-sm max-w-[200px]">
+                  <TruncatedCell>{r.folio}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs max-w-[180px]">
+                  <TruncatedCell>{r.obra}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-sm max-w-[180px]">
+                  <TruncatedCell>{r.contratista}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs max-w-[260px]">
+                  <TruncatedCell>{r.concepto}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{formatDate(r.fecha)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(r.total)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(r.pagado)}</TableCell>
+                <TableCell className="text-right font-semibold whitespace-nowrap">{formatMXN(r.saldo)}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge className={ESTADO_PAGO_BADGE[r.estatus === "pagada" ? "pagado" : r.estatus] ?? ""}>
                     {r.estatus === "parcial" ? "Parcial" : r.estatus === "pagada" ? "Pagado" : "Pendiente"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right whitespace-nowrap">
                   {r.saldo > 0 && (
                     <Button
                       size="sm"
