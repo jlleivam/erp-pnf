@@ -287,6 +287,7 @@ export function AppShell() {
             { to: "/app/admin/cuentas-por-pagar", label: "CXP", icon: FileText },
             { to: "/app/admin/nomina", label: "Nómina", icon: Users },
             { to: "/app", label: "Obras", icon: HardHat, exact: true },
+            { to: "/app/admin/condensado-semanal", label: "Condensado", icon: CalendarRange },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
             { to: "/app/admin/contabilidad", label: "Contabilidad", icon: Scale },
