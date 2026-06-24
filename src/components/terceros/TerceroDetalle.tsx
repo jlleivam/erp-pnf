@@ -314,8 +314,8 @@ export function TerceroDetalle({
 
               {/* ============ HISTORIAL ============ */}
               <TabsContent value="historial" className="mt-6 space-y-4">
-                {esProveedor && tercero && (
-                  <EstadoCuentaProveedor terceroId={tercero.id} />
+                {esProveedor && t && (
+                  <EstadoCuentaProveedor terceroId={t.id} />
                 )}
                 {esProveedor && (
                   <Card className="p-4 space-y-2">
