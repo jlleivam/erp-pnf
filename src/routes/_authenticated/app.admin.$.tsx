@@ -6,6 +6,7 @@ import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
 import { CuentasPorPagarModule } from "@/components/pagos/CuentasPorPagarModule";
 import { TesoreriaModule } from "@/components/tesoreria/TesoreriaModule";
 import { ContabilidadModule } from "@/components/contabilidad/ContabilidadModule";
+import { GastosOficinaModule } from "@/components/gastos-oficina/GastosOficinaModule";
 import { useEffectiveRoles } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
@@ -42,6 +43,7 @@ function AdminModule() {
   if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   if (slug === "caja-chica") return <CajaChicaModule scope="admin" />;
   if (slug === "cuentas-por-pagar") return <CuentasPorPagarModule />;
+  if (slug === "gastos-oficina") return <GastosOficinaModule />;
   if (slug === "contabilidad") {
     if (!roles.includes("director") && !roles.includes("administrativo")) {
       return (
