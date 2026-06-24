@@ -569,18 +569,22 @@ function ProveedorDetalleSheet({
                     const pend = +(total - pagado).toFixed(2);
                     return (
                       <TableRow key={oc.id}>
-                        <TableCell className="font-medium">{oc.folio}</TableCell>
-                        <TableCell className="text-xs">{oc.obra?.nombre ?? "—"}</TableCell>
-                        <TableCell className="text-xs">{formatDate(oc.created_at)}</TableCell>
-                        <TableCell className="text-right">{formatMXN(total)}</TableCell>
-                        <TableCell className="text-right">{formatMXN(pagado)}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatMXN(pend)}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium max-w-[140px]">
+                          <TruncatedCell>{oc.folio}</TruncatedCell>
+                        </TableCell>
+                        <TableCell className="text-xs max-w-[160px]">
+                          <TruncatedCell>{oc.obra?.nombre ?? "—"}</TruncatedCell>
+                        </TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">{formatDate(oc.created_at)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatMXN(total)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatMXN(pagado)}</TableCell>
+                        <TableCell className="text-right font-semibold whitespace-nowrap">{formatMXN(pend)}</TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Badge className={ESTADO_PAGO_BADGE[oc.estado_pago]}>
                             {oc.estado_pago === "pagado" ? "Pagado" : oc.estado_pago === "parcial" ? "Parcial" : "Pendiente"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right whitespace-nowrap">
                           {pend > 0 && (
                             <Button
                               size="sm"
