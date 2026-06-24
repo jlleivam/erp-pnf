@@ -7,6 +7,7 @@ import { CuentasPorPagarModule } from "@/components/pagos/CuentasPorPagarModule"
 import { TesoreriaModule } from "@/components/tesoreria/TesoreriaModule";
 import { ContabilidadModule } from "@/components/contabilidad/ContabilidadModule";
 import { GastosOficinaModule } from "@/components/gastos-oficina/GastosOficinaModule";
+import { CondensadoSemanalModule } from "@/components/condensado-semanal/CondensadoSemanalModule";
 import { useEffectiveRoles } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ const LABELS: Record<string, string> = {
   contabilidad: "Contabilidad",
   "almacen-central": "Almacén central",
   "gastos-oficina": "Gastos de oficina",
+  "condensado-semanal": "Condensado semanal",
   nomina: "Nómina",
   destajos: "Destajos",
   subcontratos: "Subcontratos",
@@ -44,6 +46,17 @@ function AdminModule() {
   if (slug === "caja-chica") return <CajaChicaModule scope="admin" />;
   if (slug === "cuentas-por-pagar") return <CuentasPorPagarModule />;
   if (slug === "gastos-oficina") return <GastosOficinaModule />;
+  if (slug === "condensado-semanal") {
+    if (!roles.includes("director") && !roles.includes("administrativo")) {
+      return (
+        <ModulePlaceholder
+          title="Condensado semanal"
+          description="No tienes permisos para ver este módulo."
+        />
+      );
+    }
+    return <CondensadoSemanalModule />;
+  }
   if (slug === "contabilidad") {
     if (!roles.includes("director") && !roles.includes("administrativo")) {
       return (
