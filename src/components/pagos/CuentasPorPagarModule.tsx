@@ -774,7 +774,7 @@ function AnticiposSubcontratoTab() {
             )}
             {unified.map((r) => (
               <TableRow key={r.key}>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge
                     className={
                       r.tipo === "anticipo"
@@ -785,20 +785,28 @@ function AnticiposSubcontratoTab() {
                     {r.tipo === "anticipo" ? "Anticipo" : "Estimación"}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-medium text-sm">{r.folio}</TableCell>
-                <TableCell className="text-xs">{r.obra}</TableCell>
-                <TableCell className="text-sm">{r.contratista}</TableCell>
-                <TableCell className="text-xs max-w-[260px] truncate" title={r.concepto}>{r.concepto}</TableCell>
-                <TableCell className="text-xs">{formatDate(r.fecha)}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.total)}</TableCell>
-                <TableCell className="text-right">{formatMXN(r.pagado)}</TableCell>
-                <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
-                <TableCell>
+                <TableCell className="font-medium text-sm max-w-[200px]">
+                  <TruncatedCell>{r.folio}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs max-w-[180px]">
+                  <TruncatedCell>{r.obra}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-sm max-w-[180px]">
+                  <TruncatedCell>{r.contratista}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs max-w-[260px]">
+                  <TruncatedCell>{r.concepto}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{formatDate(r.fecha)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(r.total)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(r.pagado)}</TableCell>
+                <TableCell className="text-right font-semibold whitespace-nowrap">{formatMXN(r.saldo)}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge className={ESTADO_PAGO_BADGE[r.estatus === "pagada" ? "pagado" : r.estatus] ?? ""}>
                     {r.estatus === "parcial" ? "Parcial" : r.estatus === "pagada" ? "Pagado" : "Pendiente"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right whitespace-nowrap">
                   {r.saldo > 0 && (
                     <Button
                       size="sm"
