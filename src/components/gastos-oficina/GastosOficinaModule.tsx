@@ -221,7 +221,7 @@ export function GastosOficinaModule() {
                     <Users className="h-4 w-4 mr-1" /> Gestionar personal
                   </Button>
                   <Button size="sm" onClick={() => setNominaOpen(true)}>
-                    <CalendarPlus className="h-4 w-4 mr-1" /> Generar nómina del periodo
+                    <CalendarPlus className="h-4 w-4 mr-1" /> Generar nómina semanal
                   </Button>
                 </>
               )}
@@ -232,16 +232,15 @@ export function GastosOficinaModule() {
                   <TableRow>
                     <TableHead>Nombre</TableHead>
                     <TableHead className="w-44">Puesto</TableHead>
-                    <TableHead className="w-32">Periodicidad</TableHead>
-                    <TableHead className="w-40 text-right">Sueldo por periodo</TableHead>
+                    <TableHead className="w-40 text-right">Sueldo semanal</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {personalQ.isLoading && (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Cargando…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Cargando…</TableCell></TableRow>
                   )}
                   {!personalQ.isLoading && (personalQ.data ?? []).length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">
                       Aún no hay personal de oficina. Usa "Gestionar personal" para marcarlos.
                     </TableCell></TableRow>
                   )}
@@ -249,7 +248,6 @@ export function GastosOficinaModule() {
                     <TableRow key={p.id}>
                       <TableCell><TruncatedCell>{p.nombre_completo}</TruncatedCell></TableCell>
                       <TableCell><TruncatedCell>{p.puesto ?? "—"}</TruncatedCell></TableCell>
-                      <TableCell><TruncatedCell>{p.periodicidad_pago ?? "—"}</TruncatedCell></TableCell>
                       <TableCell className="text-right tabular-nums">
                         <TruncatedCell className="text-right">
                           {p.sueldo_periodo != null ? formatMXN(p.sueldo_periodo) : "—"}

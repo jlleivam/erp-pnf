@@ -9,9 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
@@ -31,7 +28,6 @@ type Row = {
   nombre_completo: string;
   puesto: string | null;
   esOficina: boolean;
-  periodicidad: "semanal" | "quincenal" | "mensual" | "";
   sueldo: string;
 };
 
@@ -65,7 +61,6 @@ export function GestionarPersonalOficinaDialog({ open, onOpenChange, onChanged }
           nombre_completo: t.nombre_completo,
           puesto: t.puesto,
           esOficina: t.es_personal_oficina,
-          periodicidad: (o?.periodicidad_pago ?? "") as Row["periodicidad"],
           sueldo: o?.sueldo_periodo != null ? String(o.sueldo_periodo) : "",
         };
       })
@@ -83,7 +78,7 @@ export function GestionarPersonalOficinaDialog({ open, onOpenChange, onChanged }
         data: {
           trabajadorId: row.id,
           esPersonalOficina: row.esOficina,
-          periodicidad: row.esOficina ? (row.periodicidad || null) as any : null,
+          periodicidad: row.esOficina ? "semanal" : null,
           sueldoPeriodo: row.esOficina && row.sueldo ? Number(row.sueldo) : null,
         },
       });
@@ -102,7 +97,7 @@ export function GestionarPersonalOficinaDialog({ open, onOpenChange, onChanged }
         <DialogHeader>
           <DialogTitle>Personal de oficina</DialogTitle>
           <DialogDescription>
-            Marca qué trabajadores pertenecen a la nómina fija de oficina y captura su sueldo por periodo.
+            Marca qué trabajadores pertenecen a la nómina fija de oficina (semanal) y captura su sueldo semanal.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-auto">
@@ -111,8 +106,7 @@ export function GestionarPersonalOficinaDialog({ open, onOpenChange, onChanged }
               <TableRow>
                 <TableHead>Trabajador</TableHead>
                 <TableHead className="w-24">Oficina</TableHead>
-                <TableHead className="w-36">Periodicidad</TableHead>
-                <TableHead className="w-32">Sueldo periodo</TableHead>
+                <TableHead className="w-32">Sueldo semanal</TableHead>
                 <TableHead className="w-24 text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
@@ -125,20 +119,6 @@ export function GestionarPersonalOficinaDialog({ open, onOpenChange, onChanged }
                   </TableCell>
                   <TableCell>
                     <Switch checked={r.esOficina} onCheckedChange={(v) => update(idx, { esOficina: v })} />
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={r.periodicidad || undefined}
-                      onValueChange={(v) => update(idx, { periodicidad: v as Row["periodicidad"] })}
-                      disabled={!r.esOficina}
-                    >
-                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="semanal">Semanal</SelectItem>
-                        <SelectItem value="quincenal">Quincenal</SelectItem>
-                        <SelectItem value="mensual">Mensual</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </TableCell>
                   <TableCell>
                     <Input

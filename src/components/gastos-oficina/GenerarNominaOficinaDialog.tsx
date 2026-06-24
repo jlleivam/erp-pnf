@@ -7,9 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { generarNominaOficinaDelPeriodo } from "@/lib/api/gastos-oficina.functions";
 
 type Props = {
@@ -20,7 +17,6 @@ type Props = {
 
 export function GenerarNominaOficinaDialog({ open, onOpenChange, onGenerated }: Props) {
   const generar = useServerFn(generarNominaOficinaDelPeriodo);
-  const [periodicidad, setPeriodicidad] = useState<"semanal" | "quincenal" | "mensual">("quincenal");
   const [inicio, setInicio] = useState<string>("");
   const [fin, setFin] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -31,7 +27,7 @@ export function GenerarNominaOficinaDialog({ open, onOpenChange, onGenerated }: 
     setSaving(true);
     try {
       const res = await generar({
-        data: { periodicidad, periodoInicio: inicio, periodoFin: fin },
+        data: { periodicidad: "semanal", periodoInicio: inicio, periodoFin: fin },
       });
       toast.success(`Generados ${res.creados} de ${res.total} (omitidos: ${res.omitidos})`);
       onGenerated();
@@ -47,24 +43,13 @@ export function GenerarNominaOficinaDialog({ open, onOpenChange, onGenerated }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Generar nómina del periodo</DialogTitle>
+          <DialogTitle>Generar nómina semanal</DialogTitle>
           <DialogDescription>
-            Crea una solicitud por cada trabajador de oficina con la periodicidad seleccionada.
+            Crea una solicitud por cada trabajador de oficina para la semana indicada.
             Los duplicados del mismo periodo se omiten.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label>Periodicidad</Label>
-            <Select value={periodicidad} onValueChange={(v) => setPeriodicidad(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="semanal">Semanal</SelectItem>
-                <SelectItem value="quincenal">Quincenal</SelectItem>
-                <SelectItem value="mensual">Mensual</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Inicio</Label>
