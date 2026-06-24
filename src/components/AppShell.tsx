@@ -27,6 +27,7 @@ import {
   ListTodo,
   BarChart3,
   Scale,
+  CalendarRange,
 } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
