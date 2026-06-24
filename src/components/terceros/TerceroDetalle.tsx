@@ -350,3 +350,124 @@ export function TerceroDetalle({
     </>
   );
 }
+
+function EstadoCuentaProveedor({ terceroId }: { terceroId: string }) {
+  const fetchEstado = useServerFn(getEstadoCuentaProveedor);
+  const ecQ = useQuery({
+    queryKey: ["estado-cuenta-proveedor", terceroId],
+    queryFn: () => fetchEstado({ data: { terceroId } }),
+  });
+
+  const totales = ecQ.data?.totales ?? { ordenado: 0, pagado: 0, saldo: 0 };
+  const movimientos = (ecQ.data?.movimientos ?? []) as EstadoCuentaMovimiento[];
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Card className="p-4 space-y-4">
+        <div>
+          <h4 className="text-sm font-medium">Estado de cuenta</h4>
+          <p className="text-xs text-muted-foreground">
+            Cargos por órdenes de compra y abonos por pagos registrados.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="p-3">
+            <p className="text-xs text-muted-foreground">Ordenado</p>
+            <p className="font-semibold">{formatMXN(totales.ordenado)}</p>
+          </Card>
+          <Card className="p-3">
+            <p className="text-xs text-muted-foreground">Pagado</p>
+            <p className="font-semibold">{formatMXN(totales.pagado)}</p>
+          </Card>
+          <Card className="p-3">
+            <p className="text-xs text-muted-foreground">Saldo</p>
+            <p className={`font-semibold ${totales.saldo > 0 ? "text-rose-700" : "text-emerald-700"}`}>
+              {formatMXN(totales.saldo)}
+            </p>
+          </Card>
+        </div>
+
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="whitespace-nowrap">Fecha</TableHead>
+                <TableHead className="whitespace-nowrap">Tipo</TableHead>
+                <TableHead className="whitespace-nowrap">Folio / Ref</TableHead>
+                <TableHead>Concepto</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Cargo</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Abono</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Saldo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ecQ.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                    Cargando…
+                  </TableCell>
+                </TableRow>
+              )}
+              {!ecQ.isLoading && movimientos.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                    Sin movimientos contables con este proveedor.
+                  </TableCell>
+                </TableRow>
+              )}
+              {movimientos.map((m, i) => {
+                const ref = m.referencia ? `${m.folio} · ${m.referencia}` : m.folio;
+                return (
+                  <TableRow key={`${m.tipo}-${i}-${m.fecha}`}>
+                    <TableCell className="text-xs whitespace-nowrap">{formatDate(m.fecha)}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge
+                        className={
+                          m.tipo === "cargo"
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }
+                      >
+                        {m.tipo === "cargo" ? "Cargo" : "Abono"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm font-medium max-w-[160px]">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="truncate">{ref}</div>
+                        </TooltipTrigger>
+                        <TooltipContent>{ref}</TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell className="text-xs max-w-[260px]">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="truncate">{m.concepto}</div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-md whitespace-normal break-words">
+                          {m.concepto}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {m.cargo > 0 ? formatMXN(m.cargo) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {m.abono > 0 ? formatMXN(m.abono) : "—"}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right font-semibold whitespace-nowrap ${m.saldo > 0 ? "text-rose-700" : ""}`}
+                    >
+                      {formatMXN(m.saldo)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+    </TooltipProvider>
+  );
+}
