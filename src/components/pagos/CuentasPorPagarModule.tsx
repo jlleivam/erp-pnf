@@ -205,15 +205,17 @@ export function CuentasPorPagarModule() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelected(r)}
                   >
-                    <TableCell className="font-medium">{r.razon_social}</TableCell>
-                    <TableCell className="text-right">{formatMXN(r.total_ordenado)}</TableCell>
-                    <TableCell className="text-right">{formatMXN(r.total_pagado)}</TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="font-medium max-w-[280px]">
+                      <TruncatedCell>{r.razon_social}</TruncatedCell>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{formatMXN(r.total_ordenado)}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{formatMXN(r.total_pagado)}</TableCell>
+                    <TableCell className="text-right font-semibold whitespace-nowrap">
                       <span className={r.saldo_pendiente > 0 ? "text-rose-700" : ""}>
                         {formatMXN(r.saldo_pendiente)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">{r.oc_pendientes_count}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{r.oc_pendientes_count}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
