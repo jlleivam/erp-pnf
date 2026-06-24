@@ -13,6 +13,8 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { TruncatedCell } from "./TruncatedCell";
 import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes, listCxPSubcontratoPendientes } from "@/lib/api/pagos.functions";
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
 import { listAnticiposSubcontratoPendientes } from "@/lib/api/subcontratos.functions";
