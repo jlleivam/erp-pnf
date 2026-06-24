@@ -360,16 +360,11 @@ export const actualizarPersonalOficina = createServerFn({ method: "POST" })
     const ctx = await getCtx(supabase, userId);
     ensureCanAprobar(ctx);
 
-    const upd: Record<string, unknown> = {
+    const upd = {
       es_personal_oficina: data.esPersonalOficina,
+      periodicidad_pago: data.esPersonalOficina ? (data.periodicidad ?? null) : null,
+      sueldo_periodo: data.esPersonalOficina ? (data.sueldoPeriodo ?? null) : null,
     };
-    if (data.esPersonalOficina) {
-      upd.periodicidad_pago = data.periodicidad ?? null;
-      upd.sueldo_periodo = data.sueldoPeriodo ?? null;
-    } else {
-      upd.periodicidad_pago = null;
-      upd.sueldo_periodo = null;
-    }
 
     const { error } = await supabase
       .from("trabajadores")
