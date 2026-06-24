@@ -43,6 +43,7 @@ function AdminModule() {
   if (slug === "gasolinas") return <GasolinasModule scope="admin" />;
   if (slug === "caja-chica") return <CajaChicaModule scope="admin" />;
   if (slug === "cuentas-por-pagar") return <CuentasPorPagarModule />;
+  if (slug === "gastos-oficina") return <GastosOficinaModule />;
   if (slug === "contabilidad") {
     if (!roles.includes("director") && !roles.includes("administrativo")) {
       return (
