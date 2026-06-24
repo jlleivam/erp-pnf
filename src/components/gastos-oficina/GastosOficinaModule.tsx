@@ -319,7 +319,7 @@ export function GastosOficinaModule() {
         <GenerarNominaOficinaDialog open={nominaOpen} onOpenChange={setNominaOpen} onGenerated={invalidate} />
         <RechazarGastoDialog
           gasto={rechazarTarget}
-          onOpenChange={(o) => { if (!o) setRechazarTarget(null); }}
+          onOpenChange={(o: boolean) => { if (!o) setRechazarTarget(null); }}
           onDone={invalidate}
         />
       </div>
