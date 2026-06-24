@@ -6,6 +6,7 @@ import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
 import { CuentasPorPagarModule } from "@/components/pagos/CuentasPorPagarModule";
 import { TesoreriaModule } from "@/components/tesoreria/TesoreriaModule";
 import { ContabilidadModule } from "@/components/contabilidad/ContabilidadModule";
+import { GastosOficinaModule } from "@/components/gastos-oficina/GastosOficinaModule";
 import { useEffectiveRoles } from "@/stores/auth";
 
 const LABELS: Record<string, string> = {
