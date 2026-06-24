@@ -371,7 +371,7 @@ export const getEstadoCuentaProveedor = createServerFn({ method: "POST" })
       .select("id, folio, created_at, total, monto_pagado, estado_pago, obra:obras(id, nombre)")
       .eq("company_id", companyId)
       .eq("proveedor_id", data.terceroId)
-      .in("estatus", ["enviada_supervisor", "autorizada", "enviada_proveedor"]);
+      .in("estatus", ["autorizada", "enviada", "recibida_parcial", "recibida"]);
     if (ocsErr) throw new Error(ocsErr.message);
 
     const ocList = (ocs ?? []) as Array<{
