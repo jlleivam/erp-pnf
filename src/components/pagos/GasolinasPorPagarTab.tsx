@@ -13,6 +13,7 @@ import {
 import { listValesPorPagar } from "@/lib/api/vales-gasolina.functions";
 import { formatMXN, formatDate } from "@/lib/format";
 import { RegistrarPagoValesGasolinaDialog, type ValeSeleccionado } from "./RegistrarPagoValesGasolinaDialog";
+import { TruncatedCell } from "./TruncatedCell";
 
 type ValeRow = {
   id: string;
