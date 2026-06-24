@@ -134,19 +134,25 @@ export function CajaChicaPorPagarTab() {
                   className={isReemb ? "cursor-pointer hover:bg-muted/30" : undefined}
                   onClick={isReemb ? () => setVerReembolsoId(r.id) : undefined}
                 >
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge variant={isReemb ? "default" : "secondary"}>
                       {isReemb ? "Reembolso" : "Fondo"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium">{r.folio}</TableCell>
-                  <TableCell className="text-xs">{formatDate(r.fecha_emision)}</TableCell>
-                  <TableCell className="text-xs">{r.obra_nombre ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{r.beneficiario_nombre}</TableCell>
-                  <TableCell className="text-right">{formatMXN(r.monto_total)}</TableCell>
-                  <TableCell className="text-right">{formatMXN(r.monto_pagado)}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatMXN(r.saldo)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="font-medium max-w-[160px]">
+                    <TruncatedCell>{r.folio}</TruncatedCell>
+                  </TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">{formatDate(r.fecha_emision)}</TableCell>
+                  <TableCell className="text-xs max-w-[180px]">
+                    <TruncatedCell>{r.obra_nombre ?? "—"}</TruncatedCell>
+                  </TableCell>
+                  <TableCell className="text-xs max-w-[180px]">
+                    <TruncatedCell>{r.beneficiario_nombre}</TruncatedCell>
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">{formatMXN(r.monto_total)}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">{formatMXN(r.monto_pagado)}</TableCell>
+                  <TableCell className="text-right font-semibold whitespace-nowrap">{formatMXN(r.saldo)}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
                     {isReemb ? (
                       <Button size="sm" onClick={(e) => { e.stopPropagation(); setReponerReemb(r); }}>Reponer</Button>
                     ) : (
