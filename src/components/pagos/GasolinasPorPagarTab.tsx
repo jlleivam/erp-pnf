@@ -158,15 +158,21 @@ export function GasolinasPorPagarTab() {
                     aria-label={`Seleccionar ${v.folio}`}
                   />
                 </TableCell>
-                <TableCell className="font-medium">{v.folio}</TableCell>
-                <TableCell className="text-xs">{v.obra_nombre ?? "—"}</TableCell>
-                <TableCell className="text-xs capitalize">{v.tipo_combustible}</TableCell>
-                <TableCell className="text-xs">{v.solicitante_nombre ?? "—"}</TableCell>
-                <TableCell className="text-xs">{v.ligado_at ? formatDate(v.ligado_at) : "—"}</TableCell>
-                <TableCell className="text-right">{formatMXN(v.monto_autorizado)}</TableCell>
-                <TableCell className="text-right">{formatMXN(v.pagado)}</TableCell>
-                <TableCell className="text-right font-semibold">{formatMXN(v.saldo)}</TableCell>
-                <TableCell>
+                <TableCell className="font-medium max-w-[140px]">
+                  <TruncatedCell>{v.folio}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs max-w-[180px]">
+                  <TruncatedCell>{v.obra_nombre ?? "—"}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs capitalize whitespace-nowrap">{v.tipo_combustible}</TableCell>
+                <TableCell className="text-xs max-w-[180px]">
+                  <TruncatedCell>{v.solicitante_nombre ?? "—"}</TruncatedCell>
+                </TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{v.ligado_at ? formatDate(v.ligado_at) : "—"}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(v.monto_autorizado)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{formatMXN(v.pagado)}</TableCell>
+                <TableCell className="text-right font-semibold whitespace-nowrap">{formatMXN(v.saldo)}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge className={v.estatus === "confirmado" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
                     {v.estatus === "confirmado" ? "Confirmado" : "Entregado"}
                   </Badge>
