@@ -14,8 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Pencil } from "lucide-react";
-import { getTercero } from "@/lib/api/terceros.functions";
+import { getTercero, getEstadoCuentaProveedor, type EstadoCuentaMovimiento } from "@/lib/api/terceros.functions";
 import { formatMXN } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentoTerceroUploader } from "./DocumentoTerceroUploader";
 import {
   TerceroFormDialog,
