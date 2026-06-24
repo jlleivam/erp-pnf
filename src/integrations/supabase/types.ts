@@ -1181,6 +1181,110 @@ export type Database = {
           },
         ]
       }
+      gastos_oficina: {
+        Row: {
+          aprobado_at: string | null
+          aprobado_por: string | null
+          beneficiario_trabajador_id: string | null
+          company_id: string
+          concepto: string
+          created_at: string
+          cxp_id: string | null
+          estatus: Database["public"]["Enums"]["gasto_oficina_estatus"]
+          evidencia_url: string | null
+          fecha_gasto: string
+          fecha_requerida_pago: string | null
+          folio: string
+          id: string
+          monto: number
+          motivo_rechazo: string | null
+          notas: string | null
+          periodo_fin: string | null
+          periodo_inicio: string | null
+          proveedor_id: string | null
+          solicitado_por: string
+          tipo: Database["public"]["Enums"]["gasto_oficina_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          aprobado_at?: string | null
+          aprobado_por?: string | null
+          beneficiario_trabajador_id?: string | null
+          company_id: string
+          concepto: string
+          created_at?: string
+          cxp_id?: string | null
+          estatus?: Database["public"]["Enums"]["gasto_oficina_estatus"]
+          evidencia_url?: string | null
+          fecha_gasto?: string
+          fecha_requerida_pago?: string | null
+          folio: string
+          id?: string
+          monto: number
+          motivo_rechazo?: string | null
+          notas?: string | null
+          periodo_fin?: string | null
+          periodo_inicio?: string | null
+          proveedor_id?: string | null
+          solicitado_por: string
+          tipo: Database["public"]["Enums"]["gasto_oficina_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          aprobado_at?: string | null
+          aprobado_por?: string | null
+          beneficiario_trabajador_id?: string | null
+          company_id?: string
+          concepto?: string
+          created_at?: string
+          cxp_id?: string | null
+          estatus?: Database["public"]["Enums"]["gasto_oficina_estatus"]
+          evidencia_url?: string | null
+          fecha_gasto?: string
+          fecha_requerida_pago?: string | null
+          folio?: string
+          id?: string
+          monto?: number
+          motivo_rechazo?: string | null
+          notas?: string | null
+          periodo_fin?: string | null
+          periodo_inicio?: string | null
+          proveedor_id?: string | null
+          solicitado_por?: string
+          tipo?: Database["public"]["Enums"]["gasto_oficina_tipo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_oficina_beneficiario_trabajador_id_fkey"
+            columns: ["beneficiario_trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_oficina_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_oficina_cxp_id_fkey"
+            columns: ["cxp_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_por_pagar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_oficina_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insumo_categorias: {
         Row: {
           company_id: string
@@ -3631,6 +3735,7 @@ export type Database = {
           created_at: string
           curp: string | null
           direccion: string | null
+          es_personal_oficina: boolean
           estado_civil: string | null
           estatus_autorizacion: Database["public"]["Enums"]["trabajador_autorizacion"]
           fecha_baja: string | null
@@ -3644,10 +3749,14 @@ export type Database = {
           imss_tipo_trabajador: string | null
           nombre_completo: string
           nss: string | null
+          periodicidad_pago:
+            | Database["public"]["Enums"]["nomina_oficina_periodicidad"]
+            | null
           puesto: Database["public"]["Enums"]["trabajador_puesto"] | null
           rfc: string | null
           sexo: Database["public"]["Enums"]["trabajador_sexo"] | null
           sueldo_diario: number | null
+          sueldo_periodo: number | null
           telefono: string | null
           tipo_contrato:
             | Database["public"]["Enums"]["trabajador_tipo_contrato"]
@@ -3660,6 +3769,7 @@ export type Database = {
           created_at?: string
           curp?: string | null
           direccion?: string | null
+          es_personal_oficina?: boolean
           estado_civil?: string | null
           estatus_autorizacion?: Database["public"]["Enums"]["trabajador_autorizacion"]
           fecha_baja?: string | null
@@ -3673,10 +3783,14 @@ export type Database = {
           imss_tipo_trabajador?: string | null
           nombre_completo: string
           nss?: string | null
+          periodicidad_pago?:
+            | Database["public"]["Enums"]["nomina_oficina_periodicidad"]
+            | null
           puesto?: Database["public"]["Enums"]["trabajador_puesto"] | null
           rfc?: string | null
           sexo?: Database["public"]["Enums"]["trabajador_sexo"] | null
           sueldo_diario?: number | null
+          sueldo_periodo?: number | null
           telefono?: string | null
           tipo_contrato?:
             | Database["public"]["Enums"]["trabajador_tipo_contrato"]
@@ -3689,6 +3803,7 @@ export type Database = {
           created_at?: string
           curp?: string | null
           direccion?: string | null
+          es_personal_oficina?: boolean
           estado_civil?: string | null
           estatus_autorizacion?: Database["public"]["Enums"]["trabajador_autorizacion"]
           fecha_baja?: string | null
@@ -3702,10 +3817,14 @@ export type Database = {
           imss_tipo_trabajador?: string | null
           nombre_completo?: string
           nss?: string | null
+          periodicidad_pago?:
+            | Database["public"]["Enums"]["nomina_oficina_periodicidad"]
+            | null
           puesto?: Database["public"]["Enums"]["trabajador_puesto"] | null
           rfc?: string | null
           sexo?: Database["public"]["Enums"]["trabajador_sexo"] | null
           sueldo_diario?: number | null
+          sueldo_periodo?: number | null
           telefono?: string | null
           tipo_contrato?:
             | Database["public"]["Enums"]["trabajador_tipo_contrato"]
@@ -3935,6 +4054,10 @@ export type Database = {
         Returns: string
       }
       siguiente_folio_cxp: { Args: { _company_id: string }; Returns: string }
+      siguiente_folio_gasto_oficina: {
+        Args: { _company_id: string }
+        Returns: string
+      }
       siguiente_folio_oc: { Args: { _company_id: string }; Returns: string }
       siguiente_folio_requisicion: {
         Args: { _company_id: string }
@@ -3985,8 +4108,16 @@ export type Database = {
         | "pagada"
       destajo_presupuesto_tipo: "base" | "adenda"
       estimacion_estatus: "borrador" | "cerrada"
+      gasto_oficina_estatus:
+        | "pendiente_aprobacion"
+        | "aprobada"
+        | "rechazada"
+        | "pagada"
+        | "cancelada"
+      gasto_oficina_tipo: "nomina_oficina" | "servicio" | "papeleria" | "otro"
       insumo_estatus: "autorizado" | "pendiente"
       nomina_estatus: "borrador" | "cerrada"
+      nomina_oficina_periodicidad: "semanal" | "quincenal" | "mensual"
       oc_estatus:
         | "borrador"
         | "pendiente_autorizacion"
@@ -4232,8 +4363,17 @@ export const Constants = {
       ],
       destajo_presupuesto_tipo: ["base", "adenda"],
       estimacion_estatus: ["borrador", "cerrada"],
+      gasto_oficina_estatus: [
+        "pendiente_aprobacion",
+        "aprobada",
+        "rechazada",
+        "pagada",
+        "cancelada",
+      ],
+      gasto_oficina_tipo: ["nomina_oficina", "servicio", "papeleria", "otro"],
       insumo_estatus: ["autorizado", "pendiente"],
       nomina_estatus: ["borrador", "cerrada"],
+      nomina_oficina_periodicidad: ["semanal", "quincenal", "mensual"],
       oc_estatus: [
         "borrador",
         "pendiente_autorizacion",
