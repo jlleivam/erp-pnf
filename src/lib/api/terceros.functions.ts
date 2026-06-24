@@ -340,3 +340,132 @@ export const eliminarDocumentoTercero = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// =============== ESTADO DE CUENTA (PROVEEDOR) ===============
+export type EstadoCuentaMovimiento = {
+  fecha: string;
+  tipo: "cargo" | "abono";
+  folio: string;
+  concepto: string;
+  referencia: string | null;
+  obraNombre: string | null;
+  ocId: string | null;
+  ocFolio: string | null;
+  cargo: number;
+  abono: number;
+  saldo: number;
+};
+
+export const getEstadoCuentaProveedor = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ terceroId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { companyId } = await getCtx(supabase, userId);
+
+    // OCs del proveedor (cargos)
+    const { data: ocs, error: ocsErr } = await supabase
+      .from("ordenes_compra")
+      .select("id, folio, created_at, total, monto_pagado, estado_pago, obra:obras(id, nombre)")
+      .eq("company_id", companyId)
+      .eq("proveedor_id", data.terceroId)
+      .in("estatus", ["enviada_supervisor", "autorizada", "enviada_proveedor"]);
+    if (ocsErr) throw new Error(ocsErr.message);
+
+    const ocList = (ocs ?? []) as Array<{
+      id: string;
+      folio: string;
+      created_at: string;
+      total: number | string;
+      monto_pagado: number | string;
+      estado_pago: string;
+      obra: { id: string; nombre: string } | null;
+    }>;
+
+    const ocIds = ocList.map((o) => o.id);
+    let pagosList: Array<{
+      id: string;
+      fecha: string;
+      monto: number | string;
+      metodo: string;
+      referencia: string | null;
+      origen_id: string;
+      cuenta: { nombre: string } | null;
+    }> = [];
+
+    if (ocIds.length > 0) {
+      const { data: pagos, error: pagosErr } = await supabase
+        .from("pagos")
+        .select("id, fecha, monto, metodo, referencia, origen_id, cuenta:cuentas(nombre)")
+        .eq("company_id", companyId)
+        .eq("origen_tipo", "oc")
+        .is("cancelado_at", null)
+        .in("origen_id", ocIds);
+      if (pagosErr) throw new Error(pagosErr.message);
+      pagosList = (pagos ?? []) as typeof pagosList;
+    }
+
+    const ocById = new Map(ocList.map((o) => [o.id, o]));
+
+    type Mov = Omit<EstadoCuentaMovimiento, "saldo">;
+    const movs: Mov[] = [];
+
+    for (const oc of ocList) {
+      movs.push({
+        fecha: oc.created_at,
+        tipo: "cargo",
+        folio: oc.folio,
+        concepto: `Orden de compra${oc.obra?.nombre ? ` · ${oc.obra.nombre}` : ""}`,
+        referencia: null,
+        obraNombre: oc.obra?.nombre ?? null,
+        ocId: oc.id,
+        ocFolio: oc.folio,
+        cargo: Number(oc.total) || 0,
+        abono: 0,
+      });
+    }
+    for (const p of pagosList) {
+      const oc = ocById.get(p.origen_id);
+      movs.push({
+        fecha: p.fecha,
+        tipo: "abono",
+        folio: oc?.folio ?? "—",
+        concepto: `Pago ${p.metodo}${p.cuenta?.nombre ? ` · ${p.cuenta.nombre}` : ""}${oc?.folio ? ` · ${oc.folio}` : ""}`,
+        referencia: p.referencia,
+        obraNombre: oc?.obra?.nombre ?? null,
+        ocId: oc?.id ?? null,
+        ocFolio: oc?.folio ?? null,
+        cargo: 0,
+        abono: Number(p.monto) || 0,
+      });
+    }
+
+    movs.sort((a, b) => {
+      if (a.fecha === b.fecha) {
+        // cargos antes que abonos del mismo día
+        return a.tipo === b.tipo ? 0 : a.tipo === "cargo" ? -1 : 1;
+      }
+      return a.fecha < b.fecha ? -1 : 1;
+    });
+
+    let saldo = 0;
+    const movimientos: EstadoCuentaMovimiento[] = movs.map((m) => {
+      saldo += m.cargo - m.abono;
+      return { ...m, saldo: +saldo.toFixed(2) };
+    });
+
+    const totalOrdenado = ocList.reduce((s, o) => s + (Number(o.total) || 0), 0);
+    const totalPagado = pagosList.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+
+    return {
+      totales: {
+        ordenado: +totalOrdenado.toFixed(2),
+        pagado: +totalPagado.toFixed(2),
+        saldo: +(totalOrdenado - totalPagado).toFixed(2),
+      },
+      movimientos,
+    };
+  });
+
