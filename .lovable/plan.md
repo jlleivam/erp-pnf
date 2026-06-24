@@ -1,116 +1,89 @@
+## Módulo: Condensado semanal de gastos
 
-# Módulo: Gastos de oficina
+Nuevo módulo administrativo (solo director / administrativo) para revisar todos los gastos de la semana —tanto devengados como pagados— de todas las obras activas y de oficina, agrupados por obra con detalle expandible.
 
-Una sola pantalla en `/app/admin/gastos-oficina` con tres pestañas:
+### Ubicación y acceso
+- Nueva entrada en el sidebar admin de `AppShell.tsx`: **"Condensado semanal"** (ícono `CalendarRange`), debajo de Contabilidad.
+- Ruta servida por `app.admin.$.tsx` con slug `condensado-semanal` → nuevo componente `CondensadoSemanalModule`.
+- Visible solo si el rol es `director` o `administrativo` (mismo gate que Tesorería/Contabilidad).
 
-1. **Personal de oficina** – nómina fija (reutiliza `trabajadores`).
-2. **Solicitudes de gasto** – flujo solicitud → aprobación director → CxP.
-3. **Histórico** – gastos pagados y cargo contable a "Gastos de administración".
+### Selector de semana
+- Header con: `‹ Semana 23 · 1 Jun – 7 Jun 2026 ›` y botón "Hoy".
+- Semana **lunes a domingo**. Default: semana en curso.
+- Las flechas navegan ±1 semana. La semana queda en search params (`?semana=2026-06-01`) para que el enlace sea compartible.
 
----
+### Datos consolidados
 
-## 1. Base de datos (migración)
+Dos métricas paralelas por cada fila:
+- **Devengado**: gasto generado dentro de la semana, sin importar si se pagó. Fuente: fecha de creación del concepto (CxP, nómina, vale, gasto oficina, etc.).
+- **Pagado**: salidas reales de tesorería con `fecha_pago` dentro de la semana. Fuente: tabla `pagos`.
 
-### a) Marcar trabajadores de oficina
-Agregar a `public.trabajadores`:
-- `es_personal_oficina boolean NOT NULL DEFAULT false`
-- `periodicidad_pago` enum `('semanal','quincenal','mensual')` (nullable; sólo aplica si es oficina)
-- `sueldo_periodo numeric` (nullable; sueldo fijo por periodo, independiente de `sueldo_diario` que es para obra)
+Fuentes incluidas (todas filtradas a la semana seleccionada y company actual):
 
-En el catálogo de Trabajadores se agrega un toggle "Personal de oficina"; cuando se prende, aparecen los campos de periodicidad y sueldo.
+| Concepto | Devengado (fecha) | Pagado (vía) |
+|---|---|---|
+| Nómina obra | `obra_nominas.fecha_pago` (semana) | `pagos` vinculado a CxP de nómina |
+| Nómina oficina | `gastos_oficina.fecha_gasto` (tipo=nomina_oficina) | `pagos` → CxP `origen_tipo='gasto_oficina'` |
+| Destajos (anticipos + estimaciones) | `obra_destajo_anticipos.fecha` / estimaciones | `pagos` → CxP origen destajo |
+| Subcontratos | `obra_subcontrato_anticipos.fecha` / estimaciones | `pagos` → CxP origen subcontrato |
+| Insumos / CxP proveedor | `cuentas_por_pagar.fecha_emision` (origen=requisicion u OC) | `pagos` correspondientes |
+| Rentas | `obra_renta_pagos.periodo_fin` (devengo) | `pagos` → CxP `origen_tipo='renta_periodo'` |
+| Gasolinas | `vales_gasolina.fecha` | `pagos` correspondientes |
+| Caja chica | `caja_chica_gastos.fecha` (estatus aprobado) | `pagos` de reembolsos CC en la semana |
+| Otros gastos oficina | `gastos_oficina.fecha_gasto` (tipo≠nomina) | `pagos` → CxP `origen_tipo='gasto_oficina'` |
 
-### b) Nueva tabla `public.gastos_oficina`
-Columnas:
-- `id`, `company_id`, `folio` (autogenerado tipo `GO-2026-0001` con función `siguiente_folio_gasto_oficina`)
-- `tipo` enum `('nomina_oficina','servicio','papeleria','otro')`
-- `concepto text NOT NULL` (ej. "CFE recibo abril", "Papelería Office Depot")
-- `proveedor_id uuid NULL` → `terceros(id)` (opcional)
-- `beneficiario_trabajador_id uuid NULL` → `trabajadores(id)` (sólo cuando `tipo='nomina_oficina'`)
-- `periodo_inicio`, `periodo_fin` (sólo para nómina; sirven para evitar duplicados)
-- `monto numeric NOT NULL`
-- `fecha_gasto date NOT NULL`
-- `fecha_requerida_pago date`
-- `notas text`
-- `evidencia_url text` (recibo/factura subido a bucket `terceros-docs` o nuevo `gastos-oficina`)
-- `estatus` enum `('pendiente_aprobacion','aprobada','rechazada','pagada','cancelada')` default `pendiente_aprobacion`
-- `cxp_id uuid NULL` → `cuentas_por_pagar(id)` (se llena al aprobar)
-- `motivo_rechazo text`
-- `solicitado_por uuid`, `aprobado_por uuid`, `aprobado_at timestamptz`
-- `created_at`, `updated_at`
+> **Estrategia técnica:** una sola server function `getCondensadoSemanal({ semanaInicio })` que aprovecha que casi todo pasa por `cuentas_por_pagar` (con `origen_tipo`) y `pagos`. Solo se consultan tablas-fuente adicionales para conceptos que no generan CxP (ej. caja chica gastos no reembolsados aún). Esto evita 9 queries y mantiene una sola fuente de verdad. Buckets de concepto se derivan de `origen_tipo` y `obra_id IS NULL` (= oficina).
 
-Grants estándar (`authenticated`, `service_role`), RLS por `company_id` con `current_company_id()`. Política de aprobación/rechazo restringida a `director` o `administrativo` vía `has_role`.
+### Vista principal — lista detallada agrupada por obra
 
-### c) CxP – sin cambios de esquema
-Se reutiliza `cuentas_por_pagar` con:
-- `obra_id = NULL` (gasto no asignable a obra)
-- `origen_tipo = 'gasto_oficina'`, `origen_id = gastos_oficina.id`
-- `beneficiario_tipo` = `tercero` (proveedor) o `trabajador` (nómina oficina)
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ Total semana   Devengado: $1,245,300   Pagado: $987,150          │
+│                Pendiente de pago: $258,150                       │
+├──────────────────────────────────────────────────────────────────┤
+│ Filtros: [Todos los conceptos ▾]  [Solo con saldo pendiente ☐]   │
+└──────────────────────────────────────────────────────────────────┘
 
-Validar que `obra_id` permita NULL en `cuentas_por_pagar`; si no, ajustar en la misma migración.
+▾ Obra: Torre Lomas                      Deveng. $420k   Pagado $380k
+   ├ Nómina semanal              $180,000 deveng / $180,000 pagado
+   ├ Destajos                    $120,000 deveng /  $90,000 pagado
+   ├ Insumos (CxP)               $ 80,000 deveng /  $80,000 pagado
+   └ Rentas                      $ 40,000 deveng /  $30,000 pagado
+   [Ver detalle ▾]  ← expande filas individuales con folio, proveedor,
+                      concepto, monto deveng, monto pagado, link al doc.
 
-### d) Cuenta contable
-Cuando la CxP se paga (flujo existente de `pagos`), asegurar que el asiento contable use la cuenta `"Gastos de administración"` cuando `origen_tipo='gasto_oficina'`, en lugar de "Costo de obra". Lo implementaremos en el handler de pagos (o en el `cuenta_contable` que se escribe en `asientos_contables`).
+▾ Obra: Casa Polanco                     Deveng. $310k   Pagado $260k
+   ...
 
----
+▾ Oficina (sin obra)                     Deveng. $215k   Pagado $190k
+   ├ Nómina oficina              $ 95,000 / $ 95,000
+   ├ Servicios (luz, agua…)      $ 45,000 / $ 30,000
+   ├ Papelería                   $ 20,000 / $ 20,000
+   └ Otros                       $ 55,000 / $ 45,000
+   [Ver detalle ▾]
+```
 
-## 2. Backend (server functions)
+- Cabecera con 3 KPIs (devengado, pagado, pendiente).
+- Una **sección colapsable por obra activa** (`obras.estatus='activa'`) que tuvo movimiento + una sección final **"Oficina"** para `obra_id IS NULL`.
+- Dentro de cada sección: subtotal por concepto, y un botón "Ver detalle" que despliega la tabla de gastos individuales (folio, fecha, beneficiario, concepto, devengado, pagado, link al CxP / pago / vale).
+- Obras sin movimiento en la semana se ocultan (toggle "Mostrar obras sin gastos").
+- Cada folio enlaza a su módulo original (CxP → `/app/admin/cuentas-por-pagar?folio=...`, vale → módulo gasolinas, etc.).
 
-Archivo `src/lib/api/gastos-oficina.functions.ts` con `requireSupabaseAuth`:
+### Detalles técnicos
 
-- `listGastosOficina({ estatus? })` – tabla principal con filtros.
-- `crearGastoOficina(input)` – cualquier usuario con rol admin/residente lo solicita; queda `pendiente_aprobacion`.
-- `aprobarGastoOficina({ id })` – sólo director/administrativo. Crea la CxP automáticamente (folio CxP normal, beneficiario y concepto heredados) y enlaza `cxp_id`. Cambia estatus a `aprobada`.
-- `rechazarGastoOficina({ id, motivo })`.
-- `cancelarGastoOficina({ id })`.
-- `generarNominaOficinaDelPeriodo({ periodicidad, periodo_inicio, periodo_fin })` – botón en pestaña de Personal: recorre `trabajadores` con `es_personal_oficina=true` y la periodicidad indicada, crea un gasto `tipo='nomina_oficina'` por cada uno (idempotente: unique parcial `(beneficiario_trabajador_id, periodo_inicio, periodo_fin)` cuando tipo='nomina_oficina'). Quedan `pendiente_aprobacion` para que el director confirme y pase a CxP.
+- **Backend** (`src/lib/api/condensado-semanal.functions.ts`):
+  - `getCondensadoSemanal` protegido con `requireSupabaseAuth` + verificación de rol `director|administrativo` vía `has_role`.
+  - Input: `{ semanaInicio: string (YYYY-MM-DD lunes) }`.
+  - Output: `{ semana: {inicio, fin}, totales: {devengado, pagado, pendiente}, obras: [{obra_id, nombre, conceptos: [{tipo, label, devengado, pagado, items: [...]}]}], oficina: {...} }`.
+  - Una query a CxP con join a obras y pagos agregados; consulta auxiliar a caja_chica_gastos para gastos aprobados aún sin reembolso emitido.
+- **Frontend** (`src/components/condensado-semanal/CondensadoSemanalModule.tsx`):
+  - Header con selector de semana (botones `‹ ›` + label) y KPIs.
+  - `Accordion` de shadcn por obra; dentro, tabla compacta con patrón `TruncatedCell`.
+  - Filtros: multiselect de concepto + checkbox "Solo con saldo pendiente".
+  - Botón "Exportar CSV" de la semana (opcional, en vista expandida).
+- **Search params**: `?semana=YYYY-MM-DD`; validados con `validateSearch` en la ruta.
 
----
-
-## 3. Frontend
-
-### Ruta
-Reemplazar el placeholder de `gastos-oficina` en `src/routes/_authenticated/app.admin.$.tsx` con `<GastosOficinaModule />`.
-
-### `src/components/gastos-oficina/GastosOficinaModule.tsx`
-Header + `Tabs`:
-
-**Tab 1 – Personal de oficina**
-- Lista de trabajadores con `es_personal_oficina=true` (nombre, puesto, periodicidad, sueldo por periodo, próximo pago estimado).
-- Botón **"Agregar personal de oficina"** → abre selector de trabajadores existentes para marcarlos (o link al catálogo para alta nueva).
-- Botón **"Generar nómina del periodo"** → diálogo: elegir periodicidad y fechas; al confirmar llama `generarNominaOficinaDelPeriodo` y avisa cuántos se crearon.
-
-**Tab 2 – Solicitudes**
-- Tabla de gastos con estatus `pendiente_aprobacion` y `aprobada` (no pagada aún). Columnas: folio, fecha, tipo, concepto, beneficiario, monto, estatus, acciones.
-- Botón **"Nuevo gasto"** → diálogo con: tipo (servicio/papelería/otro), concepto, proveedor (opcional, autocompletado de terceros), monto, fecha, fecha requerida de pago, evidencia (upload opcional), notas.
-- Acciones por fila (sólo director/administrativo): **Aprobar** (genera CxP automáticamente), **Rechazar** (pide motivo). Solicitante puede **Cancelar** si sigue pendiente.
-
-**Tab 3 – Histórico**
-- Gastos `pagada`, `rechazada`, `cancelada` con filtros por rango de fecha y tipo.
-- Click en fila pagada → muestra CxP y pago vinculado (link o sheet).
-
-Toda tabla en **un solo renglón** con `TruncatedCell` (regla del proyecto).
-
-### Permisos UI
-- Director/Administrativo: ven todo, aprueban/rechazan, generan nómina del periodo.
-- Otros roles administrativos: pueden capturar solicitudes; ven sólo las propias y las aprobadas/pagadas.
-- Residente/supervisor: sin acceso al módulo (lo oculta `AppShell`/`modules.ts` si no es director/admin).
-
----
-
-## 4. Detalles técnicos
-
-- Folios: `GO-AAAA-####` vía nueva función `siguiente_folio_gasto_oficina`.
-- Idempotencia nómina oficina: índice único parcial `WHERE tipo='nomina_oficina' AND beneficiario_trabajador_id IS NOT NULL`.
-- Al aprobar, el handler crea la CxP en la misma transacción lógica (server function) y devuelve el `cxp_id`.
-- El pago de la CxP usa el dialog existente `RegistrarPagoCxPDialog` sin cambios.
-- En `asientos_contables`, cuando `origen_tipo='gasto_oficina'`, `cuenta_contable = 'Gastos de administración'` (cargo) y `'Bancos'`/`'Cuentas por pagar - Administrativos'` según paso.
-
----
-
-## Fuera de alcance (para después)
-
-- Catálogo de servicios recurrentes (CFE, Telmex, renta) con recordatorios; ahora cada recibo se captura suelto.
-- Reportes/gráficas de gasto administrativo por mes.
-- Presupuesto anual de oficina y comparativo vs ejercido.
-- Integración con SAT/CFDI 4.0.
-- Asignación parcial de gastos de oficina a obras (prorrateo).
+### Fuera de alcance (mencionar al cierre)
+- Gráficas / tendencia multi-semana → puede vivir después en Contabilidad.
+- Edición o aprobación desde este módulo: es solo-lectura, los gastos se siguen aprobando en sus módulos origen.
+- Comparativo presupuesto vs gastado por obra.
