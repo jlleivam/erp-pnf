@@ -85,3 +85,22 @@ export const completeOnboarding = createServerFn({ method: "POST" })
 
     return { companyId: company.id };
   });
+
+const updateProfileSchema = z.object({
+  nombre_completo: z.string().trim().min(1).max(255),
+});
+
+export const updateMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => updateProfileSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .update({ nombre_completo: data.nombre_completo })
+      .eq("id", userId)
+      .select("id, email, nombre_completo, company_id")
+      .single();
+    if (error) throw new Error(error.message);
+    return profile;
+  });
