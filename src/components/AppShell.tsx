@@ -28,6 +28,7 @@ import {
   BarChart3,
   Scale,
   CalendarRange,
+  User,
 } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -257,6 +258,17 @@ export function AppShell() {
                     <span className="text-xs text-muted-foreground">{profile?.email}</span>
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {director && (
+                  <DropdownMenuItem onClick={() => navigate({ to: "/app/configuracion" })}>
+                    <Building2 className="size-4 mr-2" />
+                    Configuración de empresa
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => navigate({ to: "/app/mi-cuenta" })}>
+                  <User className="size-4 mr-2" />
+                  Mi cuenta
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="size-4 mr-2" />
