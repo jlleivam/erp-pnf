@@ -105,7 +105,7 @@ function Onboarding() {
         <CardHeader>
           <CardTitle>Registrar empresa</CardTitle>
           <CardDescription>
-            Paso {step} de 2 — {step === 1 ? "Datos de la empresa" : "Cuenta del Director"}
+            Paso {step} de 2 — {step === 1 ? "Datos de la empresa" : "Cuenta del Propietario"}
           </CardDescription>
         </CardHeader>
         <CardContent>
