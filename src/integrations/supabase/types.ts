@@ -3593,6 +3593,41 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          action_key: string
+          allowed: boolean
+          company_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          action_key: string
+          allowed: boolean
+          company_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          action_key?: string
+          allowed?: boolean
+          company_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       terceros: {
         Row: {
           banco: string | null
