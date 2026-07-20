@@ -19,6 +19,7 @@ interface AuthState {
   assumedRole: AppRole | null;
   loading: boolean;
   setSession: (data: { userId: string | null; profile: AuthProfile | null; roles: AppRole[] }) => void;
+  setProfile: (profile: AuthProfile) => void;
   setAssumedRole: (role: AppRole | null) => void;
   setLoading: (loading: boolean) => void;
   reset: () => void;
@@ -34,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
       loading: true,
       setSession: ({ userId, profile, roles }) =>
         set({ userId, profile, roles, loading: false }),
+      setProfile: (profile) => set({ profile }),
       setAssumedRole: (assumedRole) => set({ assumedRole }),
       setLoading: (loading) => set({ loading }),
       reset: () =>
