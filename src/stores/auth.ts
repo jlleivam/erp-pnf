@@ -19,6 +19,7 @@ interface AuthState {
   assumedRole: AppRole | null;
   loading: boolean;
   setSession: (data: { userId: string | null; profile: AuthProfile | null; roles: AppRole[] }) => void;
+  setProfile: (profile: AuthProfile) => void;
   setAssumedRole: (role: AppRole | null) => void;
   setLoading: (loading: boolean) => void;
   reset: () => void;
