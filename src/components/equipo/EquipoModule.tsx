@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listTeamMembers,
   inviteTeamMember,
-  updateMemberRoles,
+  updateMemberRole,
   removeMember,
 } from "@/lib/api/team.functions";
 import { useEffectiveIsDirector, type AppRole } from "@/stores/auth";
@@ -13,7 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +56,9 @@ const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: "administrativo", label: "Administrativo" },
   { value: "supervisor", label: "Supervisor" },
 ];
+
+const roleLabel = (r: string) =>
+  ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r;
 
 type Member = {
   id: string;
@@ -92,7 +101,7 @@ export function EquipoModule() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Usuarios de la empresa y sus roles. El Director crea cuentas y comparte la contraseña manualmente.
+          Usuarios de la empresa y su rol. El Director crea cuentas y comparte la contraseña manualmente.
         </p>
         <Button onClick={() => setInviting(true)}>
           <Plus className="size-4 mr-1" /> Crear cuenta
@@ -105,7 +114,7 @@ export function EquipoModule() {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Roles</TableHead>
+              <TableHead>Rol</TableHead>
               <TableHead className="w-32 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -120,17 +129,13 @@ export function EquipoModule() {
                   <TableCell className="font-medium">{m.nombre_completo || "—"}</TableCell>
                   <TableCell className="text-sm">{m.email}</TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {m.roles.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">sin rol</span>
-                      ) : (
-                        m.roles.map((r) => (
-                          <Badge key={r} variant="secondary" className="text-xs">
-                            {ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r}
-                          </Badge>
-                        ))
-                      )}
-                    </div>
+                    {m.roles.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">sin rol</span>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        {roleLabel(m.roles[0])}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setEditing(m as Member)}>
@@ -155,7 +160,7 @@ export function EquipoModule() {
       )}
 
       {editing && (
-        <EditRolesDialog
+        <EditRoleDialog
           member={editing}
           onClose={() => setEditing(null)}
           onSaved={() => qc.invalidateQueries({ queryKey: ["team-members"] })}
@@ -167,7 +172,7 @@ export function EquipoModule() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Remover de la empresa?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{toRemove?.nombre_completo || toRemove?.email}" perderá acceso a esta empresa y todos sus roles.
+              "{toRemove?.nombre_completo || toRemove?.email}" perderá acceso a esta empresa y su rol.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -194,7 +199,7 @@ function InviteDialog({
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRoles, setSelectedRoles] = useState<AppRole[]>(["residente"]);
+  const [role, setRole] = useState<AppRole>("residente");
 
   const invite = useServerFn(inviteTeamMember);
   const m = useMutation({
@@ -207,22 +212,15 @@ function InviteDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const toggle = (r: AppRole) => {
-    setSelectedRoles((prev) =>
-      prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
-    );
-  };
-
   const submit = () => {
     if (!email.trim() || !nombre.trim()) return toast.error("Email y nombre requeridos");
     if (password.length < 8) return toast.error("Contraseña mínimo 8 caracteres");
-    if (selectedRoles.length === 0) return toast.error("Selecciona al menos un rol");
     m.mutate({
       data: {
         email: email.trim(),
         nombre_completo: nombre.trim(),
         password,
-        roles: selectedRoles,
+        role,
       },
     });
   };
@@ -258,18 +256,17 @@ function InviteDialog({
             </p>
           </div>
           <div>
-            <Label>Roles</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {ROLE_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={selectedRoles.includes(opt.value)}
-                    onCheckedChange={() => toggle(opt.value)}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
+            <Label>Rol</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
@@ -283,7 +280,7 @@ function InviteDialog({
   );
 }
 
-function EditRolesDialog({
+function EditRoleDialog({
   member,
   onClose,
   onSaved,
@@ -292,45 +289,38 @@ function EditRolesDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [selectedRoles, setSelectedRoles] = useState<AppRole[]>(member.roles as AppRole[]);
-  const update = useServerFn(updateMemberRoles);
+  const [role, setRole] = useState<AppRole>((member.roles[0] as AppRole) ?? "residente");
+  const update = useServerFn(updateMemberRole);
   const m = useMutation({
     mutationFn: update,
-    onSuccess: () => { toast.success("Roles actualizados"); onSaved(); onClose(); },
+    onSuccess: () => { toast.success("Rol actualizado"); onSaved(); onClose(); },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  const toggle = (r: AppRole) => {
-    setSelectedRoles((prev) =>
-      prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
-    );
-  };
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar roles</DialogTitle>
+          <DialogTitle>Editar rol</DialogTitle>
           <DialogDescription>{member.nombre_completo || member.email}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-2">
-          {ROLE_OPTIONS.map((opt) => (
-            <label key={opt.value} className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={selectedRoles.includes(opt.value)}
-                onCheckedChange={() => toggle(opt.value)}
-              />
-              {opt.label}
-            </label>
-          ))}
+        <div>
+          <Label>Rol</Label>
+          <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
-            onClick={() => {
-              if (selectedRoles.length === 0) return toast.error("Selecciona al menos un rol");
-              m.mutate({ data: { user_id: member.id, roles: selectedRoles } });
-            }}
+            onClick={() => m.mutate({ data: { user_id: member.id, role } })}
             disabled={m.isPending}
           >
             {m.isPending ? "Guardando…" : "Guardar"}
@@ -340,3 +330,4 @@ function EditRolesDialog({
     </Dialog>
   );
 }
+
