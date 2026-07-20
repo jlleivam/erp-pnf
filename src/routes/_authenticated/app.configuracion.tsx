@@ -69,6 +69,7 @@ function Configuracion() {
           <TabsTrigger value="identidad">Identidad</TabsTrigger>
           <TabsTrigger value="equipo">Equipo</TabsTrigger>
           <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
+          <TabsTrigger value="permisos">Permisos</TabsTrigger>
           <TabsTrigger value="documentacion">Documentación</TabsTrigger>
         </TabsList>
 
