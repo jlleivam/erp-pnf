@@ -65,13 +65,13 @@ function Configuracion() {
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-max flex-nowrap">
-            <TabsTrigger value="facturacion">Datos de facturación</TabsTrigger>
-            <TabsTrigger value="configuracion">Configuración</TabsTrigger>
+            <TabsTrigger value="facturacion">Facturación</TabsTrigger>
+            <TabsTrigger value="configuracion">General</TabsTrigger>
             <TabsTrigger value="identidad">Identidad</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
             <TabsTrigger value="permisos">Permisos</TabsTrigger>
-            <TabsTrigger value="documentacion">Documentación</TabsTrigger>
+            <TabsTrigger value="documentacion">Documentos</TabsTrigger>
           </TabsList>
         </div>
 
