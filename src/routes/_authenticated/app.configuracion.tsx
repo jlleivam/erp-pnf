@@ -71,7 +71,7 @@ function Configuracion() {
           <TabsTrigger value="documentacion">Documentación</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="facturacion" className="mt-4">
+        <TabsContent value="facturacion" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Datos de facturación</CardTitle></CardHeader>
             <CardContent>
@@ -80,7 +80,7 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="configuracion" className="mt-4">
+        <TabsContent value="configuracion" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Configuración general</CardTitle></CardHeader>
             <CardContent>
@@ -89,7 +89,7 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="identidad" className="mt-4">
+        <TabsContent value="identidad" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Identidad visual</CardTitle></CardHeader>
             <CardContent>
@@ -98,7 +98,7 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="equipo" className="mt-4">
+        <TabsContent value="equipo" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Equipo de la empresa</CardTitle></CardHeader>
             <CardContent>
@@ -107,7 +107,7 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="cuentas" className="mt-4">
+        <TabsContent value="cuentas" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Cuentas bancarias y caja fuerte</CardTitle></CardHeader>
             <CardContent>
@@ -116,7 +116,7 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="documentacion" className="mt-4">
+        <TabsContent value="documentacion" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Documentación de la empresa</CardTitle></CardHeader>
             <CardContent>
