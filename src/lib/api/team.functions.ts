@@ -71,7 +71,7 @@ const inviteSchema = z.object({
   email: z.string().trim().email().max(255),
   nombre_completo: z.string().trim().min(1).max(255),
   password: z.string().min(8).max(72),
-  roles: z.array(roleEnum).min(1).max(5),
+  role: roleEnum,
 });
 
 export const inviteTeamMember = createServerFn({ method: "POST" })
@@ -99,33 +99,29 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
       .eq("id", newUserId);
     if (profErr) throw new Error(profErr.message);
 
-    // Insert role rows.
-    const uniqueRoles = Array.from(new Set(data.roles));
-    const { error: rolesErr } = await supabaseAdmin.from("user_roles").insert(
-      uniqueRoles.map((role) => ({ user_id: newUserId, company_id: companyId, role }))
-    );
+    // Insert single role row.
+    const { error: rolesErr } = await supabaseAdmin
+      .from("user_roles")
+      .insert({ user_id: newUserId, company_id: companyId, role: data.role });
     if (rolesErr) throw new Error(rolesErr.message);
 
     return { userId: newUserId };
   });
 
-const updateRolesSchema = z.object({
+const updateRoleSchema = z.object({
   user_id: z.string().uuid(),
-  roles: z.array(roleEnum).min(1).max(5),
+  role: roleEnum,
 });
 
-export const updateMemberRoles = createServerFn({ method: "POST" })
+export const updateMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => updateRolesSchema.parse(d))
+  .inputValidator((d: unknown) => updateRoleSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const companyId = await requireDirector(supabase, userId);
 
-    if (data.user_id === userId) {
-      // Prevent the director from accidentally removing their own director role.
-      if (!data.roles.includes("director")) {
-        throw new Error("No puedes quitarte el rol de Director");
-      }
+    if (data.user_id === userId && data.role !== "director") {
+      throw new Error("No puedes quitarte el rol de Director");
     }
 
     const { error: delErr } = await supabaseAdmin
@@ -135,14 +131,14 @@ export const updateMemberRoles = createServerFn({ method: "POST" })
       .eq("company_id", companyId);
     if (delErr) throw new Error(delErr.message);
 
-    const unique = Array.from(new Set(data.roles));
     const { error: insErr } = await supabaseAdmin
       .from("user_roles")
-      .insert(unique.map((role) => ({ user_id: data.user_id, company_id: companyId, role })));
+      .insert({ user_id: data.user_id, company_id: companyId, role: data.role });
     if (insErr) throw new Error(insErr.message);
 
     return { ok: true };
   });
+
 
 export const removeMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
