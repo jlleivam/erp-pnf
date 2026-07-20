@@ -63,15 +63,17 @@ function Configuracion() {
       </header>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="facturacion">Datos de facturación</TabsTrigger>
-          <TabsTrigger value="configuracion">Configuración</TabsTrigger>
-          <TabsTrigger value="identidad">Identidad</TabsTrigger>
-          <TabsTrigger value="equipo">Equipo</TabsTrigger>
-          <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
-          <TabsTrigger value="permisos">Permisos</TabsTrigger>
-          <TabsTrigger value="documentacion">Documentación</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max flex-nowrap">
+            <TabsTrigger value="facturacion">Datos de facturación</TabsTrigger>
+            <TabsTrigger value="configuracion">Configuración</TabsTrigger>
+            <TabsTrigger value="identidad">Identidad</TabsTrigger>
+            <TabsTrigger value="equipo">Equipo</TabsTrigger>
+            <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
+            <TabsTrigger value="permisos">Permisos</TabsTrigger>
+            <TabsTrigger value="documentacion">Documentación</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="facturacion" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
