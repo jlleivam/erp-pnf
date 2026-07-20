@@ -83,6 +83,18 @@ export const completeOnboarding = createServerFn({ method: "POST" })
 
     if (roleError) throw new Error(roleError.message);
 
+    const { error: notifError } = await supabaseAdmin
+      .from("notificaciones")
+      .insert({
+        user_id: userId,
+        company_id: company.id,
+        tipo: "bienvenida",
+        titulo: "¡Bienvenido!",
+        mensaje: "Configura los datos de tu empresa para comenzar.",
+        link: "/app/configuracion",
+      });
+    if (notifError) console.error("welcome notification failed:", notifError.message);
+
     return { companyId: company.id };
   });
 
