@@ -32,7 +32,7 @@ const ZONAS = [
   "America/Monterrey",
 ];
 
-export type ConfiguracionTabHandle = { submit: () => void; isSaving: boolean };
+export type ConfiguracionTabHandle = { submit: () => void; submitAsync: () => Promise<void>; isSaving: boolean };
 
 export const ConfiguracionTab = forwardRef<ConfiguracionTabHandle>(function ConfiguracionTab(_, ref) {
   const qc = useQueryClient();
@@ -77,6 +77,7 @@ export const ConfiguracionTab = forwardRef<ConfiguracionTabHandle>(function Conf
 
   useImperativeHandle(ref, () => ({
     submit: () => save.mutate(),
+    submitAsync: async () => { await save.mutateAsync(); },
     isSaving: save.isPending,
   }), [save]);
 

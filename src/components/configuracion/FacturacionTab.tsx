@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useNavigate } from "@tanstack/react-router";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getCompanyConfig, updateCompanyFacturacion } from "@/lib/api/company.functions";
@@ -27,11 +27,11 @@ const ESTADOS_MX = [
 
 type TipoPersona = "moral" | "fisica";
 
-export type FacturacionTabHandle = { submit: () => void; isSaving: boolean };
+export type FacturacionTabHandle = { submit: () => void; submitAsync: () => Promise<void>; isSaving: boolean };
 
 export const FacturacionTab = forwardRef<FacturacionTabHandle>(function FacturacionTab(_, ref) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
+  
   const fetchCfg = useServerFn(getCompanyConfig);
   const saveFn = useServerFn(updateCompanyFacturacion);
   const formRef = useRef<HTMLFormElement>(null);
@@ -77,12 +77,29 @@ export const FacturacionTab = forwardRef<FacturacionTabHandle>(function Facturac
     });
   }, [cfg.data]);
 
+  const buildPayload = () => ({
+    tipo_persona: f.tipo_persona,
+    razon_social: f.razon_social.trim(),
+    nombre_completo: f.nombre_completo.trim() || null,
+    rfc: f.rfc.trim().toUpperCase(),
+    curp: f.tipo_persona === "fisica" ? f.curp.trim() || null : null,
+    regimen_fiscal: f.regimen_fiscal || null,
+    calle: f.calle.trim() || null,
+    numero_exterior: f.numero_exterior.trim() || null,
+    numero_interior: f.numero_interior.trim() || null,
+    colonia: f.colonia.trim() || null,
+    municipio: f.municipio.trim() || null,
+    estado: f.estado.trim() || null,
+    codigo_postal: f.codigo_postal.trim() || null,
+    registro_imss: f.registro_imss.trim() || null,
+    registro_infonavit: f.registro_infonavit.trim() || null,
+  });
+
   const save = useMutation({
     mutationFn: saveFn,
     onSuccess: () => {
       toast.success("Datos actualizados");
       qc.invalidateQueries({ queryKey: ["company-config"] });
-      navigate({ to: "/app" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -92,8 +109,11 @@ export const FacturacionTab = forwardRef<FacturacionTabHandle>(function Facturac
 
   useImperativeHandle(ref, () => ({
     submit: () => formRef.current?.requestSubmit(),
+    submitAsync: async () => {
+      await save.mutateAsync({ data: buildPayload() });
+    },
     isSaving: save.isPending,
-  }), [save.isPending]);
+  }), [save, f]);
 
   if (cfg.isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
 
@@ -105,27 +125,10 @@ export const FacturacionTab = forwardRef<FacturacionTabHandle>(function Facturac
       className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate({
-          data: {
-            tipo_persona: f.tipo_persona,
-            razon_social: f.razon_social.trim(),
-            nombre_completo: f.nombre_completo.trim() || null,
-            rfc: f.rfc.trim().toUpperCase(),
-            curp: f.tipo_persona === "fisica" ? f.curp.trim() || null : null,
-            regimen_fiscal: f.regimen_fiscal || null,
-            calle: f.calle.trim() || null,
-            numero_exterior: f.numero_exterior.trim() || null,
-            numero_interior: f.numero_interior.trim() || null,
-            colonia: f.colonia.trim() || null,
-            municipio: f.municipio.trim() || null,
-            estado: f.estado.trim() || null,
-            codigo_postal: f.codigo_postal.trim() || null,
-            registro_imss: f.registro_imss.trim() || null,
-            registro_infonavit: f.registro_infonavit.trim() || null,
-          },
-        });
+        save.mutate({ data: buildPayload() });
       }}
     >
+
       <div>
         <Label>Tipo de persona</Label>
         <RadioGroup

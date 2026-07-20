@@ -28,10 +28,18 @@ function Configuracion() {
 
   if (!director) return null;
 
-  const savable = tab === "facturacion" || tab === "configuracion";
-  const handleSave = () => {
-    if (tab === "facturacion") facturacionRef.current?.submit();
-    else if (tab === "configuracion") configRef.current?.submit();
+  const [saving, setSaving] = useState(false);
+  const handleSaveAndClose = async () => {
+    setSaving(true);
+    try {
+      if (tab === "facturacion") await facturacionRef.current?.submitAsync();
+      else if (tab === "configuracion") await configRef.current?.submitAsync();
+      navigate({ to: "/app" });
+    } catch {
+      // error toast ya lo muestra la mutation
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -43,9 +51,9 @@ function Configuracion() {
             Datos fiscales, identidad, equipo y otras opciones.
           </p>
         </div>
-        {savable && (
-          <Button onClick={handleSave}>Guardar cambios</Button>
-        )}
+        <Button onClick={handleSaveAndClose} disabled={saving}>
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </Button>
       </header>
 
       <Tabs value={tab} onValueChange={setTab}>
