@@ -118,6 +118,15 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="permisos" forceMount className="mt-4 data-[state=inactive]:hidden">
+          <Card>
+            <CardHeader><CardTitle>Permisos por rol</CardTitle></CardHeader>
+            <CardContent>
+              <PermisosTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="documentacion" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Documentación de la empresa</CardTitle></CardHeader>
