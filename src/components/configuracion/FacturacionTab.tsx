@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useNavigate } from "@tanstack/react-router";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getCompanyConfig, updateCompanyFacturacion } from "@/lib/api/company.functions";
@@ -31,7 +31,7 @@ export type FacturacionTabHandle = { submit: () => void; submitAsync: () => Prom
 
 export const FacturacionTab = forwardRef<FacturacionTabHandle>(function FacturacionTab(_, ref) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
+  
   const fetchCfg = useServerFn(getCompanyConfig);
   const saveFn = useServerFn(updateCompanyFacturacion);
   const formRef = useRef<HTMLFormElement>(null);
