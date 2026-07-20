@@ -51,9 +51,14 @@ function Configuracion() {
             Datos fiscales, identidad, equipo y otras opciones.
           </p>
         </div>
-        <Button onClick={handleSaveAndClose} disabled={saving}>
-          {saving ? "Guardando…" : "Guardar cambios"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate({ to: "/app" })} disabled={saving}>
+            Descartar
+          </Button>
+          <Button onClick={handleSaveAndClose} disabled={saving}>
+            {saving ? "Guardando…" : "Guardar"}
+          </Button>
+        </div>
       </header>
 
       <Tabs value={tab} onValueChange={setTab}>
