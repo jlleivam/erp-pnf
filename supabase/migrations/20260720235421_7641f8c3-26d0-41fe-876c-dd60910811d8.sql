@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS user_roles_one_per_company ON public.user_roles (user_id, company_id);
