@@ -89,8 +89,8 @@ export function PermisosTab() {
           </TableHeader>
           <TableBody>
             {MODULOS_ORDEN.map((modulo) => (
-              <>
-                <TableRow key={`h-${modulo}`} className="bg-muted/50 hover:bg-muted/50">
+              <Fragment key={modulo}>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableCell colSpan={2 + ROLES.length} className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">
                     {modulo}
                   </TableCell>
@@ -123,7 +123,7 @@ export function PermisosTab() {
                     })}
                   </TableRow>
                 ))}
-              </>
+              </Fragment>
             ))}
           </TableBody>
         </Table>
