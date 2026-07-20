@@ -1,13 +1,18 @@
-Preservar el estado de los formularios de Configuración al cambiar entre pestañas. Al navegar fuera del módulo (o al usar Descartar/Guardar) los cambios no persistidos se descartan como hoy.
+Al completar el onboarding (crear empresa), insertar una notificación de bienvenida para el nuevo director que lo dirige a Configuración de empresa.
 
-## Causa
-Radix `TabsContent` desmonta el contenido inactivo, por lo que el estado local (`useState` / `useForm`) de cada pestaña se pierde al cambiar de tab.
+## Cambios
 
-## Solución
-Montar todas las pestañas simultáneamente y ocultarlas con CSS mientras están inactivas, usando `forceMount` de Radix. Así el estado de los formularios sobrevive al cambio de pestaña, pero se descarta al desmontarse la ruta (navegar a otro módulo, Descartar, Guardar).
+- `src/lib/api/auth.functions.ts` (`completeOnboarding` handler):
+  - Tras crear la empresa y el rol de director, insertar en `notificaciones` una fila para el nuevo usuario:
+    - `user_id`: `userId`
+    - `company_id`: `company.id`
+    - `tipo`: `"bienvenida"`
+    - `titulo`: `"¡Bienvenido a Lovable Constructoras!"` (o similar)
+    - `mensaje`: `"Configura los datos de tu empresa para comenzar."`
+    - `link`: `"/app/configuracion"`
+  - Usar `supabaseAdmin` (mismo cliente que ya crea empresa/rol) para saltar RLS. Si el insert falla, no romper el onboarding — loggear y continuar.
 
-## Cambios técnicos
-- `src/routes/_authenticated/app.configuracion.tsx`:
-  - Agregar `forceMount` a cada `<TabsContent>` y `className="mt-4 data-[state=inactive]:hidden"` para ocultar las inactivas sin desmontarlas.
+- `src/components/NotificacionesBell.tsx`:
+  - Verificar que al hacer click en una notificación con `link`, navega a esa ruta y la marca como leída. Si aún no lo hace, añadir `navigate({ to: item.link })` en el handler de click. (Confirmaré al implementar leyendo el archivo.)
 
-Sin cambios en las pestañas hijas ni backend.
+Sin cambios de esquema: la tabla `notificaciones` ya tiene las columnas necesarias (`tipo`, `titulo`, `mensaje`, `link`).
