@@ -27,7 +27,7 @@ const ESTADOS_MX = [
 
 type TipoPersona = "moral" | "fisica";
 
-export type FacturacionTabHandle = { submit: () => void; isSaving: boolean };
+export type FacturacionTabHandle = { submit: () => void; submitAsync: () => Promise<void>; isSaving: boolean };
 
 export const FacturacionTab = forwardRef<FacturacionTabHandle>(function FacturacionTab(_, ref) {
   const qc = useQueryClient();
