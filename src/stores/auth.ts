@@ -35,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
       loading: true,
       setSession: ({ userId, profile, roles }) =>
         set({ userId, profile, roles, loading: false }),
+      setProfile: (profile) => set({ profile }),
       setAssumedRole: (assumedRole) => set({ assumedRole }),
       setLoading: (loading) => set({ loading }),
       reset: () =>
