@@ -220,7 +220,13 @@ export const actualizarCliente = createServerFn({ method: "POST" })
       razon_social: data.razon_social,
       rfc: rfcUpper,
       regimen_fiscal: data.regimen_fiscal ?? null,
-      direccion_fiscal: data.direccion_fiscal ?? null,
+      calle: data.calle ?? null,
+      numero_exterior: data.numero_exterior ?? null,
+      numero_interior: data.numero_interior ?? null,
+      colonia: data.colonia ?? null,
+      municipio: data.municipio ?? null,
+      estado: data.estado ?? null,
+      codigo_postal: data.codigo_postal ?? null,
       telefono: data.telefono ?? null,
       correo: data.correo ?? null,
       contacto_nombre: data.tipo_persona === "moral" ? (data.contacto_nombre ?? null) : null,
@@ -232,6 +238,7 @@ export const actualizarCliente = createServerFn({ method: "POST" })
       clabe: data.clabe ?? null,
       beneficiario: data.beneficiario ?? null,
     };
+
 
     const { error } = await supabase
       .from("clientes")
