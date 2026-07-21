@@ -21,7 +21,13 @@ const clienteFieldsSchema = z.object({
     .max(13)
     .regex(/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/i, "RFC con formato inválido"),
   regimen_fiscal: z.string().trim().max(255).nullable().optional(),
-  direccion_fiscal: z.string().trim().max(1000).nullable().optional(),
+  calle: z.string().trim().max(255).nullable().optional(),
+  numero_exterior: z.string().trim().max(50).nullable().optional(),
+  numero_interior: z.string().trim().max(50).nullable().optional(),
+  colonia: z.string().trim().max(255).nullable().optional(),
+  municipio: z.string().trim().max(255).nullable().optional(),
+  estado: z.string().trim().max(255).nullable().optional(),
+  codigo_postal: z.string().trim().max(5).nullable().optional(),
   telefono: z.string().trim().max(50).nullable().optional(),
   correo: z.string().trim().max(255).nullable().optional(),
   contacto_nombre: z.string().trim().max(255).nullable().optional(),
@@ -43,7 +49,8 @@ const clienteFieldsSchema = z.object({
 });
 
 const SELECT_FULL =
-  "id, company_id, tipo_persona, razon_social, rfc, regimen_fiscal, direccion_fiscal, telefono, correo, contacto_nombre, contacto_telefono, curp, condiciones_pago, limite_credito, banco, clabe, beneficiario, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento, datos_contacto, created_at";
+  "id, company_id, tipo_persona, razon_social, rfc, regimen_fiscal, calle, numero_exterior, numero_interior, colonia, municipio, estado, codigo_postal, telefono, correo, contacto_nombre, contacto_telefono, curp, condiciones_pago, limite_credito, banco, clabe, beneficiario, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento, datos_contacto, created_at";
+
 
 const SELECT_LIST =
   "id, tipo_persona, razon_social, rfc, telefono, correo, datos_contacto, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento";
@@ -157,7 +164,13 @@ export const crearCliente = createServerFn({ method: "POST" })
       razon_social: data.razon_social,
       rfc: rfcUpper,
       regimen_fiscal: data.regimen_fiscal ?? null,
-      direccion_fiscal: data.direccion_fiscal ?? null,
+      calle: data.calle ?? null,
+      numero_exterior: data.numero_exterior ?? null,
+      numero_interior: data.numero_interior ?? null,
+      colonia: data.colonia ?? null,
+      municipio: data.municipio ?? null,
+      estado: data.estado ?? null,
+      codigo_postal: data.codigo_postal ?? null,
       telefono: data.telefono ?? null,
       correo: data.correo ?? null,
       contacto_nombre: data.tipo_persona === "moral" ? (data.contacto_nombre ?? null) : null,
@@ -170,6 +183,7 @@ export const crearCliente = createServerFn({ method: "POST" })
       beneficiario: data.beneficiario ?? null,
       datos_contacto: data.datos_contacto ?? {},
     };
+
 
     const { data: cliente, error } = await supabase
       .from("clientes")
