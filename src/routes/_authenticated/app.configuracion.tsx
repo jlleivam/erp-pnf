@@ -133,6 +133,15 @@ function Configuracion() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="notificaciones" forceMount className="mt-4 data-[state=inactive]:hidden">
+          <Card>
+            <CardHeader><CardTitle>Notificaciones por rol</CardTitle></CardHeader>
+            <CardContent>
+              <NotificacionesTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="documentacion" forceMount className="mt-4 data-[state=inactive]:hidden">
           <Card>
             <CardHeader><CardTitle>Documentación de la empresa</CardTitle></CardHeader>
