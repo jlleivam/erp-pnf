@@ -222,17 +222,32 @@ export const crearTrabajador = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Notificar al administrador de la obra si es una solicitud pendiente
-    if (estatus_autorizacion === "pendiente" && data.obraId) {
+    // Notificar cuando la solicitud queda pendiente de autorización
+    if (estatus_autorizacion === "pendiente") {
       try {
-        const { data: admins } = await supabase
-          .from("obra_team")
+        const destSet = new Set<string>();
+
+        // 1) Administrativos de la obra (si aplica)
+        if (data.obraId) {
+          const { data: admins } = await supabase
+            .from("obra_team")
+            .select("user_id")
+            .eq("obra_id", data.obraId)
+            .eq("role", "administrativo");
+          (admins ?? []).forEach((a: any) => destSet.add(a.user_id as string));
+        }
+
+        // 2) Directores y administrativos de la empresa
+        const { data: companyRoles } = await supabase
+          .from("user_roles")
           .select("user_id")
-          .eq("obra_id", data.obraId)
-          .eq("role", "administrativo");
-        const destinatarios = Array.from(
-          new Set((admins ?? []).map((a: any) => a.user_id as string).filter((u) => u !== userId)),
-        );
+          .eq("company_id", companyId)
+          .in("role", ["director", "administrativo"]);
+        (companyRoles ?? []).forEach((r: any) => destSet.add(r.user_id as string));
+
+        destSet.delete(userId);
+        const destinatarios = Array.from(destSet);
+
         if (destinatarios.length > 0) {
           const { data: solicitanteProfile } = await supabase
             .from("profiles")
@@ -245,10 +260,10 @@ export const crearTrabajador = createServerFn({ method: "POST" })
             destinatarios.map((uid) => ({
               user_id: uid,
               company_id: companyId,
-              obra_id: data.obraId,
+              obra_id: data.obraId ?? null,
               tipo: "trabajador_alta_solicitada",
               titulo: "Solicitud de alta de trabajador",
-              mensaje: `${quien} solicitó dar de alta a ${data.nombre_completo}. Completa su registro y alta ante el IMSS.`,
+              mensaje: `${quien} solicitó dar de alta a ${data.nombre_completo}. Requiere autorización.`,
               link: `/app/catalogos/trabajadores?tab=pendientes&id=${trabajador.id}`,
             })),
           );
@@ -258,6 +273,7 @@ export const crearTrabajador = createServerFn({ method: "POST" })
         console.error("[notificaciones] trabajador_alta_solicitada error", e?.message);
       }
     }
+
 
     return trabajador;
   });

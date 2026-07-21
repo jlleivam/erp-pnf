@@ -1,11 +1,21 @@
-## Ocultar sección IMSS al solicitar alta
+## Notificar a nivel empresa cuando la solicitud se hace desde el catálogo
 
-Cuando un residente (u otro rol sin permiso de gestión) abre "Solicitar alta de trabajador", la sección **IMSS** (Estatus IMSS, Fecha de alta, NSS, SBC, Tipo de trabajador) no debe mostrarse. Esos datos los captura el administrativo/director al registrar el alta.
+Actualmente `crearTrabajador` (`src/lib/api/trabajadores.functions.ts`) sólo envía notificaciones cuando la solicitud viene con `obraId` y únicamente a los administrativos de esa obra. Al solicitar desde el catálogo (sin obra) nadie recibe aviso.
 
-### Cambios
+### Cambio
 
-**`src/components/trabajadores/TrabajadorFormDialog.tsx`**
-- Envolver el bloque `<Section title="IMSS">…</Section>` en `{canManage && ( … )}` para que solo lo vean administrativos/directores.
-- En `submit()`, cuando `!canManage`, enviar los campos IMSS como `null` / default (`imss_estatus: "sin_alta"`) para no persistir valores del formulario oculto.
+En `crearTrabajador`, cuando `estatus_autorizacion === "pendiente"`, calcular destinatarios como la unión de:
 
-No se tocan la BD ni la API; los campos siguen disponibles al editar/registrar desde la ficha con permisos.
+1. **Administrativos de la obra** (si `data.obraId` viene) — comportamiento actual.
+2. **Directores de la empresa** — `user_roles` con `role = 'director'` y `company_id = companyId`.
+3. **Administrativos de la empresa** — `user_roles` con `role = 'administrativo'` y `company_id = companyId`.
+
+Filtrar duplicados y excluir al `userId` solicitante. Insertar una notificación por destinatario con:
+- `tipo: "trabajador_alta_solicitada"`
+- `obra_id`: el de la solicitud si existe, si no `null`
+- `link: /app/catalogos/trabajadores?tab=pendientes&id=<id>`
+- `mensaje`: "{quien} solicitó dar de alta a {nombre}. Requiere autorización."
+
+Respetar `notificacion_preferencias` si ya se filtra en otros flujos (revisar patrón existente antes de insertar; si no hay helper, dejar la inserción directa como hoy).
+
+No se toca la BD, ni el formulario, ni el catálogo — solo el server function.
