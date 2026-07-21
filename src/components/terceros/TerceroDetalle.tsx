@@ -57,6 +57,14 @@ function findDoc(docs: TerceroDocumento[], tipo: TerceroDocTipo) {
   return docs.find((d) => d.tipo === tipo) ?? null;
 }
 
+function formatDireccion(t: Tercero): string {
+  const linea1 = [t.calle, t.numero_exterior && `#${t.numero_exterior}`, t.numero_interior && `Int. ${t.numero_interior}`]
+    .filter(Boolean).join(" ");
+  const parts = [linea1, t.colonia, t.municipio, t.estado, t.codigo_postal && `C.P. ${t.codigo_postal}`]
+    .filter(Boolean);
+  return parts.join(", ");
+}
+
 export function TerceroDetalle({
   terceroId,
   open,
@@ -158,7 +166,7 @@ export function TerceroDetalle({
                     />
                   )}
                   <Field label="Régimen fiscal" value={t.regimen_fiscal} />
-                  <Field label="Dirección fiscal" value={t.direccion_fiscal} />
+                  <Field label="Dirección fiscal" value={formatDireccion(t) || t.direccion_fiscal} />
                   <Field label="Teléfono" value={t.telefono} />
                   <Field label="Correo" value={t.correo} />
                   {t.tipo_persona === "moral" && (
