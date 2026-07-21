@@ -1,0 +1,1 @@
+ALTER TABLE public.terceros ADD COLUMN IF NOT EXISTS nombre_comercial text;

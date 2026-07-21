@@ -3713,6 +3713,7 @@ export type Database = {
           fondo_garantia_pct: number | null
           id: string
           municipio: string | null
+          nombre_comercial: string | null
           numero_exterior: string | null
           numero_interior: string | null
           razon_social: string
@@ -3752,6 +3753,7 @@ export type Database = {
           fondo_garantia_pct?: number | null
           id?: string
           municipio?: string | null
+          nombre_comercial?: string | null
           numero_exterior?: string | null
           numero_interior?: string | null
           razon_social: string
@@ -3791,6 +3793,7 @@ export type Database = {
           fondo_garantia_pct?: number | null
           id?: string
           municipio?: string | null
+          nombre_comercial?: string | null
           numero_exterior?: string | null
           numero_interior?: string | null
           razon_social?: string
