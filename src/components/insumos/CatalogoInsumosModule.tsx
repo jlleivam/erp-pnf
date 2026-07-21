@@ -22,6 +22,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { TruncatedCell } from "@/components/pagos/TruncatedCell";
 import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
 import {
   listInsumos, listCategorias, getMetricasInsumos, solicitarInsumo, editarInsumo,
