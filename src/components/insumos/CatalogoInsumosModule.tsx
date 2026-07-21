@@ -122,22 +122,22 @@ export function CatalogoInsumosModule() {
         </div>
         <div className="flex gap-2">
           {director && (
-            <Button size="sm" variant="outline" onClick={() => setOpenCategorias(true)}>
-              <FolderTree className="size-4 mr-1" /> Categorías
+            <Button size="sm" variant="outline" className="h-8" onClick={() => setOpenCategorias(true)}>
+              <FolderTree className="size-3.5 mr-1" /> Categorías
             </Button>
           )}
           {director && (
-            <Button size="sm" variant="outline" onClick={() => setOpenUnidades(true)}>
-              <Ruler className="size-4 mr-1" /> Unidades
+            <Button size="sm" variant="outline" className="h-8" onClick={() => setOpenUnidades(true)}>
+              <Ruler className="size-3.5 mr-1" /> Unidades
             </Button>
           )}
           {director && (
-            <Button size="sm" variant="outline" onClick={() => setOpenImportar(true)}>
-              <FileSpreadsheet className="size-4 mr-1" /> Importar Excel
+            <Button size="sm" variant="outline" className="h-8" onClick={() => setOpenImportar(true)}>
+              <FileSpreadsheet className="size-3.5 mr-1" /> Importar Excel
             </Button>
           )}
-          <Button onClick={() => setOpenSolicitar(true)} className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90">
-            <Plus className="size-4 mr-1" /> Solicitar insumo
+          <Button size="sm" onClick={() => setOpenSolicitar(true)} className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90 h-8">
+            <Plus className="size-3.5 mr-1" /> Solicitar insumo
           </Button>
         </div>
       </header>
