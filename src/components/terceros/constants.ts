@@ -69,6 +69,7 @@ export type TerceroDocumento = {
 export type TerceroListRow = {
   id: string;
   razon_social: string;
+  nombre_comercial: string | null;
   rfc: string;
   tipo_persona: TipoPersona;
   categoria: TerceroCategoria;
@@ -81,6 +82,7 @@ export type Tercero = {
   company_id: string;
   tipo_persona: TipoPersona;
   razon_social: string;
+  nombre_comercial: string | null;
   rfc: string;
   curp: string | null;
   regimen_fiscal: string | null;

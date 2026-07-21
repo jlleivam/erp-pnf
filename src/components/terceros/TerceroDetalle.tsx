@@ -157,6 +157,7 @@ export function TerceroDetalle({
                     label={t.tipo_persona === "moral" ? "Razón social" : "Nombre completo"}
                     value={t.razon_social}
                   />
+                  <Field label="Nombre comercial" value={t.nombre_comercial} />
                   {t.tipo_persona === "fisica" && (
                     <Field
                       label="CURP"

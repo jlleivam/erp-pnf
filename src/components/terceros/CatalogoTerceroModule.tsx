@@ -272,7 +272,11 @@ export function CatalogoTerceroModule() {
                     onClick={() => setDetalleId(r.id)}
                   >
                     <TableCell className="font-medium max-w-0">
-                      <TruncatedCell>{r.razon_social}</TruncatedCell>
+                      <TruncatedCell>
+                        {r.nombre_comercial
+                          ? `${r.nombre_comercial} · ${r.razon_social}`
+                          : r.razon_social}
+                      </TruncatedCell>
                     </TableCell>
                     <TableCell className="font-mono text-xs whitespace-nowrap">{r.rfc}</TableCell>
                     <TableCell className="whitespace-nowrap">
