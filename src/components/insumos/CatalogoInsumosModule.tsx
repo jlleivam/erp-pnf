@@ -192,14 +192,12 @@ export function CatalogoInsumosModule() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
           <TabsList>
             <TabsTrigger value="autorizado">Autorizados</TabsTrigger>
-            {director && (
-              <TabsTrigger value="pendiente" className="gap-2">
-                Pendientes
-                {pendientesCount > 0 && (
-                  <Badge variant="destructive" className="h-5 px-1.5">{pendientesCount}</Badge>
-                )}
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="pendiente" className="gap-2">
+              Pendientes
+              {pendientesCount > 0 && (
+                <Badge variant="destructive" className="h-5 px-1.5">{pendientesCount}</Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="autorizado" className="mt-4">

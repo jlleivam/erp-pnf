@@ -1,22 +1,18 @@
-## Cambio
+## Problema
 
-En `src/components/insumos/CatalogoInsumosModule.tsx`, aplicar al botón "Solicitar insumo" (y a los secundarios Categorías / Unidades / Importar Excel) exactamente el mismo tamaño que usa "Solicitar alta" en Trabajadores:
+En el catálogo de Insumos, la pestaña "Pendientes" solo se renderiza para el Director. Un residente que solicita un insumo no puede ver su solicitud ni las de otros usuarios, lo que puede llevar a solicitudes duplicadas.
 
-- `size="sm"` + `h-8`
-- ícono `size-3.5 mr-1` (en lugar de `size-4 mr-1`)
+## Cambios
 
-Botón principal:
-```tsx
-<Button
-  size="sm"
-  onClick={() => setOpenSolicitar(true)}
-  className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90 h-8"
->
-  <Plus className="size-3.5 mr-1" /> Solicitar insumo
-</Button>
-```
+### UI — `src/components/insumos/CatalogoInsumosModule.tsx`
+- Mostrar la pestaña "Pendientes" a todos los roles (quitar el `{director && ...}` del `<TabsTrigger>` y del `<TabsContent value="pendiente">`).
+- En la tabla de pendientes, mantener visible la columna "Solicitado por" para todos (así se ve quién ya pidió qué).
+- Los botones **Autorizar / Rechazar** siguen mostrándose solo al director. Para no-directores, mostrar un badge "Pendiente" en la columna de acciones.
+- Ajustar `colSpan` del estado vacío según el rol.
 
-Botones secundarios (Categorías, Unidades, Importar Excel): agregar `h-8` y bajar íconos a `size-3.5 mr-1` para conservar densidad uniforme.
+### Backend
+Sin cambios: `listInsumos` con `estatus: "pendiente"` ya devuelve todas las solicitudes pendientes de la empresa, y las RLS existentes permiten a cualquier miembro de la empresa leerlas.
 
-## Fuera de alcance
-No se tocan filtros, tabla ni lógica.
+## Resultado
+
+Cualquier residente/supervisor verá dos pestañas: "Autorizados" y "Pendientes" (todas las solicitudes en curso de la empresa, con quién las solicitó), evitando pedir insumos duplicados. Solo el director conserva las acciones de autorizar/rechazar.
