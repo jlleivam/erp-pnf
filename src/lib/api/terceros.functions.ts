@@ -14,6 +14,7 @@ const docTipo = z.enum([
 const fieldsSchema = z.object({
   tipo_persona: tipoPersona,
   razon_social: z.string().trim().min(1).max(255),
+  nombre_comercial: z.string().trim().max(255).nullable().optional(),
   rfc: z
     .string()
     .trim()
@@ -58,7 +59,7 @@ const fieldsSchema = z.object({
 });
 
 const SELECT_FULL = "*";
-const SELECT_LIST = "id, razon_social, rfc, tipo_persona, categoria, dias_credito, disponible_renta";
+const SELECT_LIST = "id, razon_social, nombre_comercial, rfc, tipo_persona, categoria, dias_credito, disponible_renta";
 
 async function getCtx(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -106,7 +107,7 @@ export const listTerceros = createServerFn({ method: "POST" })
     if (data.tipo_persona) q = q.eq("tipo_persona", data.tipo_persona);
     if (data.search && data.search.length > 0) {
       const s = data.search.replace(/[%_]/g, "");
-      q = q.or(`razon_social.ilike.%${s}%,rfc.ilike.%${s}%`);
+      q = q.or(`razon_social.ilike.%${s}%,nombre_comercial.ilike.%${s}%,rfc.ilike.%${s}%`);
     }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -171,6 +172,7 @@ function buildPayload(data: z.infer<typeof fieldsSchema>) {
   return {
     tipo_persona: data.tipo_persona,
     razon_social: data.razon_social,
+    nombre_comercial: data.nombre_comercial?.trim() || null,
     rfc: data.rfc.toUpperCase(),
     curp:
       data.tipo_persona === "fisica" ? (data.curp?.toUpperCase() ?? null) : null,

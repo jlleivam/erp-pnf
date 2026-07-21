@@ -38,6 +38,7 @@ export type TerceroFormInitial = {
   id?: string;
   tipo_persona: TipoPersona;
   razon_social: string;
+  nombre_comercial?: string | null;
   rfc: string;
   curp?: string | null;
   regimen_fiscal?: string | null;
@@ -158,6 +159,7 @@ export function TerceroFormDialog({
     const payload = {
       tipo_persona: f.tipo_persona,
       razon_social: f.razon_social.trim(),
+      nombre_comercial: f.nombre_comercial?.trim() || null,
       rfc,
       curp: f.curp?.trim().toUpperCase() || null,
       regimen_fiscal: f.regimen_fiscal?.trim() || null,
@@ -314,6 +316,14 @@ export function TerceroFormDialog({
               <Input
                 value={f.razon_social}
                 onChange={(e) => set("razon_social", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Nombre comercial</Label>
+              <Input
+                value={f.nombre_comercial ?? ""}
+                onChange={(e) => set("nombre_comercial", e.target.value)}
+                placeholder="Opcional"
               />
             </div>
             <div>
