@@ -74,6 +74,7 @@ function Configuracion() {
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
             <TabsTrigger value="permisos">Permisos</TabsTrigger>
+            <TabsTrigger value="notificaciones">Notificaciones</TabsTrigger>
             <TabsTrigger value="documentacion">Documentos</TabsTrigger>
           </TabsList>
         </div>
