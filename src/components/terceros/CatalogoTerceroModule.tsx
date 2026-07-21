@@ -171,21 +171,21 @@ export function CatalogoTerceroModule() {
 
 
       {/* Filters */}
-      <Card className="p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-64">
+      <Card className="p-3 flex flex-wrap sm:flex-nowrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre o RFC…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9 text-sm"
           />
         </div>
         <Select
           value={catFiltro}
           onValueChange={(v) => setCatFiltro(v as typeof catFiltro)}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-40 h-9 text-sm shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -199,7 +199,7 @@ export function CatalogoTerceroModule() {
           value={personaFiltro}
           onValueChange={(v) => setPersonaFiltro(v as typeof personaFiltro)}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-40 h-9 text-sm shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -212,7 +212,7 @@ export function CatalogoTerceroModule() {
           value={docFiltro}
           onValueChange={(v) => setDocFiltro(v as typeof docFiltro)}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44 h-9 text-sm shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -223,6 +223,7 @@ export function CatalogoTerceroModule() {
           </SelectContent>
         </Select>
       </Card>
+
 
       <Card>
         <TooltipProvider delayDuration={200}>

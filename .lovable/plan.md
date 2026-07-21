@@ -1,18 +1,17 @@
 ## Objetivo
 
-Que cada renglón de la tabla de proveedores/contratistas ocupe una sola línea, sin scroll horizontal, en el ancho actual del catálogo.
+Compactar el encabezado de filtros del catálogo de proveedores/contratistas para que quepa en una sola fila en anchos típicos de escritorio, sin scroll horizontal.
 
 ## Cambios en `src/components/terceros/CatalogoTerceroModule.tsx`
 
-1. Aplicar `whitespace-nowrap` a todas las celdas de datos y headers para forzar una sola línea. Los headers actuales ("Nombre / Razón social", "Días crédito", "Vencido o faltante") se están rompiendo en dos renglones.
-2. Nombre / Razón social: envolver el texto en `TruncatedCell` (`src/components/pagos/TruncatedCell.tsx`) para que el texto largo se corte con `…` y muestre tooltip. Es la única columna que puede crecer arbitrariamente.
-3. RFC, Tipo, Categoría, Días crédito: `whitespace-nowrap`, ancho automático (contenido corto y fijo).
-4. Documentos: acortar la etiqueta "Vencido o faltante" a "Faltante" en el badge para que quepa en una línea (el color rojo ya comunica el problema); dejar los otros dos como están ("Al día", "Por vencer"). El label largo original queda disponible en `title` del badge para tooltip nativo.
-5. Acciones: quitar `w-32` y usar `w-auto whitespace-nowrap`; los dos iconos ocupan ~72 px.
-6. Encabezado de columnas: agregar `whitespace-nowrap` y renombrar "Nombre / Razón social" → "Nombre" para ahorrar ancho sin perder claridad (el subtítulo del módulo ya explica el contexto).
-7. No se agrega `overflow-x-auto` en la Card — se mantiene el ancho actual y las celdas se ajustan solas.
+1. Reducir padding de la Card contenedora: `p-4` → `p-3`, `gap-3` → `gap-2`.
+2. Quitar el `flex-wrap` para forzar una sola fila (`flex items-center gap-2`).
+3. Reducir altura de inputs/selects a `h-9` y aplicar `text-sm`.
+4. Buscador: bajar `min-w-64` a `min-w-[200px]` y mantener `flex-1` para que absorba el espacio disponible.
+5. Selects: reducir anchos (`w-44` → `w-40`, `w-48` → `w-44`) y agregar `shrink-0` para que no se compriman.
+6. En pantallas muy angostas (<640 px), permitir wrap como fallback: usar `flex-wrap sm:flex-nowrap` para no romper en móvil.
 
 ## Fuera de alcance
 
-- No se cambia el ancho del contenedor ni el diseño de filtros.
-- No se tocan datos ni el detalle del proveedor.
+- No se cambia la lógica de filtrado ni las opciones disponibles.
+- No se toca la tabla ni otros módulos.
