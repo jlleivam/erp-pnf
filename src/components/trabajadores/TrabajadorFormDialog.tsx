@@ -133,12 +133,14 @@ export function TrabajadorFormDialog({
       tipo_contrato: f.tipo_contrato ?? null,
       fecha_ingreso: f.fecha_ingreso || null,
       fecha_baja: f.fecha_baja || null,
-      imss_estatus: f.imss_estatus ?? "sin_alta",
-      imss_fecha_alta: f.imss_fecha_alta || null,
-      imss_nss: f.imss_nss?.trim() || null,
-      imss_sbc:
-        f.imss_sbc == null || isNaN(Number(f.imss_sbc)) ? null : Number(f.imss_sbc),
-      imss_tipo_trabajador: f.imss_tipo_trabajador?.trim() || null,
+      imss_estatus: canManage ? (f.imss_estatus ?? "sin_alta") : "sin_alta",
+      imss_fecha_alta: canManage ? (f.imss_fecha_alta || null) : null,
+      imss_nss: canManage ? (f.imss_nss?.trim() || null) : null,
+      imss_sbc: canManage
+        ? (f.imss_sbc == null || isNaN(Number(f.imss_sbc)) ? null : Number(f.imss_sbc))
+        : null,
+      imss_tipo_trabajador: canManage ? (f.imss_tipo_trabajador?.trim() || null) : null,
+
     };
     if (isEdit && initial?.id) {
       updateM.mutate({ data: { ...payload, id: initial.id } });
