@@ -104,7 +104,7 @@ export function EquipoModule() {
           Usuarios de la empresa y su rol. El Director crea cuentas y comparte la contraseña manualmente.
         </p>
         <Button onClick={() => setInviting(true)}>
-          <Plus className="size-4 mr-1" /> Crear cuenta
+          <Plus className="size-4 mr-1" /> Crear usuario
         </Button>
       </div>
 
@@ -272,7 +272,7 @@ function InviteDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={submit} disabled={m.isPending}>
-            {m.isPending ? "Creando…" : "Crear cuenta"}
+            {m.isPending ? "Creando…" : "Crear usuario"}
           </Button>
         </DialogFooter>
       </DialogContent>
