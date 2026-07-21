@@ -333,66 +333,69 @@ export function TrabajadorFormDialog({
             </div>
           </Section>
 
-          <Section title="IMSS">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Estatus IMSS</Label>
-                <Select
-                  value={f.imss_estatus ?? "sin_alta"}
-                  onValueChange={(v) =>
-                    set("imss_estatus", v as TrabajadorFormInitial["imss_estatus"])
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="alta_activa">Alta activa</SelectItem>
-                    <SelectItem value="sin_alta">Sin alta</SelectItem>
-                    <SelectItem value="en_tramite">En trámite</SelectItem>
-                    <SelectItem value="baja">Baja</SelectItem>
-                  </SelectContent>
-                </Select>
+          {canManage && (
+            <Section title="IMSS">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Estatus IMSS</Label>
+                  <Select
+                    value={f.imss_estatus ?? "sin_alta"}
+                    onValueChange={(v) =>
+                      set("imss_estatus", v as TrabajadorFormInitial["imss_estatus"])
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alta_activa">Alta activa</SelectItem>
+                      <SelectItem value="sin_alta">Sin alta</SelectItem>
+                      <SelectItem value="en_tramite">En trámite</SelectItem>
+                      <SelectItem value="baja">Baja</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Fecha de alta IMSS</Label>
+                  <Input
+                    type="date"
+                    value={f.imss_fecha_alta ?? ""}
+                    onChange={(e) => set("imss_fecha_alta", e.target.value || null)}
+                  />
+                </div>
               </div>
-              <div>
-                <Label>Fecha de alta IMSS</Label>
-                <Input
-                  type="date"
-                  value={f.imss_fecha_alta ?? ""}
-                  onChange={(e) => set("imss_fecha_alta", e.target.value || null)}
-                />
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>NSS</Label>
+                  <Input
+                    value={f.nss ?? ""}
+                    onChange={(e) => set("nss", e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+                <div>
+                  <Label>SBC (Salario base cotización)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={f.imss_sbc ?? ""}
+                    onChange={(e) =>
+                      set("imss_sbc", e.target.value === "" ? null : Number(e.target.value))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Tipo de trabajador</Label>
+                  <Input
+                    value={f.imss_tipo_trabajador ?? ""}
+                    onChange={(e) => set("imss_tipo_trabajador", e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label>NSS</Label>
-                <Input
-                  value={f.nss ?? ""}
-                  onChange={(e) => set("nss", e.target.value)}
-                  className="font-mono"
-                />
-              </div>
-              <div>
-                <Label>SBC (Salario base cotización)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={f.imss_sbc ?? ""}
-                  onChange={(e) =>
-                    set("imss_sbc", e.target.value === "" ? null : Number(e.target.value))
-                  }
-                />
-              </div>
-              <div>
-                <Label>Tipo de trabajador</Label>
-                <Input
-                  value={f.imss_tipo_trabajador ?? ""}
-                  onChange={(e) => set("imss_tipo_trabajador", e.target.value)}
-                />
-              </div>
-            </div>
-          </Section>
+            </Section>
+          )}
+
         </div>
 
         <DialogFooter>
