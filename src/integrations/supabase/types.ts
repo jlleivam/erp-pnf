@@ -3691,9 +3691,12 @@ export type Database = {
         Row: {
           banco: string | null
           beneficiario: string | null
+          calle: string | null
           categoria: Database["public"]["Enums"]["tercero_categoria"]
           categoria_productos: string | null
           clabe: string | null
+          codigo_postal: string | null
+          colonia: string | null
           company_id: string
           contacto_nombre: string | null
           contacto_telefono: string | null
@@ -3705,9 +3708,13 @@ export type Database = {
           dias_credito: number | null
           direccion_fiscal: string | null
           disponible_renta: boolean
+          estado: string | null
           fondo_garantia: boolean
           fondo_garantia_pct: number | null
           id: string
+          municipio: string | null
+          numero_exterior: string | null
+          numero_interior: string | null
           razon_social: string
           regimen_fiscal: string | null
           requiere_factura: boolean
@@ -3723,9 +3730,12 @@ export type Database = {
         Insert: {
           banco?: string | null
           beneficiario?: string | null
+          calle?: string | null
           categoria?: Database["public"]["Enums"]["tercero_categoria"]
           categoria_productos?: string | null
           clabe?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           company_id: string
           contacto_nombre?: string | null
           contacto_telefono?: string | null
@@ -3737,9 +3747,13 @@ export type Database = {
           dias_credito?: number | null
           direccion_fiscal?: string | null
           disponible_renta?: boolean
+          estado?: string | null
           fondo_garantia?: boolean
           fondo_garantia_pct?: number | null
           id?: string
+          municipio?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           razon_social: string
           regimen_fiscal?: string | null
           requiere_factura?: boolean
@@ -3755,9 +3769,12 @@ export type Database = {
         Update: {
           banco?: string | null
           beneficiario?: string | null
+          calle?: string | null
           categoria?: Database["public"]["Enums"]["tercero_categoria"]
           categoria_productos?: string | null
           clabe?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           company_id?: string
           contacto_nombre?: string | null
           contacto_telefono?: string | null
@@ -3769,9 +3786,13 @@ export type Database = {
           dias_credito?: number | null
           direccion_fiscal?: string | null
           disponible_renta?: boolean
+          estado?: string | null
           fondo_garantia?: boolean
           fondo_garantia_pct?: number | null
           id?: string
+          municipio?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           razon_social?: string
           regimen_fiscal?: string | null
           requiere_factura?: boolean
