@@ -43,6 +43,7 @@ import { useEffectiveRoles } from "@/stores/auth";
 import { estadoVencimiento } from "@/lib/format";
 import { ClienteFormDialog } from "@/components/clientes/ClienteFormDialog";
 import { ClienteDetalle } from "@/components/clientes/ClienteDetalle";
+import { TruncatedCell } from "@/components/pagos/TruncatedCell";
 
 type ClienteListRow = {
   id: string;
