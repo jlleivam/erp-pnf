@@ -22,6 +22,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { TruncatedCell } from "@/components/pagos/TruncatedCell";
 import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
 import {
   listInsumos, listCategorias, getMetricasInsumos, solicitarInsumo, editarInsumo,
@@ -113,29 +115,29 @@ export function CatalogoInsumosModule() {
     <div className="flex flex-col gap-6">
       <header className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Insumos</h1>
+          <h2 className="text-xl font-semibold tracking-tight">Insumos</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Gestiona los insumos disponibles para tus obras
           </p>
         </div>
         <div className="flex gap-2">
           {director && (
-            <Button variant="outline" onClick={() => setOpenCategorias(true)}>
-              <FolderTree /> Categorías
+            <Button size="sm" variant="outline" onClick={() => setOpenCategorias(true)}>
+              <FolderTree className="size-4 mr-1" /> Categorías
             </Button>
           )}
           {director && (
-            <Button variant="outline" onClick={() => setOpenUnidades(true)}>
-              <Ruler /> Unidades
+            <Button size="sm" variant="outline" onClick={() => setOpenUnidades(true)}>
+              <Ruler className="size-4 mr-1" /> Unidades
             </Button>
           )}
           {director && (
-            <Button variant="outline" onClick={() => setOpenImportar(true)}>
-              <FileSpreadsheet /> Importar Excel
+            <Button size="sm" variant="outline" onClick={() => setOpenImportar(true)}>
+              <FileSpreadsheet className="size-4 mr-1" /> Importar Excel
             </Button>
           )}
-          <Button onClick={() => setOpenSolicitar(true)}>
-            <Plus /> Solicitar insumo
+          <Button onClick={() => setOpenSolicitar(true)} className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90">
+            <Plus className="size-4 mr-1" /> Solicitar insumo
           </Button>
         </div>
       </header>
@@ -155,46 +157,38 @@ export function CatalogoInsumosModule() {
         </Card>
       )}
 
-      <Card className="p-4">
-        <div className="flex flex-wrap items-end gap-3 mb-4">
-          <div className="flex-1 min-w-[220px]">
-            <Label className="text-xs text-muted-foreground">Buscar</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Nombre o código..."
-                className="pl-8"
-              />
-            </div>
-          </div>
-          <div className="w-48">
-            <Label className="text-xs text-muted-foreground">Categoría</Label>
-            <Select value={categoriaId} onValueChange={setCategoriaId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {(categoriasQ.data ?? []).map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-36">
-            <Label className="text-xs text-muted-foreground">Unidad</Label>
-            <Select value={unidad} onValueChange={setUnidad}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {(unidadesQ.data ?? []).map((u: any) => (
-                  <SelectItem key={u.id} value={u.codigo}>{u.codigo}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <Card className="p-3 flex flex-col sm:flex-row sm:flex-nowrap items-stretch sm:items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Nombre o código…"
+            className="pl-8 h-8 text-xs"
+          />
         </div>
+        <Select value={categoriaId} onValueChange={setCategoriaId}>
+          <SelectTrigger className="w-36 h-8 text-xs shrink-0"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {(categoriasQ.data ?? []).map((c: any) => (
+              <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={unidad} onValueChange={setUnidad}>
+          <SelectTrigger className="w-36 h-8 text-xs shrink-0"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las unidades</SelectItem>
+            {(unidadesQ.data ?? []).map((u: any) => (
+              <SelectItem key={u.id} value={u.codigo}>{u.codigo}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Card>
 
+      <TooltipProvider>
+      <Card className="p-4">
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
           <TabsList>
             <TabsTrigger value="autorizado">Autorizados</TabsTrigger>
@@ -212,13 +206,13 @@ export function CatalogoInsumosModule() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[120px]">Código</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Último precio</TableHead>
-                  <TableHead>Proveedor</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="w-[120px] whitespace-nowrap">Código</TableHead>
+                  <TableHead className="whitespace-nowrap">Nombre</TableHead>
+                  <TableHead className="whitespace-nowrap">Unidad</TableHead>
+                  <TableHead className="whitespace-nowrap">Categoría</TableHead>
+                  <TableHead className="whitespace-nowrap">Último precio</TableHead>
+                  <TableHead className="whitespace-nowrap">Proveedor</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -229,34 +223,36 @@ export function CatalogoInsumosModule() {
                 )}
                 {(insumosQ.data ?? []).map((i: any) => (
                   <TableRow key={i.id}>
-                    <TableCell className="font-mono text-xs">{i.codigo ?? "—"}</TableCell>
-                    <TableCell className="font-medium">
-                      <span className="inline-flex items-center gap-2">
-                        {i.nombre}
-                        {i.disponible_renta && (
-                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Renta</Badge>
-                        )}
-                      </span>
+                    <TableCell className="font-mono text-xs whitespace-nowrap">{i.codigo ?? "—"}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap max-w-[240px]">
+                      <TruncatedCell>
+                        <span className="inline-flex items-center gap-2">
+                          {i.nombre}
+                          {i.disponible_renta && (
+                            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Renta</Badge>
+                          )}
+                        </span>
+                      </TruncatedCell>
                     </TableCell>
-                    <TableCell><Badge variant="outline">{i.unidad}</Badge></TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap"><Badge variant="outline">{i.unidad}</Badge></TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {i.categoria ? (
                         <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${toneFor(i.categoria.id)}`}>
                           {i.categoria.nombre}
                         </span>
                       ) : <span className="text-muted-foreground text-xs">Sin categoría</span>}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {i.ultimo_precio ? fmtMoney(i.ultimo_precio.precio) : <span className="text-muted-foreground text-xs">—</span>}
                     </TableCell>
-                    <TableCell>{i.ultimo_precio?.proveedor ?? <span className="text-muted-foreground text-xs">—</span>}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="whitespace-nowrap">{i.ultimo_precio?.proveedor ?? <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
                       <Button size="icon" variant="ghost" onClick={() => setHistorialFor(i)} title="Ver historial">
-                        <BarChart3 />
+                        <BarChart3 className="size-4" />
                       </Button>
                       {director && (
                         <Button size="icon" variant="ghost" onClick={() => setEditInsumo(i)} title="Editar">
-                          <Pencil />
+                          <Pencil className="size-4" />
                         </Button>
                       )}
                     </TableCell>
@@ -271,12 +267,12 @@ export function CatalogoInsumosModule() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Unidad</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Solicitado por</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="whitespace-nowrap">Nombre</TableHead>
+                    <TableHead className="whitespace-nowrap">Unidad</TableHead>
+                    <TableHead className="whitespace-nowrap">Categoría</TableHead>
+                    <TableHead className="whitespace-nowrap">Solicitado por</TableHead>
+                    <TableHead className="whitespace-nowrap">Fecha</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -287,23 +283,25 @@ export function CatalogoInsumosModule() {
                   )}
                   {(insumosQ.data ?? []).map((i: any) => (
                     <TableRow key={i.id}>
-                      <TableCell className="font-medium">{i.nombre}</TableCell>
-                      <TableCell><Badge variant="outline">{i.unidad}</Badge></TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium whitespace-nowrap max-w-[240px]">
+                        <TruncatedCell>{i.nombre}</TruncatedCell>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap"><Badge variant="outline">{i.unidad}</Badge></TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {i.categoria ? (
                           <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${toneFor(i.categoria.id)}`}>
                             {i.categoria.nombre}
                           </span>
                         ) : <span className="text-muted-foreground text-xs">Sin categoría</span>}
                       </TableCell>
-                      <TableCell>{i.solicitante?.nombre_completo ?? i.solicitante?.email ?? "—"}</TableCell>
-                      <TableCell>{new Date(i.created_at).toLocaleDateString("es-MX")}</TableCell>
-                      <TableCell className="text-right space-x-2">
+                      <TableCell className="whitespace-nowrap">{i.solicitante?.nombre_completo ?? i.solicitante?.email ?? "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{new Date(i.created_at).toLocaleDateString("es-MX")}</TableCell>
+                      <TableCell className="text-right space-x-2 whitespace-nowrap">
                         <Button size="sm" onClick={() => autorizarMut.mutate({ data: { id: i.id } })}>
-                          <Check /> Autorizar
+                          <Check className="size-4 mr-1" /> Autorizar
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => rechazarMut.mutate({ data: { id: i.id } })}>
-                          <X /> Rechazar
+                          <X className="size-4 mr-1" /> Rechazar
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -314,6 +312,8 @@ export function CatalogoInsumosModule() {
           )}
         </Tabs>
       </Card>
+      </TooltipProvider>
+
 
       <SolicitarDialog
         open={openSolicitar}
