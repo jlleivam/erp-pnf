@@ -187,7 +187,11 @@ export const FacturacionTab = forwardRef<FacturacionTabHandle>(function Facturac
         <div className="sm:col-span-2">
           <Label>Régimen fiscal</Label>
           <Select value={f.regimen_fiscal} onValueChange={(v) => set("regimen_fiscal", v)}>
-            <SelectTrigger><SelectValue placeholder="Selecciona régimen" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona régimen">
+                {f.regimen_fiscal || undefined}
+              </SelectValue>
+            </SelectTrigger>
             <SelectContent>
               {regimenes.map((r) => (
                 <SelectItem key={r} value={r}>{r}</SelectItem>
