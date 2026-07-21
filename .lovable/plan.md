@@ -1,28 +1,30 @@
-## Objetivo
-Cada usuario de la empresa tendrá **exactamente un rol** (regla nueva). El director es siempre director; los demás son residente, auxiliar, administrativo o supervisor.
+## Problema
 
-## Cambios
+En `src/routes/_authenticated/app.configuracion.tsx`, `handleSaveAndClose` solo guarda la pestaña activa:
 
-### 1. Base de datos (migración)
-- Agregar índice único parcial en `user_roles(user_id, company_id)` para garantizar un solo rol por usuario dentro de una empresa (Director sigue siendo un rol más; solo puede haber uno).
-- No se eliminan filas existentes automáticamente — solo aplica hacia adelante. (Actualmente todos los usuarios tienen un solo rol tras el wipe, así que no hay conflictos.)
+```ts
+if (tab === "facturacion") await facturacionRef.current?.submitAsync();
+else if (tab === "configuracion") await configRef.current?.submitAsync();
+```
 
-### 2. Backend — `src/lib/api/team.functions.ts`
-- Cambiar `inviteSchema.roles` y `updateRolesSchema.roles` de `z.array(roleEnum).min(1).max(5)` a un solo campo `role: roleEnum`.
-- En `inviteTeamMember`: insertar una única fila en `user_roles`.
-- En `updateMemberRoles` (renombrar a `updateMemberRole`): borrar filas previas e insertar una sola.
-- Mantener la validación "no puedes quitarte tu rol de Director".
+Como `forceMount` mantiene el estado de todas las pestañas, el usuario puede editar Facturación, cambiar a General y perder los cambios al guardar (nunca se envía Facturación).
 
-### 3. UI — `src/components/equipo/EquipoModule.tsx`
-- Reemplazar los `Checkbox` por un `Select` (o `RadioGroup`) con un único rol.
-- `InviteDialog`: `selectedRole` en lugar de `selectedRoles: AppRole[]`. Default: `residente`.
-- `EditRolesDialog` (renombrar a `EditRoleDialog`): mismo cambio.
-- Tabla: la columna "Roles" muestra un único badge en vez de lista.
+## Fix
 
-### 4. Sin cambios en el resto de la app
-- Los checks existentes (`role === 'residente'`, `useEffectiveIsDirector`, etc.) siguen funcionando: iteran sobre el arreglo `roles` que ahora tendrá siempre 1 elemento.
-- `getMiRolEnObra` y demás funciones que leen `user_roles` no requieren cambio.
+En `handleSaveAndClose`, invocar `submitAsync()` de **todas** las pestañas con estado editable en paralelo, sin importar la pestaña activa:
 
-## Notas
-- El módulo de Permisos ya trata cada rol independientemente, así que sigue funcionando.
-- Onboarding (que asigna rol `director` al crear la empresa) no se toca.
+```ts
+await Promise.all([
+  facturacionRef.current?.submitAsync(),
+  configRef.current?.submitAsync(),
+]);
+navigate({ to: "/app" });
+```
+
+Cada `submitAsync` ya hace `mutateAsync` con el estado actual del formulario y muestra toast en error. Si ninguna pestaña cambió, simplemente re-envía los mismos valores (idempotente contra `companies`).
+
+Opcional menor: si se quiere evitar el UPDATE innecesario, cada tab podría exponer un flag `isDirty` y solo enviar cuando aplique — pero no es requerido para arreglar el bug.
+
+## Archivos
+
+- `src/routes/_authenticated/app.configuracion.tsx` — cambiar `handleSaveAndClose` para guardar ambas pestañas en paralelo.

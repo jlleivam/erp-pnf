@@ -33,8 +33,10 @@ function Configuracion() {
   const handleSaveAndClose = async () => {
     setSaving(true);
     try {
-      if (tab === "facturacion") await facturacionRef.current?.submitAsync();
-      else if (tab === "configuracion") await configRef.current?.submitAsync();
+      await Promise.all([
+        facturacionRef.current?.submitAsync(),
+        configRef.current?.submitAsync(),
+      ]);
       navigate({ to: "/app" });
     } catch {
       // error toast ya lo muestra la mutation
