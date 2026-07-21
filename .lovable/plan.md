@@ -1,26 +1,9 @@
-## Diagnóstico
+**Diagnóstico confirmado**
+- El valor sí está guardado en la base de datos: `601 — General de Ley Personas Morales`.
+- El problema está en el render del dropdown: el componente `SelectValue` de régimen fiscal está recibiendo texto manual como children, lo que provoca el warning de React/Radix y evita que el valor seleccionado se pinte correctamente.
 
-El régimen fiscal **sí se está guardando** en la base de datos. Confirmé consultando `companies` directamente: el valor `"601 — General de Ley Personas Morales"` está persistido correctamente.
-
-El problema real es de **visualización**: al abrir Configuración → Facturación, el dropdown "Régimen fiscal" muestra el placeholder "Selecciona régimen" aunque el valor exista en el estado. Al inspeccionar el DOM en vivo, el `<select>` oculto de Radix sí tiene el valor correcto, pero el trigger visible aparece vacío.
-
-**Causa raíz**: Radix Select solo renderiza los `<SelectItem>` cuando el popover está abierto (o cuando se abre por primera vez). El componente `SelectValue` necesita que el ítem correspondiente esté montado para leer su texto visible; si no lo encuentra y hay un `placeholder`, muestra el placeholder. Los otros Selects de la misma pantalla (Moneda, Zona) "funcionan" solo porque no tienen placeholder y Radix cae al valor como texto por defecto.
-
-Como el usuario ve el campo vacío, asume que no se guardó y lo vuelve a llenar — pero ya estaba guardado.
-
-## Cambio propuesto
-
-Un único ajuste en `src/components/configuracion/FacturacionTab.tsx`, en el `<SelectValue>` de "Régimen fiscal":
-
-```tsx
-<SelectValue placeholder="Selecciona régimen">
-  {f.regimen_fiscal || undefined}
-</SelectValue>
-```
-
-Esto hace que el trigger muestre el valor actual aunque el popover nunca se haya abierto, resolviendo la percepción de "no se guardó". No cambia el flujo de guardado (ya funciona).
-
-## Fuera de alcance
-
-- No modifico backend, esquema ni lógica de guardado — todo está correcto.
-- No toco los otros Selects de la pantalla (funcionan por casualidad); si conviene, se pueden armonizar después.
+**Plan de implementación**
+1. Corregir `FacturacionTab` para que `SelectValue` sea usado de forma compatible con Radix, sin children manuales.
+2. Mantener el `Select` controlado con `value={f.regimen_fiscal}` y los `SelectItem` existentes para que Radix muestre automáticamente el texto seleccionado.
+3. Agregar una protección pequeña para que, si por alguna razón el régimen guardado no está dentro de la lista actual, se incluya como opción visible y no aparezca vacío.
+4. Verificar en la pantalla de Configuración de empresa que el campo muestre `601 — General de Ley Personas Morales` al cargar.

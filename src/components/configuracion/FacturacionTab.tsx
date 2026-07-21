@@ -118,6 +118,10 @@ export const FacturacionTab = forwardRef<FacturacionTabHandle>(function Facturac
   if (cfg.isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
 
   const regimenes = f.tipo_persona === "moral" ? REGIMENES_MORAL : REGIMENES_FISICA;
+  const regimenOptions =
+    f.regimen_fiscal && !regimenes.includes(f.regimen_fiscal)
+      ? [f.regimen_fiscal, ...regimenes]
+      : regimenes;
 
   return (
     <form
@@ -188,12 +192,10 @@ export const FacturacionTab = forwardRef<FacturacionTabHandle>(function Facturac
           <Label>Régimen fiscal</Label>
           <Select value={f.regimen_fiscal} onValueChange={(v) => set("regimen_fiscal", v)}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona régimen">
-                {f.regimen_fiscal || undefined}
-              </SelectValue>
+              <SelectValue placeholder="Selecciona régimen" />
             </SelectTrigger>
             <SelectContent>
-              {regimenes.map((r) => (
+              {regimenOptions.map((r) => (
                 <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
             </SelectContent>
