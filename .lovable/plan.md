@@ -1,27 +1,18 @@
 ## Objetivo
 
-Reemplazar el campo único "Dirección fiscal" del cliente por los mismos campos estructurados que usa Configuración de empresa: Calle, Núm. exterior, Núm. interior, Colonia, Municipio / Alcaldía, Estado (dropdown de 32 estados) y Código postal.
+Que cada renglón de la tabla de proveedores/contratistas ocupe una sola línea, sin scroll horizontal, en el ancho actual del catálogo.
 
-## Cambios
+## Cambios en `src/components/terceros/CatalogoTerceroModule.tsx`
 
-### 1. Base de datos (migración)
-En `public.clientes` agregar columnas de texto (nullable):
-- `calle`, `numero_exterior`, `numero_interior`, `colonia`, `municipio`, `estado`, `codigo_postal`
-
-El campo actual `direccion_fiscal` se conserva en la tabla por compatibilidad histórica pero deja de escribirse/leerse desde la UI. No hay datos productivos que migrar (el usuario ya limpió la BD).
-
-### 2. Backend — `src/lib/api/clientes.functions.ts`
-- Agregar los 7 campos al `clienteFieldsSchema` (todos `string.trim().nullable().optional()`; `codigo_postal` con `max(5)`).
-- Incluirlos en `SELECT_FULL`.
-- Persistirlos en `crearCliente` y `actualizarCliente`.
-- Quitar `direccion_fiscal` del schema y de los payloads insert/update.
-
-### 3. UI — `src/components/clientes/ClienteFormDialog.tsx`
-Reemplazar el textarea "Dirección fiscal" por el mismo bloque de "Dirección fiscal" que usa `FacturacionTab` (mismos labels, mismo grid `sm:grid-cols-4` + `sm:grid-cols-3`, mismo `Select` de estados usando la lista `ESTADOS_MX`). Se extrae la lista de estados a un módulo compartido pequeño (`src/lib/mx-estados.ts`) e importado tanto por `FacturacionTab` como por el formulario de cliente para evitar duplicar.
-
-### 4. UI — `src/components/clientes/ClienteDetalle.tsx`
-Sustituir el renglón `<Field label="Dirección fiscal" value={cliente.direccion_fiscal} />` por una dirección compuesta legible (una sola línea con Calle Núm. ext Int, Colonia, Municipio, Estado, C.P.), usando los nuevos campos.
+1. Aplicar `whitespace-nowrap` a todas las celdas de datos y headers para forzar una sola línea. Los headers actuales ("Nombre / Razón social", "Días crédito", "Vencido o faltante") se están rompiendo en dos renglones.
+2. Nombre / Razón social: envolver el texto en `TruncatedCell` (`src/components/pagos/TruncatedCell.tsx`) para que el texto largo se corte con `…` y muestre tooltip. Es la única columna que puede crecer arbitrariamente.
+3. RFC, Tipo, Categoría, Días crédito: `whitespace-nowrap`, ancho automático (contenido corto y fijo).
+4. Documentos: acortar la etiqueta "Vencido o faltante" a "Faltante" en el badge para que quepa en una línea (el color rojo ya comunica el problema); dejar los otros dos como están ("Al día", "Por vencer"). El label largo original queda disponible en `title` del badge para tooltip nativo.
+5. Acciones: quitar `w-32` y usar `w-auto whitespace-nowrap`; los dos iconos ocupan ~72 px.
+6. Encabezado de columnas: agregar `whitespace-nowrap` y renombrar "Nombre / Razón social" → "Nombre" para ahorrar ancho sin perder claridad (el subtítulo del módulo ya explica el contexto).
+7. No se agrega `overflow-x-auto` en la Card — se mantiene el ancho actual y las celdas se ajustan solas.
 
 ## Fuera de alcance
-- Proveedores/Subcontratistas/Trabajadores (catálogo de terceros): no se tocan en este cambio, aunque también podrían migrarse después si se pide.
-- No se borra la columna `direccion_fiscal` de la BD en esta iteración.
+
+- No se cambia el ancho del contenedor ni el diseño de filtros.
+- No se tocan datos ni el detalle del proveedor.

@@ -40,6 +40,8 @@ import { useEffectiveRoles } from "@/stores/auth";
 import { estadoVencimiento, type EstadoDoc } from "@/lib/format";
 import { TerceroFormDialog } from "./TerceroFormDialog";
 import { TerceroDetalle } from "./TerceroDetalle";
+import { TruncatedCell } from "@/components/pagos/TruncatedCell";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   CATEGORIA_BADGE,
   CATEGORIA_LABEL,
@@ -223,16 +225,17 @@ export function CatalogoTerceroModule() {
       </Card>
 
       <Card>
+        <TooltipProvider delayDuration={200}>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre / Razón social</TableHead>
-              <TableHead>RFC</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead className="text-right">Días crédito</TableHead>
-              <TableHead>Documentos</TableHead>
-              {canEdit && <TableHead className="w-32 text-right">Acciones</TableHead>}
+              <TableHead className="whitespace-nowrap">Nombre</TableHead>
+              <TableHead className="whitespace-nowrap">RFC</TableHead>
+              <TableHead className="whitespace-nowrap">Tipo</TableHead>
+              <TableHead className="whitespace-nowrap">Categoría</TableHead>
+              <TableHead className="whitespace-nowrap text-right">Días crédito</TableHead>
+              <TableHead className="whitespace-nowrap">Documentos</TableHead>
+              {canEdit && <TableHead className="whitespace-nowrap w-auto text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -260,33 +263,36 @@ export function CatalogoTerceroModule() {
             ) : (
               filtered.map((r) => {
                 const s = STATUS_BADGE[r._status];
+                const shortLabel = r._status === "vencido" ? "Faltante" : s.label;
                 return (
                   <TableRow
                     key={r.id}
                     className="cursor-pointer"
                     onClick={() => setDetalleId(r.id)}
                   >
-                    <TableCell className="font-medium">{r.razon_social}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.rfc}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium max-w-0">
+                      <TruncatedCell>{r.razon_social}</TruncatedCell>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs whitespace-nowrap">{r.rfc}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant="secondary">
                         {r.tipo_persona === "moral" ? "Moral" : "Física"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge className={CATEGORIA_BADGE[r.categoria]}>
                         {CATEGORIA_LABEL[r.categoria]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
+                    <TableCell className="whitespace-nowrap text-right text-sm text-muted-foreground">
                       {r.dias_credito != null ? `${r.dias_credito} d` : "—"}
                     </TableCell>
-                    <TableCell>
-                      <Badge className={s.cls}>{s.label}</Badge>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge className={s.cls} title={s.label}>{shortLabel}</Badge>
                     </TableCell>
                     {canEdit && (
                       <TableCell
-                        className="text-right"
+                        className="whitespace-nowrap w-auto text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Button
@@ -313,7 +319,9 @@ export function CatalogoTerceroModule() {
             )}
           </TableBody>
         </Table>
+        </TooltipProvider>
       </Card>
+
 
       {(creating || editing) && (
         <TerceroFormDialog
