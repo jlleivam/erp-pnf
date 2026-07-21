@@ -85,6 +85,13 @@ export type Tercero = {
   curp: string | null;
   regimen_fiscal: string | null;
   direccion_fiscal: string | null;
+  calle: string | null;
+  numero_exterior: string | null;
+  numero_interior: string | null;
+  colonia: string | null;
+  municipio: string | null;
+  estado: string | null;
+  codigo_postal: string | null;
   telefono: string | null;
   correo: string | null;
   contacto_nombre: string | null;
