@@ -216,18 +216,20 @@ export function CatalogoClientesModule({
                     className="cursor-pointer"
                     onClick={() => setDetalleId(c.id)}
                   >
-                    <TableCell className="font-medium">{c.razon_social}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.rfc}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium whitespace-nowrap max-w-[240px]">
+                      <TruncatedCell>{c.razon_social}</TruncatedCell>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs whitespace-nowrap">{c.rfc}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant="secondary">
                         {c.tipo_persona === "moral" ? "Moral" : "Física"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {c.telefono ?? "—"}
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap max-w-[160px]">
+                      <TruncatedCell>{c.telefono ?? "—"}</TruncatedCell>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {c.correo ?? "—"}
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap max-w-[200px]">
+                      <TruncatedCell>{c.correo ?? "—"}</TruncatedCell>
                     </TableCell>
                     <TableCell>
                       {worst === "vencido" ? (
