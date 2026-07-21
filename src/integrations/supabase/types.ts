@@ -1427,6 +1427,44 @@ export type Database = {
           },
         ]
       }
+      notificacion_preferencias: {
+        Row: {
+          company_id: string
+          created_at: string
+          habilitado: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          tipo: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          habilitado?: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          tipo: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          habilitado?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          tipo?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificacion_preferencias_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificaciones: {
         Row: {
           company_id: string

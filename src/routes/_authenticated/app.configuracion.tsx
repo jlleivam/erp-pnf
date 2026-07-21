@@ -10,6 +10,7 @@ import { ConfiguracionTab, type ConfiguracionTabHandle } from "@/components/conf
 import { IdentidadTab } from "@/components/configuracion/IdentidadTab";
 import { CuentasTab } from "@/components/configuracion/CuentasTab";
 import { PermisosTab } from "@/components/configuracion/PermisosTab";
+import { NotificacionesTab } from "@/components/configuracion/NotificacionesTab";
 import { useEffectiveIsDirector } from "@/stores/auth";
 
 export const Route = createFileRoute("/_authenticated/app/configuracion")({
@@ -73,6 +74,7 @@ function Configuracion() {
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
             <TabsTrigger value="permisos">Permisos</TabsTrigger>
+            <TabsTrigger value="notificaciones">Notificaciones</TabsTrigger>
             <TabsTrigger value="documentacion">Documentos</TabsTrigger>
           </TabsList>
         </div>
@@ -127,6 +129,15 @@ function Configuracion() {
             <CardHeader><CardTitle>Permisos por rol</CardTitle></CardHeader>
             <CardContent>
               <PermisosTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notificaciones" forceMount className="mt-4 data-[state=inactive]:hidden">
+          <Card>
+            <CardHeader><CardTitle>Notificaciones por rol</CardTitle></CardHeader>
+            <CardContent>
+              <NotificacionesTab />
             </CardContent>
           </Card>
         </TabsContent>
