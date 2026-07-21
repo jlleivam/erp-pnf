@@ -178,14 +178,14 @@ export function CatalogoTerceroModule() {
             placeholder="Buscar por nombre o RFC…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm"
+            className="pl-8 h-8 text-xs"
           />
         </div>
         <Select
           value={catFiltro}
           onValueChange={(v) => setCatFiltro(v as typeof catFiltro)}
         >
-          <SelectTrigger className="w-40 h-9 text-sm shrink-0">
+          <SelectTrigger className="w-36 h-8 text-xs shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -199,7 +199,7 @@ export function CatalogoTerceroModule() {
           value={personaFiltro}
           onValueChange={(v) => setPersonaFiltro(v as typeof personaFiltro)}
         >
-          <SelectTrigger className="w-40 h-9 text-sm shrink-0">
+          <SelectTrigger className="w-36 h-8 text-xs shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -212,7 +212,7 @@ export function CatalogoTerceroModule() {
           value={docFiltro}
           onValueChange={(v) => setDocFiltro(v as typeof docFiltro)}
         >
-          <SelectTrigger className="w-44 h-9 text-sm shrink-0">
+          <SelectTrigger className="w-40 h-8 text-xs shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
