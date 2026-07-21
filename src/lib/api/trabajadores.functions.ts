@@ -227,23 +227,24 @@ export const crearTrabajador = createServerFn({ method: "POST" })
       try {
         const destSet = new Set<string>();
 
-        // 1) Administrativos de la obra (si aplica)
         if (data.obraId) {
+          // Solicitud desde una obra: solo administrativos asignados a esa obra
           const { data: admins } = await supabase
             .from("obra_team")
             .select("user_id")
             .eq("obra_id", data.obraId)
             .eq("role", "administrativo");
           (admins ?? []).forEach((a: any) => destSet.add(a.user_id as string));
+        } else {
+          // Solicitud desde el catálogo general: directores y administrativos de la empresa
+          const { data: companyRoles } = await supabase
+            .from("user_roles")
+            .select("user_id")
+            .eq("company_id", companyId)
+            .in("role", ["director", "administrativo"]);
+          (companyRoles ?? []).forEach((r: any) => destSet.add(r.user_id as string));
         }
 
-        // 2) Directores y administrativos de la empresa
-        const { data: companyRoles } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("company_id", companyId)
-          .in("role", ["director", "administrativo"]);
-        (companyRoles ?? []).forEach((r: any) => destSet.add(r.user_id as string));
 
         destSet.delete(userId);
         const destinatarios = Array.from(destSet);

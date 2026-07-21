@@ -1,21 +1,15 @@
-## Notificar a nivel empresa cuando la solicitud se hace desde el catálogo
+## Ajuste de destinatarios de notificación de alta de trabajador
 
-Actualmente `crearTrabajador` (`src/lib/api/trabajadores.functions.ts`) sólo envía notificaciones cuando la solicitud viene con `obraId` y únicamente a los administrativos de esa obra. Al solicitar desde el catálogo (sin obra) nadie recibe aviso.
+Diferenciar la audiencia según el origen de la solicitud:
 
-### Cambio
+- **Desde una obra** (`obra_id` presente): notificar únicamente a los **administrativos asignados al `obra_team`** de esa obra (comportamiento original), excluyendo al solicitante.
+- **Desde el catálogo general** (`obra_id` null): notificar a **todos los directores y administrativos de la empresa**, excluyendo al solicitante.
 
-En `crearTrabajador`, cuando `estatus_autorizacion === "pendiente"`, calcular destinatarios como la unión de:
+### Cambios técnicos
 
-1. **Administrativos de la obra** (si `data.obraId` viene) — comportamiento actual.
-2. **Directores de la empresa** — `user_roles` con `role = 'director'` y `company_id = companyId`.
-3. **Administrativos de la empresa** — `user_roles` con `role = 'administrativo'` y `company_id = companyId`.
+En `src/lib/api/trabajadores.functions.ts`, dentro de `crearTrabajador`:
+- Ramificar la construcción del set de destinatarios según `obra_id`.
+- Mantener el link con `tab=pendientes&id=[id]` en ambos casos.
+- Conservar el filtro de exclusión del solicitante.
 
-Filtrar duplicados y excluir al `userId` solicitante. Insertar una notificación por destinatario con:
-- `tipo: "trabajador_alta_solicitada"`
-- `obra_id`: el de la solicitud si existe, si no `null`
-- `link: /app/catalogos/trabajadores?tab=pendientes&id=<id>`
-- `mensaje`: "{quien} solicitó dar de alta a {nombre}. Requiere autorización."
-
-Respetar `notificacion_preferencias` si ya se filtra en otros flujos (revisar patrón existente antes de insertar; si no hay helper, dejar la inserción directa como hoy).
-
-No se toca la BD, ni el formulario, ni el catálogo — solo el server function.
+No se tocan tablas, UI ni otras funciones.
