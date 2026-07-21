@@ -296,6 +296,9 @@ export function CatalogoClientesModule({
           </TableBody>
         </Table>
       </Card>
+      </TooltipProvider>
+
+
 
       {(creating || editing) && (
         <ClienteFormDialog
