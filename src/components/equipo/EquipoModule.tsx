@@ -272,7 +272,7 @@ function InviteDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={submit} disabled={m.isPending}>
-            {m.isPending ? "Creando…" : "Crear cuenta"}
+            {m.isPending ? "Creando…" : "Crear usuario"}
           </Button>
         </DialogFooter>
       </DialogContent>
