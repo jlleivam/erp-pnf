@@ -22,13 +22,21 @@ import {
 } from "@/components/ui/select";
 import { crearCliente, actualizarCliente } from "@/lib/api/clientes.functions";
 
+import { ESTADOS_MX } from "@/lib/mx-estados";
+
 export type ClienteFormInitial = {
   id?: string;
   tipo_persona: "moral" | "fisica";
   razon_social: string;
   rfc: string;
   regimen_fiscal?: string | null;
-  direccion_fiscal?: string | null;
+  calle?: string | null;
+  numero_exterior?: string | null;
+  numero_interior?: string | null;
+  colonia?: string | null;
+  municipio?: string | null;
+  estado?: string | null;
+  codigo_postal?: string | null;
   telefono?: string | null;
   correo?: string | null;
   contacto_nombre?: string | null;
@@ -46,6 +54,7 @@ const EMPTY: ClienteFormInitial = {
   razon_social: "",
   rfc: "",
 };
+
 
 const REGIMENES_MORAL = [
   "601 — General de Ley Personas Morales",
@@ -141,7 +150,13 @@ export function ClienteFormDialog({
       razon_social: f.razon_social.trim(),
       rfc,
       regimen_fiscal: f.regimen_fiscal?.trim() || null,
-      direccion_fiscal: f.direccion_fiscal?.trim() || null,
+      calle: f.calle?.trim() || null,
+      numero_exterior: f.numero_exterior?.trim() || null,
+      numero_interior: f.numero_interior?.trim() || null,
+      colonia: f.colonia?.trim() || null,
+      municipio: f.municipio?.trim() || null,
+      estado: f.estado?.trim() || null,
+      codigo_postal: f.codigo_postal?.trim() || null,
       telefono: f.telefono?.trim() || null,
       correo: f.correo?.trim() || null,
       contacto_nombre: f.contacto_nombre?.trim() || null,
@@ -166,6 +181,7 @@ export function ClienteFormDialog({
       createM.mutate({ data: payload });
     }
   };
+
 
   const pending = createM.isPending || updateM.isPending;
 
@@ -254,14 +270,53 @@ export function ClienteFormDialog({
             </div>
           </Section>
 
-          <Section title="Contacto">
-            <div>
-              <Label>Dirección fiscal</Label>
-              <Input
-                value={f.direccion_fiscal ?? ""}
-                onChange={(e) => set("direccion_fiscal", e.target.value)}
-              />
+          <Section title="Dirección fiscal">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="sm:col-span-2">
+                <Label>Calle</Label>
+                <Input value={f.calle ?? ""} onChange={(e) => set("calle", e.target.value)} />
+              </div>
+              <div>
+                <Label>Núm. exterior</Label>
+                <Input value={f.numero_exterior ?? ""} onChange={(e) => set("numero_exterior", e.target.value)} />
+              </div>
+              <div>
+                <Label>Núm. interior</Label>
+                <Input value={f.numero_interior ?? ""} onChange={(e) => set("numero_interior", e.target.value)} />
+              </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label>Colonia</Label>
+                <Input value={f.colonia ?? ""} onChange={(e) => set("colonia", e.target.value)} />
+              </div>
+              <div>
+                <Label>Municipio / Alcaldía</Label>
+                <Input value={f.municipio ?? ""} onChange={(e) => set("municipio", e.target.value)} />
+              </div>
+              <div>
+                <Label>Estado</Label>
+                <Select value={f.estado ?? ""} onValueChange={(v) => set("estado", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona estado" /></SelectTrigger>
+                  <SelectContent>
+                    {ESTADOS_MX.map((e) => (
+                      <SelectItem key={e} value={e}>{e}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Código postal</Label>
+                <Input
+                  value={f.codigo_postal ?? ""}
+                  onChange={(e) => set("codigo_postal", e.target.value)}
+                  maxLength={5}
+                />
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Contacto">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Teléfono</Label>
@@ -269,6 +324,7 @@ export function ClienteFormDialog({
                   value={f.telefono ?? ""}
                   onChange={(e) => set("telefono", e.target.value)}
                 />
+
               </div>
               <div>
                 <Label>Correo</Label>

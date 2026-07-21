@@ -141,7 +141,23 @@ export function ClienteDetalle({
                     />
                   )}
                   <Field label="Régimen fiscal" value={cliente.regimen_fiscal} />
-                  <Field label="Dirección fiscal" value={cliente.direccion_fiscal} />
+                  <Field
+                    label="Dirección fiscal"
+                    value={
+                      [
+                        [cliente.calle, cliente.numero_exterior && `#${cliente.numero_exterior}`, cliente.numero_interior && `Int. ${cliente.numero_interior}`]
+                          .filter(Boolean)
+                          .join(" "),
+                        cliente.colonia,
+                        cliente.municipio,
+                        cliente.estado,
+                        cliente.codigo_postal && `C.P. ${cliente.codigo_postal}`,
+                      ]
+                        .filter((s) => s && String(s).trim().length > 0)
+                        .join(", ") || null
+                    }
+                  />
+
                   <Field label="Teléfono" value={cliente.telefono} />
                   <Field label="Correo" value={cliente.correo} />
                   {cliente.tipo_persona === "moral" && (

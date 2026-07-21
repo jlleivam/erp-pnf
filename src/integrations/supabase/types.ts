@@ -600,7 +600,10 @@ export type Database = {
         Row: {
           banco: string | null
           beneficiario: string | null
+          calle: string | null
           clabe: string | null
+          codigo_postal: string | null
+          colonia: string | null
           company_id: string
           condiciones_pago: number | null
           constancia_fiscal_url: string | null
@@ -612,8 +615,12 @@ export type Database = {
           curp: string | null
           datos_contacto: Json
           direccion_fiscal: string | null
+          estado: string | null
           id: string
           limite_credito: number | null
+          municipio: string | null
+          numero_exterior: string | null
+          numero_interior: string | null
           opinion_sat_url: string | null
           opinion_sat_vencimiento: string | null
           razon_social: string
@@ -625,7 +632,10 @@ export type Database = {
         Insert: {
           banco?: string | null
           beneficiario?: string | null
+          calle?: string | null
           clabe?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           company_id: string
           condiciones_pago?: number | null
           constancia_fiscal_url?: string | null
@@ -637,8 +647,12 @@ export type Database = {
           curp?: string | null
           datos_contacto?: Json
           direccion_fiscal?: string | null
+          estado?: string | null
           id?: string
           limite_credito?: number | null
+          municipio?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           opinion_sat_url?: string | null
           opinion_sat_vencimiento?: string | null
           razon_social: string
@@ -650,7 +664,10 @@ export type Database = {
         Update: {
           banco?: string | null
           beneficiario?: string | null
+          calle?: string | null
           clabe?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           company_id?: string
           condiciones_pago?: number | null
           constancia_fiscal_url?: string | null
@@ -662,8 +679,12 @@ export type Database = {
           curp?: string | null
           datos_contacto?: Json
           direccion_fiscal?: string | null
+          estado?: string | null
           id?: string
           limite_credito?: number | null
+          municipio?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           opinion_sat_url?: string | null
           opinion_sat_vencimiento?: string | null
           razon_social?: string
