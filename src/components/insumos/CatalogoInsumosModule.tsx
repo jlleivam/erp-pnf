@@ -192,14 +192,12 @@ export function CatalogoInsumosModule() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
           <TabsList>
             <TabsTrigger value="autorizado">Autorizados</TabsTrigger>
-            {director && (
-              <TabsTrigger value="pendiente" className="gap-2">
-                Pendientes
-                {pendientesCount > 0 && (
-                  <Badge variant="destructive" className="h-5 px-1.5">{pendientesCount}</Badge>
-                )}
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="pendiente" className="gap-2">
+              Pendientes
+              {pendientesCount > 0 && (
+                <Badge variant="destructive" className="h-5 px-1.5">{pendientesCount}</Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="autorizado" className="mt-4">
@@ -262,54 +260,58 @@ export function CatalogoInsumosModule() {
             </Table>
           </TabsContent>
 
-          {director && (
-            <TabsContent value="pendiente" className="mt-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">Nombre</TableHead>
-                    <TableHead className="whitespace-nowrap">Unidad</TableHead>
-                    <TableHead className="whitespace-nowrap">Categoría</TableHead>
-                    <TableHead className="whitespace-nowrap">Solicitado por</TableHead>
-                    <TableHead className="whitespace-nowrap">Fecha</TableHead>
-                    <TableHead className="text-right whitespace-nowrap">Acciones</TableHead>
+          <TabsContent value="pendiente" className="mt-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Nombre</TableHead>
+                  <TableHead className="whitespace-nowrap">Unidad</TableHead>
+                  <TableHead className="whitespace-nowrap">Categoría</TableHead>
+                  <TableHead className="whitespace-nowrap">Solicitado por</TableHead>
+                  <TableHead className="whitespace-nowrap">Fecha</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">{director ? "Acciones" : "Estado"}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(insumosQ.data ?? []).length === 0 && (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    Sin solicitudes pendientes.
+                  </TableCell></TableRow>
+                )}
+                {(insumosQ.data ?? []).map((i: any) => (
+                  <TableRow key={i.id}>
+                    <TableCell className="font-medium whitespace-nowrap max-w-[240px]">
+                      <TruncatedCell>{i.nombre}</TruncatedCell>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap"><Badge variant="outline">{i.unidad}</Badge></TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {i.categoria ? (
+                        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${toneFor(i.categoria.id)}`}>
+                          {i.categoria.nombre}
+                        </span>
+                      ) : <span className="text-muted-foreground text-xs">Sin categoría</span>}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{i.solicitante?.nombre_completo ?? i.solicitante?.email ?? "—"}</TableCell>
+                    <TableCell className="whitespace-nowrap">{new Date(i.created_at).toLocaleDateString("es-MX")}</TableCell>
+                    <TableCell className="text-right space-x-2 whitespace-nowrap">
+                      {director ? (
+                        <>
+                          <Button size="sm" onClick={() => autorizarMut.mutate({ data: { id: i.id } })}>
+                            <Check className="size-4 mr-1" /> Autorizar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => rechazarMut.mutate({ data: { id: i.id } })}>
+                            <X className="size-4 mr-1" /> Rechazar
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant="secondary">Pendiente</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(insumosQ.data ?? []).length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Sin solicitudes pendientes.
-                    </TableCell></TableRow>
-                  )}
-                  {(insumosQ.data ?? []).map((i: any) => (
-                    <TableRow key={i.id}>
-                      <TableCell className="font-medium whitespace-nowrap max-w-[240px]">
-                        <TruncatedCell>{i.nombre}</TruncatedCell>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap"><Badge variant="outline">{i.unidad}</Badge></TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {i.categoria ? (
-                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${toneFor(i.categoria.id)}`}>
-                            {i.categoria.nombre}
-                          </span>
-                        ) : <span className="text-muted-foreground text-xs">Sin categoría</span>}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{i.solicitante?.nombre_completo ?? i.solicitante?.email ?? "—"}</TableCell>
-                      <TableCell className="whitespace-nowrap">{new Date(i.created_at).toLocaleDateString("es-MX")}</TableCell>
-                      <TableCell className="text-right space-x-2 whitespace-nowrap">
-                        <Button size="sm" onClick={() => autorizarMut.mutate({ data: { id: i.id } })}>
-                          <Check className="size-4 mr-1" /> Autorizar
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => rechazarMut.mutate({ data: { id: i.id } })}>
-                          <X className="size-4 mr-1" /> Rechazar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          )}
+                ))}
+              </TableBody>
+            </Table>
+          </TabsContent>
         </Tabs>
       </Card>
       </TooltipProvider>
