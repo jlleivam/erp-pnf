@@ -141,18 +141,18 @@ export function CatalogoClientesModule({
         </Card>
       )}
 
-      <Card className="p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-64">
-          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <Card className="p-3 flex flex-col sm:flex-row sm:flex-nowrap items-stretch sm:items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre o RFC…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-xs"
           />
         </div>
         <Select value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as typeof tipoFiltro)}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-36 h-8 text-xs shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -163,17 +163,18 @@ export function CatalogoClientesModule({
         </Select>
       </Card>
 
+      <TooltipProvider>
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Razón social</TableHead>
-              <TableHead>RFC</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Correo</TableHead>
-              <TableHead>Alertas</TableHead>
-              {canEdit && <TableHead className="w-32 text-right">Acciones</TableHead>}
+              <TableHead className="whitespace-nowrap">Nombre</TableHead>
+              <TableHead className="whitespace-nowrap">RFC</TableHead>
+              <TableHead className="whitespace-nowrap">Tipo</TableHead>
+              <TableHead className="whitespace-nowrap">Teléfono</TableHead>
+              <TableHead className="whitespace-nowrap">Correo</TableHead>
+              <TableHead className="whitespace-nowrap">Alertas</TableHead>
+              {canEdit && <TableHead className="w-32 text-right whitespace-nowrap">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
