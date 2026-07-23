@@ -96,10 +96,7 @@ export function CapturaPresupuestoSheet({
     });
     setActiveRowId(newRow._id);
   };
-  const handleRowClick = (id: string) => (e: React.MouseEvent<HTMLTableRowElement>) => {
-    if ((e.target as HTMLElement).closest("input, button, textarea, select, label")) return;
-    setActiveRowId(id);
-  };
+  const handleRowActivate = (id: string) => () => setActiveRowId(id);
 
   // Cálculo en vivo
   const calc = useMemo(() => {
@@ -394,7 +391,8 @@ export function CapturaPresupuestoSheet({
                     return (
                       <tr
                         key={r._id}
-                        onClick={handleRowClick(r._id)}
+                        onFocus={handleRowActivate(r._id)}
+                        onMouseDown={handleRowActivate(r._id)}
                         className={`border-t border-border cursor-pointer transition-colors ${
                           errs.length
                             ? "bg-destructive/5"
