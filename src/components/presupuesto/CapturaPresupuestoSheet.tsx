@@ -220,8 +220,17 @@ export function CapturaPresupuestoSheet({
   const aplicarRenglonesImportados = (
     renglones: Array<{ clave: string; concepto: string; unidad?: string | null; cantidad?: number | null; precio_unitario?: number | null }>,
   ) => {
-    setRows(
+    const { renglones: completos, agregados } = completarPadresFaltantes(
       renglones.map((r) => ({
+        clave: r.clave,
+        concepto: r.concepto,
+        unidad: r.unidad ?? null,
+        cantidad: r.cantidad ?? null,
+        precio_unitario: r.precio_unitario ?? null,
+      })),
+    );
+    setRows(
+      completos.map((r) => ({
         _id: nextId(),
         clave: r.clave,
         concepto: r.concepto,
@@ -230,6 +239,11 @@ export function CapturaPresupuestoSheet({
         precio_unitario: r.precio_unitario ?? null,
       })),
     );
+    if (agregados.length > 0) {
+      toast.info(
+        `Se agregaron ${agregados.length} renglón(es) padre faltante(s) (${agregados.join(", ")}). Revisa su concepto.`,
+      );
+    }
   };
 
   const handleImportarExcel = async (file: File) => {
