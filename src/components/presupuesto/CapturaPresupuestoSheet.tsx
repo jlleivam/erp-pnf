@@ -99,7 +99,7 @@ export function CapturaPresupuestoSheet({
   };
   const handleRowActivate = (id: string) => () => setActiveRowId(id);
 
-  // Cálculo en vivo
+  // Cálculo en vivo (auto-completando padres para que "Falta padre" no bloquee)
   const calc = useMemo(() => {
     const input: RenglonInput[] = rows
       .filter((r) => r.clave.trim() || r.concepto.trim())
@@ -110,7 +110,8 @@ export function CapturaPresupuestoSheet({
         cantidad: r.cantidad,
         precio_unitario: r.precio_unitario,
       }));
-    return procesarRenglones(input);
+    const { renglones: completos } = completarPadresFaltantes(input);
+    return procesarRenglones(completos);
   }, [rows]);
 
   // Map errores por clave para mostrar inline
