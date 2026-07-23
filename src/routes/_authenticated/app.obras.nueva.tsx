@@ -95,6 +95,9 @@ function NuevaObra() {
   const fetchUsers = useServerFn(listCompanyUsers);
   const fetchUnidades = useServerFn(listUnidadesNegocio);
   const createObraFn = useServerFn(crearObra);
+  const parsePdfFn = useServerFn(parsearPdfPresupuesto);
+  const createPresupuestoFn = useServerFn(crearPresupuesto);
+  const guardarRenglonesFn = useServerFn(guardarRenglones);
 
   const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes({ data: {} }) });
   const usersQ = useQuery({ queryKey: ["company-users"], queryFn: () => fetchUsers() });
@@ -102,8 +105,33 @@ function NuevaObra() {
 
   const createObraM = useMutation({
     mutationFn: createObraFn,
-    onSuccess: ({ obraId }) => {
-      toast.success("Obra creada");
+    onSuccess: async ({ obraId }) => {
+      if (partidasExtraidas && partidasExtraidas.length > 0 && usarPartidas) {
+        try {
+          const { id: presupuestoId } = await createPresupuestoFn({
+            data: {
+              obraId,
+              tipo: "base",
+              nombre: "Presupuesto inicial (PDF)",
+            },
+          });
+          await guardarRenglonesFn({
+            data: {
+              presupuestoId,
+              renglones: partidasExtraidas,
+            },
+          });
+          toast.success("Obra creada con partidas del PDF");
+        } catch (e) {
+          toast.error(
+            `Obra creada, pero no se pudieron guardar las partidas: ${
+              e instanceof Error ? e.message : "error"
+            }`,
+          );
+        }
+      } else {
+        toast.success("Obra creada");
+      }
       qc.invalidateQueries({ queryKey: ["obras"] });
       navigate({ to: "/app/obras/$obraId", params: { obraId } });
     },
@@ -117,9 +145,22 @@ function NuevaObra() {
     setStep(2);
   };
 
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const comma = result.indexOf(",");
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
   const handleUpload = async (file: File) => {
     if (!profile?.company_id) return;
     setUploading(true);
+    setPartidasExtraidas(null);
     try {
       const path = `${profile.company_id}/${crypto.randomUUID()}-${file.name}`;
       const { error } = await supabase.storage.from("presupuestos").upload(path, file, {
@@ -127,7 +168,36 @@ function NuevaObra() {
       });
       if (error) throw error;
       setPresupuestoUrl(path);
-      toast.success("Presupuesto cargado");
+      toast.success("Archivo cargado");
+
+      const isPdf =
+        file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      if (isPdf) {
+        setParsingPdf(true);
+        try {
+          const b64 = await fileToBase64(file);
+          const { renglones } = await parsePdfFn({
+            data: {
+              fileBase64: b64,
+              mimeType: file.type || "application/pdf",
+              filename: file.name,
+            },
+          });
+          setPartidasExtraidas(renglones);
+          setUsarPartidas(renglones.length > 0);
+          if (renglones.length === 0) {
+            toast.warning("La IA no detectó partidas. Podrás capturar el presupuesto manualmente.");
+          } else {
+            toast.success(`${renglones.length} partidas extraídas del PDF`);
+          }
+        } catch (e) {
+          toast.error(
+            `No se pudieron extraer partidas: ${e instanceof Error ? e.message : "error"}`,
+          );
+        } finally {
+          setParsingPdf(false);
+        }
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al subir");
     } finally {
