@@ -12,6 +12,7 @@ import {
 import {
   procesarRenglones,
   calcularClavesPadre,
+  completarPadresFaltantes,
   type RenglonInput,
 } from "@/lib/presupuesto-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
