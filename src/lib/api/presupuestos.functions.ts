@@ -492,6 +492,135 @@ export const parsearExcelPresupuesto = createServerFn({ method: "POST" })
     return { renglones: normalized };
   });
 
+/** Parsea un PDF (base64) con IA y devuelve los renglones detectados (sin guardar). */
+export const parsearPdfPresupuesto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        fileBase64: z.string().min(1).max(30_000_000),
+        mimeType: z.string().default("application/pdf"),
+        filename: z.string().default("presupuesto.pdf"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY no configurada");
+
+    const systemPrompt = `Eres un asistente que extrae partidas de un presupuesto de obra desde un PDF.
+Devuelve ÚNICAMENTE partidas como filas planas con una clave WBS jerárquica (ej. "1", "1.1", "1.1.1").
+Reglas:
+- Usa la numeración/clave que aparezca en el PDF; si no existe, genera claves WBS coherentes (1, 1.1, 1.2, 2, 2.1...).
+- Concepto: descripción de la partida.
+- Unidad: unidad de medida (m2, m3, pza, ml, lote, etc.) o null.
+- Cantidad y precio_unitario: números (sin comas ni símbolos) o null si es un grupo/encabezado.
+- No incluyas totales, subtotales, IVA ni renglones vacíos.
+- Devuelve todas las partidas encontradas.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3.6-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extrae las partidas del presupuesto en este PDF." },
+              {
+                type: "file",
+                file: {
+                  filename: data.filename,
+                  file_data: `data:${data.mimeType};base64,${data.fileBase64}`,
+                },
+              },
+            ],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "guardar_partidas",
+              description: "Guarda las partidas extraídas del presupuesto",
+              parameters: {
+                type: "object",
+                properties: {
+                  renglones: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        clave: { type: "string" },
+                        concepto: { type: "string" },
+                        unidad: { type: ["string", "null"] },
+                        cantidad: { type: ["number", "null"] },
+                        precio_unitario: { type: ["number", "null"] },
+                      },
+                      required: ["clave", "concepto"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["renglones"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "guardar_partidas" } },
+      }),
+    });
+
+    if (response.status === 429)
+      throw new Error("Límite de solicitudes de IA alcanzado. Intenta más tarde.");
+    if (response.status === 402)
+      throw new Error("Créditos de IA agotados. Agrega créditos en el workspace.");
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Error de IA (${response.status}): ${body.slice(0, 300)}`);
+    }
+
+    const json = (await response.json()) as any;
+    const call = json?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!call?.function?.arguments) {
+      throw new Error("La IA no devolvió partidas. Intenta con otro archivo.");
+    }
+    let parsed: { renglones?: unknown } = {};
+    try {
+      parsed = JSON.parse(call.function.arguments);
+    } catch {
+      throw new Error("Respuesta de IA inválida");
+    }
+    const arr = Array.isArray(parsed.renglones) ? parsed.renglones : [];
+    const renglones: RenglonInput[] = arr
+      .map((r: any) => ({
+        clave: String(r?.clave ?? "").trim(),
+        concepto: String(r?.concepto ?? "").trim(),
+        unidad: r?.unidad ? String(r.unidad).trim() : null,
+        cantidad:
+          r?.cantidad === null || r?.cantidad === undefined || r?.cantidad === ""
+            ? null
+            : Number.isFinite(Number(r.cantidad))
+              ? Number(r.cantidad)
+              : null,
+        precio_unitario:
+          r?.precio_unitario === null || r?.precio_unitario === undefined || r?.precio_unitario === ""
+            ? null
+            : Number.isFinite(Number(r.precio_unitario))
+              ? Number(r.precio_unitario)
+              : null,
+      }))
+      .filter((r: RenglonInput) => r.clave && r.concepto);
+
+    return { renglones };
+  });
+
 /** Genera la plantilla .xlsx en base64. */
 export const descargarPlantillaPresupuesto = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
