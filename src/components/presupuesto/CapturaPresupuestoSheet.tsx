@@ -165,6 +165,7 @@ export function CapturaPresupuestoSheet({
   const parsearPdf = useServerFn(parsearPdfPresupuesto);
   const [parsing, setParsing] = useState(false);
   const [parsingPdf, setParsingPdf] = useState(false);
+  const importing = parsing || parsingPdf;
 
   const handleDescargarPlantilla = async () => {
     try {
