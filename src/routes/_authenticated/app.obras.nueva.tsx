@@ -328,34 +328,86 @@ function NuevaObra() {
       {step === 2 && (
         <Card className="p-6 space-y-4">
           <div>
-            <Label>Presupuesto (.xlsx)</Label>
-            <p className="text-xs text-muted-foreground mt-1">Opcional. Puedes subirlo más tarde.</p>
+            <Label>Presupuesto (.xlsx o .pdf)</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Opcional. Si subes un PDF, la IA intentará extraer las partidas automáticamente.
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Input
               type="file"
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) handleUpload(f);
               }}
-              disabled={uploading}
+              disabled={uploading || parsingPdf}
             />
-            {presupuestoUrl && (
+            {presupuestoUrl && !parsingPdf && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Check className="size-3 text-primary" /> cargado
               </span>
             )}
+            {parsingPdf && (
+              <span className="text-xs text-muted-foreground">Extrayendo partidas…</span>
+            )}
           </div>
+
+          {partidasExtraidas && partidasExtraidas.length > 0 && (
+            <div className="border rounded-md">
+              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+                <div className="text-sm font-medium">
+                  {partidasExtraidas.length} partidas detectadas
+                </div>
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={usarPartidas}
+                    onChange={(e) => setUsarPartidas(e.target.checked)}
+                  />
+                  Usar estas partidas como presupuesto base
+                </label>
+              </div>
+              <div className="max-h-72 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/20 sticky top-0">
+                    <tr className="text-left">
+                      <th className="px-2 py-1 w-16">Clave</th>
+                      <th className="px-2 py-1">Concepto</th>
+                      <th className="px-2 py-1 w-16">Unidad</th>
+                      <th className="px-2 py-1 w-20 text-right">Cant.</th>
+                      <th className="px-2 py-1 w-24 text-right">PU</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partidasExtraidas.map((p, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1 font-mono">{p.clave}</td>
+                        <td className="px-2 py-1">{p.concepto}</td>
+                        <td className="px-2 py-1">{p.unidad ?? ""}</td>
+                        <td className="px-2 py-1 text-right">{p.cantidad ?? ""}</td>
+                        <td className="px-2 py-1 text-right">{p.precio_unitario ?? ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="px-3 py-2 text-xs text-muted-foreground border-t">
+                Podrás editarlas después en el módulo Presupuesto de la obra.
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-between items-center">
             <Button variant="ghost" onClick={() => navigate({ to: "/app" })}>Cancelar</Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
-              <Button onClick={() => setStep(3)}>Continuar</Button>
+              <Button onClick={() => setStep(3)} disabled={parsingPdf}>Continuar</Button>
             </div>
           </div>
         </Card>
       )}
+
 
       {step === 3 && (
         <Card className="p-6 space-y-6">
