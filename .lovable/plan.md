@@ -1,16 +1,28 @@
 ## Objetivo
-Integrar la importación por PDF (con extracción vía IA) en la ventana "Presupuesto base", reutilizando la tabla existente para que las partidas extraídas sean revisables y editables antes de guardar.
+Agregar un indicador de carga prominente y bloqueante cuando se está importando un PDF en la ventana "Presupuesto base", evitando que el usuario cierre o interactúe con la pantalla mientras dura el proceso.
 
-## Cambios
+## Cambios propuestos
 
-**`src/components/presupuesto/CapturaPresupuestoSheet.tsx`**
-- Importar el server function existente `parsearPdfPresupuesto` (ya implementado en `presupuestos.functions.ts`, usa Gemini).
-- Añadir botón "Importar PDF" en el toolbar (junto a "Importar Excel"), con `accept=".pdf"` y su propio estado `parsingPdf`.
-- Handler `handleImportarPdf(file)`: convierte a base64, llama a `parsearPdfPresupuesto`, y vuelca los renglones al mismo `setRows(...)` que ya usa el import de Excel — así la tabla existente permite editar clave/concepto/unidad/cantidad/PU antes de "Guardar borrador" o "Guardar y autorizar".
-- Mostrar toast con el número de partidas extraídas y mensaje "Revísalos antes de guardar".
-- Deshabilitar ambos botones de importación mientras cualquiera esté procesando.
-- Si la lista actual ya tiene renglones con datos, pedir confirmación antes de reemplazar (para evitar pérdida accidental).
+### `src/components/presupuesto/CapturaPresupuestoSheet.tsx`
+
+1. **Overlay de carga bloqueante**
+   - Renderizar un overlay a pantalla completa dentro del `SheetContent` cuando `parsingPdf` (o también `parsing` para Excel) esté activo.
+   - El overlay usará `fixed inset-0 z-50`, fondo semitransparente (`bg-background/80` o similar semántico) y `pointer-events-auto` para capturar clicks.
+   - Centrar un spinner animado (usar `Loader2` de lucide-react o reutilizar patrón existente) y un mensaje descriptivo: "Analizando PDF, por favor no cierres esta ventana..."
+
+2. **Prevenir cierre accidental**
+   - Modificar `onOpenChange` del `Sheet` para que ignore intentos de cierre mientras `parsingPdf` o `parsing` sean `true`.
+   - Esto evita que el usuario cierre el sheet desde la X o haciendo click fuera.
+
+3. **Deshabilitar controles internos**
+   - Asegurar que los botones "Cerrar", "Guardar borrador" y "Guardar y autorizar" estén deshabilitados durante la importación (ya existen condiciones parciales, consolidar).
+   - Asegurar que no se puedan editar celdas de la tabla mientras se analiza el PDF.
+
+4. **Reutilizar estado existente**
+   - Usar los estados actuales `parsing` e `parsingPdf`; no agregar nuevos estados si no es necesario.
+   - Mostrar el overlay para cualquiera de los dos procesos de importación (Excel y PDF), ya que ambos son operaciones de parseo que no deberían interrumpirse.
 
 ## Fuera de alcance
-- Sin cambios en backend: `parsearPdfPresupuesto` ya existe y devuelve el mismo shape que el parser de Excel.
-- Sin cambios en el flujo de guardado/autorización.
+- Sin cambios en backend ni en la lógica de extracción del PDF (`parsearPdfPresupuesto`).
+- Sin cambios en el flujo de guardado o autorización.
+- Sin cambios en la tabla editable fuera del estado de carga.

@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, Upload, Download, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Upload, Download, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
 
@@ -165,6 +165,7 @@ export function CapturaPresupuestoSheet({
   const parsearPdf = useServerFn(parsearPdfPresupuesto);
   const [parsing, setParsing] = useState(false);
   const [parsingPdf, setParsingPdf] = useState(false);
+  const importing = parsing || parsingPdf;
 
   const handleDescargarPlantilla = async () => {
     try {
@@ -251,8 +252,21 @@ export function CapturaPresupuestoSheet({
   const yaAutorizado = presupuesto?.estatus === "autorizado";
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-5xl overflow-y-auto">
+    <Sheet open onOpenChange={(o) => { if (!o && !importing) onClose(); }}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-5xl overflow-y-auto"
+        onPointerDownOutside={(e) => { if (importing) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (importing) e.preventDefault(); }}
+      >
+        {importing && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-auto">
+            <Loader2 className="size-10 animate-spin text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground">
+              {parsingPdf ? "Analizando PDF, por favor no cierres esta ventana..." : "Importando archivo, por favor espera..."}
+            </p>
+          </div>
+        )}
         <SheetHeader>
           <SheetTitle>
             {presupuesto?.nombre ?? "Editar presupuesto"}
@@ -269,7 +283,7 @@ export function CapturaPresupuestoSheet({
           <div className="mt-6 space-y-4">
             {/* Toolbar */}
             <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" variant="outline" onClick={handleDescargarPlantilla}>
+              <Button size="sm" variant="outline" onClick={handleDescargarPlantilla} disabled={importing}>
                 <Download className="size-4 mr-1" /> Plantilla
               </Button>
               <label className="inline-flex">
@@ -277,13 +291,14 @@ export function CapturaPresupuestoSheet({
                   type="file"
                   accept=".xlsx,.xls"
                   className="hidden"
+                  disabled={importing}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) handleImportarExcel(f);
                     e.target.value = "";
                   }}
                 />
-                <Button size="sm" variant="outline" asChild disabled={parsing || parsingPdf}>
+                <Button size="sm" variant="outline" asChild disabled={importing}>
                   <span>
                     <Upload className="size-4 mr-1" />
                     {parsing ? "Importando…" : "Importar Excel"}
@@ -295,20 +310,21 @@ export function CapturaPresupuestoSheet({
                   type="file"
                   accept="application/pdf,.pdf"
                   className="hidden"
+                  disabled={importing}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) handleImportarPdf(f);
                     e.target.value = "";
                   }}
                 />
-                <Button size="sm" variant="outline" asChild disabled={parsingPdf || parsing}>
+                <Button size="sm" variant="outline" asChild disabled={importing}>
                   <span>
                     <Upload className="size-4 mr-1" />
                     {parsingPdf ? "Analizando PDF…" : "Importar PDF"}
                   </span>
                 </Button>
               </label>
-              <Button size="sm" variant="ghost" onClick={addRow}>
+              <Button size="sm" variant="ghost" onClick={addRow} disabled={importing}>
                 <Plus className="size-4 mr-1" /> Agregar renglón
               </Button>
 
@@ -360,6 +376,7 @@ export function CapturaPresupuestoSheet({
                             onChange={(e) => updateRow(r._id, { clave: e.target.value })}
                             placeholder="1.1"
                             className="h-8"
+                            disabled={importing}
                           />
                         </td>
                         <td className="p-1">
@@ -368,6 +385,7 @@ export function CapturaPresupuestoSheet({
                             onChange={(e) => updateRow(r._id, { concepto: e.target.value })}
                             placeholder="Concepto"
                             className="h-8"
+                            disabled={importing}
                           />
                           {errs.length > 0 && (
                             <p className="text-xs text-destructive mt-1">{errs.join(" · ")}</p>
@@ -387,6 +405,7 @@ export function CapturaPresupuestoSheet({
                                 onChange={(e) => updateRow(r._id, { unidad: e.target.value })}
                                 placeholder="m2"
                                 className="h-8"
+                                disabled={importing}
                               />
                             </td>
                             <td className="p-1">
@@ -399,6 +418,7 @@ export function CapturaPresupuestoSheet({
                                   })
                                 }
                                 className="h-8 text-right"
+                                disabled={importing}
                               />
                             </td>
                             <td className="p-1">
@@ -411,6 +431,7 @@ export function CapturaPresupuestoSheet({
                                   })
                                 }
                                 className="h-8 text-right"
+                                disabled={importing}
                               />
                             </td>
                           </>
@@ -424,6 +445,7 @@ export function CapturaPresupuestoSheet({
                             variant="ghost"
                             className="h-7 w-7"
                             onClick={() => removeRow(r._id)}
+                            disabled={importing}
                           >
                             <Trash2 className="size-3.5" />
                           </Button>
@@ -436,16 +458,16 @@ export function CapturaPresupuestoSheet({
             </Card>
 
             <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background py-3">
-              <Button variant="outline" onClick={onClose}>Cerrar</Button>
+              <Button variant="outline" onClick={onClose} disabled={importing}>Cerrar</Button>
               <Button
-                disabled={guardarM.isPending || calc.errores.length > 0 || yaAutorizado}
+                disabled={importing || guardarM.isPending || calc.errores.length > 0 || yaAutorizado}
                 onClick={() => handleGuardar(false)}
               >
                 {guardarM.isPending ? "Guardando…" : "Guardar borrador"}
               </Button>
               <Button
                 disabled={
-                  guardarM.isPending || autorizarM.isPending ||
+                  importing || guardarM.isPending || autorizarM.isPending ||
                   calc.errores.length > 0 || yaAutorizado ||
                   calc.renglones.length === 0
                 }
