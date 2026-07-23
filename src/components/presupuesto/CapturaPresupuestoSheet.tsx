@@ -6,6 +6,7 @@ import {
   guardarRenglones,
   autorizarPresupuesto,
   parsearExcelPresupuesto,
+  parsearPdfPresupuesto,
   descargarPlantillaPresupuesto,
 } from "@/lib/api/presupuestos.functions";
 import {
