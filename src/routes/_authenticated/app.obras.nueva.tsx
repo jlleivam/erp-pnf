@@ -5,13 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crearObra, listCompanyUsers } from "@/lib/api/obras.functions";
 import { listClientes, crearCliente } from "@/lib/api/clientes.functions";
 import { listUnidadesNegocio } from "@/lib/api/unidades-negocio.functions";
-import {
-  parsearPdfPresupuesto,
-  crearPresupuesto,
-  guardarRenglones,
-} from "@/lib/api/presupuestos.functions";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuthStore, useEffectiveIsDirector } from "@/stores/auth";
+import { useEffectiveIsDirector } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Trash2, Plus, Check, AlertCircle } from "lucide-react";
+import { Trash2, Plus, AlertCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/obras/nueva")({
   component: NuevaObra,
@@ -53,10 +47,9 @@ type ComisionRow = { user_id: string; porcentaje: number; base_calculo: "monto_c
 function NuevaObra() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const profile = useAuthStore((s) => s.profile);
   const director = useEffectiveIsDirector();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
 
   // Step 1
   const [nombre, setNombre] = useState("");
@@ -67,22 +60,7 @@ function NuevaObra() {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaTerm, setFechaTerm] = useState("");
 
-
-
-  // Step 2
-  const [presupuestoUrl, setPresupuestoUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [parsingPdf, setParsingPdf] = useState(false);
-  const [partidasExtraidas, setPartidasExtraidas] = useState<Array<{
-    clave: string;
-    concepto: string;
-    unidad?: string | null;
-    cantidad?: number | null;
-    precio_unitario?: number | null;
-  }> | null>(null);
-  const [usarPartidas, setUsarPartidas] = useState(true);
-
-  // Step 3
+  // Step 2 (Equipo)
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [comisiones, setComisiones] = useState<ComisionRow[]>([]);
   const [teamError, setTeamError] = useState<string | null>(null);
@@ -95,9 +73,6 @@ function NuevaObra() {
   const fetchUsers = useServerFn(listCompanyUsers);
   const fetchUnidades = useServerFn(listUnidadesNegocio);
   const createObraFn = useServerFn(crearObra);
-  const parsePdfFn = useServerFn(parsearPdfPresupuesto);
-  const createPresupuestoFn = useServerFn(crearPresupuesto);
-  const guardarRenglonesFn = useServerFn(guardarRenglones);
 
   const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes({ data: {} }) });
   const usersQ = useQuery({ queryKey: ["company-users"], queryFn: () => fetchUsers() });
@@ -105,33 +80,8 @@ function NuevaObra() {
 
   const createObraM = useMutation({
     mutationFn: createObraFn,
-    onSuccess: async ({ obraId }) => {
-      if (partidasExtraidas && partidasExtraidas.length > 0 && usarPartidas) {
-        try {
-          const { id: presupuestoId } = await createPresupuestoFn({
-            data: {
-              obraId,
-              tipo: "base",
-              nombre: "Presupuesto inicial (PDF)",
-            },
-          });
-          await guardarRenglonesFn({
-            data: {
-              presupuestoId,
-              renglones: partidasExtraidas,
-            },
-          });
-          toast.success("Obra creada con partidas del PDF");
-        } catch (e) {
-          toast.error(
-            `Obra creada, pero no se pudieron guardar las partidas: ${
-              e instanceof Error ? e.message : "error"
-            }`,
-          );
-        }
-      } else {
-        toast.success("Obra creada");
-      }
+    onSuccess: ({ obraId }) => {
+      toast.success("Obra creada");
       qc.invalidateQueries({ queryKey: ["obras"] });
       navigate({ to: "/app/obras/$obraId", params: { obraId } });
     },
@@ -145,65 +95,6 @@ function NuevaObra() {
     setStep(2);
   };
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const comma = result.indexOf(",");
-        resolve(comma >= 0 ? result.slice(comma + 1) : result);
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-
-  const handleUpload = async (file: File) => {
-    if (!profile?.company_id) return;
-    setUploading(true);
-    setPartidasExtraidas(null);
-    try {
-      const path = `${profile.company_id}/${crypto.randomUUID()}-${file.name}`;
-      const { error } = await supabase.storage.from("presupuestos").upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-      });
-      if (error) throw error;
-      setPresupuestoUrl(path);
-      toast.success("Archivo cargado");
-
-      const isPdf =
-        file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-      if (isPdf) {
-        setParsingPdf(true);
-        try {
-          const b64 = await fileToBase64(file);
-          const { renglones } = await parsePdfFn({
-            data: {
-              fileBase64: b64,
-              mimeType: file.type || "application/pdf",
-              filename: file.name,
-            },
-          });
-          setPartidasExtraidas(renglones);
-          setUsarPartidas(renglones.length > 0);
-          if (renglones.length === 0) {
-            toast.warning("La IA no detectó partidas. Podrás capturar el presupuesto manualmente.");
-          } else {
-            toast.success(`${renglones.length} partidas extraídas del PDF`);
-          }
-        } catch (e) {
-          toast.error(
-            `No se pudieron extraer partidas: ${e instanceof Error ? e.message : "error"}`,
-          );
-        } finally {
-          setParsingPdf(false);
-        }
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleSubmit = () => {
     const teamLimpio = team.filter((t) => !!t.user_id);
@@ -228,14 +119,12 @@ function NuevaObra() {
         ubicacion: ubicacion.trim() || undefined,
         fecha_inicio: fechaInicio || undefined,
         fecha_terminacion: fechaTerm || undefined,
-        presupuesto_url: presupuestoUrl,
-
-
         team: teamLimpio,
         comisiones: comisionesLimpias,
       },
     });
   };
+
 
   if (!director) {
     return <p className="text-sm text-destructive">Solo el Director puede crear obras.</p>;
@@ -245,7 +134,7 @@ function NuevaObra() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Nueva obra</h1>
-        <p className="text-sm text-muted-foreground mt-1">Crea una obra en 3 pasos.</p>
+        <p className="text-sm text-muted-foreground mt-1">Crea una obra en 2 pasos.</p>
       </div>
 
       <Stepper step={step} />
@@ -326,90 +215,7 @@ function NuevaObra() {
       )}
 
       {step === 2 && (
-        <Card className="p-6 space-y-4">
-          <div>
-            <Label>Presupuesto (.xlsx o .pdf)</Label>
-            <p className="text-xs text-muted-foreground mt-1">
-              Opcional. Si subes un PDF, la IA intentará extraer las partidas automáticamente.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Input
-              type="file"
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleUpload(f);
-              }}
-              disabled={uploading || parsingPdf}
-            />
-            {presupuestoUrl && !parsingPdf && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Check className="size-3 text-primary" /> cargado
-              </span>
-            )}
-            {parsingPdf && (
-              <span className="text-xs text-muted-foreground">Extrayendo partidas…</span>
-            )}
-          </div>
 
-          {partidasExtraidas && partidasExtraidas.length > 0 && (
-            <div className="border rounded-md">
-              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
-                <div className="text-sm font-medium">
-                  {partidasExtraidas.length} partidas detectadas
-                </div>
-                <label className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={usarPartidas}
-                    onChange={(e) => setUsarPartidas(e.target.checked)}
-                  />
-                  Usar estas partidas como presupuesto base
-                </label>
-              </div>
-              <div className="max-h-72 overflow-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-muted/20 sticky top-0">
-                    <tr className="text-left">
-                      <th className="px-2 py-1 w-16">Clave</th>
-                      <th className="px-2 py-1">Concepto</th>
-                      <th className="px-2 py-1 w-16">Unidad</th>
-                      <th className="px-2 py-1 w-20 text-right">Cant.</th>
-                      <th className="px-2 py-1 w-24 text-right">PU</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {partidasExtraidas.map((p, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-2 py-1 font-mono">{p.clave}</td>
-                        <td className="px-2 py-1">{p.concepto}</td>
-                        <td className="px-2 py-1">{p.unidad ?? ""}</td>
-                        <td className="px-2 py-1 text-right">{p.cantidad ?? ""}</td>
-                        <td className="px-2 py-1 text-right">{p.precio_unitario ?? ""}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="px-3 py-2 text-xs text-muted-foreground border-t">
-                Podrás editarlas después en el módulo Presupuesto de la obra.
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-between items-center">
-            <Button variant="ghost" onClick={() => navigate({ to: "/app" })}>Cancelar</Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
-              <Button onClick={() => setStep(3)} disabled={parsingPdf}>Continuar</Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-
-      {step === 3 && (
         <Card className="p-6 space-y-6">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -550,7 +356,7 @@ function NuevaObra() {
           <div className="flex justify-between items-center">
             <Button variant="ghost" onClick={() => navigate({ to: "/app" })} disabled={createObraM.isPending}>Cancelar</Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(2)} disabled={createObraM.isPending}>Atrás</Button>
+              <Button variant="outline" onClick={() => setStep(1)} disabled={createObraM.isPending}>Atrás</Button>
               <Button onClick={handleSubmit} disabled={createObraM.isPending || !puedeCrear}>
                 {createObraM.isPending ? "Creando…" : "Crear obra"}
               </Button>
@@ -562,11 +368,10 @@ function NuevaObra() {
   );
 }
 
-function Stepper({ step }: { step: 1 | 2 | 3 }) {
+function Stepper({ step }: { step: 1 | 2 }) {
   const items = [
     { n: 1, label: "Datos generales" },
-    { n: 2, label: "Presupuesto" },
-    { n: 3, label: "Equipo" },
+    { n: 2, label: "Equipo" },
   ];
   return (
     <div className="flex items-center gap-2">
