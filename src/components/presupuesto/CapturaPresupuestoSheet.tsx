@@ -458,16 +458,16 @@ export function CapturaPresupuestoSheet({
             </Card>
 
             <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background py-3">
-              <Button variant="outline" onClick={onClose}>Cerrar</Button>
+              <Button variant="outline" onClick={onClose} disabled={importing}>Cerrar</Button>
               <Button
-                disabled={guardarM.isPending || calc.errores.length > 0 || yaAutorizado}
+                disabled={importing || guardarM.isPending || calc.errores.length > 0 || yaAutorizado}
                 onClick={() => handleGuardar(false)}
               >
                 {guardarM.isPending ? "Guardando…" : "Guardar borrador"}
               </Button>
               <Button
                 disabled={
-                  guardarM.isPending || autorizarM.isPending ||
+                  importing || guardarM.isPending || autorizarM.isPending ||
                   calc.errores.length > 0 || yaAutorizado ||
                   calc.renglones.length === 0
                 }
