@@ -96,66 +96,6 @@ function NuevaObra() {
   };
 
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const comma = result.indexOf(",");
-        resolve(comma >= 0 ? result.slice(comma + 1) : result);
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-
-  const handleUpload = async (file: File) => {
-    if (!profile?.company_id) return;
-    setUploading(true);
-    setPartidasExtraidas(null);
-    try {
-      const path = `${profile.company_id}/${crypto.randomUUID()}-${file.name}`;
-      const { error } = await supabase.storage.from("presupuestos").upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-      });
-      if (error) throw error;
-      setPresupuestoUrl(path);
-      toast.success("Archivo cargado");
-
-      const isPdf =
-        file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-      if (isPdf) {
-        setParsingPdf(true);
-        try {
-          const b64 = await fileToBase64(file);
-          const { renglones } = await parsePdfFn({
-            data: {
-              fileBase64: b64,
-              mimeType: file.type || "application/pdf",
-              filename: file.name,
-            },
-          });
-          setPartidasExtraidas(renglones);
-          setUsarPartidas(renglones.length > 0);
-          if (renglones.length === 0) {
-            toast.warning("La IA no detectó partidas. Podrás capturar el presupuesto manualmente.");
-          } else {
-            toast.success(`${renglones.length} partidas extraídas del PDF`);
-          }
-        } catch (e) {
-          toast.error(
-            `No se pudieron extraer partidas: ${e instanceof Error ? e.message : "error"}`,
-          );
-        } finally {
-          setParsingPdf(false);
-        }
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSubmit = () => {
     const teamLimpio = team.filter((t) => !!t.user_id);
     const comisionesLimpias = comisiones.filter((c) => !!c.user_id);
@@ -179,14 +119,12 @@ function NuevaObra() {
         ubicacion: ubicacion.trim() || undefined,
         fecha_inicio: fechaInicio || undefined,
         fecha_terminacion: fechaTerm || undefined,
-        presupuesto_url: presupuestoUrl,
-
-
         team: teamLimpio,
         comisiones: comisionesLimpias,
       },
     });
   };
+
 
   if (!director) {
     return <p className="text-sm text-destructive">Solo el Director puede crear obras.</p>;
