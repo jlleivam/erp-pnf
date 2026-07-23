@@ -72,6 +72,15 @@ function NuevaObra() {
   // Step 2
   const [presupuestoUrl, setPresupuestoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [parsingPdf, setParsingPdf] = useState(false);
+  const [partidasExtraidas, setPartidasExtraidas] = useState<Array<{
+    clave: string;
+    concepto: string;
+    unidad: string | null;
+    cantidad: number | null;
+    precio_unitario: number | null;
+  }> | null>(null);
+  const [usarPartidas, setUsarPartidas] = useState(true);
 
   // Step 3
   const [team, setTeam] = useState<TeamRow[]>([]);
