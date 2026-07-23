@@ -76,9 +76,9 @@ function NuevaObra() {
   const [partidasExtraidas, setPartidasExtraidas] = useState<Array<{
     clave: string;
     concepto: string;
-    unidad: string | null;
-    cantidad: number | null;
-    precio_unitario: number | null;
+    unidad?: string | null;
+    cantidad?: number | null;
+    precio_unitario?: number | null;
   }> | null>(null);
   const [usarPartidas, setUsarPartidas] = useState(true);
 
