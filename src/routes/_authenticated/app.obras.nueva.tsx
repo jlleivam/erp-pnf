@@ -47,10 +47,9 @@ type ComisionRow = { user_id: string; porcentaje: number; base_calculo: "monto_c
 function NuevaObra() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const profile = useAuthStore((s) => s.profile);
   const director = useEffectiveIsDirector();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
 
   // Step 1
   const [nombre, setNombre] = useState("");
@@ -61,22 +60,7 @@ function NuevaObra() {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaTerm, setFechaTerm] = useState("");
 
-
-
-  // Step 2
-  const [presupuestoUrl, setPresupuestoUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [parsingPdf, setParsingPdf] = useState(false);
-  const [partidasExtraidas, setPartidasExtraidas] = useState<Array<{
-    clave: string;
-    concepto: string;
-    unidad?: string | null;
-    cantidad?: number | null;
-    precio_unitario?: number | null;
-  }> | null>(null);
-  const [usarPartidas, setUsarPartidas] = useState(true);
-
-  // Step 3
+  // Step 2 (Equipo)
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [comisiones, setComisiones] = useState<ComisionRow[]>([]);
   const [teamError, setTeamError] = useState<string | null>(null);
@@ -89,9 +73,6 @@ function NuevaObra() {
   const fetchUsers = useServerFn(listCompanyUsers);
   const fetchUnidades = useServerFn(listUnidadesNegocio);
   const createObraFn = useServerFn(crearObra);
-  const parsePdfFn = useServerFn(parsearPdfPresupuesto);
-  const createPresupuestoFn = useServerFn(crearPresupuesto);
-  const guardarRenglonesFn = useServerFn(guardarRenglones);
 
   const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes({ data: {} }) });
   const usersQ = useQuery({ queryKey: ["company-users"], queryFn: () => fetchUsers() });
@@ -99,33 +80,8 @@ function NuevaObra() {
 
   const createObraM = useMutation({
     mutationFn: createObraFn,
-    onSuccess: async ({ obraId }) => {
-      if (partidasExtraidas && partidasExtraidas.length > 0 && usarPartidas) {
-        try {
-          const { id: presupuestoId } = await createPresupuestoFn({
-            data: {
-              obraId,
-              tipo: "base",
-              nombre: "Presupuesto inicial (PDF)",
-            },
-          });
-          await guardarRenglonesFn({
-            data: {
-              presupuestoId,
-              renglones: partidasExtraidas,
-            },
-          });
-          toast.success("Obra creada con partidas del PDF");
-        } catch (e) {
-          toast.error(
-            `Obra creada, pero no se pudieron guardar las partidas: ${
-              e instanceof Error ? e.message : "error"
-            }`,
-          );
-        }
-      } else {
-        toast.success("Obra creada");
-      }
+    onSuccess: ({ obraId }) => {
+      toast.success("Obra creada");
       qc.invalidateQueries({ queryKey: ["obras"] });
       navigate({ to: "/app/obras/$obraId", params: { obraId } });
     },
@@ -138,6 +94,7 @@ function NuevaObra() {
     if (!clienteId) return toast.error("Selecciona un cliente");
     setStep(2);
   };
+
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
