@@ -283,7 +283,7 @@ export function CapturaPresupuestoSheet({
                     e.target.value = "";
                   }}
                 />
-                <Button size="sm" variant="outline" asChild disabled={parsing}>
+                <Button size="sm" variant="outline" asChild disabled={parsing || parsingPdf}>
                   <span>
                     <Upload className="size-4 mr-1" />
                     {parsing ? "Importando…" : "Importar Excel"}
