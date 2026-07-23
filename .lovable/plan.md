@@ -1,20 +1,16 @@
-
-# Eliminar paso "Presupuesto" del wizard Nueva obra
-
-El presupuesto ya no se captura durante la creación de la obra. Se cargará después desde el módulo Presupuesto de la obra.
+## Objetivo
+Integrar la importación por PDF (con extracción vía IA) en la ventana "Presupuesto base", reutilizando la tabla existente para que las partidas extraídas sean revisables y editables antes de guardar.
 
 ## Cambios
 
-**`src/routes/_authenticated/app.obras.nueva.tsx`**
-- Quitar el paso 2 (subida de archivo, extracción por IA, preview de partidas).
-- Renumerar: el actual paso 3 (Equipo/comisiones) pasa a ser paso 2. Indicador cambia de "Paso X de 3" a "Paso X de 2".
-- Eliminar estado y lógica asociada: `presupuestoUrl`, `uploading`, `parsingPdf`, `partidasExtraidas`, `usarPartidas`, `handleUpload`, imports de `parsearPdfPresupuesto`, `crearPresupuesto`, `guardarRenglones`, `supabase.storage`, `Switch`, `Loader2`/`Check` si quedan sin uso.
-- En `crearObra` ya no se envía `presupuesto_url` ni se dispara la creación de presupuesto/renglones tras `onSuccess`; solo navegar a la obra creada.
-- Botones de navegación: en paso 1 "Continuar" va directo a paso 2 (equipo); en paso 2 "Atrás" regresa a paso 1.
-
-**Backend**
-- No se toca `crearObra` ni `parsearPdfPresupuesto` (queda disponible por si luego se usa desde el módulo Presupuesto). El campo `presupuesto_url` en `obras` se conserva; simplemente no se llena en la creación.
+**`src/components/presupuesto/CapturaPresupuestoSheet.tsx`**
+- Importar el server function existente `parsearPdfPresupuesto` (ya implementado en `presupuestos.functions.ts`, usa Gemini).
+- Añadir botón "Importar PDF" en el toolbar (junto a "Importar Excel"), con `accept=".pdf"` y su propio estado `parsingPdf`.
+- Handler `handleImportarPdf(file)`: convierte a base64, llama a `parsearPdfPresupuesto`, y vuelca los renglones al mismo `setRows(...)` que ya usa el import de Excel — así la tabla existente permite editar clave/concepto/unidad/cantidad/PU antes de "Guardar borrador" o "Guardar y autorizar".
+- Mostrar toast con el número de partidas extraídas y mensaje "Revísalos antes de guardar".
+- Deshabilitar ambos botones de importación mientras cualquiera esté procesando.
+- Si la lista actual ya tiene renglones con datos, pedir confirmación antes de reemplazar (para evitar pérdida accidental).
 
 ## Fuera de alcance
-- Módulo Presupuesto de la obra (ya existe y permite capturar/subir presupuesto).
-- Migraciones de BD.
+- Sin cambios en backend: `parsearPdfPresupuesto` ya existe y devuelve el mismo shape que el parser de Excel.
+- Sin cambios en el flujo de guardado/autorización.

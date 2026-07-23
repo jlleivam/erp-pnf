@@ -6,6 +6,7 @@ import {
   guardarRenglones,
   autorizarPresupuesto,
   parsearExcelPresupuesto,
+  parsearPdfPresupuesto,
   descargarPlantillaPresupuesto,
 } from "@/lib/api/presupuestos.functions";
 import {
@@ -161,7 +162,9 @@ export function CapturaPresupuestoSheet({
   // Importar Excel
   const descargarPlantilla = useServerFn(descargarPlantillaPresupuesto);
   const parsear = useServerFn(parsearExcelPresupuesto);
+  const parsearPdf = useServerFn(parsearPdfPresupuesto);
   const [parsing, setParsing] = useState(false);
+  const [parsingPdf, setParsingPdf] = useState(false);
 
   const handleDescargarPlantilla = async () => {
     try {
@@ -178,7 +181,33 @@ export function CapturaPresupuestoSheet({
     }
   };
 
+  const hasContenido = () =>
+    rows.some(
+      (r) =>
+        r.clave.trim() ||
+        r.concepto.trim() ||
+        (r.unidad ?? "").toString().trim() ||
+        r.cantidad != null ||
+        r.precio_unitario != null,
+    );
+
+  const aplicarRenglonesImportados = (
+    renglones: Array<{ clave: string; concepto: string; unidad?: string | null; cantidad?: number | null; precio_unitario?: number | null }>,
+  ) => {
+    setRows(
+      renglones.map((r) => ({
+        _id: nextId(),
+        clave: r.clave,
+        concepto: r.concepto,
+        unidad: r.unidad ?? "",
+        cantidad: r.cantidad ?? null,
+        precio_unitario: r.precio_unitario ?? null,
+      })),
+    );
+  };
+
   const handleImportarExcel = async (file: File) => {
+    if (hasContenido() && !window.confirm("Se reemplazarán los renglones actuales con los del archivo. ¿Continuar?")) return;
     setParsing(true);
     try {
       const b64 = await fileToBase64(file);
@@ -187,16 +216,7 @@ export function CapturaPresupuestoSheet({
         toast.error("No se encontraron renglones en el archivo");
         return;
       }
-      setRows(
-        res.renglones.map((r) => ({
-          _id: nextId(),
-          clave: r.clave,
-          concepto: r.concepto,
-          unidad: r.unidad ?? "",
-          cantidad: r.cantidad ?? null,
-          precio_unitario: r.precio_unitario ?? null,
-        })),
-      );
+      aplicarRenglonesImportados(res.renglones);
       toast.success(`${res.renglones.length} renglones importados. Revísalos antes de guardar.`);
     } catch (e) {
       toast.error((e as Error).message);
@@ -204,6 +224,28 @@ export function CapturaPresupuestoSheet({
       setParsing(false);
     }
   };
+
+  const handleImportarPdf = async (file: File) => {
+    if (hasContenido() && !window.confirm("Se reemplazarán los renglones actuales con los del PDF. ¿Continuar?")) return;
+    setParsingPdf(true);
+    try {
+      const b64 = await fileToBase64(file);
+      const res = await parsearPdf({
+        data: { fileBase64: b64, mimeType: file.type || "application/pdf", filename: file.name },
+      });
+      if (!res.renglones.length) {
+        toast.error("No se detectaron partidas en el PDF");
+        return;
+      }
+      aplicarRenglonesImportados(res.renglones);
+      toast.success(`${res.renglones.length} partidas extraídas. Revísalas y edita antes de guardar.`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setParsingPdf(false);
+    }
+  };
+
 
   const presupuesto = data?.presupuesto;
   const yaAutorizado = presupuesto?.estatus === "autorizado";
@@ -241,10 +283,28 @@ export function CapturaPresupuestoSheet({
                     e.target.value = "";
                   }}
                 />
-                <Button size="sm" variant="outline" asChild disabled={parsing}>
+                <Button size="sm" variant="outline" asChild disabled={parsing || parsingPdf}>
                   <span>
                     <Upload className="size-4 mr-1" />
                     {parsing ? "Importando…" : "Importar Excel"}
+                  </span>
+                </Button>
+              </label>
+              <label className="inline-flex">
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImportarPdf(f);
+                    e.target.value = "";
+                  }}
+                />
+                <Button size="sm" variant="outline" asChild disabled={parsingPdf || parsing}>
+                  <span>
+                    <Upload className="size-4 mr-1" />
+                    {parsingPdf ? "Analizando PDF…" : "Importar PDF"}
                   </span>
                 </Button>
               </label>
