@@ -356,7 +356,7 @@ function NuevaObra() {
           <div className="flex justify-between items-center">
             <Button variant="ghost" onClick={() => navigate({ to: "/app" })} disabled={createObraM.isPending}>Cancelar</Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(2)} disabled={createObraM.isPending}>Atrás</Button>
+              <Button variant="outline" onClick={() => setStep(1)} disabled={createObraM.isPending}>Atrás</Button>
               <Button onClick={handleSubmit} disabled={createObraM.isPending || !puedeCrear}>
                 {createObraM.isPending ? "Creando…" : "Crear obra"}
               </Button>
