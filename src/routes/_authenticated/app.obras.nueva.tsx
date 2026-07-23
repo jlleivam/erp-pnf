@@ -368,11 +368,10 @@ function NuevaObra() {
   );
 }
 
-function Stepper({ step }: { step: 1 | 2 | 3 }) {
+function Stepper({ step }: { step: 1 | 2 }) {
   const items = [
     { n: 1, label: "Datos generales" },
-    { n: 2, label: "Presupuesto" },
-    { n: 3, label: "Equipo" },
+    { n: 2, label: "Equipo" },
   ];
   return (
     <div className="flex items-center gap-2">
