@@ -48,6 +48,52 @@ export function calcularClavesPadre(claves: string[]): Set<string> {
   return set;
 }
 
+/**
+ * Devuelve todos los ancestros de una clave WBS (de más cercano a raíz).
+ * Ej: "1.2.3" -> ["1.2", "1"]
+ */
+export function ancestrosDeClave(clave: string): string[] {
+  const partes = clave.split(".");
+  const out: string[] = [];
+  for (let i = partes.length - 1; i > 0; i--) {
+    out.push(partes.slice(0, i).join("."));
+  }
+  return out;
+}
+
+/**
+ * Devuelve una nueva lista de renglones con los padres WBS faltantes
+ * auto-creados (concepto "—", sin unidad/cantidad/PU). Idempotente:
+ * si el padre ya existe, no lo duplica. Los renglones originales
+ * conservan su orden; los padres agregados se colocan al inicio.
+ */
+export function completarPadresFaltantes(input: RenglonInput[]): {
+  renglones: RenglonInput[];
+  agregados: string[];
+} {
+  const existentes = new Set(
+    input.map((r) => (r.clave ?? "").trim()).filter((c) => c && CLAVE_REGEX.test(c)),
+  );
+  const faltantes = new Set<string>();
+  for (const r of input) {
+    const clave = (r.clave ?? "").trim();
+    if (!clave || !CLAVE_REGEX.test(clave)) continue;
+    for (const anc of ancestrosDeClave(clave)) {
+      if (!existentes.has(anc) && !faltantes.has(anc)) faltantes.add(anc);
+    }
+  }
+  if (faltantes.size === 0) return { renglones: input, agregados: [] };
+  const agregados = [...faltantes].sort(ordenSort);
+  const nuevos: RenglonInput[] = agregados.map((clave) => ({
+    clave,
+    concepto: "—",
+    unidad: null,
+    cantidad: null,
+    precio_unitario: null,
+  }));
+  return { renglones: [...nuevos, ...input], agregados };
+}
+
 export function ordenSort(a: string, b: string): number {
   const pa = a.split(".").map((n) => parseInt(n, 10));
   const pb = b.split(".").map((n) => parseInt(n, 10));
