@@ -159,12 +159,9 @@ export function CapturaPresupuestoSheet({
   });
 
   const handleGuardar = (autorizarDespues: boolean) => {
-    if (calc.errores.length > 0) {
-      toast.error("Corrige los errores antes de guardar");
-      return;
-    }
-    const payload = rows
-      .filter((r) => r.clave.trim())
+    // Auto-completar padres faltantes antes de validar/guardar
+    const inputActual: RenglonInput[] = rows
+      .filter((r) => r.clave.trim() || r.concepto.trim())
       .map((r) => ({
         clave: r.clave.trim(),
         concepto: r.concepto.trim(),
@@ -172,6 +169,34 @@ export function CapturaPresupuestoSheet({
         cantidad: r.cantidad,
         precio_unitario: r.precio_unitario,
       }));
+    const { renglones: completos, agregados } = completarPadresFaltantes(inputActual);
+    if (agregados.length > 0) {
+      setRows(
+        completos.map((r) => ({
+          _id: nextId(),
+          clave: r.clave,
+          concepto: r.concepto,
+          unidad: r.unidad ?? "",
+          cantidad: r.cantidad ?? null,
+          precio_unitario: r.precio_unitario ?? null,
+        })),
+      );
+      toast.info(
+        `Se agregaron ${agregados.length} renglón(es) padre faltante(s) (${agregados.join(", ")}). Revisa su concepto.`,
+      );
+    }
+    const validado = procesarRenglones(completos);
+    if (validado.errores.length > 0) {
+      toast.error("Corrige los errores antes de guardar");
+      return;
+    }
+    const payload = completos.map((r) => ({
+      clave: r.clave,
+      concepto: r.concepto,
+      unidad: r.unidad ?? null,
+      cantidad: r.cantidad ?? null,
+      precio_unitario: r.precio_unitario ?? null,
+    }));
     guardarM.mutate(
       { data: { presupuestoId, renglones: payload } },
       {
