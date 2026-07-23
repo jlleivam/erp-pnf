@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Trash2, Plus, Check, AlertCircle } from "lucide-react";
+import { Trash2, Plus, AlertCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/obras/nueva")({
   component: NuevaObra,
