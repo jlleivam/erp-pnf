@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, Upload, Download, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Upload, Download, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
 
