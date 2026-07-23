@@ -1,35 +1,38 @@
-## Diagnóstico
+## Objetivo
 
-El código sí está en `CapturaPresupuestoSheet.tsx` (state `activeRowId`, `addRow` insertando en `idx + 1`, y estilo `esActivo`), pero `handleRowClick` ignora el evento cuando el target está dentro de un `input, button, textarea, select, label`:
+Al importar (PDF/Excel) o al guardar el presupuesto base, si el usuario incluye una clave como `1.1.1` sin que exista su padre `1.1` (o `1`), auto-crear los renglones padre faltantes con concepto `"—"`, sin unidad, cantidad ni PU. Así los cálculos actuales (suma por hijos directos, detección de grupo, vigente, OCs) siguen funcionando sin cambios.
+
+## Cambios
+
+### 1. `src/lib/presupuesto-utils.ts` — nuevo helper
+
+Agregar función pura reutilizable:
 
 ```ts
-if ((e.target as HTMLElement).closest("input, button, textarea, select, label")) return;
+export function completarPadresFaltantes(input: RenglonInput[]): RenglonInput[]
 ```
 
-Como cada celda del renglón está ocupada por un `<Input>`, cualquier clic dentro del renglón cae sobre un input y el guard sale antes de setear `activeRowId`. Resultado: nunca se resalta ni cambia el punto de inserción. Solo funcionaría si se diera clic en el borde/padding de la fila, cosa prácticamente imposible.
+- Recorre las claves; para cada `clave` con padres ausentes en el input, inserta un renglón por cada ancestro faltante con:
+  - `clave` = el ancestro (`1.1`, `1`)
+  - `concepto` = `"—"`
+  - `unidad = null`, `cantidad = null`, `precio_unitario = null`
+- No modifica el orden preexistente; los padres agregados se dejan en la lista (el orden visual final lo resolverá `procesarRenglones` con `ordenSort`).
+- Idempotente: si el padre ya existe (aunque esté vacío), no lo duplica.
 
-## Corrección
+### 2. `src/components/presupuesto/CapturaPresupuestoSheet.tsx`
 
-Detectar el renglón activo por **foco** en lugar de por clic, así los inputs sí lo activan al hacer clic o tabular hacia ellos.
+- **Al importar** (`handleImportarExcel` y `handleImportarPdf`): pasar los renglones por `completarPadresFaltantes` antes de `aplicarRenglonesImportados`, para que el usuario vea los padres auto-creados en la tabla y pueda editar su concepto si quiere.
+- **Al guardar** (`handleGuardar`): antes de construir el payload y calcular con `procesarRenglones`, expandir `rows` con los padres faltantes y actualizar `setRows` (así el usuario ve qué se agregó y por qué desaparecen los errores tipo "Falta el renglón padre 1.1"). Luego procede la validación normal.
+- Mostrar un `toast.info` cuando se auto-crean padres, indicando cuántos, para que el usuario los revise.
 
-### Cambios en `src/components/presupuesto/CapturaPresupuestoSheet.tsx`
+### 3. Alcance intencionalmente limitado
 
-1. Reemplazar `handleRowClick` por un handler basado en focus que se aplica en el `<tr>`:
-   ```tsx
-   const handleRowFocus = (id: string) => () => setActiveRowId(id);
-   ```
-2. En el `<tr>`, quitar `onClick={handleRowClick(...)}` y usar:
-   ```tsx
-   onFocus={handleRowFocus(r._id)}
-   onMouseDown={() => setActiveRowId(r._id)}
-   ```
-   - `onFocus` burbujea desde cualquier input hijo → cubre clic en inputs y navegación por teclado.
-   - `onMouseDown` cubre clic en zonas no interactivas del renglón (padding, celda de importe, etc.) para renglones "padre" cuyos inputs están deshabilitados.
-3. Mantener el estilo `esActivo` con `bg-muted/60` + ring y `transition-colors` que ya existe.
-
-Nada más se toca; `addRow` ya inserta correctamente después de `activeRowId`.
+- **No** se toca `procesarOrdenCambio`: las OCs siguen exigiendo padre explícito. Si en el futuro se quiere el mismo comportamiento allí, se aplicará el helper también en las capturas de OC.
+- **No** cambian las reglas de suma ni el modelo persistido: el padre auto-creado se guarda como un renglón normal (grupo por tener hijos), con concepto `"—"` editable después.
+- **No** se altera el flujo de destajos/subcontratos: usan sus propios sheets y no importan PDF hoy.
 
 ## Verificación
 
-- Playwright: abrir el sheet de presupuesto, hacer clic dentro del input "Concepto" del renglón 2 de 3, confirmar highlight; presionar "Agregar renglón" y verificar que aparece en posición 3 (no al final).
-- Screenshot del renglón resaltado.
+- Test manual en Playwright: capturar `1`, luego `1.1.1` con cantidad/PU, guardar borrador. Confirmar que aparece renglón `1.1` con concepto `"—"` marcado como grupo, y el total sube correctamente.
+- Test manual: importar un PDF que contenga solo `1` y `1.1.1`; confirmar que la tabla muestra el `1.1` auto-creado.
+- `bun tsgo` para typecheck.
