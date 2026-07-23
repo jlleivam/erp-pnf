@@ -376,6 +376,7 @@ export function CapturaPresupuestoSheet({
                             onChange={(e) => updateRow(r._id, { clave: e.target.value })}
                             placeholder="1.1"
                             className="h-8"
+                            disabled={importing}
                           />
                         </td>
                         <td className="p-1">
@@ -384,6 +385,7 @@ export function CapturaPresupuestoSheet({
                             onChange={(e) => updateRow(r._id, { concepto: e.target.value })}
                             placeholder="Concepto"
                             className="h-8"
+                            disabled={importing}
                           />
                           {errs.length > 0 && (
                             <p className="text-xs text-destructive mt-1">{errs.join(" · ")}</p>
@@ -403,6 +405,7 @@ export function CapturaPresupuestoSheet({
                                 onChange={(e) => updateRow(r._id, { unidad: e.target.value })}
                                 placeholder="m2"
                                 className="h-8"
+                                disabled={importing}
                               />
                             </td>
                             <td className="p-1">
@@ -415,6 +418,7 @@ export function CapturaPresupuestoSheet({
                                   })
                                 }
                                 className="h-8 text-right"
+                                disabled={importing}
                               />
                             </td>
                             <td className="p-1">
@@ -427,6 +431,7 @@ export function CapturaPresupuestoSheet({
                                   })
                                 }
                                 className="h-8 text-right"
+                                disabled={importing}
                               />
                             </td>
                           </>
@@ -440,6 +445,7 @@ export function CapturaPresupuestoSheet({
                             variant="ghost"
                             className="h-7 w-7"
                             onClick={() => removeRow(r._id)}
+                            disabled={importing}
                           >
                             <Trash2 className="size-3.5" />
                           </Button>
