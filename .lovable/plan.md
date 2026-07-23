@@ -1,40 +1,35 @@
-## Objetivo
-Modificar el comportamiento del botón **Agregar renglón** en el presupuesto base para que:
-- Inserte el nuevo renglón justo debajo del renglón que el usuario tenga activo/seleccionado.
-- Se muestre una indicación visual tenue del renglón activo.
-- Si no hay renglón seleccionado, conserve el comportamiento actual (agregar al final).
-- El nuevo renglón pase a ser el activo tras insertarse, facilitando insertar varios consecutivos.
+## Diagnóstico
 
-## Alcance
-Solo el componente `src/components/presupuesto/CapturaPresupuestoSheet.tsx`. No se alteran APIs ni persistencia.
+El código sí está en `CapturaPresupuestoSheet.tsx` (state `activeRowId`, `addRow` insertando en `idx + 1`, y estilo `esActivo`), pero `handleRowClick` ignora el evento cuando el target está dentro de un `input, button, textarea, select, label`:
 
-## Cambios planificados
-1. **Estado de renglón activo**
-   - Agregar `activeRowId: string | null` con `useState`.
-   - Inicialmente `null` (sin selección).
+```ts
+if ((e.target as HTMLElement).closest("input, button, textarea, select, label")) return;
+```
 
-2. **Interacción de selección**
-   - Hacer que cada `<tr>` responda a `onClick` para activar el `activeRowId`.
-   - Evitar que la selección cambie al interactuar con inputs o botón de eliminar dentro de la fila.
+Como cada celda del renglón está ocupada por un `<Input>`, cualquier clic dentro del renglón cae sobre un input y el guard sale antes de setear `activeRowId`. Resultado: nunca se resalta ni cambia el punto de inserción. Solo funcionaría si se diera clic en el borde/padding de la fila, cosa prácticamente imposible.
 
-3. **Indicador visual activo**
-   - Aplicar una clase de fondo tenue (por ejemplo `bg-muted/60`) al renglón cuyo `_id` coincida con `activeRowId`.
-   - Preservar los estilos actuales de errores (`bg-destructive/5`) y padres (`bg-accent/40`), dando prioridad a errores y padres sobre el indicador de activo o combinándolos cuidadosamente.
+## Corrección
 
-4. **Lógica de inserción**
-   - Reemplazar `addRow` por `addRowAfterActive`.
-   - Si `activeRowId` existe, insertar una fila vacía en el índice `index + 1`.
-   - Si no hay activo, insertar al final (comportamiento actual).
-   - Después de insertar, actualizar `activeRowId` al `_id` del nuevo renglón.
+Detectar el renglón activo por **foco** en lugar de por clic, así los inputs sí lo activan al hacer clic o tabular hacia ellos.
 
-5. **Borrado de fila**
-   - Si la fila eliminada es la activa, pasar el activo a la fila anterior, a la siguiente o a `null` si era la única.
+### Cambios en `src/components/presupuesto/CapturaPresupuestoSheet.tsx`
 
-6. **Validación y verificación**
-   - Correr typecheck (`bun run typecheck`) y build de desarrollo para confirmar que no hay errores.
-   - Probar en el preview: seleccionar un renglón intermedio, agregar renglón, confirmar que se inserta abajo y que el indicador cambia al nuevo renglón.
+1. Reemplazar `handleRowClick` por un handler basado en focus que se aplica en el `<tr>`:
+   ```tsx
+   const handleRowFocus = (id: string) => () => setActiveRowId(id);
+   ```
+2. En el `<tr>`, quitar `onClick={handleRowClick(...)}` y usar:
+   ```tsx
+   onFocus={handleRowFocus(r._id)}
+   onMouseDown={() => setActiveRowId(r._id)}
+   ```
+   - `onFocus` burbujea desde cualquier input hijo → cubre clic en inputs y navegación por teclado.
+   - `onMouseDown` cubre clic en zonas no interactivas del renglón (padding, celda de importe, etc.) para renglones "padre" cuyos inputs están deshabilitados.
+3. Mantener el estilo `esActivo` con `bg-muted/60` + ring y `transition-colors` que ya existe.
 
-## Notas técnicas
-- No se agregan dependencias nuevas.
-- Se mantiene la funcionalidad de importar Excel/PDF y el overlay de carga existente.
-- Se respeta la accesibilidad: los inputs siguen siendo editables y el botón de eliminar sigue operativo.
+Nada más se toca; `addRow` ya inserta correctamente después de `activeRowId`.
+
+## Verificación
+
+- Playwright: abrir el sheet de presupuesto, hacer clic dentro del input "Concepto" del renglón 2 de 3, confirmar highlight; presionar "Agregar renglón" y verificar que aparece en posición 3 (no al final).
+- Screenshot del renglón resaltado.
