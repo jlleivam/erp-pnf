@@ -252,8 +252,13 @@ export function CapturaPresupuestoSheet({
   const yaAutorizado = presupuesto?.estatus === "autorizado";
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-5xl overflow-y-auto">
+    <Sheet open onOpenChange={(o) => { if (!o && !importing) onClose(); }}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-5xl overflow-y-auto"
+        onPointerDownOutside={(e) => { if (importing) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (importing) e.preventDefault(); }}
+      >
         <SheetHeader>
           <SheetTitle>
             {presupuesto?.nombre ?? "Editar presupuesto"}
