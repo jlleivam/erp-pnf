@@ -290,6 +290,24 @@ export function CapturaPresupuestoSheet({
                   </span>
                 </Button>
               </label>
+              <label className="inline-flex">
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImportarPdf(f);
+                    e.target.value = "";
+                  }}
+                />
+                <Button size="sm" variant="outline" asChild disabled={parsingPdf || parsing}>
+                  <span>
+                    <Upload className="size-4 mr-1" />
+                    {parsingPdf ? "Analizando PDF…" : "Importar PDF"}
+                  </span>
+                </Button>
+              </label>
               <Button size="sm" variant="ghost" onClick={addRow}>
                 <Plus className="size-4 mr-1" /> Agregar renglón
               </Button>
