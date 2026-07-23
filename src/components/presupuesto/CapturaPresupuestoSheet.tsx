@@ -283,7 +283,7 @@ export function CapturaPresupuestoSheet({
           <div className="mt-6 space-y-4">
             {/* Toolbar */}
             <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" variant="outline" onClick={handleDescargarPlantilla}>
+              <Button size="sm" variant="outline" onClick={handleDescargarPlantilla} disabled={importing}>
                 <Download className="size-4 mr-1" /> Plantilla
               </Button>
               <label className="inline-flex">
@@ -291,13 +291,14 @@ export function CapturaPresupuestoSheet({
                   type="file"
                   accept=".xlsx,.xls"
                   className="hidden"
+                  disabled={importing}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) handleImportarExcel(f);
                     e.target.value = "";
                   }}
                 />
-                <Button size="sm" variant="outline" asChild disabled={parsing || parsingPdf}>
+                <Button size="sm" variant="outline" asChild disabled={importing}>
                   <span>
                     <Upload className="size-4 mr-1" />
                     {parsing ? "Importando…" : "Importar Excel"}
@@ -309,20 +310,21 @@ export function CapturaPresupuestoSheet({
                   type="file"
                   accept="application/pdf,.pdf"
                   className="hidden"
+                  disabled={importing}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) handleImportarPdf(f);
                     e.target.value = "";
                   }}
                 />
-                <Button size="sm" variant="outline" asChild disabled={parsingPdf || parsing}>
+                <Button size="sm" variant="outline" asChild disabled={importing}>
                   <span>
                     <Upload className="size-4 mr-1" />
                     {parsingPdf ? "Analizando PDF…" : "Importar PDF"}
                   </span>
                 </Button>
               </label>
-              <Button size="sm" variant="ghost" onClick={addRow}>
+              <Button size="sm" variant="ghost" onClick={addRow} disabled={importing}>
                 <Plus className="size-4 mr-1" /> Agregar renglón
               </Button>
 
