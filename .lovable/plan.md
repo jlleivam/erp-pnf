@@ -1,38 +1,20 @@
-# Subir presupuesto en PDF con extracción por IA
 
-Actualmente el paso 2 de "Nueva obra" solo acepta `.xlsx` y lo guarda en el bucket `presupuestos` sin parsear. Vamos a:
+# Eliminar paso "Presupuesto" del wizard Nueva obra
 
-1. Aceptar también `.pdf` (además de `.xlsx`) como archivo adjunto oficial del presupuesto.
-2. Extraer partidas del PDF con Lovable AI y prellenar la captura del presupuesto para que el usuario revise/edite antes de guardarlo.
+El presupuesto ya no se captura durante la creación de la obra. Se cargará después desde el módulo Presupuesto de la obra.
 
-## Alcance funcional
+## Cambios
 
-- El paso 2 seguirá siendo opcional. Si el usuario sube un archivo:
-  - Se guarda el archivo original (PDF o XLSX) en el bucket `presupuestos` (como hoy).
-  - Si es PDF: se dispara la extracción con IA y se muestra vista previa de partidas detectadas (concepto, unidad, cantidad, precio unitario, importe) para confirmar/editar.
-  - Si es XLSX: sin cambios (solo se adjunta).
-- El PDF original queda vinculado a la obra como referencia (igual que hoy con XLSX).
-- Las partidas extraídas se guardan como la versión inicial del presupuesto de la obra usando el flujo existente de `presupuestos.functions.ts` (misma estructura que la captura manual), para que después el usuario pueda editarlas en el módulo Presupuesto.
-- Si la extracción falla o queda vacía, se guarda el PDF adjunto igual y se avisa al usuario que capture manualmente.
-
-## Cambios técnicos
-
-**Frontend (`src/routes/_authenticated/app.obras.nueva.tsx`)**
-- `<Input type="file" accept=".xlsx,.pdf,...">` para aceptar PDF.
-- Al subir un PDF: llamar nueva server function `extraerPresupuestoDesdePdf({ path })` y mostrar un panel colapsable con las partidas detectadas + botón "Usar estas partidas" / "Descartar".
-- Estado local `partidasExtraidas` que, si el usuario confirma, se envía en el paso 3 junto con el resto de datos de la obra.
+**`src/routes/_authenticated/app.obras.nueva.tsx`**
+- Quitar el paso 2 (subida de archivo, extracción por IA, preview de partidas).
+- Renumerar: el actual paso 3 (Equipo/comisiones) pasa a ser paso 2. Indicador cambia de "Paso X de 3" a "Paso X de 2".
+- Eliminar estado y lógica asociada: `presupuestoUrl`, `uploading`, `parsingPdf`, `partidasExtraidas`, `usarPartidas`, `handleUpload`, imports de `parsearPdfPresupuesto`, `crearPresupuesto`, `guardarRenglones`, `supabase.storage`, `Switch`, `Loader2`/`Check` si quedan sin uso.
+- En `crearObra` ya no se envía `presupuesto_url` ni se dispara la creación de presupuesto/renglones tras `onSuccess`; solo navegar a la obra creada.
+- Botones de navegación: en paso 1 "Continuar" va directo a paso 2 (equipo); en paso 2 "Atrás" regresa a paso 1.
 
 **Backend**
-- Nueva `src/lib/api/presupuestos-import.functions.ts` con:
-  - `extraerPresupuestoDesdePdf` (`createServerFn` + `requireSupabaseAuth`): genera signed URL del PDF en el bucket `presupuestos`, arma un request multimodal a Lovable AI Gateway (`google/gemini-3.6-flash`) usando `file` content block + prompt con esquema estructurado (JSON schema vía tool calling) para devolver un array de partidas normalizadas `{ concepto, unidad, cantidad, precio_unitario }`.
-  - Manejo de errores 429/402 con mensajes claros al usuario.
-- Extender `crearObra` (o el paso siguiente del wizard) para aceptar `partidas_iniciales?: Partida[]` y, si viene, insertar la primera versión del presupuesto usando los helpers existentes en `presupuestos.functions.ts`.
+- No se toca `crearObra` ni `parsearPdfPresupuesto` (queda disponible por si luego se usa desde el módulo Presupuesto). El campo `presupuesto_url` en `obras` se conserva; simplemente no se llena en la creación.
 
-**Storage**
-- Bucket `presupuestos` ya existe; no requiere cambios. El path sigue `${company_id}/${uuid}-${filename}`.
-
-## Notas
-
-- Solo se toca el flujo de creación de obra y el paso 2 del wizard; el módulo Presupuesto no cambia.
-- El PDF nunca se envía a un tercero fuera de Lovable AI Gateway; se pasa por signed URL de Supabase Storage.
-- La extracción es best-effort: las partidas quedan editables en el módulo Presupuesto de la obra.
+## Fuera de alcance
+- Módulo Presupuesto de la obra (ya existe y permite capturar/subir presupuesto).
+- Migraciones de BD.
