@@ -259,6 +259,14 @@ export function CapturaPresupuestoSheet({
         onPointerDownOutside={(e) => { if (importing) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (importing) e.preventDefault(); }}
       >
+        {importing && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-auto">
+            <Loader2 className="size-10 animate-spin text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground">
+              {parsingPdf ? "Analizando PDF, por favor no cierres esta ventana..." : "Importando archivo, por favor espera..."}
+            </p>
+          </div>
+        )}
         <SheetHeader>
           <SheetTitle>
             {presupuesto?.nombre ?? "Editar presupuesto"}
