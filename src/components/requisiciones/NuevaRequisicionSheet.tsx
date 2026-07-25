@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, startOfDay } from "date-fns";
-import { CalendarIcon, Plus, Trash2, Search, Check } from "lucide-react";
+import { format, parseISO, startOfDay } from "date-fns";
+import { CalendarIcon, Plus, Trash2, Search, Check, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -23,13 +23,18 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { listInsumos, listCategorias } from "@/lib/api/insumos.functions";
-import { crearRequisicion } from "@/lib/api/requisiciones.functions";
+import {
+  guardarBorradorRequisicion,
+  enviarBorradorRequisicion,
+  getBorradorRequisicion,
+} from "@/lib/api/requisiciones.functions";
 
 
 interface Props {
   obraId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  borradorId?: string | null;
 }
 
 interface Bloque {
@@ -43,11 +48,13 @@ function emptyBloque(): Bloque {
   return { insumo_id: "", cantidad: "", fecha_requerida: undefined, nota: "" };
 }
 
-export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
+export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }: Props) {
   const qc = useQueryClient();
   const fetchInsumos = useServerFn(listInsumos);
   const fetchCategorias = useServerFn(listCategorias);
-  const crear = useServerFn(crearRequisicion);
+  const guardarBorrador = useServerFn(guardarBorradorRequisicion);
+  const enviarBorrador = useServerFn(enviarBorradorRequisicion);
+  const fetchBorrador = useServerFn(getBorradorRequisicion);
 
   const insumosQ = useQuery({
     queryKey: ["insumos", "autorizado"],
@@ -70,6 +77,46 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
   const [openFechaIdx, setOpenFechaIdx] = useState<number | null>(null);
+  const [currentBorradorId, setCurrentBorradorId] = useState<string | null>(borradorId ?? null);
+
+  // Reset y carga del borrador cuando abre
+  useEffect(() => {
+    if (!open) return;
+    setCurrentBorradorId(borradorId ?? null);
+    if (!borradorId) {
+      setBloques([emptyBloque()]);
+      setNotas("");
+      return;
+    }
+    fetchBorrador({ data: { id: borradorId } })
+      .then((r: any) => {
+        setNotas(r.notas ?? "");
+        const items = (r.items ?? []) as Array<any>;
+        if (items.length === 0) {
+          setBloques([emptyBloque()]);
+        } else {
+          setBloques(
+            items.map((it) => ({
+              insumo_id: it.insumo_id ?? "",
+              cantidad: it.cantidad != null ? String(it.cantidad) : "",
+              fecha_requerida: it.fecha_requerida ? parseISO(it.fecha_requerida) : undefined,
+              nota: it.nota ?? "",
+            })),
+          );
+        }
+      })
+      .catch((e: any) => toast.error(e?.message ?? "Error al cargar borrador"));
+  }, [open, borradorId, fetchBorrador]);
+
+  const resetForm = () => {
+    setBloques([emptyBloque()]);
+    setNotas("");
+    setCurrentBorradorId(null);
+  };
+
+  const invalidateLists = () => {
+    qc.invalidateQueries({ queryKey: ["requisiciones", obraId] });
+  };
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -84,16 +131,67 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
         if (!(it.cantidad > 0)) throw new Error("Cantidad debe ser mayor a 0");
         if (!it.fecha_requerida) throw new Error("Fecha requerida obligatoria");
       }
-      return crear({ data: { obraId, notas: notas.trim() || null, insumos: items } });
+      // Si no hay borrador, primero creamos uno y luego lo enviamos
+      let bid = currentBorradorId;
+      if (!bid) {
+        const created = await guardarBorrador({
+          data: {
+            obraId,
+            notas: notas.trim() || null,
+            insumos: items.map((it) => ({
+              insumo_id: it.insumo_id,
+              cantidad: it.cantidad,
+              fecha_requerida: it.fecha_requerida,
+              nota: it.nota,
+            })),
+          },
+        });
+        bid = (created as any).id as string;
+      }
+      return enviarBorrador({
+        data: { borradorId: bid, notas: notas.trim() || null, insumos: items },
+      });
     },
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       toast.success(`Requisición ${res.folio} enviada`);
-      qc.invalidateQueries({ queryKey: ["requisiciones", obraId] });
-      setBloques([emptyBloque()]);
-      setNotas("");
+      invalidateLists();
+      resetForm();
       onOpenChange(false);
     },
     onError: (e: any) => toast.error(e?.message ?? "Error al enviar"),
+  });
+
+  const guardar = useMutation({
+    mutationFn: async () => {
+      const items = bloques.map((b) => ({
+        insumo_id: b.insumo_id || null,
+        cantidad: b.cantidad !== "" ? Number(b.cantidad) : null,
+        fecha_requerida: b.fecha_requerida ? format(b.fecha_requerida, "yyyy-MM-dd") : null,
+        nota: b.nota?.trim() || null,
+      }));
+      const hasAny = items.some(
+        (it) => it.insumo_id || (it.cantidad ?? 0) > 0 || it.fecha_requerida || it.nota,
+      );
+      if (!hasAny && !notas.trim()) {
+        throw new Error("Agrega al menos un dato antes de guardar el borrador");
+      }
+      const res = await guardarBorrador({
+        data: {
+          borradorId: currentBorradorId ?? undefined,
+          obraId,
+          notas: notas.trim() || null,
+          insumos: items,
+        },
+      });
+      return res as { id: string };
+    },
+    onSuccess: (res) => {
+      setCurrentBorradorId(res.id);
+      toast.success("Borrador guardado");
+      invalidateLists();
+      onOpenChange(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error al guardar borrador"),
   });
 
   const updateBloque = (i: number, patch: Partial<Bloque>) =>
@@ -105,7 +203,9 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Nueva requisición</SheetTitle>
+          <SheetTitle>
+            {currentBorradorId ? "Editar borrador de requisición" : "Nueva requisición"}
+          </SheetTitle>
         </SheetHeader>
 
         <div className="space-y-3 mt-4">
@@ -236,13 +336,24 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
             />
           </div>
 
-          <Button
-            className="w-full"
-            disabled={mut.isPending}
-            onClick={() => mut.mutate()}
-          >
-            {mut.isPending ? "Enviando…" : "Enviar requisición"}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto sm:flex-1"
+              disabled={guardar.isPending || mut.isPending}
+              onClick={() => guardar.mutate()}
+            >
+              <Save className="size-4 mr-1" />
+              {guardar.isPending ? "Guardando…" : "Guardar borrador"}
+            </Button>
+            <Button
+              className="w-full sm:w-auto sm:flex-1"
+              disabled={mut.isPending || guardar.isPending}
+              onClick={() => mut.mutate()}
+            >
+              {mut.isPending ? "Enviando…" : "Enviar requisición"}
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

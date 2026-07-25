@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown } from "lucide-react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { listRequisiciones } from "@/lib/api/requisiciones.functions";
+import {
+  listRequisiciones,
+  eliminarBorradorRequisicion,
+} from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
 import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
@@ -30,9 +34,24 @@ export function RequisicionesModule({ obraId }: Props) {
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
+  const [borradorEnEdicion, setBorradorEnEdicion] = useState<string | null>(null);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const qc = useQueryClient();
+  const eliminarBorradorFn = useServerFn(eliminarBorradorRequisicion);
+  const eliminarBorrador = useMutation({
+    mutationFn: (id: string) => eliminarBorradorFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Borrador eliminado");
+      qc.invalidateQueries({ queryKey: ["requisiciones", obraId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error al eliminar"),
+  });
+  const abrirBorrador = (id: string) => {
+    setBorradorEnEdicion(id);
+    setOpenNueva(true);
+  };
   const toggleExpand = (id: string) => {
     setExpandidos((prev) => {
       const next = new Set(prev);
@@ -73,7 +92,13 @@ export function RequisicionesModule({ obraId }: Props) {
           <p className="text-sm text-muted-foreground">Material solicitado para esta obra</p>
         </div>
         {puedeCrear && (
-          <Button onClick={() => setOpenNueva(true)} className="shrink-0">
+          <Button
+            onClick={() => {
+              setBorradorEnEdicion(null);
+              setOpenNueva(true);
+            }}
+            className="shrink-0"
+          >
             <Plus className="size-4 mr-1" /> Nueva
           </Button>
         )}
@@ -161,14 +186,15 @@ export function RequisicionesModule({ obraId }: Props) {
 
           {!isAdministrativo && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+            const esBorrador = r.estatus === "borrador";
             const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
             const isExpanded = expandidos.has(r.id);
             const items = r.items ?? [];
             return (
               <Card
                 key={r.id}
-                className="p-3 cursor-pointer hover:border-primary/40 transition-colors"
-                onClick={() => setDetalleId(r.id)}
+                className={`p-3 cursor-pointer hover:border-primary/40 transition-colors ${esBorrador ? "border-dashed" : ""}`}
+                onClick={() => (esBorrador ? abrirBorrador(r.id) : setDetalleId(r.id))}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -181,12 +207,40 @@ export function RequisicionesModule({ obraId }: Props) {
                       {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                     </button>
                     <p className="text-sm min-w-0 truncate">
-                      <span className="font-semibold text-foreground">{r.folio}</span>
+                      <span className="font-semibold text-foreground">
+                        {esBorrador ? "Borrador" : r.folio}
+                      </span>
                       <span className="text-muted-foreground"> · {formatDate(r.created_at)} · {items.length} insumos{r.solicitante?.nombre_completo ? ` · ${r.solicitante.nombre_completo}` : ""}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0.5`}>{meta.label}</Badge>
+                    {esBorrador && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          onClick={(e) => { e.stopPropagation(); abrirBorrador(r.id); }}
+                        >
+                          <Pencil className="size-3.5 mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive"
+                          disabled={eliminarBorrador.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("¿Eliminar este borrador?")) eliminarBorrador.mutate(r.id);
+                          }}
+                          aria-label="Eliminar borrador"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </>
+                    )}
                     {mostrarRevisar && (
                       <Button
                         size="sm"
@@ -292,7 +346,11 @@ export function RequisicionesModule({ obraId }: Props) {
         <NuevaRequisicionSheet
           obraId={obraId}
           open={openNueva}
-          onOpenChange={setOpenNueva}
+          onOpenChange={(o) => {
+            setOpenNueva(o);
+            if (!o) setBorradorEnEdicion(null);
+          }}
+          borradorId={borradorEnEdicion}
         />
       )}
       {detalleId && (
