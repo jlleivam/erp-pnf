@@ -456,7 +456,22 @@ function InsumoPicker({
           >
             <CommandInput autoFocus placeholder="Buscar insumo…" className="h-9 text-xs" />
             <CommandList className="max-h-64">
-              <CommandEmpty>Sin resultados.</CommandEmpty>
+              <CommandEmpty>
+                <div className="py-3 text-center space-y-2">
+                  <p className="text-xs text-muted-foreground">Sin resultados.</p>
+                  {onRequestNew && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setOpen(false); onRequestNew(); }}
+                    >
+                      <PackagePlus className="size-3.5 mr-1" /> Solicitar nuevo insumo
+                    </Button>
+                  )}
+                </div>
+              </CommandEmpty>
               <CommandGroup>
                 {filtered.map((ins) => {
                   const isDisabled = disabledIds?.includes(ins.id) ?? false;
@@ -500,6 +515,19 @@ function InsumoPicker({
                   );
                 })}
               </CommandGroup>
+              {onRequestNew && filtered.length > 0 && (
+                <div className="border-t p-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-full justify-start text-xs"
+                    onClick={() => { setOpen(false); onRequestNew(); }}
+                  >
+                    <PackagePlus className="size-3.5 mr-1" /> Solicitar nuevo insumo
+                  </Button>
+                </div>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
