@@ -62,10 +62,21 @@ export const getCotizacionRequisicion = createServerFn({ method: "POST" })
 
     const { data: req, error: reqErr } = await supabase
       .from("requisiciones")
-      .select("id, folio, obra_id, company_id, estatus, notas, items:requisicion_insumos(id, cantidad, fecha_requerida, insumo:insumos(id, nombre, unidad))")
+      .select("id, folio, obra_id, company_id, estatus, notas, created_at, enviada_at, creado_por, items:requisicion_insumos(id, cantidad, fecha_requerida, nota, insumo:insumos(id, nombre, unidad))")
       .eq("id", data.requisicionId).maybeSingle();
     if (reqErr) throw new Error(reqErr.message);
     if (!req) throw new Error("Requisición no encontrada");
+
+    let solicitanteNombre: string | null = null;
+    if ((req as any).creado_por) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("nombre_completo, email")
+        .eq("id", (req as any).creado_por)
+        .maybeSingle();
+      solicitanteNombre = (prof as any)?.nombre_completo || (prof as any)?.email || null;
+    }
+    (req as any).solicitante = solicitanteNombre;
 
     const { data: paquetes, error: paqErr } = await supabase
       .from("cotizacion_paquetes")
