@@ -34,9 +34,24 @@ export function RequisicionesModule({ obraId }: Props) {
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
+  const [borradorEnEdicion, setBorradorEnEdicion] = useState<string | null>(null);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const qc = useQueryClient();
+  const eliminarBorradorFn = useServerFn(eliminarBorradorRequisicion);
+  const eliminarBorrador = useMutation({
+    mutationFn: (id: string) => eliminarBorradorFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Borrador eliminado");
+      qc.invalidateQueries({ queryKey: ["requisiciones", obraId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error al eliminar"),
+  });
+  const abrirBorrador = (id: string) => {
+    setBorradorEnEdicion(id);
+    setOpenNueva(true);
+  };
   const toggleExpand = (id: string) => {
     setExpandidos((prev) => {
       const next = new Set(prev);
