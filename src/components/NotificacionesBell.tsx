@@ -61,7 +61,13 @@ export function NotificacionesBell() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-3 py-2 border-b">
-          <p className="text-sm font-semibold">Notificaciones</p>
+          <button
+            type="button"
+            className="text-sm font-semibold hover:underline"
+            onClick={() => navigate({ to: "/app/notificaciones" })}
+          >
+            Notificaciones
+          </button>
           {noLeidas > 0 && (
             <Button
               variant="ghost" size="sm" className="h-7 gap-1 text-xs"
@@ -95,6 +101,15 @@ export function NotificacionesBell() {
             </ul>
           )}
         </ScrollArea>
+        <div className="border-t px-3 py-2">
+          <button
+            type="button"
+            className="w-full text-xs text-center text-muted-foreground hover:text-foreground"
+            onClick={() => navigate({ to: "/app/notificaciones" })}
+          >
+            Ver todas las notificaciones
+          </button>
+        </div>
       </PopoverContent>
     </Popover>
   );
