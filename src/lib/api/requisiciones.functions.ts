@@ -335,7 +335,7 @@ async function notificarRequisicionEnviada(
       .select("user_id")
       .eq("company_id", args.companyId)
       .in("role", ["administrativo", "director"]);
-    const destinatarios = Array.from(
+    const destinatarios: string[] = Array.from(
       new Set((admins ?? []).map((a: any) => a.user_id as string).filter((u: string) => u !== args.userId)),
     );
     if (destinatarios.length === 0) return;
