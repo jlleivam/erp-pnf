@@ -240,7 +240,7 @@ export function RequisicionDetalleSheet({ id, open, onOpenChange }: Props) {
                         onClick={(e) => { e.preventDefault(); cancelMut.mutate(); }}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        {cancelMut.isPending ? "Cancelando…" : "Sí, cancelar"}
+                        {cancelMut.isPending ? "Cancelando…" : "Cancelar"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
