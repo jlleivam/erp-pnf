@@ -59,7 +59,7 @@ const fieldsSchema = z.object({
 });
 
 const SELECT_FULL = "*";
-const SELECT_LIST = "id, razon_social, nombre_comercial, rfc, tipo_persona, categoria, dias_credito, disponible_renta";
+const SELECT_LIST = "id, razon_social, nombre_comercial, rfc, tipo_persona, categoria, dias_credito, disponible_renta, estatus_autorizacion, creado_por";
 
 async function getCtx(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
