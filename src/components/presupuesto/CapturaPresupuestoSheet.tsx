@@ -368,19 +368,20 @@ export function CapturaPresupuestoSheet({
             </div>
 
             {/* Tabla editable */}
-            <Card className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="text-left p-2 w-24">Clave</th>
-                    <th className="text-left p-2">Concepto</th>
-                    <th className="text-left p-2 w-20">Unidad</th>
-                    <th className="text-right p-2 w-24">Cantidad</th>
-                    <th className="text-right p-2 w-24">PU</th>
-                    <th className="text-right p-2 w-28">Importe</th>
-                    <th className="w-10"></th>
-                  </tr>
-                </thead>
+            <div className="flex-1 min-h-0 overflow-y-auto px-6">
+              <Card className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="text-left p-2 w-24 sticky top-0 z-10 bg-muted">Clave</th>
+                      <th className="text-left p-2 sticky top-0 z-10 bg-muted">Concepto</th>
+                      <th className="text-left p-2 w-20 sticky top-0 z-10 bg-muted">Unidad</th>
+                      <th className="text-right p-2 w-24 sticky top-0 z-10 bg-muted">Cantidad</th>
+                      <th className="text-right p-2 w-24 sticky top-0 z-10 bg-muted">PU</th>
+                      <th className="text-right p-2 w-28 sticky top-0 z-10 bg-muted">Importe</th>
+                      <th className="w-10 sticky top-0 z-10 bg-muted"></th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {rows.map((r) => {
                     const claveTrim = r.clave.trim();
