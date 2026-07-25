@@ -76,8 +76,19 @@ async function getMyContext(
   return { companyId: profile.company_id as string, roles };
 }
 
+function canManage(roles: string[]) {
+  return roles.includes("director") || roles.includes("administrativo");
+}
+function canRequest(roles: string[]) {
+  return (
+    canManage(roles) ||
+    roles.includes("residente") ||
+    roles.includes("auxiliar") ||
+    roles.includes("supervisor")
+  );
+}
 function assertCanManage(roles: string[]) {
-  if (!roles.includes("director") && !roles.includes("administrativo")) {
+  if (!canManage(roles)) {
     throw new Error("No tienes permisos para esta acción");
   }
 }
