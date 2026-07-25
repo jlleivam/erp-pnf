@@ -252,7 +252,7 @@ function RequisicionesTable({
                       <TooltipContent>{r.obra?.nombre ?? "—"}</TooltipContent>
                     </Tooltip>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell py-1 px-2 text-muted-foreground min-w-0">
+                  <TableCell className="py-1 px-2 text-muted-foreground min-w-0">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="truncate">{r.solicitante ?? "—"}</div>
@@ -260,7 +260,8 @@ function RequisicionesTable({
                       <TooltipContent>{r.solicitante ?? "—"}</TooltipContent>
                     </Tooltip>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell text-right py-1 px-2">{r.insumos_count}</TableCell>
+                  <TableCell className="hidden xl:table-cell text-right py-1 px-2">{r.insumos_count}</TableCell>
+
                   <TableCell className="py-1 px-2">
                     <FechaProximaCell rowId={r.id} fetchDetalle={fetchDetalle} />
                   </TableCell>
