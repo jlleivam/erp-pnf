@@ -244,16 +244,11 @@ function NuevaSolicitudForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-muted-foreground">Proveedor</label>
-          <Select value={proveedorId} onValueChange={setProveedorId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona proveedor" />
-            </SelectTrigger>
-            <SelectContent>
-              {proveedores.map((p: any) => (
-                <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProveedorCombobox
+            proveedores={proveedores}
+            value={proveedorId}
+            onChange={setProveedorId}
+          />
         </div>
       </div>
 
