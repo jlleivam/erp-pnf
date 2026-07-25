@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, startOfDay } from "date-fns";
-import { CalendarIcon, Plus, Trash2, Search, Check, Save } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, Search, Check, Save, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +25,8 @@ import {
 } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { listInsumos, listCategorias } from "@/lib/api/insumos.functions";
+import { listInsumos, listCategorias, solicitarInsumo, listUnidades } from "@/lib/api/insumos.functions";
+import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
 import {
   guardarBorradorRequisicion,
   enviarBorradorRequisicion,
@@ -73,11 +77,22 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
   });
   const categorias = (categoriasQ.data ?? []) as Array<{ id: string; nombre: string }>;
 
+  const fetchUnidades = useServerFn(listUnidades);
+  const unidadesQ = useQuery({
+    queryKey: ["insumo-unidades"],
+    queryFn: () => fetchUnidades(),
+    enabled: open,
+  });
+  const unidades = (unidadesQ.data ?? []) as Array<{ id: string; codigo: string; nombre?: string }>;
+
+  const roles = useEffectiveRoles();
+  const isDirector = checkDirector(roles);
 
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
   const [openFechaIdx, setOpenFechaIdx] = useState<number | null>(null);
   const [currentBorradorId, setCurrentBorradorId] = useState<string | null>(borradorId ?? null);
+  const [solicitarForIdx, setSolicitarForIdx] = useState<number | null>(null);
 
   // Reset y carga del borrador cuando abre
   useEffect(() => {
@@ -240,6 +255,7 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
                       .filter((_, idx) => idx !== i)
                       .map((x) => x.insumo_id)
                       .filter(Boolean)}
+                    onRequestNew={() => setSolicitarForIdx(i)}
                   />
                 </div>
 
@@ -356,7 +372,124 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
           </div>
         </div>
       </SheetContent>
+      <SolicitarInsumoRapidoDialog
+        open={solicitarForIdx !== null}
+        onOpenChange={(v) => { if (!v) setSolicitarForIdx(null); }}
+        categorias={categorias}
+        unidades={unidades}
+        isDirector={isDirector}
+        onCreated={(newId) => {
+          qc.invalidateQueries({ queryKey: ["insumos"] });
+          if (newId && solicitarForIdx !== null) {
+            updateBloque(solicitarForIdx, { insumo_id: newId });
+          }
+          setSolicitarForIdx(null);
+        }}
+      />
     </Sheet>
+  );
+}
+
+function SolicitarInsumoRapidoDialog({
+  open, onOpenChange, categorias, unidades, isDirector, onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (b: boolean) => void;
+  categorias: Array<{ id: string; nombre: string }>;
+  unidades: Array<{ id: string; codigo: string; nombre?: string }>;
+  isDirector: boolean;
+  onCreated: (newId?: string) => void;
+}) {
+  const solicitar = useServerFn(solicitarInsumo);
+  const [nombre, setNombre] = useState("");
+  const [unidad, setUnidad] = useState<string>("");
+  const [categoriaId, setCategoriaId] = useState<string>("none");
+
+  useEffect(() => {
+    if (open) {
+      setNombre("");
+      setCategoriaId("none");
+      setUnidad(unidades[0]?.codigo ?? "");
+    }
+  }, [open, unidades]);
+
+  const mut = useMutation({
+    mutationFn: solicitar,
+    onSuccess: (r: any) => {
+      toast.success(
+        isDirector
+          ? "Insumo creado y autorizado."
+          : "Solicitud enviada. Un Director revisará tu solicitud.",
+      );
+      onCreated(isDirector ? r?.id : undefined);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isDirector ? "Nuevo insumo" : "Solicitar insumo"}</DialogTitle>
+          <DialogDescription>
+            {isDirector
+              ? "El insumo se creará autorizado y podrás agregarlo a la requisición."
+              : "El Director revisará tu solicitud. Podrás agregar el insumo una vez autorizado."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Nombre</Label>
+            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Unidad</Label>
+              <Select value={unidad} onValueChange={setUnidad}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                <SelectContent>
+                  {unidades.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      Sin unidades. Pide al Director crearlas.
+                    </div>
+                  )}
+                  {unidades.map((u) => (
+                    <SelectItem key={u.id} value={u.codigo}>
+                      {u.codigo}{u.nombre ? ` — ${u.nombre}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Categoría</Label>
+              <Select value={categoriaId} onValueChange={setCategoriaId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin categoría</SelectItem>
+                  {categorias.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button
+            disabled={!nombre.trim() || !unidad || mut.isPending}
+            onClick={() => mut.mutate({ data: {
+              nombre: nombre.trim(),
+              unidad,
+              categoriaId: categoriaId === "none" ? null : categoriaId,
+            } })}
+          >
+            {isDirector ? "Crear" : "Solicitar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -373,12 +506,14 @@ function InsumoPicker({
   value,
   onChange,
   disabledIds,
+  onRequestNew,
 }: {
   insumos: InsumoItem[];
   categorias: Array<{ id: string; nombre: string }>;
   value: string;
   onChange: (id: string) => void;
   disabledIds?: string[];
+  onRequestNew?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [categoriaId, setCategoriaId] = useState<string>("all");
@@ -438,7 +573,22 @@ function InsumoPicker({
           >
             <CommandInput autoFocus placeholder="Buscar insumo…" className="h-9 text-xs" />
             <CommandList className="max-h-64">
-              <CommandEmpty>Sin resultados.</CommandEmpty>
+              <CommandEmpty>
+                <div className="py-3 text-center space-y-2">
+                  <p className="text-xs text-muted-foreground">Sin resultados.</p>
+                  {onRequestNew && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setOpen(false); onRequestNew(); }}
+                    >
+                      <PackagePlus className="size-3.5 mr-1" /> Solicitar nuevo insumo
+                    </Button>
+                  )}
+                </div>
+              </CommandEmpty>
               <CommandGroup>
                 {filtered.map((ins) => {
                   const isDisabled = disabledIds?.includes(ins.id) ?? false;
@@ -482,6 +632,19 @@ function InsumoPicker({
                   );
                 })}
               </CommandGroup>
+              {onRequestNew && filtered.length > 0 && (
+                <div className="border-t p-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-full justify-start text-xs"
+                    onClick={() => { setOpen(false); onRequestNew(); }}
+                  >
+                    <PackagePlus className="size-3.5 mr-1" /> Solicitar nuevo insumo
+                  </Button>
+                </div>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
