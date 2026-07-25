@@ -87,7 +87,7 @@ export function NotificacionesBell() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{n.titulo}</p>
                       <p className="text-xs text-muted-foreground line-clamp-2">{n.mensaje}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{formatDate(n.created_at)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{formatDateTime(n.created_at)}</p>
                     </div>
                   </div>
                 </li>
