@@ -192,6 +192,7 @@ function AccionCell({ row, onAction }: {
   return null;
 }
 
+
 function RequisicionesTable({
   rows, loading, emptyText, onRowClick, onAction, fetchDetalle,
 }: {
