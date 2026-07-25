@@ -151,14 +151,16 @@ export const getCliente = createServerFn({ method: "POST" })
     return { cliente, obras, monto_total_contratado };
   });
 
-// =============== CREATE ===============
+// =============== CREATE (solicitud) ===============
 export const crearCliente = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => clienteFieldsSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, roles } = await getMyContext(supabase, userId);
-    assertCanManage(roles);
+    if (!canRequest(roles)) {
+      throw new Error("No tienes permisos para esta acción");
+    }
 
     const rfcUpper = data.rfc.toUpperCase();
 
@@ -171,8 +173,14 @@ export const crearCliente = createServerFn({ method: "POST" })
       .maybeSingle();
     if (dup) throw new Error(`Ya existe un cliente con RFC ${rfcUpper}`);
 
+    const estatus_autorizacion: "autorizado" | "pendiente" = canManage(roles)
+      ? "autorizado"
+      : "pendiente";
+
     const insertPayload = {
       company_id: companyId,
+      creado_por: userId,
+      estatus_autorizacion,
       tipo_persona: data.tipo_persona,
       razon_social: data.razon_social,
       rfc: rfcUpper,
@@ -204,7 +212,132 @@ export const crearCliente = createServerFn({ method: "POST" })
       .select(SELECT_FULL)
       .single();
     if (error) throw new Error(error.message);
+
+    if (estatus_autorizacion === "pendiente") {
+      try {
+        const { data: companyRoles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("company_id", companyId)
+          .in("role", ["director", "administrativo"]);
+        const destSet = new Set<string>(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ((companyRoles ?? []) as any[]).map((r) => r.user_id as string),
+        );
+        destSet.delete(userId);
+        const destinatarios = Array.from(destSet);
+        if (destinatarios.length > 0) {
+          const { data: solicitanteProfile } = await supabase
+            .from("profiles")
+            .select("nombre_completo")
+            .eq("id", userId)
+            .maybeSingle();
+          const quien = solicitanteProfile?.nombre_completo ?? "Un usuario";
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
+            destinatarios.map((uid) => ({
+              user_id: uid,
+              company_id: companyId,
+              tipo: "cliente_alta_solicitada",
+              titulo: "Solicitud de alta de cliente",
+              mensaje: `${quien} solicitó dar de alta al cliente ${data.razon_social}. Requiere autorización.`,
+              link: `/app/catalogos/clientes?tab=pendientes&id=${cliente.id}`,
+            })),
+          );
+          if (notifErr) console.error("[notificaciones] cliente_alta_solicitada", notifErr.message);
+        }
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.error("[notificaciones] cliente_alta_solicitada error", (e as any)?.message);
+      }
+    }
+
     return cliente;
+  });
+
+// =============== AUTORIZAR ===============
+export const autorizarCliente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { roles } = await getMyContext(supabase, userId);
+    assertCanManage(roles);
+
+    const { data: c } = await supabase
+      .from("clientes")
+      .select("creado_por, razon_social, company_id")
+      .eq("id", data.id)
+      .maybeSingle();
+
+    const { error } = await supabase
+      .from("clientes")
+      .update({ estatus_autorizacion: "autorizado" })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    if (c?.creado_por && c.creado_por !== userId) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("notificaciones").insert({
+          user_id: c.creado_por,
+          company_id: c.company_id,
+          tipo: "cliente_alta_autorizada",
+          titulo: "Cliente autorizado",
+          mensaje: `${c.razon_social} ya fue autorizado y puede vincularse a obras.`,
+          link: `/app/catalogos/clientes?id=${data.id}`,
+        });
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.error("[notificaciones] cliente_alta_autorizada error", (e as any)?.message);
+      }
+    }
+
+    return { ok: true };
+  });
+
+// =============== RECHAZAR ===============
+export const rechazarCliente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), motivo: z.string().trim().max(500).optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { roles } = await getMyContext(supabase, userId);
+    assertCanManage(roles);
+
+    const { data: c } = await supabase
+      .from("clientes")
+      .select("creado_por, razon_social, company_id, estatus_autorizacion")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!c) throw new Error("No encontrado");
+    if (c.estatus_autorizacion !== "pendiente") {
+      throw new Error("Solo se pueden rechazar solicitudes pendientes");
+    }
+
+    const { error } = await supabase.from("clientes").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    if (c.creado_por && c.creado_por !== userId) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("notificaciones").insert({
+          user_id: c.creado_por,
+          company_id: c.company_id,
+          tipo: "cliente_alta_rechazada",
+          titulo: "Solicitud rechazada",
+          mensaje: `Tu solicitud de alta para ${c.razon_social} fue rechazada.${data.motivo ? ` Motivo: ${data.motivo}` : ""}`,
+          link: `/app/catalogos/clientes`,
+        });
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.error("[notificaciones] cliente_alta_rechazada error", (e as any)?.message);
+      }
+    }
+
+    return { ok: true };
   });
 
 // =============== UPDATE ===============
