@@ -92,7 +92,13 @@ export function RequisicionesModule({ obraId }: Props) {
           <p className="text-sm text-muted-foreground">Material solicitado para esta obra</p>
         </div>
         {puedeCrear && (
-          <Button onClick={() => setOpenNueva(true)} className="shrink-0">
+          <Button
+            onClick={() => {
+              setBorradorEnEdicion(null);
+              setOpenNueva(true);
+            }}
+            className="shrink-0"
+          >
             <Plus className="size-4 mr-1" /> Nueva
           </Button>
         )}
