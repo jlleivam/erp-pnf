@@ -487,11 +487,12 @@ export function CapturaPresupuestoSheet({
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
-            </Card>
+                  </tbody>
+                </table>
+              </Card>
+            </div>
 
-            <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background py-3">
+            <div className="flex items-center justify-end gap-2 shrink-0 border-t bg-background px-6 py-3">
               <Button variant="outline" onClick={onClose} disabled={importing}>Cerrar</Button>
               <Button
                 disabled={importing || guardarM.isPending || calc.errores.length > 0 || yaAutorizado}
