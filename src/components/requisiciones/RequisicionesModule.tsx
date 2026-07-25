@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown } from "lucide-react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { listRequisiciones } from "@/lib/api/requisiciones.functions";
+import {
+  listRequisiciones,
+  eliminarBorradorRequisicion,
+} from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
 import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
