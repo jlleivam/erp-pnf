@@ -13,11 +13,13 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { listRequisicionesAsignadas, getRequisicion } from "@/lib/api/requisiciones.functions";
 import { RequisicionDetalleSheet } from "@/components/requisiciones/RequisicionDetalleSheet";
 import { CotizacionSheet, type CotizacionTab } from "@/components/requisiciones/CotizacionSheet";
 import { ESTATUS_META, type RequisicionEstatus } from "@/components/requisiciones/constants";
 import { formatDate } from "@/lib/format";
+
 import { useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
 
 export const Route = createFileRoute("/_authenticated/app/admin/requisiciones")({
@@ -153,17 +155,25 @@ function FechaProximaCell({ rowId, fetchDetalle }: { rowId: string; fetchDetalle
     .map((it: any) => it.fecha_requerida)
     .filter(Boolean)
     .map((d: string) => new Date(d).getTime());
-  if (fechas.length === 0) return <span className="text-muted-foreground text-sm">—</span>;
+  if (fechas.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
   const min = Math.min(...fechas);
   const diff = Math.ceil((min - Date.now()) / (1000 * 60 * 60 * 24));
   const urgent = diff <= 3;
+  const d = new Date(min);
+  const short = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }).replace(".", "");
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-sm whitespace-nowrap">{formatDate(new Date(min).toISOString())}</span>
-      {urgent && <Badge className="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0 h-4">Urgente</Badge>}
+    <div className="flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-xs whitespace-nowrap">{short}</span>
+        </TooltipTrigger>
+        <TooltipContent>{formatDate(d.toISOString())}</TooltipContent>
+      </Tooltip>
+      {urgent && <span className="size-1.5 rounded-full bg-rose-500" title="Urgente" />}
     </div>
   );
 }
+
 
 function AccionCell({ row, onAction }: {
   row: any;
@@ -181,6 +191,7 @@ function AccionCell({ row, onAction }: {
   }
   return null;
 }
+
 
 function RequisicionesTable({
   rows, loading, emptyText, onRowClick, onAction, fetchDetalle,
@@ -204,42 +215,60 @@ function RequisicionesTable({
     );
   }
   return (
-    <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table>
+    <TooltipProvider delayDuration={150}>
+      <Card className="overflow-hidden">
+        <Table className="table-fixed w-full text-xs">
           <TableHeader>
             <TableRow className="h-8">
-              <TableHead className="py-1 text-xs">Folio</TableHead>
-              <TableHead className="py-1 text-xs">Obra</TableHead>
-              <TableHead className="hidden sm:table-cell py-1 text-xs">Solicitante</TableHead>
-              <TableHead className="hidden md:table-cell text-right py-1 text-xs">Insumos</TableHead>
-              <TableHead className="py-1 text-xs">Fecha más próxima</TableHead>
-              <TableHead className="py-1 text-xs">Estatus</TableHead>
-              <TableHead className="text-right py-1 text-xs">Acción</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[72px]">Folio</TableHead>
+              <TableHead className="py-1 px-2 text-xs">Obra</TableHead>
+              <TableHead className="hidden md:table-cell py-1 px-2 text-xs w-[130px]">Solicitante</TableHead>
+              <TableHead className="hidden lg:table-cell text-right py-1 px-2 text-xs w-14">Ins.</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[74px]">Fecha</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[76px]">Estatus</TableHead>
+              <TableHead className="text-right py-1 px-2 text-xs w-[84px]">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((r) => {
               const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+              const folioShort = (r.folio ?? "").replace(/^REQ-?/i, "");
               return (
                 <TableRow key={r.id} className="hover:bg-muted/50 h-9">
-                  <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => onRowClick(r.id)}>
-                    {r.folio}
+                  <TableCell className="py-1 px-2 font-medium cursor-pointer whitespace-nowrap" onClick={() => onRowClick(r.id)}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>{folioShort}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>{r.folio}</TooltipContent>
+                    </Tooltip>
                   </TableCell>
-                  <TableCell className="py-1 max-w-[160px] truncate text-sm">{r.obra?.nombre ?? "—"}</TableCell>
-                  <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
-                    {r.solicitante ?? "—"}
+                  <TableCell className="py-1 px-2 min-w-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="truncate">{r.obra?.nombre ?? "—"}</div>
+                      </TooltipTrigger>
+                      <TooltipContent>{r.obra?.nombre ?? "—"}</TooltipContent>
+                    </Tooltip>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-right py-1 text-sm">{r.insumos_count}</TableCell>
-                  <TableCell className="py-1">
+                  <TableCell className="hidden md:table-cell py-1 px-2 text-muted-foreground min-w-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="truncate">{r.solicitante ?? "—"}</div>
+                      </TooltipTrigger>
+                      <TooltipContent>{r.solicitante ?? "—"}</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-right py-1 px-2">{r.insumos_count}</TableCell>
+                  <TableCell className="py-1 px-2">
                     <FechaProximaCell rowId={r.id} fetchDetalle={fetchDetalle} />
                   </TableCell>
-                  <TableCell className="py-1">
-                    <Badge className={`${meta?.badge ?? ""} text-[10px] px-2 py-0 h-5`} variant="secondary">
+                  <TableCell className="py-1 px-2">
+                    <Badge className={`${meta?.badge ?? ""} text-[10px] px-1.5 py-0 h-5 whitespace-nowrap`} variant="secondary">
                       {meta?.label ?? r.estatus}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right py-1">
+                  <TableCell className="text-right py-1 px-2">
                     <AccionCell row={r} onAction={onAction} />
                   </TableCell>
                 </TableRow>
@@ -247,7 +276,8 @@ function RequisicionesTable({
             })}
           </TableBody>
         </Table>
-      </div>
-    </Card>
+      </Card>
+    </TooltipProvider>
   );
 }
+
