@@ -336,13 +336,24 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
             />
           </div>
 
-          <Button
-            className="w-full"
-            disabled={mut.isPending}
-            onClick={() => mut.mutate()}
-          >
-            {mut.isPending ? "Enviando…" : "Enviar requisición"}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto sm:flex-1"
+              disabled={guardar.isPending || mut.isPending}
+              onClick={() => guardar.mutate()}
+            >
+              <Save className="size-4 mr-1" />
+              {guardar.isPending ? "Guardando…" : "Guardar borrador"}
+            </Button>
+            <Button
+              className="w-full sm:w-auto sm:flex-1"
+              disabled={mut.isPending || guardar.isPending}
+              onClick={() => mut.mutate()}
+            >
+              {mut.isPending ? "Enviando…" : "Enviar requisición"}
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
