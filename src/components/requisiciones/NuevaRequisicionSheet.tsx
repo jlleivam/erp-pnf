@@ -549,7 +549,7 @@ function InsumoPicker({
             </span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start">
+        <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
           <div className="p-2 border-b">
             <Select value={categoriaId} onValueChange={setCategoriaId}>
               <SelectTrigger className="h-8 text-xs">
