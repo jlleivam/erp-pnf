@@ -49,11 +49,11 @@ const clienteFieldsSchema = z.object({
 });
 
 const SELECT_FULL =
-  "id, company_id, tipo_persona, razon_social, rfc, regimen_fiscal, calle, numero_exterior, numero_interior, colonia, municipio, estado, codigo_postal, telefono, correo, contacto_nombre, contacto_telefono, curp, condiciones_pago, limite_credito, banco, clabe, beneficiario, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento, datos_contacto, created_at";
+  "id, company_id, tipo_persona, razon_social, rfc, regimen_fiscal, calle, numero_exterior, numero_interior, colonia, municipio, estado, codigo_postal, telefono, correo, contacto_nombre, contacto_telefono, curp, condiciones_pago, limite_credito, banco, clabe, beneficiario, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento, datos_contacto, estatus_autorizacion, creado_por, created_at";
 
 
 const SELECT_LIST =
-  "id, tipo_persona, razon_social, rfc, telefono, correo, datos_contacto, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento";
+  "id, tipo_persona, razon_social, rfc, telefono, correo, datos_contacto, constancia_fiscal_url, constancia_fiscal_vencimiento, opinion_sat_url, opinion_sat_vencimiento, estatus_autorizacion, creado_por";
 
 async function getMyContext(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
