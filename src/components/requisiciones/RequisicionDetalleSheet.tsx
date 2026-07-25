@@ -13,6 +13,10 @@ import {
 import {
   Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { getRequisicion, cancelarRequisicion } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, TIMELINE_STEPS, type RequisicionEstatus } from "./constants";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -212,14 +216,35 @@ export function RequisicionDetalleSheet({ id, open, onOpenChange }: Props) {
               </div>
 
               {puedeCancelar && (
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  disabled={cancelMut.isPending}
-                  onClick={() => cancelMut.mutate()}
-                >
-                  Cancelar requisición
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      disabled={cancelMut.isPending}
+                    >
+                      Cancelar requisición
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancelar requisición</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción no se puede deshacer. La requisición quedará cancelada y no podrás enviarla nuevamente.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={cancelMut.isPending}>Volver</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={cancelMut.isPending}
+                        onClick={(e) => { e.preventDefault(); cancelMut.mutate(); }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {cancelMut.isPending ? "Cancelando…" : "Sí, cancelar"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           )}
