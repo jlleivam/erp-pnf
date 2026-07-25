@@ -77,11 +77,22 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
   });
   const categorias = (categoriasQ.data ?? []) as Array<{ id: string; nombre: string }>;
 
+  const fetchUnidades = useServerFn(listUnidades);
+  const unidadesQ = useQuery({
+    queryKey: ["insumo-unidades"],
+    queryFn: () => fetchUnidades(),
+    enabled: open,
+  });
+  const unidades = (unidadesQ.data ?? []) as Array<{ id: string; codigo: string; nombre?: string }>;
+
+  const roles = useEffectiveRoles();
+  const isDirector = checkDirector(roles);
 
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
   const [openFechaIdx, setOpenFechaIdx] = useState<number | null>(null);
   const [currentBorradorId, setCurrentBorradorId] = useState<string | null>(borradorId ?? null);
+  const [solicitarForIdx, setSolicitarForIdx] = useState<number | null>(null);
 
   // Reset y carga del borrador cuando abre
   useEffect(() => {
