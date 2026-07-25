@@ -155,17 +155,25 @@ function FechaProximaCell({ rowId, fetchDetalle }: { rowId: string; fetchDetalle
     .map((it: any) => it.fecha_requerida)
     .filter(Boolean)
     .map((d: string) => new Date(d).getTime());
-  if (fechas.length === 0) return <span className="text-muted-foreground text-sm">—</span>;
+  if (fechas.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
   const min = Math.min(...fechas);
   const diff = Math.ceil((min - Date.now()) / (1000 * 60 * 60 * 24));
   const urgent = diff <= 3;
+  const d = new Date(min);
+  const short = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }).replace(".", "");
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-sm whitespace-nowrap">{formatDate(new Date(min).toISOString())}</span>
-      {urgent && <Badge className="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0 h-4">Urgente</Badge>}
+    <div className="flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-xs whitespace-nowrap">{short}</span>
+        </TooltipTrigger>
+        <TooltipContent>{formatDate(d.toISOString())}</TooltipContent>
+      </Tooltip>
+      {urgent && <span className="size-1.5 rounded-full bg-rose-500" title="Urgente" />}
     </div>
   );
 }
+
 
 function AccionCell({ row, onAction }: {
   row: any;
