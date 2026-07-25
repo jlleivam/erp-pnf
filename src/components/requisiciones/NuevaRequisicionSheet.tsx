@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, startOfDay } from "date-fns";
-import { CalendarIcon, Plus, Trash2, Search, Check } from "lucide-react";
+import { format, parseISO, startOfDay } from "date-fns";
+import { CalendarIcon, Plus, Trash2, Search, Check, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -23,13 +23,18 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { listInsumos, listCategorias } from "@/lib/api/insumos.functions";
-import { crearRequisicion } from "@/lib/api/requisiciones.functions";
+import {
+  guardarBorradorRequisicion,
+  enviarBorradorRequisicion,
+  getBorradorRequisicion,
+} from "@/lib/api/requisiciones.functions";
 
 
 interface Props {
   obraId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  borradorId?: string | null;
 }
 
 interface Bloque {
@@ -43,11 +48,13 @@ function emptyBloque(): Bloque {
   return { insumo_id: "", cantidad: "", fecha_requerida: undefined, nota: "" };
 }
 
-export function NuevaRequisicionSheet({ obraId, open, onOpenChange }: Props) {
+export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }: Props) {
   const qc = useQueryClient();
   const fetchInsumos = useServerFn(listInsumos);
   const fetchCategorias = useServerFn(listCategorias);
-  const crear = useServerFn(crearRequisicion);
+  const guardarBorrador = useServerFn(guardarBorradorRequisicion);
+  const enviarBorrador = useServerFn(enviarBorradorRequisicion);
+  const fetchBorrador = useServerFn(getBorradorRequisicion);
 
   const insumosQ = useQuery({
     queryKey: ["insumos", "autorizado"],
