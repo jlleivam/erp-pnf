@@ -102,6 +102,7 @@ export const listClientes = createServerFn({ method: "POST" })
       .object({
         search: z.string().trim().max(255).optional(),
         tipo_persona: z.enum(["moral", "fisica"]).optional(),
+        solo_pendientes: z.boolean().optional(),
       })
       .default({})
       .parse(d ?? {}),
@@ -110,6 +111,7 @@ export const listClientes = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase.from("clientes").select(SELECT_LIST).order("razon_social");
     if (data.tipo_persona) q = q.eq("tipo_persona", data.tipo_persona);
+    if (data.solo_pendientes) q = q.eq("estatus_autorizacion", "pendiente");
     if (data.search && data.search.length > 0) {
       const s = data.search.replace(/[%_]/g, "");
       q = q.or(`razon_social.ilike.%${s}%,rfc.ilike.%${s}%`);
