@@ -121,6 +121,7 @@ export function CapturaEstimacionSheet({
       qc.invalidateQueries({ queryKey: ["estimaciones", obraId] });
       qc.invalidateQueries({ queryKey: ["estimacion-borrador", obraId, semanaInicio] });
       onSaved?.();
+      onClose();
     },
     onError: (e: Error) => toast.error(e.message),
   });
