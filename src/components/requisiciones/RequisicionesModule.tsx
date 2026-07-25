@@ -346,7 +346,11 @@ export function RequisicionesModule({ obraId }: Props) {
         <NuevaRequisicionSheet
           obraId={obraId}
           open={openNueva}
-          onOpenChange={setOpenNueva}
+          onOpenChange={(o) => {
+            setOpenNueva(o);
+            if (!o) setBorradorEnEdicion(null);
+          }}
+          borradorId={borradorEnEdicion}
         />
       )}
       {detalleId && (
