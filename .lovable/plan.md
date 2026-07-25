@@ -1,21 +1,24 @@
 ## Objetivo
 
-En "Nueva solicitud" (pestaña Solicitudes de una requisición), reemplazar el `<Select>` actual del campo **Proveedor** por un combobox con búsqueda que filtre por **razón social** o **nombre comercial**.
+Eliminar el scroll horizontal de la tabla de requisiciones administrativas (`/app/admin/requisiciones`) haciéndola más compacta para que quepa en el viewport actual (~750px).
 
-## Cambios
+## Cambios en `src/routes/_authenticated/app.admin.requisiciones.tsx`
 
-**`src/components/requisiciones/SolicitudesTab.tsx`**
-- Sustituir el `Select` de proveedor (líneas ~247-256) por un `Popover` + `Command` (shadcn) — mismo patrón que ya usan otros pickers del proyecto (p. ej. `InsumoPicker` en `NuevaRequisicionSheet.tsx`).
-- Trigger: botón outline del ancho del contenedor mostrando el proveedor seleccionado (`razon_social` y, si existe, `nombre_comercial` en gris entre paréntesis) o el placeholder "Selecciona proveedor".
-- Contenido: `Command` con `CommandInput` (placeholder "Buscar por razón social o nombre comercial…"), `CommandEmpty` y `CommandList` con un `CommandItem` por proveedor.
-  - `value` del item: `` `${razon_social} ${nombre_comercial ?? ""}` `` para que el filtro nativo de `cmdk` matchee ambos campos.
-  - Al seleccionar, setear `proveedorId` y cerrar el popover.
-  - Ícono de check en el item activo.
-- Añadir `onWheel`/`onTouchMove` stopPropagation al `PopoverContent` (mismo fix ya aplicado en el picker de insumos) para evitar el bug de scroll dentro de sheets.
+1. **Quitar el wrapper `overflow-x-auto`** del `Card` para forzar que la tabla se ajuste al ancho disponible.
 
-Sin cambios en API, tipos ni en la lista `proveedores` que ya llega como prop (ya incluye `nombre_comercial`).
+2. **Compactar columnas y ocultar en mobile**:
+   - `Folio`: acortar visualmente (ej. mostrar solo la parte numérica `2026-001` sin `REQ-`, con tooltip del folio completo).
+   - `Obra`: reducir `max-w` a `[110px]` con truncate + tooltip.
+   - `Solicitante`: ocultar en pantallas pequeñas (`hidden md:table-cell` en vez de `sm`), o mostrar solo el primer nombre + apellido inicial con tooltip.
+   - `Insumos`: ya está oculto en `md` — mantener oculto hasta `lg`.
+   - `Fecha más próxima`: acortar encabezado a "Fecha" y usar formato corto (`26 jul`).
+   - `Estatus`: usar badge sin texto largo — "En cotización" → "Cotizando" o mantener con `whitespace-normal` en 2 líneas compactas (ya lo hace).
+   - `Acción`: mantener botón compacto.
 
-## Notas técnicas
+3. **Reducir paddings horizontales** de celdas (`px-2`) y tamaño de fuente donde aplique.
 
-- Reutiliza componentes existentes: `@/components/ui/popover`, `@/components/ui/command`, `Button`, ícono `Check`/`ChevronsUpDown` de `lucide-react`.
-- No tocar `CotizacionSheet.tsx` ni otros dropdowns salvo que el usuario lo pida.
+4. **Agregar tooltips** (`TooltipProvider` + `Tooltip`) en Folio, Obra y Solicitante para no perder información al truncar.
+
+## Resultado esperado
+
+La tabla cabe completa en viewport de 752px sin scroll horizontal, manteniendo legibilidad y acceso a la info completa vía tooltip.
