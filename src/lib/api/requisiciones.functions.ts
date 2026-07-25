@@ -25,7 +25,7 @@ export const listRequisiciones = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     let q = supabase
       .from("requisiciones")
       .select("id, folio, estatus, notas, created_at, creado_por, items:requisicion_insumos(id, cantidad, fecha_requerida, nota, insumo:insumos(id, nombre, unidad))")
@@ -36,8 +36,12 @@ export const listRequisiciones = createServerFn({ method: "POST" })
     } else if (data.soloActivas === false) {
       q = q.in("estatus", ["completada", "rechazada"]);
     }
-    const { data: rows, error } = await q;
+    const { data: rowsRaw, error } = await q;
     if (error) throw new Error(error.message);
+    // Borradores solo visibles para su creador
+    const rows = (rowsRaw ?? []).filter(
+      (r: any) => r.estatus !== "borrador" || r.creado_por === userId,
+    );
 
     const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.creado_por).filter(Boolean)));
     let profileMap = new Map<string, { nombre_completo: string; email: string }>();
