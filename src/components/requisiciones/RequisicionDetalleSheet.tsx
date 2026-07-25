@@ -13,6 +13,10 @@ import {
 import {
   Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { getRequisicion, cancelarRequisicion } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, TIMELINE_STEPS, type RequisicionEstatus } from "./constants";
 import { formatDate, formatDateTime } from "@/lib/format";
