@@ -87,6 +87,7 @@ export const listRequisicionesAsignadas = createServerFn({ method: "POST" })
     let q = supabase
       .from("requisiciones")
       .select("id, folio, estatus, notas, enviada_at, created_at, creado_por, obra_id, items:requisicion_insumos(id)")
+      .neq("estatus", "borrador")
       .order("created_at", { ascending: false });
     if (obraIds) q = q.in("obra_id", obraIds);
     if (data.soloActivas === true) q = q.not("estatus", "in", "(completada,rechazada)");
