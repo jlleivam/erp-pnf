@@ -1,29 +1,30 @@
-## Objetivo
+## Problema
 
-Crear un módulo completo de notificaciones accesible desde la campana del header: al hacer clic en la campana se sigue mostrando el popover actual, pero ahora el título **"Notificaciones"** se convierte en un enlace que abre el módulo completo en `/app/notificaciones`.
+En el sheet de **Cotización** (`CotizacionSheet.tsx`) el encabezado muestra:
+- `Solicitante: —`
+- `Creada: —`
+- `Enviada: —`
+- Columna `Nota` de cada insumo con `—`
+
+La causa es que `getCotizacionRequisicion` en `src/lib/api/cotizaciones.functions.ts` (línea 63-66) no está trayendo esos campos de la requisición. El `select` actual solo pide `id, folio, obra_id, company_id, estatus, notas, items(...)` sin `nota` en items, sin `created_at`, `enviada_at`, ni el solicitante (`creado_por` + join a `profiles`).
 
 ## Cambios
 
-1. **Nueva ruta `src/routes/app.notificaciones.tsx`**
-   - `head()` con título y descripción propios.
-   - Renderiza `<NotificacionesModule />` dentro del `AppShell` existente.
+**`src/lib/api/cotizaciones.functions.ts`** — en `getCotizacionRequisicion`:
 
-2. **Nuevo componente `src/components/notificaciones/NotificacionesModule.tsx`**
-   - Header del módulo con título y botón "Marcar todas como leídas".
-   - Tabs: **Todas**, **No leídas**, **Leídas**.
-   - Filtro por tipo de notificación (select) y búsqueda por texto en título/mensaje.
-   - Lista completa (paginada o con scroll) con: icono según tipo, título, mensaje, fecha y hora (`formatDateTime`), indicador visual de no leída.
-   - Al hacer clic en un renglón: marca como leída y navega al `link_url` si existe.
-   - Estado vacío amigable.
-   - Reutiliza `listNotificaciones`, `marcarLeida` y `marcarTodasLeidas`; se extiende `listNotificaciones` para aceptar un `limit` mayor y opcional filtro por estatus si aún no lo soporta.
+1. Ampliar el `select` de la requisición a:
+   ```
+   id, folio, obra_id, company_id, estatus, notas,
+   created_at, enviada_at, creado_por,
+   solicitante:profiles!requisiciones_creado_por_fkey(id, nombre_completo),
+   items:requisicion_insumos(id, cantidad, fecha_requerida, nota, insumo:insumos(id, nombre, unidad))
+   ```
+   Si la FK a `profiles` no resuelve por nombre, hacer una consulta separada a `profiles` con `creado_por` y adjuntar el nombre al objeto `requisicion` antes de retornar.
 
-3. **`src/components/NotificacionesBell.tsx` (popover actual)**
-   - Convertir el título **"Notificaciones"** del popover en un botón/`Link` que navega a `/app/notificaciones` y cierra el popover.
-   - Mantener intacto el resto del comportamiento (lista rápida, "Marcar todas", clic en item).
-   - Opcional: agregar un pequeño enlace "Ver todas" al pie del popover con la misma navegación, por si el usuario no descubre el título clickeable.
+2. Normalizar el campo `solicitante` en el retorno como string (nombre completo) para que `req.solicitante` funcione tal cual lo consume el componente.
 
-## Notas técnicas
+**Sin cambios en el UI** — `CotizacionSheet.tsx` ya lee `req.solicitante`, `req.created_at`, `req.enviada_at` y `item.nota`.
 
-- Sin cambios de esquema en base de datos.
-- Invalidar los queries `["notificaciones"]` y `["notificaciones", "no-leidas"]` tras cada mutación para mantener sincronizados campana y módulo.
-- Seguir el patrón TanStack Query del proyecto: `ensureQueryData` en el loader + `useSuspenseQuery` en el componente.
+## Verificación
+
+Abrir la cotización de REQ-2026-001 y confirmar que el encabezado muestra solicitante/fechas y que la columna Nota refleja los textos capturados en la requisición.
