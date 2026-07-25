@@ -9,6 +9,13 @@ const InsumoInput = z.object({
   nota: z.string().trim().max(500).optional().nullable(),
 });
 
+const BorradorInsumoInput = z.object({
+  insumo_id: z.string().uuid().nullable().optional(),
+  cantidad: z.number().min(0).nullable().optional(),
+  fecha_requerida: z.string().nullable().optional(),
+  nota: z.string().trim().max(500).optional().nullable(),
+});
+
 export const listRequisiciones = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
