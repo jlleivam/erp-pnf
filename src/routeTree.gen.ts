@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppNotificacionesRouteImport } from './routes/_authenticated/app.notificaciones'
 import { Route as AuthenticatedAppMiCuentaRouteImport } from './routes/_authenticated/app.mi-cuenta'
 import { Route as AuthenticatedAppEquipoRouteImport } from './routes/_authenticated/app.equipo'
 import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app.configuracion'
@@ -67,6 +68,12 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppNotificacionesRoute =
+  AuthenticatedAppNotificacionesRouteImport.update({
+    id: '/notificaciones',
+    path: '/notificaciones',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppMiCuentaRoute =
   AuthenticatedAppMiCuentaRouteImport.update({
     id: '/mi-cuenta',
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
   '/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/app/mi-cuenta': typeof AuthenticatedAppMiCuentaRoute
+  '/app/notificaciones': typeof AuthenticatedAppNotificacionesRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
   '/app/admin/requisiciones': typeof AuthenticatedAppAdminRequisicionesRoute
@@ -236,6 +244,7 @@ export interface FileRoutesByTo {
   '/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
   '/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/app/mi-cuenta': typeof AuthenticatedAppMiCuentaRoute
+  '/app/notificaciones': typeof AuthenticatedAppNotificacionesRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
   '/app/admin/requisiciones': typeof AuthenticatedAppAdminRequisicionesRoute
@@ -266,6 +275,7 @@ export interface FileRoutesById {
   '/_authenticated/app/configuracion': typeof AuthenticatedAppConfiguracionRoute
   '/_authenticated/app/equipo': typeof AuthenticatedAppEquipoRoute
   '/_authenticated/app/mi-cuenta': typeof AuthenticatedAppMiCuentaRoute
+  '/_authenticated/app/notificaciones': typeof AuthenticatedAppNotificacionesRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/$': typeof AuthenticatedAppAdminSplatRoute
   '/_authenticated/app/admin/requisiciones': typeof AuthenticatedAppAdminRequisicionesRoute
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/app/configuracion'
     | '/app/equipo'
     | '/app/mi-cuenta'
+    | '/app/notificaciones'
     | '/app/'
     | '/app/admin/$'
     | '/app/admin/requisiciones'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/app/configuracion'
     | '/app/equipo'
     | '/app/mi-cuenta'
+    | '/app/notificaciones'
     | '/app'
     | '/app/admin/$'
     | '/app/admin/requisiciones'
@@ -353,6 +365,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/configuracion'
     | '/_authenticated/app/equipo'
     | '/_authenticated/app/mi-cuenta'
+    | '/_authenticated/app/notificaciones'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/$'
     | '/_authenticated/app/admin/requisiciones'
@@ -423,6 +436,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/notificaciones': {
+      id: '/_authenticated/app/notificaciones'
+      path: '/notificaciones'
+      fullPath: '/app/notificaciones'
+      preLoaderRoute: typeof AuthenticatedAppNotificacionesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/mi-cuenta': {
@@ -656,6 +676,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppConfiguracionRoute: typeof AuthenticatedAppConfiguracionRoute
   AuthenticatedAppEquipoRoute: typeof AuthenticatedAppEquipoRoute
   AuthenticatedAppMiCuentaRoute: typeof AuthenticatedAppMiCuentaRoute
+  AuthenticatedAppNotificacionesRoute: typeof AuthenticatedAppNotificacionesRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminSplatRoute: typeof AuthenticatedAppAdminSplatRoute
   AuthenticatedAppAdminRequisicionesRoute: typeof AuthenticatedAppAdminRequisicionesRoute
@@ -670,6 +691,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppConfiguracionRoute: AuthenticatedAppConfiguracionRoute,
   AuthenticatedAppEquipoRoute: AuthenticatedAppEquipoRoute,
   AuthenticatedAppMiCuentaRoute: AuthenticatedAppMiCuentaRoute,
+  AuthenticatedAppNotificacionesRoute: AuthenticatedAppNotificacionesRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminSplatRoute: AuthenticatedAppAdminSplatRoute,
   AuthenticatedAppAdminRequisicionesRoute:
