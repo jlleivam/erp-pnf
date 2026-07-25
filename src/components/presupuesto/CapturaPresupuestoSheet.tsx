@@ -279,7 +279,7 @@ export function CapturaPresupuestoSheet({
     <Sheet open onOpenChange={(o) => { if (!o && !importing) onClose(); }}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-5xl overflow-y-auto"
+        className="w-full sm:max-w-5xl flex flex-col h-full p-0"
         onPointerDownOutside={(e) => { if (importing) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (importing) e.preventDefault(); }}
       >
@@ -291,7 +291,7 @@ export function CapturaPresupuestoSheet({
             </p>
           </div>
         )}
-        <SheetHeader>
+        <SheetHeader className="shrink-0 px-6 pt-6">
           <SheetTitle>
             {presupuesto?.nombre ?? "Editar presupuesto"}
             {yaAutorizado && <Badge className="ml-2">Autorizado</Badge>}
@@ -302,9 +302,9 @@ export function CapturaPresupuestoSheet({
         </SheetHeader>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground mt-6">Cargando…</p>
+          <p className="text-sm text-muted-foreground mt-6 px-6">Cargando…</p>
         ) : (
-          <div className="mt-6 space-y-4">
+          <div className="mt-4 flex flex-col flex-1 min-h-0">
             {/* Toolbar */}
             <div className="flex items-center gap-2 flex-wrap">
               <Button size="sm" variant="outline" onClick={handleDescargarPlantilla} disabled={importing}>
