@@ -215,42 +215,60 @@ function RequisicionesTable({
     );
   }
   return (
-    <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table>
+    <TooltipProvider delayDuration={150}>
+      <Card className="overflow-hidden">
+        <Table className="table-fixed w-full text-xs">
           <TableHeader>
             <TableRow className="h-8">
-              <TableHead className="py-1 text-xs">Folio</TableHead>
-              <TableHead className="py-1 text-xs">Obra</TableHead>
-              <TableHead className="hidden sm:table-cell py-1 text-xs">Solicitante</TableHead>
-              <TableHead className="hidden md:table-cell text-right py-1 text-xs">Insumos</TableHead>
-              <TableHead className="py-1 text-xs">Fecha más próxima</TableHead>
-              <TableHead className="py-1 text-xs">Estatus</TableHead>
-              <TableHead className="text-right py-1 text-xs">Acción</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[72px]">Folio</TableHead>
+              <TableHead className="py-1 px-2 text-xs">Obra</TableHead>
+              <TableHead className="hidden md:table-cell py-1 px-2 text-xs w-[130px]">Solicitante</TableHead>
+              <TableHead className="hidden lg:table-cell text-right py-1 px-2 text-xs w-14">Ins.</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[74px]">Fecha</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[76px]">Estatus</TableHead>
+              <TableHead className="text-right py-1 px-2 text-xs w-[84px]">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((r) => {
               const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+              const folioShort = (r.folio ?? "").replace(/^REQ-?/i, "");
               return (
                 <TableRow key={r.id} className="hover:bg-muted/50 h-9">
-                  <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => onRowClick(r.id)}>
-                    {r.folio}
+                  <TableCell className="py-1 px-2 font-medium cursor-pointer whitespace-nowrap" onClick={() => onRowClick(r.id)}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>{folioShort}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>{r.folio}</TooltipContent>
+                    </Tooltip>
                   </TableCell>
-                  <TableCell className="py-1 max-w-[160px] truncate text-sm">{r.obra?.nombre ?? "—"}</TableCell>
-                  <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
-                    {r.solicitante ?? "—"}
+                  <TableCell className="py-1 px-2 min-w-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="truncate">{r.obra?.nombre ?? "—"}</div>
+                      </TooltipTrigger>
+                      <TooltipContent>{r.obra?.nombre ?? "—"}</TooltipContent>
+                    </Tooltip>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-right py-1 text-sm">{r.insumos_count}</TableCell>
-                  <TableCell className="py-1">
+                  <TableCell className="hidden md:table-cell py-1 px-2 text-muted-foreground min-w-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="truncate">{r.solicitante ?? "—"}</div>
+                      </TooltipTrigger>
+                      <TooltipContent>{r.solicitante ?? "—"}</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-right py-1 px-2">{r.insumos_count}</TableCell>
+                  <TableCell className="py-1 px-2">
                     <FechaProximaCell rowId={r.id} fetchDetalle={fetchDetalle} />
                   </TableCell>
-                  <TableCell className="py-1">
-                    <Badge className={`${meta?.badge ?? ""} text-[10px] px-2 py-0 h-5`} variant="secondary">
+                  <TableCell className="py-1 px-2">
+                    <Badge className={`${meta?.badge ?? ""} text-[10px] px-1.5 py-0 h-5 whitespace-nowrap`} variant="secondary">
                       {meta?.label ?? r.estatus}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right py-1">
+                  <TableCell className="text-right py-1 px-2">
                     <AccionCell row={r} onAction={onAction} />
                   </TableCell>
                 </TableRow>
@@ -258,7 +276,8 @@ function RequisicionesTable({
             })}
           </TableBody>
         </Table>
-      </div>
-    </Card>
+      </Card>
+    </TooltipProvider>
   );
 }
+
