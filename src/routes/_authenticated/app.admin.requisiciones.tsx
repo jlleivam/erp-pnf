@@ -220,13 +220,14 @@ function RequisicionesTable({
         <Table className="table-fixed w-full text-xs">
           <TableHeader>
             <TableRow className="h-8">
-              <TableHead className="py-1 px-2 text-xs w-[72px]">Folio</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[64px]">Folio</TableHead>
               <TableHead className="py-1 px-2 text-xs">Obra</TableHead>
-              <TableHead className="hidden md:table-cell py-1 px-2 text-xs w-[130px]">Solicitante</TableHead>
-              <TableHead className="hidden lg:table-cell text-right py-1 px-2 text-xs w-14">Ins.</TableHead>
+              <TableHead className="py-1 px-2 text-xs w-[110px]">Solicitante</TableHead>
+              <TableHead className="hidden xl:table-cell text-right py-1 px-2 text-xs w-14">Ins.</TableHead>
               <TableHead className="py-1 px-2 text-xs w-[74px]">Fecha</TableHead>
               <TableHead className="py-1 px-2 text-xs w-[76px]">Estatus</TableHead>
               <TableHead className="text-right py-1 px-2 text-xs w-[84px]">Acción</TableHead>
+
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -251,7 +252,7 @@ function RequisicionesTable({
                       <TooltipContent>{r.obra?.nombre ?? "—"}</TooltipContent>
                     </Tooltip>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell py-1 px-2 text-muted-foreground min-w-0">
+                  <TableCell className="py-1 px-2 text-muted-foreground min-w-0">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="truncate">{r.solicitante ?? "—"}</div>
@@ -259,7 +260,8 @@ function RequisicionesTable({
                       <TooltipContent>{r.solicitante ?? "—"}</TooltipContent>
                     </Tooltip>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell text-right py-1 px-2">{r.insumos_count}</TableCell>
+                  <TableCell className="hidden xl:table-cell text-right py-1 px-2">{r.insumos_count}</TableCell>
+
                   <TableCell className="py-1 px-2">
                     <FechaProximaCell rowId={r.id} fetchDetalle={fetchDetalle} />
                   </TableCell>
