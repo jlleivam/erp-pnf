@@ -255,6 +255,7 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
                       .filter((_, idx) => idx !== i)
                       .map((x) => x.insumo_id)
                       .filter(Boolean)}
+                    onRequestNew={() => setSolicitarForIdx(i)}
                   />
                 </div>
 
