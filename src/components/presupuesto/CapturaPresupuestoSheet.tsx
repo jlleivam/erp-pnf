@@ -279,7 +279,7 @@ export function CapturaPresupuestoSheet({
     <Sheet open onOpenChange={(o) => { if (!o && !importing) onClose(); }}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-5xl overflow-y-auto"
+        className="w-full sm:max-w-5xl flex flex-col h-full p-0"
         onPointerDownOutside={(e) => { if (importing) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (importing) e.preventDefault(); }}
       >
@@ -291,7 +291,7 @@ export function CapturaPresupuestoSheet({
             </p>
           </div>
         )}
-        <SheetHeader>
+        <SheetHeader className="shrink-0 px-6 pt-6">
           <SheetTitle>
             {presupuesto?.nombre ?? "Editar presupuesto"}
             {yaAutorizado && <Badge className="ml-2">Autorizado</Badge>}
@@ -302,11 +302,11 @@ export function CapturaPresupuestoSheet({
         </SheetHeader>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground mt-6">Cargando…</p>
+          <p className="text-sm text-muted-foreground mt-6 px-6">Cargando…</p>
         ) : (
-          <div className="mt-6 space-y-4">
+          <div className="mt-4 flex flex-col flex-1 min-h-0">
             {/* Toolbar */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap shrink-0 px-6 pb-3">
               <Button size="sm" variant="outline" onClick={handleDescargarPlantilla} disabled={importing}>
                 <Download className="size-4 mr-1" /> Plantilla
               </Button>
@@ -368,19 +368,20 @@ export function CapturaPresupuestoSheet({
             </div>
 
             {/* Tabla editable */}
-            <Card className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="text-left p-2 w-24">Clave</th>
-                    <th className="text-left p-2">Concepto</th>
-                    <th className="text-left p-2 w-20">Unidad</th>
-                    <th className="text-right p-2 w-24">Cantidad</th>
-                    <th className="text-right p-2 w-24">PU</th>
-                    <th className="text-right p-2 w-28">Importe</th>
-                    <th className="w-10"></th>
-                  </tr>
-                </thead>
+            <div className="flex-1 min-h-0 overflow-y-auto px-6">
+              <Card className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="text-left p-2 w-24 sticky top-0 z-10 bg-muted">Clave</th>
+                      <th className="text-left p-2 sticky top-0 z-10 bg-muted">Concepto</th>
+                      <th className="text-left p-2 w-20 sticky top-0 z-10 bg-muted">Unidad</th>
+                      <th className="text-right p-2 w-24 sticky top-0 z-10 bg-muted">Cantidad</th>
+                      <th className="text-right p-2 w-24 sticky top-0 z-10 bg-muted">PU</th>
+                      <th className="text-right p-2 w-28 sticky top-0 z-10 bg-muted">Importe</th>
+                      <th className="w-10 sticky top-0 z-10 bg-muted"></th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {rows.map((r) => {
                     const claveTrim = r.clave.trim();
@@ -486,11 +487,12 @@ export function CapturaPresupuestoSheet({
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
-            </Card>
+                  </tbody>
+                </table>
+              </Card>
+            </div>
 
-            <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background py-3">
+            <div className="flex items-center justify-end gap-2 shrink-0 border-t bg-background px-6 py-3">
               <Button variant="outline" onClick={onClose} disabled={importing}>Cerrar</Button>
               <Button
                 disabled={importing || guardarM.isPending || calc.errores.length > 0 || yaAutorizado}
