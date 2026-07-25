@@ -231,14 +231,16 @@ function buildPayload(data: z.infer<typeof fieldsSchema>) {
   };
 }
 
-// =============== CREATE ===============
+// =============== CREATE (solicitud) ===============
 export const crearTercero = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => fieldsSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { companyId, roles } = await getCtx(supabase, userId);
-    assertCanManage(roles);
+    if (!canRequest(roles)) {
+      throw new Error("No tienes permisos para esta acción");
+    }
 
     const rfcUpper = data.rfc.toUpperCase();
     const { data: dup } = await supabase
@@ -249,9 +251,14 @@ export const crearTercero = createServerFn({ method: "POST" })
       .maybeSingle();
     if (dup) throw new Error(`Ya existe un proveedor o contratista con RFC ${rfcUpper}`);
 
+    const estatus_autorizacion: "autorizado" | "pendiente" = canManage(roles)
+      ? "autorizado"
+      : "pendiente";
+
     const payload = {
       company_id: companyId,
       creado_por: userId,
+      estatus_autorizacion,
       ...buildPayload(data),
     };
 
@@ -261,7 +268,135 @@ export const crearTercero = createServerFn({ method: "POST" })
       .select(SELECT_FULL)
       .single();
     if (error) throw new Error(error.message);
+
+    if (estatus_autorizacion === "pendiente") {
+      try {
+        const { data: companyRoles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("company_id", companyId)
+          .in("role", ["director", "administrativo"]);
+        const destSet = new Set<string>(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ((companyRoles ?? []) as any[]).map((r) => r.user_id as string),
+        );
+        destSet.delete(userId);
+        const destinatarios = Array.from(destSet);
+        if (destinatarios.length > 0) {
+          const { data: solicitanteProfile } = await supabase
+            .from("profiles")
+            .select("nombre_completo")
+            .eq("id", userId)
+            .maybeSingle();
+          const quien = solicitanteProfile?.nombre_completo ?? "Un usuario";
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const nombre = data.nombre_comercial?.trim() || data.razon_social;
+          const { error: notifErr } = await supabaseAdmin.from("notificaciones").insert(
+            destinatarios.map((uid) => ({
+              user_id: uid,
+              company_id: companyId,
+              tipo: "tercero_alta_solicitada",
+              titulo: "Solicitud de alta de proveedor/contratista",
+              mensaje: `${quien} solicitó dar de alta a ${nombre}. Requiere autorización.`,
+              link: `/app/catalogos/proveedores?tab=pendientes&id=${tercero.id}`,
+            })),
+          );
+          if (notifErr) console.error("[notificaciones] tercero_alta_solicitada", notifErr.message);
+        }
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.error("[notificaciones] tercero_alta_solicitada error", (e as any)?.message);
+      }
+    }
+
     return tercero;
+  });
+
+// =============== AUTORIZAR ===============
+export const autorizarTercero = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { roles } = await getCtx(supabase, userId);
+    assertCanManage(roles);
+
+    const { data: t } = await supabase
+      .from("terceros")
+      .select("creado_por, razon_social, nombre_comercial, company_id")
+      .eq("id", data.id)
+      .maybeSingle();
+
+    const { error } = await supabase
+      .from("terceros")
+      .update({ estatus_autorizacion: "autorizado" })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    if (t?.creado_por && t.creado_por !== userId) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const nombre = t.nombre_comercial || t.razon_social;
+        await supabaseAdmin.from("notificaciones").insert({
+          user_id: t.creado_por,
+          company_id: t.company_id,
+          tipo: "tercero_alta_autorizada",
+          titulo: "Proveedor/contratista autorizado",
+          mensaje: `${nombre} ya fue autorizado y puede usarse en órdenes y contratos.`,
+          link: `/app/catalogos/proveedores?id=${data.id}`,
+        });
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.error("[notificaciones] tercero_alta_autorizada error", (e as any)?.message);
+      }
+    }
+
+    return { ok: true };
+  });
+
+// =============== RECHAZAR (elimina el pendiente) ===============
+export const rechazarTercero = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), motivo: z.string().trim().max(500).optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { roles } = await getCtx(supabase, userId);
+    assertCanManage(roles);
+
+    const { data: t } = await supabase
+      .from("terceros")
+      .select("creado_por, razon_social, nombre_comercial, company_id, estatus_autorizacion")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!t) throw new Error("No encontrado");
+    if (t.estatus_autorizacion !== "pendiente") {
+      throw new Error("Solo se pueden rechazar solicitudes pendientes");
+    }
+
+    const { error } = await supabase.from("terceros").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    if (t.creado_por && t.creado_por !== userId) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const nombre = t.nombre_comercial || t.razon_social;
+        await supabaseAdmin.from("notificaciones").insert({
+          user_id: t.creado_por,
+          company_id: t.company_id,
+          tipo: "tercero_alta_rechazada",
+          titulo: "Solicitud rechazada",
+          mensaje: `Tu solicitud de alta para ${nombre} fue rechazada.${data.motivo ? ` Motivo: ${data.motivo}` : ""}`,
+          link: `/app/catalogos/proveedores`,
+        });
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.error("[notificaciones] tercero_alta_rechazada error", (e as any)?.message);
+      }
+    }
+
+    return { ok: true };
   });
 
 // =============== UPDATE ===============
