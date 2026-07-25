@@ -77,6 +77,46 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
   const [bloques, setBloques] = useState<Bloque[]>([emptyBloque()]);
   const [notas, setNotas] = useState("");
   const [openFechaIdx, setOpenFechaIdx] = useState<number | null>(null);
+  const [currentBorradorId, setCurrentBorradorId] = useState<string | null>(borradorId ?? null);
+
+  // Reset y carga del borrador cuando abre
+  useEffect(() => {
+    if (!open) return;
+    setCurrentBorradorId(borradorId ?? null);
+    if (!borradorId) {
+      setBloques([emptyBloque()]);
+      setNotas("");
+      return;
+    }
+    fetchBorrador({ data: { id: borradorId } })
+      .then((r: any) => {
+        setNotas(r.notas ?? "");
+        const items = (r.items ?? []) as Array<any>;
+        if (items.length === 0) {
+          setBloques([emptyBloque()]);
+        } else {
+          setBloques(
+            items.map((it) => ({
+              insumo_id: it.insumo_id ?? "",
+              cantidad: it.cantidad != null ? String(it.cantidad) : "",
+              fecha_requerida: it.fecha_requerida ? parseISO(it.fecha_requerida) : undefined,
+              nota: it.nota ?? "",
+            })),
+          );
+        }
+      })
+      .catch((e: any) => toast.error(e?.message ?? "Error al cargar borrador"));
+  }, [open, borradorId, fetchBorrador]);
+
+  const resetForm = () => {
+    setBloques([emptyBloque()]);
+    setNotas("");
+    setCurrentBorradorId(null);
+  };
+
+  const invalidateLists = () => {
+    qc.invalidateQueries({ queryKey: ["requisiciones", obraId] });
+  };
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -91,16 +131,67 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
         if (!(it.cantidad > 0)) throw new Error("Cantidad debe ser mayor a 0");
         if (!it.fecha_requerida) throw new Error("Fecha requerida obligatoria");
       }
-      return crear({ data: { obraId, notas: notas.trim() || null, insumos: items } });
+      // Si no hay borrador, primero creamos uno y luego lo enviamos
+      let bid = currentBorradorId;
+      if (!bid) {
+        const created = await guardarBorrador({
+          data: {
+            obraId,
+            notas: notas.trim() || null,
+            insumos: items.map((it) => ({
+              insumo_id: it.insumo_id,
+              cantidad: it.cantidad,
+              fecha_requerida: it.fecha_requerida,
+              nota: it.nota,
+            })),
+          },
+        });
+        bid = (created as any).id as string;
+      }
+      return enviarBorrador({
+        data: { borradorId: bid, notas: notas.trim() || null, insumos: items },
+      });
     },
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       toast.success(`Requisición ${res.folio} enviada`);
-      qc.invalidateQueries({ queryKey: ["requisiciones", obraId] });
-      setBloques([emptyBloque()]);
-      setNotas("");
+      invalidateLists();
+      resetForm();
       onOpenChange(false);
     },
     onError: (e: any) => toast.error(e?.message ?? "Error al enviar"),
+  });
+
+  const guardar = useMutation({
+    mutationFn: async () => {
+      const items = bloques.map((b) => ({
+        insumo_id: b.insumo_id || null,
+        cantidad: b.cantidad !== "" ? Number(b.cantidad) : null,
+        fecha_requerida: b.fecha_requerida ? format(b.fecha_requerida, "yyyy-MM-dd") : null,
+        nota: b.nota?.trim() || null,
+      }));
+      const hasAny = items.some(
+        (it) => it.insumo_id || (it.cantidad ?? 0) > 0 || it.fecha_requerida || it.nota,
+      );
+      if (!hasAny && !notas.trim()) {
+        throw new Error("Agrega al menos un dato antes de guardar el borrador");
+      }
+      const res = await guardarBorrador({
+        data: {
+          borradorId: currentBorradorId ?? undefined,
+          obraId,
+          notas: notas.trim() || null,
+          insumos: items,
+        },
+      });
+      return res as { id: string };
+    },
+    onSuccess: (res) => {
+      setCurrentBorradorId(res.id);
+      toast.success("Borrador guardado");
+      invalidateLists();
+      onOpenChange(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error al guardar borrador"),
   });
 
   const updateBloque = (i: number, patch: Partial<Bloque>) =>
