@@ -1,30 +1,21 @@
-## Problema
+## Objetivo
 
-En el sheet de **Cotización** (`CotizacionSheet.tsx`) el encabezado muestra:
-- `Solicitante: —`
-- `Creada: —`
-- `Enviada: —`
-- Columna `Nota` de cada insumo con `—`
-
-La causa es que `getCotizacionRequisicion` en `src/lib/api/cotizaciones.functions.ts` (línea 63-66) no está trayendo esos campos de la requisición. El `select` actual solo pide `id, folio, obra_id, company_id, estatus, notas, items(...)` sin `nota` en items, sin `created_at`, `enviada_at`, ni el solicitante (`creado_por` + join a `profiles`).
+En "Nueva solicitud" (pestaña Solicitudes de una requisición), reemplazar el `<Select>` actual del campo **Proveedor** por un combobox con búsqueda que filtre por **razón social** o **nombre comercial**.
 
 ## Cambios
 
-**`src/lib/api/cotizaciones.functions.ts`** — en `getCotizacionRequisicion`:
+**`src/components/requisiciones/SolicitudesTab.tsx`**
+- Sustituir el `Select` de proveedor (líneas ~247-256) por un `Popover` + `Command` (shadcn) — mismo patrón que ya usan otros pickers del proyecto (p. ej. `InsumoPicker` en `NuevaRequisicionSheet.tsx`).
+- Trigger: botón outline del ancho del contenedor mostrando el proveedor seleccionado (`razon_social` y, si existe, `nombre_comercial` en gris entre paréntesis) o el placeholder "Selecciona proveedor".
+- Contenido: `Command` con `CommandInput` (placeholder "Buscar por razón social o nombre comercial…"), `CommandEmpty` y `CommandList` con un `CommandItem` por proveedor.
+  - `value` del item: `` `${razon_social} ${nombre_comercial ?? ""}` `` para que el filtro nativo de `cmdk` matchee ambos campos.
+  - Al seleccionar, setear `proveedorId` y cerrar el popover.
+  - Ícono de check en el item activo.
+- Añadir `onWheel`/`onTouchMove` stopPropagation al `PopoverContent` (mismo fix ya aplicado en el picker de insumos) para evitar el bug de scroll dentro de sheets.
 
-1. Ampliar el `select` de la requisición a:
-   ```
-   id, folio, obra_id, company_id, estatus, notas,
-   created_at, enviada_at, creado_por,
-   solicitante:profiles!requisiciones_creado_por_fkey(id, nombre_completo),
-   items:requisicion_insumos(id, cantidad, fecha_requerida, nota, insumo:insumos(id, nombre, unidad))
-   ```
-   Si la FK a `profiles` no resuelve por nombre, hacer una consulta separada a `profiles` con `creado_por` y adjuntar el nombre al objeto `requisicion` antes de retornar.
+Sin cambios en API, tipos ni en la lista `proveedores` que ya llega como prop (ya incluye `nombre_comercial`).
 
-2. Normalizar el campo `solicitante` en el retorno como string (nombre completo) para que `req.solicitante` funcione tal cual lo consume el componente.
+## Notas técnicas
 
-**Sin cambios en el UI** — `CotizacionSheet.tsx` ya lee `req.solicitante`, `req.created_at`, `req.enviada_at` y `item.nota`.
-
-## Verificación
-
-Abrir la cotización de REQ-2026-001 y confirmar que el encabezado muestra solicitante/fechas y que la columna Nota refleja los textos capturados en la requisición.
+- Reutiliza componentes existentes: `@/components/ui/popover`, `@/components/ui/command`, `Button`, ícono `Check`/`ChevronsUpDown` de `lucide-react`.
+- No tocar `CotizacionSheet.tsx` ni otros dropdowns salvo que el usuario lo pida.
