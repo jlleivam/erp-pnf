@@ -186,14 +186,15 @@ export function RequisicionesModule({ obraId }: Props) {
 
           {!isAdministrativo && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+            const esBorrador = r.estatus === "borrador";
             const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
             const isExpanded = expandidos.has(r.id);
             const items = r.items ?? [];
             return (
               <Card
                 key={r.id}
-                className="p-3 cursor-pointer hover:border-primary/40 transition-colors"
-                onClick={() => setDetalleId(r.id)}
+                className={`p-3 cursor-pointer hover:border-primary/40 transition-colors ${esBorrador ? "border-dashed" : ""}`}
+                onClick={() => (esBorrador ? abrirBorrador(r.id) : setDetalleId(r.id))}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -206,12 +207,40 @@ export function RequisicionesModule({ obraId }: Props) {
                       {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                     </button>
                     <p className="text-sm min-w-0 truncate">
-                      <span className="font-semibold text-foreground">{r.folio}</span>
+                      <span className="font-semibold text-foreground">
+                        {esBorrador ? "Borrador" : r.folio}
+                      </span>
                       <span className="text-muted-foreground"> · {formatDate(r.created_at)} · {items.length} insumos{r.solicitante?.nombre_completo ? ` · ${r.solicitante.nombre_completo}` : ""}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0.5`}>{meta.label}</Badge>
+                    {esBorrador && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          onClick={(e) => { e.stopPropagation(); abrirBorrador(r.id); }}
+                        >
+                          <Pencil className="size-3.5 mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive"
+                          disabled={eliminarBorrador.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("¿Eliminar este borrador?")) eliminarBorrador.mutate(r.id);
+                          }}
+                          aria-label="Eliminar borrador"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </>
+                    )}
                     {mostrarRevisar && (
                       <Button
                         size="sm"
