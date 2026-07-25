@@ -2,16 +2,16 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Download, FileText, ClipboardEdit, Send, XCircle } from "lucide-react";
+import { Plus, Trash2, Download, FileText, ClipboardEdit, Send, XCircle, Check, ChevronsUpDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -244,16 +244,11 @@ function NuevaSolicitudForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-muted-foreground">Proveedor</label>
-          <Select value={proveedorId} onValueChange={setProveedorId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona proveedor" />
-            </SelectTrigger>
-            <SelectContent>
-              {proveedores.map((p: any) => (
-                <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProveedorCombobox
+            proveedores={proveedores}
+            value={proveedorId}
+            onChange={setProveedorId}
+          />
         </div>
       </div>
 
@@ -327,5 +322,83 @@ function NuevaSolicitudForm({
         </Button>
       </div>
     </Card>
+  );
+}
+
+function ProveedorCombobox({
+  proveedores,
+  value,
+  onChange,
+}: {
+  proveedores: any[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = proveedores.find((p: any) => p.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="truncate">
+            {selected ? (
+              <>
+                {selected.razon_social}
+                {selected.nombre_comercial ? (
+                  <span className="text-muted-foreground"> ({selected.nombre_comercial})</span>
+                ) : null}
+              </>
+            ) : (
+              <span className="text-muted-foreground">Selecciona proveedor</span>
+            )}
+          </span>
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0 w-[--radix-popover-trigger-width]"
+        align="start"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+      >
+        <Command>
+          <CommandInput placeholder="Buscar por razón social o nombre comercial…" />
+          <CommandList>
+            <CommandEmpty>Sin resultados</CommandEmpty>
+            <CommandGroup>
+              {proveedores.map((p: any) => (
+                <CommandItem
+                  key={p.id}
+                  value={`${p.razon_social ?? ""} ${p.nombre_comercial ?? ""}`}
+                  onSelect={() => {
+                    onChange(p.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 size-4",
+                      value === p.id ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <span className="truncate">
+                    {p.razon_social}
+                    {p.nombre_comercial ? (
+                      <span className="text-muted-foreground"> ({p.nombre_comercial})</span>
+                    ) : null}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
