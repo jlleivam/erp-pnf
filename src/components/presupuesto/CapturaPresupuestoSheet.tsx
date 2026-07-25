@@ -306,7 +306,7 @@ export function CapturaPresupuestoSheet({
         ) : (
           <div className="mt-4 flex flex-col flex-1 min-h-0">
             {/* Toolbar */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap shrink-0 px-6 pb-3">
               <Button size="sm" variant="outline" onClick={handleDescargarPlantilla} disabled={importing}>
                 <Download className="size-4 mr-1" /> Plantilla
               </Button>
