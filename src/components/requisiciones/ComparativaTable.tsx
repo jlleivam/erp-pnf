@@ -904,13 +904,13 @@ export function ComparativaTable({
                   {/* Pendiente → supervisor autoriza/rechaza */}
                   {estatus === "pendiente_autorizacion" && (
                     <>
-                      {!isSupervisor && (
+                      {(!isSupervisor || !oc || oc.estatus !== "pendiente_autorizacion") && (
                         <Button size="sm" variant="outline" disabled>
                           <Clock className="size-4 mr-1" />
                           Pendiente de autorización
                         </Button>
                       )}
-                      {isSupervisor && (
+                      {isSupervisor && oc && oc.estatus === "pendiente_autorizacion" && (
                         <>
                           <Button
                             size="sm"
