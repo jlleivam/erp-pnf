@@ -3531,29 +3531,29 @@ export type Database = {
       }
       requisicion_insumos: {
         Row: {
-          cantidad: number
+          cantidad: number | null
           created_at: string
-          fecha_requerida: string
+          fecha_requerida: string | null
           id: string
-          insumo_id: string
+          insumo_id: string | null
           nota: string | null
           requisicion_id: string
         }
         Insert: {
-          cantidad: number
+          cantidad?: number | null
           created_at?: string
-          fecha_requerida: string
+          fecha_requerida?: string | null
           id?: string
-          insumo_id: string
+          insumo_id?: string | null
           nota?: string | null
           requisicion_id: string
         }
         Update: {
-          cantidad?: number
+          cantidad?: number | null
           created_at?: string
-          fecha_requerida?: string
+          fecha_requerida?: string | null
           id?: string
-          insumo_id?: string
+          insumo_id?: string | null
           nota?: string | null
           requisicion_id?: string
         }
