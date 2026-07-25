@@ -203,7 +203,9 @@ export function NuevaRequisicionSheet({ obraId, open, onOpenChange, borradorId }
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Nueva requisición</SheetTitle>
+          <SheetTitle>
+            {currentBorradorId ? "Editar borrador de requisición" : "Nueva requisición"}
+          </SheetTitle>
         </SheetHeader>
 
         <div className="space-y-3 mt-4">
