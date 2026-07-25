@@ -187,9 +187,9 @@ export const solicitarInsumo = createServerFn({ method: "POST" })
       row.autorizado_at = new Date().toISOString();
       row.disponible_renta = data.disponibleRenta ?? false;
     }
-    const { error } = await supabase.from("insumos").insert(row);
+    const { data: inserted, error } = await supabase.from("insumos").insert(row).select("id, estatus").single();
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, id: inserted?.id as string | undefined, estatus: inserted?.estatus as "autorizado" | "pendiente" };
   });
 
 export const editarInsumo = createServerFn({ method: "POST" })
