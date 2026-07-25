@@ -1,45 +1,19 @@
-## Objetivo
-Permitir guardar una requisición como **borrador** antes de enviarla, para retomarla después y enviarla cuando esté lista.
+## Problema
 
-## Comportamiento
+En el `InsumoPicker` (dropdown de selección de insumos dentro de `NuevaRequisicionSheet`), la lista de insumos solo se puede recorrer arrastrando la barra de scroll, no con la rueda del mouse ni trackpad.
 
-- En la hoja **"Nueva requisición"** se agrega un segundo botón: **"Guardar borrador"** junto a **"Enviar requisición"**.
-- Un borrador:
-  - No notifica al administrativo/director.
-  - No requiere validaciones estrictas (se puede guardar con campos vacíos: cantidad 0, sin fecha, sin insumo). Solo se exige que al menos un renglón exista.
-  - Es visible únicamente para quien lo creó (el residente/solicitante).
-  - Aparece en la pestaña activa de requisiciones con badge **"Borrador"** distinto (gris) y sin folio consumido — el folio se asigna hasta enviarlo.
-- Al abrir un borrador existente se reutiliza la misma hoja (`NuevaRequisicionSheet`) en modo edición: se puede seguir editando, **Guardar borrador** (actualiza) o **Enviar requisición** (aplica validaciones completas, asigna folio, cambia estatus a `enviada`, dispara notificaciones).
-- Los borradores se pueden **eliminar** desde el listado (icono papelera, solo visible en borradores).
+## Causa
 
-## Cambios técnicos
+El `PopoverContent` se renderiza en un portal del DOM, pero los eventos sintéticos de React (incluido `onWheel`) burbujean por el árbol de React hasta el `SheetContent` padre, que tiene `overflow-y-auto` (línea 219). El resultado: al girar la rueda sobre la lista, el evento llega al Sheet y hace scroll del sheet en lugar del `CommandList`.
 
-### Backend (`src/lib/api/requisiciones.functions.ts`)
+Al usar la barra de scroll directamente se manipula el `scrollTop` del `CommandList` sin generar evento wheel, por eso ese camino sí funciona.
 
-- **`crearRequisicion`** — aceptar nuevo parámetro `comoBorrador: boolean` (default `false`).
-  - Si `comoBorrador`: no llamar `siguiente_folio_requisicion`, insertar con `folio: null` (verificar si la columna lo permite; si no, generar folio temporal `BORRADOR-<shortid>` o hacer la columna nullable vía migración), `estatus: "borrador"`, sin `enviada_at`, sin notificaciones.
-  - Relajar validación de items cuando es borrador (permitir `cantidad = 0`, `fecha_requerida` opcional, `insumo_id` opcional).
-- Nueva función **`actualizarBorradorRequisicion`** — reemplaza items y notas de un borrador propio. Verifica `estatus === "borrador"` y `creado_por === userId`.
-- Nueva función **`enviarBorradorRequisicion`** — valida items completos, asigna folio real, cambia estatus a `enviada`, setea `enviada_at`, dispara la misma lógica de notificaciones que `crearRequisicion`.
-- Nueva función **`eliminarBorrador`** — solo si es borrador propio.
-- **`listRequisiciones`** — filtrar borradores: mostrar solo los del usuario actual (los borradores ajenos no aparecen). No se cuentan como "activas" para admin/director.
+## Solución
 
-### Migración
+En `src/components/requisiciones/NuevaRequisicionSheet.tsx`, dentro del `InsumoPicker`, detener la propagación del evento wheel dentro del `PopoverContent` para que el Sheet no lo intercepte, permitiendo que el scroll nativo del `CommandList` (que ya tiene `max-h-64` + overflow) opere normalmente.
 
-- Hacer `requisiciones.folio` nullable (o mantener y usar placeholder) — confirmar leyendo el schema; probable ajuste mínimo.
-- Asegurar que el enum `estatus` incluya `"borrador"` (el filtro existente en línea 147 sugiere que ya existe; verificar en la migración).
-- Política RLS: permitir a residentes ver/editar/borrar solo sus propios borradores.
+Cambio puntual: agregar `onWheel={(e) => e.stopPropagation()}` al `PopoverContent` del `InsumoPicker` (línea 552). No se toca lógica de negocio ni estilos visibles.
 
-### Frontend
+## Verificación
 
-- **`src/components/requisiciones/NuevaRequisicionSheet.tsx`**:
-  - Aceptar prop opcional `borradorId?: string`. Cuando llega, cargar los datos existentes en el `useState` inicial.
-  - Segundo botón "Guardar borrador" que llama `crearRequisicion` con `comoBorrador: true` o `actualizarBorradorRequisicion` según el modo.
-  - "Enviar requisición" en modo borrador llama `enviarBorradorRequisicion`.
-- **`src/components/requisiciones/RequisicionesModule.tsx`**:
-  - Mostrar borradores con badge distinto y click abre la hoja con `borradorId`.
-  - Botón eliminar (papelera) visible solo en filas con estatus `borrador`.
-
-## Fuera de alcance
-- Colaboración multi-usuario sobre un mismo borrador.
-- Auto-guardado en cada tecla — el guardado es manual.
+Abrir "Nueva requisición" → desplegar el selector de insumos → confirmar que la rueda del mouse y el gesto de scroll del trackpad recorren la lista de insumos sin mover el sheet.
