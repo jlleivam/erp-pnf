@@ -1,8 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -14,6 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -38,7 +56,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { listClientes, eliminarCliente } from "@/lib/api/clientes.functions";
+import {
+  autorizarCliente,
+  eliminarCliente,
+  listClientes,
+  rechazarCliente,
+} from "@/lib/api/clientes.functions";
 import { useEffectiveRoles } from "@/stores/auth";
 import { estadoVencimiento } from "@/lib/format";
 import { ClienteFormDialog } from "@/components/clientes/ClienteFormDialog";
@@ -58,6 +81,8 @@ type ClienteListRow = {
   constancia_fiscal_vencimiento: string | null;
   opinion_sat_url: string | null;
   opinion_sat_vencimiento: string | null;
+  estatus_autorizacion?: "autorizado" | "pendiente";
+  creado_por?: string | null;
 };
 
 export function CatalogoClientesModule({
@@ -66,28 +91,42 @@ export function CatalogoClientesModule({
   initialClienteId?: string;
 }) {
   const roles = useEffectiveRoles();
-  const canEdit = roles.includes("director") || roles.includes("administrativo");
+  const canManage = roles.includes("director") || roles.includes("administrativo");
+  const canRequest =
+    canManage ||
+    roles.includes("residente") ||
+    roles.includes("auxiliar") ||
+    roles.includes("supervisor");
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState<"todos" | "moral" | "fisica">("todos");
+  const [tab, setTab] = useState<"todos" | "pendientes">("todos");
   const [creating, setCreating] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(initialClienteId ?? null);
   const [editing, setEditing] = useState<ClienteListRow | null>(null);
   const [toDelete, setToDelete] = useState<ClienteListRow | null>(null);
+  const [toReject, setToReject] = useState<ClienteListRow | null>(null);
 
+  const search_ = useSearch({ from: "/_authenticated/app/catalogos/clientes" });
   useEffect(() => {
     if (initialClienteId) setDetalleId(initialClienteId);
   }, [initialClienteId]);
+  useEffect(() => {
+    if (search_.tab === "pendientes") setTab("pendientes");
+    if (search_.id) setDetalleId(search_.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search_.tab, search_.id]);
 
   const fetchList = useServerFn(listClientes);
   const listQ = useQuery({
-    queryKey: ["clientes", search, tipoFiltro],
+    queryKey: ["clientes", search, tipoFiltro, tab],
     queryFn: () =>
       fetchList({
         data: {
           search: search || undefined,
           tipo_persona: tipoFiltro === "todos" ? undefined : tipoFiltro,
+          solo_pendientes: tab === "pendientes" ? true : undefined,
         },
       }),
   });
@@ -99,6 +138,27 @@ export function CatalogoClientesModule({
       toast.success("Cliente eliminado");
       qc.invalidateQueries({ queryKey: ["clientes"] });
       setToDelete(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const autorizar = useServerFn(autorizarCliente);
+  const autM = useMutation({
+    mutationFn: autorizar,
+    onSuccess: () => {
+      toast.success("Cliente autorizado");
+      qc.invalidateQueries({ queryKey: ["clientes"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rechazar = useServerFn(rechazarCliente);
+  const rejM = useMutation({
+    mutationFn: rechazar,
+    onSuccess: () => {
+      toast.success("Solicitud rechazada");
+      qc.invalidateQueries({ queryKey: ["clientes"] });
+      setToReject(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -115,20 +175,47 @@ export function CatalogoClientesModule({
     [rows],
   );
 
+  const pendientesCount = useMemo(
+    () => rows.filter((r) => r.estatus_autorizacion === "pendiente").length,
+    [rows],
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Clientes</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Empresas y personas a las que facturas tus obras.
           </p>
         </div>
-        {canEdit && (
-          <Button onClick={() => setCreating(true)} className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90">
-            <Plus className="size-4 mr-1" /> Nuevo cliente
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+              <TabsList className="h-8">
+                <TabsTrigger value="todos" className="text-xs h-6 px-2">Todos</TabsTrigger>
+                <TabsTrigger value="pendientes" className="text-xs h-6 px-2">
+                  Pendientes
+                  {pendientesCount > 0 && (
+                    <Badge className="ml-1.5 h-4 px-1 bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px]">
+                      {pendientesCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {canRequest && (
+            <Button
+              onClick={() => setCreating(true)}
+              className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90 h-8"
+              size="sm"
+            >
+              <Plus className="size-3.5 mr-1" />
+              {canManage ? "Nuevo cliente" : "Solicitar alta"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {conAlertas > 0 && (
@@ -174,24 +261,29 @@ export function CatalogoClientesModule({
               <TableHead className="whitespace-nowrap">Teléfono</TableHead>
               <TableHead className="whitespace-nowrap">Correo</TableHead>
               <TableHead className="whitespace-nowrap">Alertas</TableHead>
-              {canEdit && <TableHead className="w-32 text-right whitespace-nowrap">Acciones</TableHead>}
+              <TableHead className="whitespace-nowrap">Estatus</TableHead>
+              {(canManage || canRequest) && (
+                <TableHead className="w-32 text-right whitespace-nowrap">Acciones</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {listQ.isLoading ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6} className="text-sm text-muted-foreground">
+                <TableCell colSpan={8} className="text-sm text-muted-foreground">
                   Cargando…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6}>
+                <TableCell colSpan={8}>
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Users className="size-10 text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">Sin clientes aún</p>
+                    <p className="text-sm font-medium">Sin clientes</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Crea tu primer cliente para vincularlo a tus obras.
+                      {tab === "pendientes"
+                        ? "No hay solicitudes pendientes de autorización."
+                        : "Crea tu primer cliente para vincularlo a tus obras."}
                     </p>
                   </div>
                 </TableCell>
@@ -209,6 +301,7 @@ export function CatalogoClientesModule({
                     : ec === "por_vencer" || eo === "por_vencer"
                       ? "por_vencer"
                       : null;
+                const isPending = c.estatus_autorizacion === "pendiente";
 
                 return (
                   <TableRow
@@ -233,60 +326,94 @@ export function CatalogoClientesModule({
                     </TableCell>
                     <TableCell>
                       {worst === "vencido" ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">
-                                Vencido
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {ec === "vencido" && "Constancia fiscal vencida"}
-                              {ec === "vencido" && eo === "vencido" && " · "}
-                              {eo === "vencido" && "Opinión SAT vencida"}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">
+                              Vencido
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {ec === "vencido" && "Constancia fiscal vencida"}
+                            {ec === "vencido" && eo === "vencido" && " · "}
+                            {eo === "vencido" && "Opinión SAT vencida"}
+                          </TooltipContent>
+                        </Tooltip>
                       ) : worst === "por_vencer" ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                Por vencer
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {ec === "por_vencer" && "Constancia próxima a vencer"}
-                              {ec === "por_vencer" && eo === "por_vencer" && " · "}
-                              {eo === "por_vencer" && "Opinión SAT próxima a vencer"}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                              Por vencer
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {ec === "por_vencer" && "Constancia próxima a vencer"}
+                            {ec === "por_vencer" && eo === "por_vencer" && " · "}
+                            {eo === "por_vencer" && "Opinión SAT próxima a vencer"}
+                          </TooltipContent>
+                        </Tooltip>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    {canEdit && (
+                    <TableCell className="whitespace-nowrap">
+                      {isPending ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
+                          <span className="size-1.5 rounded-full bg-amber-500" />
+                          Pendiente
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700">
+                          <span className="size-1.5 rounded-full bg-emerald-500" />
+                          Autorizado
+                        </span>
+                      )}
+                    </TableCell>
+                    {(canManage || canRequest) && (
                       <TableCell
                         className="text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditing(c)}
-                          title="Editar"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setToDelete(c)}
-                          title="Eliminar"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        {canManage ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-7">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isPending && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => autM.mutate({ data: { id: c.id } })}
+                                    disabled={autM.isPending}
+                                    className="text-emerald-700"
+                                  >
+                                    <CheckCircle2 className="size-4 mr-2" />
+                                    Autorizar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => setToReject(c)}
+                                    className="text-rose-700"
+                                  >
+                                    <XCircle className="size-4 mr-2" />
+                                    Rechazar
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuItem onClick={() => setEditing(c)}>
+                                <Pencil className="size-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setToDelete(c)}
+                                className="text-rose-700"
+                              >
+                                <Trash2 className="size-4 mr-2" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null}
                       </TableCell>
                     )}
                   </TableRow>
@@ -297,8 +424,6 @@ export function CatalogoClientesModule({
         </Table>
       </Card>
       </TooltipProvider>
-
-
 
       {(creating || editing) && (
         <ClienteFormDialog
@@ -315,7 +440,7 @@ export function CatalogoClientesModule({
         clienteId={detalleId}
         open={!!detalleId}
         onClose={() => setDetalleId(null)}
-        canEdit={canEdit}
+        canEdit={canManage}
       />
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
@@ -334,6 +459,28 @@ export function CatalogoClientesModule({
               disabled={delM.isPending}
             >
               {delM.isPending ? "Eliminando…" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!toReject} onOpenChange={(o) => !o && setToReject(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Rechazar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará la solicitud de alta de "{toReject?.razon_social}" y se
+              notificará a quien la creó.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => toReject && rejM.mutate({ data: { id: toReject.id } })}
+              disabled={rejM.isPending}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              {rejM.isPending ? "Rechazando…" : "Rechazar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

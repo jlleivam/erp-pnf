@@ -1,8 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -14,6 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -33,8 +50,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  autorizarTercero,
   eliminarTercero,
   listTerceros,
+  rechazarTercero,
 } from "@/lib/api/terceros.functions";
 import { useEffectiveRoles } from "@/stores/auth";
 import { estadoVencimiento, type EstadoDoc } from "@/lib/format";
@@ -66,7 +85,7 @@ function computeDocStatus(
   let worst: EstadoDoc = "ok";
   for (const tipo of required) {
     const d = docs.find((x) => x.tipo === tipo);
-    if (!d) return "vencido"; // falta
+    if (!d) return "vencido";
     const e = estadoVencimiento(d.fecha_vencimiento, d.url);
     if (e === "vencido" || e === "sin_documento") return "vencido";
     if (e === "por_vencer" && worst === "ok") worst = "por_vencer";
@@ -91,27 +110,42 @@ const STATUS_BADGE: Record<DocStatus, { label: string; cls: string }> = {
 
 export function CatalogoTerceroModule() {
   const roles = useEffectiveRoles();
-  const canEdit = roles.includes("director") || roles.includes("administrativo");
+  const canManage = roles.includes("director") || roles.includes("administrativo");
+  const canRequest =
+    canManage ||
+    roles.includes("residente") ||
+    roles.includes("auxiliar") ||
+    roles.includes("supervisor");
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [catFiltro, setCatFiltro] = useState<TerceroCategoria | "todos">("todos");
   const [personaFiltro, setPersonaFiltro] = useState<TipoPersona | "todos">("todos");
   const [docFiltro, setDocFiltro] = useState<DocStatus | "todos">("todos");
+  const [tab, setTab] = useState<"todos" | "pendientes">("todos");
   const [creating, setCreating] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [editing, setEditing] = useState<TerceroListRow | null>(null);
   const [toDelete, setToDelete] = useState<TerceroListRow | null>(null);
+  const [toReject, setToReject] = useState<TerceroListRow | null>(null);
+
+  const search_ = useSearch({ from: "/_authenticated/app/catalogos/proveedores" });
+  useEffect(() => {
+    if (search_.tab === "pendientes") setTab("pendientes");
+    if (search_.id) setDetalleId(search_.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search_.tab, search_.id]);
 
   const fetchList = useServerFn(listTerceros);
   const listQ = useQuery({
-    queryKey: ["terceros", search, catFiltro, personaFiltro],
+    queryKey: ["terceros", search, catFiltro, personaFiltro, tab],
     queryFn: () =>
       fetchList({
         data: {
           search: search || undefined,
           categoria: catFiltro === "todos" ? undefined : catFiltro,
           tipo_persona: personaFiltro === "todos" ? undefined : personaFiltro,
+          solo_pendientes: tab === "pendientes" ? true : undefined,
         },
       }),
   });
@@ -127,8 +161,28 @@ export function CatalogoTerceroModule() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const rows: TerceroListRow[] = (listQ.data ?? []) as unknown as TerceroListRow[];
+  const autorizar = useServerFn(autorizarTercero);
+  const autM = useMutation({
+    mutationFn: autorizar,
+    onSuccess: () => {
+      toast.success("Registro autorizado");
+      qc.invalidateQueries({ queryKey: ["terceros"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
+  const rechazar = useServerFn(rechazarTercero);
+  const rejM = useMutation({
+    mutationFn: rechazar,
+    onSuccess: () => {
+      toast.success("Solicitud rechazada");
+      qc.invalidateQueries({ queryKey: ["terceros"] });
+      setToReject(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rows: TerceroListRow[] = (listQ.data ?? []) as unknown as TerceroListRow[];
 
   const rowsWithStatus = useMemo(
     () =>
@@ -147,10 +201,14 @@ export function CatalogoTerceroModule() {
     [rowsWithStatus, docFiltro],
   );
 
+  const pendientesCount = useMemo(
+    () => rows.filter((r) => r.estatus_autorizacion === "pendiente").length,
+    [rows],
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">
             Proveedores y Contratistas
@@ -159,16 +217,34 @@ export function CatalogoTerceroModule() {
             Proveedores y contratistas que te suministran materiales o ejecutan trabajos contratados.
           </p>
         </div>
-        {canEdit && (
-          <Button
-            onClick={() => setCreating(true)}
-            className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90"
-          >
-            <Plus className="size-4 mr-1" /> Nuevo
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+              <TabsList className="h-8">
+                <TabsTrigger value="todos" className="text-xs h-6 px-2">Todos</TabsTrigger>
+                <TabsTrigger value="pendientes" className="text-xs h-6 px-2">
+                  Pendientes
+                  {pendientesCount > 0 && (
+                    <Badge className="ml-1.5 h-4 px-1 bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px]">
+                      {pendientesCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {canRequest && (
+            <Button
+              onClick={() => setCreating(true)}
+              className="bg-[#0f1e3d] hover:bg-[#0f1e3d]/90 h-8"
+              size="sm"
+            >
+              <Plus className="size-3.5 mr-1" />
+              {canManage ? "Nuevo" : "Solicitar alta"}
+            </Button>
+          )}
+        </div>
       </div>
-
 
       {/* Filters */}
       <Card className="p-3 flex flex-wrap sm:flex-nowrap items-center gap-2">
@@ -224,7 +300,6 @@ export function CatalogoTerceroModule() {
         </Select>
       </Card>
 
-
       <Card>
         <TooltipProvider delayDuration={200}>
         <Table>
@@ -236,14 +311,15 @@ export function CatalogoTerceroModule() {
               <TableHead className="whitespace-nowrap">Categoría</TableHead>
               <TableHead className="whitespace-nowrap text-right">Días crédito</TableHead>
               <TableHead className="whitespace-nowrap">Documentos</TableHead>
-              {canEdit && <TableHead className="whitespace-nowrap w-auto text-right">Acciones</TableHead>}
+              <TableHead className="whitespace-nowrap">Estatus</TableHead>
+              {(canManage || canRequest) && <TableHead className="whitespace-nowrap w-auto text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {listQ.isLoading ? (
               <TableRow>
                 <TableCell
-                  colSpan={canEdit ? 7 : 6}
+                  colSpan={8}
                   className="text-sm text-muted-foreground"
                 >
                   Cargando…
@@ -251,12 +327,14 @@ export function CatalogoTerceroModule() {
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6}>
+                <TableCell colSpan={8}>
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Building2 className="size-10 text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">Sin registros aún</p>
+                    <p className="text-sm font-medium">Sin registros</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Crea tu primer proveedor o contratista para empezar.
+                      {tab === "pendientes"
+                        ? "No hay solicitudes pendientes de autorización."
+                        : "Crea tu primer proveedor o contratista para empezar."}
                     </p>
                   </div>
                 </TableCell>
@@ -265,6 +343,7 @@ export function CatalogoTerceroModule() {
               filtered.map((r) => {
                 const s = STATUS_BADGE[r._status];
                 const shortLabel = r._status === "vencido" ? "Faltante" : s.label;
+                const isPending = r.estatus_autorizacion === "pendiente";
                 return (
                   <TableRow
                     key={r.id}
@@ -295,27 +374,65 @@ export function CatalogoTerceroModule() {
                     <TableCell className="whitespace-nowrap">
                       <Badge className={s.cls} title={s.label}>{shortLabel}</Badge>
                     </TableCell>
-                    {canEdit && (
+                    <TableCell className="whitespace-nowrap">
+                      {isPending ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
+                          <span className="size-1.5 rounded-full bg-amber-500" />
+                          Pendiente
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700">
+                          <span className="size-1.5 rounded-full bg-emerald-500" />
+                          Autorizado
+                        </span>
+                      )}
+                    </TableCell>
+                    {(canManage || canRequest) && (
                       <TableCell
                         className="whitespace-nowrap w-auto text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditing(r)}
-                          title="Editar"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setToDelete(r)}
-                          title="Eliminar"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        {canManage ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-7">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isPending && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => autM.mutate({ data: { id: r.id } })}
+                                    disabled={autM.isPending}
+                                    className="text-emerald-700"
+                                  >
+                                    <CheckCircle2 className="size-4 mr-2" />
+                                    Autorizar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => setToReject(r)}
+                                    className="text-rose-700"
+                                  >
+                                    <XCircle className="size-4 mr-2" />
+                                    Rechazar
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuItem onClick={() => setEditing(r)}>
+                                <Pencil className="size-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setToDelete(r)}
+                                className="text-rose-700"
+                              >
+                                <Trash2 className="size-4 mr-2" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null}
                       </TableCell>
                     )}
                   </TableRow>
@@ -326,7 +443,6 @@ export function CatalogoTerceroModule() {
         </Table>
         </TooltipProvider>
       </Card>
-
 
       {(creating || editing) && (
         <TerceroFormDialog
@@ -344,7 +460,7 @@ export function CatalogoTerceroModule() {
         terceroId={detalleId}
         open={!!detalleId}
         onClose={() => setDetalleId(null)}
-        canEdit={canEdit}
+        canEdit={canManage}
       />
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
@@ -363,6 +479,28 @@ export function CatalogoTerceroModule() {
               disabled={delM.isPending}
             >
               {delM.isPending ? "Eliminando…" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!toReject} onOpenChange={(o) => !o && setToReject(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Rechazar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará la solicitud de alta de "{toReject?.razon_social}" y se
+              notificará a quien la creó.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => toReject && rejM.mutate({ data: { id: toReject.id } })}
+              disabled={rejM.isPending}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              {rejM.isPending ? "Rechazando…" : "Rechazar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

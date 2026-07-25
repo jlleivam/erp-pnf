@@ -611,11 +611,13 @@ export type Database = {
           contacto_nombre: string | null
           contacto_telefono: string | null
           correo: string | null
+          creado_por: string | null
           created_at: string
           curp: string | null
           datos_contacto: Json
           direccion_fiscal: string | null
           estado: string | null
+          estatus_autorizacion: string
           id: string
           limite_credito: number | null
           municipio: string | null
@@ -643,11 +645,13 @@ export type Database = {
           contacto_nombre?: string | null
           contacto_telefono?: string | null
           correo?: string | null
+          creado_por?: string | null
           created_at?: string
           curp?: string | null
           datos_contacto?: Json
           direccion_fiscal?: string | null
           estado?: string | null
+          estatus_autorizacion?: string
           id?: string
           limite_credito?: number | null
           municipio?: string | null
@@ -675,11 +679,13 @@ export type Database = {
           contacto_nombre?: string | null
           contacto_telefono?: string | null
           correo?: string | null
+          creado_por?: string | null
           created_at?: string
           curp?: string | null
           datos_contacto?: Json
           direccion_fiscal?: string | null
           estado?: string | null
+          estatus_autorizacion?: string
           id?: string
           limite_credito?: number | null
           municipio?: string | null
@@ -3709,6 +3715,7 @@ export type Database = {
           direccion_fiscal: string | null
           disponible_renta: boolean
           estado: string | null
+          estatus_autorizacion: string
           fondo_garantia: boolean
           fondo_garantia_pct: number | null
           id: string
@@ -3749,6 +3756,7 @@ export type Database = {
           direccion_fiscal?: string | null
           disponible_renta?: boolean
           estado?: string | null
+          estatus_autorizacion?: string
           fondo_garantia?: boolean
           fondo_garantia_pct?: number | null
           id?: string
@@ -3789,6 +3797,7 @@ export type Database = {
           direccion_fiscal?: string | null
           disponible_renta?: boolean
           estado?: string | null
+          estatus_autorizacion?: string
           fondo_garantia?: boolean
           fondo_garantia_pct?: number | null
           id?: string

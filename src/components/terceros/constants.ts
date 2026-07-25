@@ -75,6 +75,8 @@ export type TerceroListRow = {
   categoria: TerceroCategoria;
   dias_credito: number | null;
   documentos: TerceroDocumento[];
+  estatus_autorizacion?: "autorizado" | "pendiente";
+  creado_por?: string | null;
 };
 
 export type Tercero = {
