@@ -114,6 +114,10 @@ export function TrabajadorFormDialog({
 
   const submit = () => {
     if (!f.nombre_completo.trim()) return toast.error("Nombre requerido");
+    if (!isEdit && !canManage) {
+      if (!f.sexo) return toast.error("Sexo requerido");
+      if (!f.puesto) return toast.error("Puesto requerido");
+    }
     const payload = {
       nombre_completo: f.nombre_completo.trim(),
       telefono: f.telefono?.trim() || null,
