@@ -151,6 +151,7 @@ function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
