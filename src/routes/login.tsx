@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/auth";
@@ -79,7 +80,15 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen grid place-items-center bg-background px-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-3">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="size-4" />
+          Volver al inicio
+        </Link>
+        <Card className="w-full">
         <CardHeader>
           <CardTitle>Iniciar sesión</CardTitle>
           <CardDescription>Accede a tu cuenta de ERP PNF.</CardDescription>
@@ -142,6 +151,7 @@ function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
