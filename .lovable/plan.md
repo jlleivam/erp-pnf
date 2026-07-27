@@ -1,7 +1,7 @@
-## Objetivo
-Al presionar "Guardar" en el Sheet de Estimación semanal, cerrar el sheet automáticamente para regresar a la pantalla anterior.
+Agregar un botón "Volver al inicio" en la página de onboarding (`src/routes/onboarding.tsx`) que navegue a `/`.
 
-## Cambio
-En `src/components/estimaciones/CapturaEstimacionSheet.tsx`, dentro del `onSuccess` de `guardarM` (línea ~119): después de mostrar el toast, invalidar queries y llamar `onSaved?.()`, invocar `onClose()` para cerrar el Sheet.
+## Detalles
 
-Se mantiene el comportamiento existente (toast de éxito + refresco de datos), solo se agrega el cierre.
+- Añadir un `Link` de `@tanstack/react-router` (con `ChevronLeft`) arriba del `Card`, o como botón secundario dentro del `CardHeader`.
+- Estilo discreto (variant ghost / texto muted) para no competir con el flujo principal.
+- Visible en ambos pasos (1 y 2).
