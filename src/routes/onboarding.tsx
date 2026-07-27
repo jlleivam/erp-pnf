@@ -205,6 +205,7 @@ function Onboarding() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
