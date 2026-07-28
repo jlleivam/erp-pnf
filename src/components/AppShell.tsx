@@ -94,6 +94,8 @@ export function AppShell() {
 
   const adminPendientes = usePendientesAdmin();
   const obraPendientes = usePendientesObra(obraId);
+  usePendientesRealtime();
+
 
 
 
