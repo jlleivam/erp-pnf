@@ -47,7 +47,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { NotificacionesBell } from "@/components/NotificacionesBell";
 import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
 import { PendientesBadge } from "@/components/PendientesBadge";
-import { usePendientesAdmin, usePendientesObra, moduleKeyFromPath } from "@/hooks/usePendientes";
+import { usePendientesAdmin, usePendientesObra, usePendientesRealtime, moduleKeyFromPath } from "@/hooks/usePendientes";
 
 
 
@@ -94,6 +94,8 @@ export function AppShell() {
 
   const adminPendientes = usePendientesAdmin();
   const obraPendientes = usePendientesObra(obraId);
+  usePendientesRealtime();
+
 
 
 
