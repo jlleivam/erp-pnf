@@ -166,6 +166,7 @@ export const guardarPaquete = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { companyId, roles } = await getCtx(supabase, userId);
     assertAdmin(roles);
+    await requirePermission(supabase, userId, "requisiciones.cotizar");
 
     const { data: req } = await supabase
       .from("requisiciones").select("id, company_id").eq("id", data.requisicionId).maybeSingle();
