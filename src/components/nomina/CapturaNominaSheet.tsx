@@ -256,7 +256,7 @@ export function CapturaNominaSheet({
                                 jornada={Number(a?.jornada ?? 0)}
                                 horasExtras={Number(a?.horas_extras ?? 0)}
                                 notaExtras={a?.nota_extras ?? null}
-                                disabled={!!isClosed}
+                                disabled={!!isReadOnly}
                                 onSaved={() => {
                                   qc.invalidateQueries({
                                     queryKey: ["nomina", obraId, semanaInicio],
