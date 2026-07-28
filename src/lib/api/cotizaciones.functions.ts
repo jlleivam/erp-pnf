@@ -271,8 +271,8 @@ export const generarOC = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ paqueteId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    const { companyId } = await getCtx(supabase, userId);
+    await requirePermission(supabase, userId, "requisiciones.generar_oc");
 
     const { data: paquete } = await supabase
       .from("cotizacion_paquetes")
