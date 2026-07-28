@@ -1,0 +1,1 @@
+ALTER TYPE public.renta_estatus ADD VALUE IF NOT EXISTS 'solicitada';
