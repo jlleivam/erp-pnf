@@ -282,7 +282,7 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
   });
 
 // ============================================================
-// COTIZAR (administrativo) -> cotizada
+// COTIZAR (administrativo) -> se mantiene en "solicitada" con proveedor/tarifa
 // ============================================================
 
 export const cotizarRenta = createServerFn({ method: "POST" })
@@ -306,8 +306,8 @@ export const cotizarRenta = createServerFn({ method: "POST" })
     const { data: renta } = await supabase
       .from("obra_rentas").select("estatus, obra_id, numero, equipo").eq("id", data.id).maybeSingle();
     if (!renta) throw new Error("Renta no encontrada");
-    if (renta.estatus !== "borrador" && renta.estatus !== "rechazada") {
-      throw new Error("Solo se puede cotizar una renta en borrador o rechazada");
+    if (renta.estatus !== "solicitada" && renta.estatus !== "rechazada") {
+      throw new Error("Solo se puede cotizar una renta solicitada o rechazada");
     }
     const { error } = await supabase
       .from("obra_rentas")
@@ -317,7 +317,7 @@ export const cotizarRenta = createServerFn({ method: "POST" })
         tarifa_unitaria: data.tarifaUnitaria,
         deposito: data.deposito,
         condiciones: data.condiciones ?? null,
-        estatus: "cotizada",
+        estatus: "solicitada",
         cotizado_por: userId,
         cotizado_at: new Date().toISOString(),
         rechazo_motivo: null,
