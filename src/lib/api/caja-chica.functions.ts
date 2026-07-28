@@ -262,7 +262,7 @@ export const solicitarFondoCajaChica = createServerFn({ method: "POST" })
       tipo: "caja_chica_fondo_solicitado",
       titulo: "Solicitud de fondo de caja chica",
       mensaje: `Residente solicita $${data.monto.toFixed(2)} en efectivo`,
-      link: `/app/obras/${data.obraId}/caja-chica`,
+      link: `/app/obras/${data.obraId}/caja-chica?tab=fondos`,
     })));
     return { ok: true, id: inserted.id };
   });
@@ -373,7 +373,7 @@ export const autorizarFondoCajaChica = createServerFn({ method: "POST" })
         tipo: "caja_chica_fondo_autorizado",
         titulo: "Tu fondo fue autorizado",
         mensaje: `En espera del pago en efectivo (${folio})`,
-        link: `/app/obras/${fondo.obra_id}/caja-chica`,
+        link: `/app/obras/${fondo.obra_id}/caja-chica?tab=fondos`,
       },
     ]);
 
@@ -427,7 +427,7 @@ export const rechazarFondoCajaChica = createServerFn({ method: "POST" })
       tipo: "caja_chica_fondo_rechazado",
       titulo: "Solicitud de fondo rechazada",
       mensaje: data.motivo,
-      link: `/app/obras/${fondo.obra_id}/caja-chica`,
+      link: `/app/obras/${fondo.obra_id}/caja-chica?tab=fondos`,
     }]);
 
     return { ok: true };
@@ -471,7 +471,7 @@ export const entregarFondoCajaChica = createServerFn({ method: "POST" })
       tipo: "caja_chica_fondo_entregado",
       titulo: "Fondo de caja chica entregado",
       mensaje: `Se entregaron $${data.montoEntregado.toFixed(2)} en efectivo`,
-      link: `/app/obras/${fondo.obra_id}/caja-chica`,
+      link: `/app/obras/${fondo.obra_id}/caja-chica?tab=fondos`,
     }]);
     return { ok: true };
   });
@@ -755,7 +755,7 @@ export const solicitarReembolsoCajaChica = createServerFn({ method: "POST" })
       tipo: "caja_chica_reembolso_solicitado",
       titulo: `Reembolso ${reemb.folio}`,
       mensaje: `Se solicita reembolso por $${total.toFixed(2)}`,
-      link: `/app/obras/${data.obraId}/caja-chica`,
+      link: `/app/obras/${data.obraId}/caja-chica?tab=reembolsos`,
     })));
 
     return { ok: true, id: reemb.id, folio: reemb.folio };
@@ -917,7 +917,7 @@ export const reponerReembolsoCajaChica = createServerFn({ method: "POST" })
       tipo: "caja_chica_reembolso_repuesto",
       titulo: `Reembolso ${r.folio} repuesto`,
       mensaje: `Se repusieron $${data.montoReembolsado.toFixed(2)}`,
-      link: `/app/obras/${r.obra_id}/caja-chica`,
+      link: `/app/obras/${r.obra_id}/caja-chica?tab=reembolsos`,
     }]);
     return { ok: true };
   });
@@ -1035,7 +1035,7 @@ export const rechazarReembolsoCajaChica = createServerFn({ method: "POST" })
       tipo: "caja_chica_reembolso_rechazado",
       titulo: `Reembolso ${r.folio} rechazado`,
       mensaje: data.motivo,
-      link: `/app/obras/${r.obra_id}/caja-chica`,
+      link: `/app/obras/${r.obra_id}/caja-chica?tab=reembolsos`,
     }]);
     return { ok: true };
   });

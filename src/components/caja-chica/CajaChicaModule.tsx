@@ -177,9 +177,16 @@ export function CajaChicaModule({ obraId, scope = "obra" }: Props) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const puedeCrearGasto = scope === "obra" && obraRole.isResidente;
   const verMisGastos = scope === "obra" && obraRole.isResidente;
-  const [tab, setTab] = useState<string>(
-    scope === "admin" || !verMisGastos ? "reembolsos" : "mis-gastos",
-  );
+  const [tab, setTab] = useState<string>(() => {
+    const urlTab =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("tab")
+        : null;
+    if (urlTab === "fondos" || urlTab === "reembolsos" || urlTab === "asignaciones" || urlTab === "mis-gastos") {
+      return urlTab;
+    }
+    return scope === "admin" || !verMisGastos ? "reembolsos" : "mis-gastos";
+  });
 
   const gastosAll: any[] = (gastosQ.data as any) ?? [];
   const borradores = useMemo(() => gastosAll.filter((g) => g.estatus === "borrador"), [gastosAll]);
