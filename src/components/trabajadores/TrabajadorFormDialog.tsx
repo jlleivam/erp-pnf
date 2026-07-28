@@ -122,6 +122,8 @@ export function TrabajadorFormDialog({
     if (!isEdit && !canManage) {
       if (!f.sexo) return toast.error("Sexo requerido");
       if (!f.puesto) return toast.error("Puesto requerido");
+      if (f.sueldo_diario == null || isNaN(Number(f.sueldo_diario)) || Number(f.sueldo_diario) <= 0)
+        return toast.error("Sueldo diario requerido");
     }
     const payload = {
       nombre_completo: f.nombre_completo.trim(),
@@ -296,7 +298,7 @@ export function TrabajadorFormDialog({
                 </Select>
               </div>
               <div>
-                <Label>Sueldo diario (MXN)</Label>
+                <Label>Sueldo diario (MXN){!isEdit && !canManage && <Req />}</Label>
                 <Input
                   type="number"
                   min={0}
