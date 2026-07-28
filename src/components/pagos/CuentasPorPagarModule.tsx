@@ -26,6 +26,8 @@ import { RegistrarPagoOCDialog } from "./RegistrarPagoOCDialog";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { GasolinasPorPagarTab } from "./GasolinasPorPagarTab";
 import { CajaChicaPorPagarTab } from "./CajaChicaPorPagarTab";
+import { NominaPorPagarTab } from "./NominaPorPagarTab";
+import { listSemanasNominaPorPagar } from "@/lib/api/nominas.functions";
 import { formatMXN, formatDate } from "@/lib/format";
 
 type Row = {
