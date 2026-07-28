@@ -1,20 +1,7 @@
-## Marcar campos obligatorios en formulario de trabajador
+## Cerrar el popover al hacer clic en "Ver todas las notificaciones"
 
-En `src/components/trabajadores/TrabajadorFormDialog.tsx`, agregar un asterisco rojo (`*`) junto a las etiquetas de los campos requeridos según el modo del formulario.
+En `src/components/NotificacionesBell.tsx`, el `Popover` es no controlado, así que la navegación no lo cierra.
 
-### Campos a marcar
-
-**Siempre obligatorio:**
-- Nombre completo
-
-**Obligatorios solo cuando es solicitud de alta** (`!canManage && !isEdit`):
-- Sexo
-- Puesto
-
-### Implementación
-
-- Crear un pequeño helper/componente `RequiredMark` que renderice `<span className="text-destructive ml-0.5">*</span>`.
-- Añadirlo condicionalmente en los `<Label>` correspondientes.
-- Agregar una nota discreta arriba del formulario (solo en modo solicitud) tipo: *"Los campos marcados con \* son obligatorios."*
-
-No se modifica lógica de validación (ya implementada previamente) ni backend.
+### Cambios
+- Controlar el estado con `const [open, setOpen] = useState(false)` y pasar `open`/`onOpenChange` al `<Popover>`.
+- En los handlers que navegan (encabezado "Notificaciones", el link "Ver todas las notificaciones", y `handleOpen` al abrir una notificación individual), llamar `setOpen(false)` después de `navigate(...)`.

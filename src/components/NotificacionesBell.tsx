@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -16,6 +17,7 @@ import {
 export function NotificacionesBell() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const fetchList = useServerFn(listMisNotificaciones);
   const markOneFn = useServerFn(marcarNotificacionLeida);
   const markAllFn = useServerFn(marcarTodasLeidas);
@@ -43,12 +45,19 @@ export function NotificacionesBell() {
     if (!n.link) return;
     const url = new URL(n.link, window.location.origin);
     const search = Object.fromEntries(url.searchParams.entries());
+    setOpen(false);
     navigate({ to: url.pathname as any, search: search as any });
   };
 
+  const goToAll = () => {
+    setOpen(false);
+    navigate({ to: "/app/notificaciones" });
+  };
+
+
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Notificaciones">
           <Bell className="size-5" />
@@ -64,7 +73,7 @@ export function NotificacionesBell() {
           <button
             type="button"
             className="text-sm font-semibold hover:underline"
-            onClick={() => navigate({ to: "/app/notificaciones" })}
+            onClick={goToAll}
           >
             Notificaciones
           </button>
@@ -105,7 +114,7 @@ export function NotificacionesBell() {
           <button
             type="button"
             className="w-full text-xs text-center text-muted-foreground hover:text-foreground"
-            onClick={() => navigate({ to: "/app/notificaciones" })}
+            onClick={goToAll}
           >
             Ver todas las notificaciones
           </button>
