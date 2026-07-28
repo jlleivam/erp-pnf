@@ -180,7 +180,7 @@ export function CapturaNominaSheet({
               </Card>
             </div>
 
-            {!isClosed && (
+            {!isReadOnly && (
               <div className="flex justify-between gap-2">
                 <Button variant="outline" onClick={() => setAsignarOpen(true)}>
                   <UserPlus className="size-4 mr-1" /> Asignar trabajadores
@@ -190,6 +190,7 @@ export function CapturaNominaSheet({
                 </Button>
               </div>
             )}
+
 
             {renglones.length === 0 ? (
               <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
