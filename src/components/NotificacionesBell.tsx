@@ -114,7 +114,7 @@ export function NotificacionesBell() {
           <button
             type="button"
             className="w-full text-xs text-center text-muted-foreground hover:text-foreground"
-            onClick={() => navigate({ to: "/app/notificaciones" })}
+            onClick={goToAll}
           >
             Ver todas las notificaciones
           </button>
