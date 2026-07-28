@@ -255,6 +255,10 @@ export function CuentasPorPagarModule() {
         <TabsContent value="caja-chica" className="mt-4">
           <CajaChicaPorPagarTab />
         </TabsContent>
+
+        <TabsContent value="nomina" className="mt-4">
+          <NominaPorPagarTab />
+        </TabsContent>
       </Tabs>
 
       {selected && (
