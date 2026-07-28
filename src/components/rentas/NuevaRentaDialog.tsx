@@ -69,12 +69,28 @@ export function NuevaRentaDialog({
   const crear = useServerFn(crearSolicitudRenta);
   const m = useMutation({
     mutationFn: crear,
-    onSuccess: (res) => {
-      toast.success("Solicitud creada");
+    onSuccess: (res, vars: any) => {
+      toast.success(vars?.data?.enviar ? "Solicitud enviada a cotizar" : "Borrador guardado");
       onCreated(res.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const submit = (enviar: boolean) =>
+    m.mutate({
+      data: {
+        obraId,
+        insumoId,
+        cantidad: Number(cantidad),
+        descripcion: descripcion.trim() || undefined,
+        fechaEstimadaInicio: fechaEstimada || undefined,
+        periodicidadSugerida: (periodicidad || undefined) as any,
+        periodosEstimados: periodos && Number(periodos) > 0 ? Number(periodos) : undefined,
+        diasAvisoVencimiento: Number(diasAviso) || 3,
+        enviar,
+      },
+    });
+
 
   const sinInsumos = !insumosQ.isLoading && insumos.length === 0;
 
