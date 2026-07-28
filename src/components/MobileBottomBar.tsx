@@ -38,9 +38,15 @@ export function MobileBottomBar({ items, pathname, variant = "fixed", onMoreClic
                   active ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <Icon className="size-5 shrink-0" />
+                <span className="relative inline-flex">
+                  <Icon className="size-5 shrink-0" />
+                  {it.pendientes ? (
+                    <PendientesBadge count={it.pendientes} className="absolute -top-1.5 -right-2" />
+                  ) : null}
+                </span>
                 <span className="truncate max-w-full">{it.label}</span>
               </Link>
+
             );
           })}
         </div>
