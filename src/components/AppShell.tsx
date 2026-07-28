@@ -29,8 +29,6 @@ import {
   Scale,
   CalendarRange,
   User,
-  UserCog,
-  Check,
 } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,12 +42,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { NotificacionesBell } from "@/components/NotificacionesBell";
 import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
