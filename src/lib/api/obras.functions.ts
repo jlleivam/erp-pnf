@@ -217,7 +217,7 @@ export const actualizarObra = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => actualizarObraSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDirectorDeObra(supabase, userId, data.obraId);
+    await requirePermission(supabase, userId, "obras.editar");
 
     const { error } = await supabase
       .from("obras")
@@ -251,7 +251,7 @@ export const actualizarObraTeam = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => actualizarObraTeamSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDirectorDeObra(supabase, userId, data.obraId);
+    await requirePermission(supabase, userId, "obras.asignar_team");
 
     const roles = new Set(data.team.map((m) => m.role));
     if (!roles.has("residente") || !roles.has("administrativo") || !roles.has("supervisor")) {
@@ -289,7 +289,7 @@ export const actualizarObraComisiones = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => actualizarObraComisionesSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDirectorDeObra(supabase, userId, data.obraId);
+    await requirePermission(supabase, userId, "obras.asignar_team");
 
     const { error: delErr } = await supabase
       .from("obra_comisiones")
