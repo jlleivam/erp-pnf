@@ -298,7 +298,7 @@ export function TrabajadorFormDialog({
                 </Select>
               </div>
               <div>
-                <Label>Sueldo diario (MXN)</Label>
+                <Label>Sueldo diario (MXN){!isEdit && !canManage && <Req />}</Label>
                 <Input
                   type="number"
                   min={0}
