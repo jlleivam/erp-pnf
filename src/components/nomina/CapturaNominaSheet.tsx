@@ -124,7 +124,8 @@ export function CapturaNominaSheet({
   const nomina = data?.nomina;
   const renglones = (data?.renglones ?? []) as Renglon[];
   const asistencias = (data?.asistencias ?? []) as Asistencia[];
-  const isClosed = readOnly || nomina?.estatus === "cerrada";
+  const isClosed = nomina?.estatus === "cerrada";
+  const isReadOnly = readOnly || isClosed;
   const dias = useMemo(() => diasSemana(semanaInicio), [semanaInicio]);
 
   const asistMap = useMemo(() => {
