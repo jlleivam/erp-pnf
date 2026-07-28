@@ -1,22 +1,20 @@
 ## Objetivo
-Hacer más visual la tabla de captura de nómina coloreando los botones de jornada (0, ½, 1) para identificar rápidamente asistencias, medios días y ausencias.
+Replicar el comportamiento de "Agregar renglón" del presupuesto de obra en los presupuestos base de **Destajos** y **Subcontratos**: al insertar, el nuevo renglón se coloca justo debajo del renglón activo (no al final), y el renglón activo se resalta visualmente.
 
-## Cambios (archivo único: `src/components/nomina/CapturaNominaSheet.tsx`, componente `DiaCell`)
+## Cambios
 
-Reemplazar el estilo actual donde solo la opción seleccionada usa `bg-primary`. Nuevo esquema:
+### `src/components/destajos/CapturaDestajoSheet.tsx` y `src/components/subcontratos/CapturaSubcontratoSheet.tsx`
 
-- **Opción seleccionada (estado activo):**
-  - `0` (·, ausencia) → fondo rojo (`bg-destructive text-destructive-foreground`)
-  - `½` (medio día) → fondo ámbar (`bg-amber-500 text-white`)
-  - `1` (día completo) → fondo verde (`bg-emerald-600 text-white`)
-- **Opción no seleccionada:** fondo neutro (`bg-background`) con un hover tintado suave del color correspondiente (`hover:bg-destructive/10`, `hover:bg-amber-500/10`, `hover:bg-emerald-500/10`) para dar pista visual sin saturar.
-- Mantener bordes, tamaño y layout actuales (mismo `inline-flex rounded-md border`). Sin cambios en lógica de guardado, en `+h`, ni en columnas de la tabla.
+Ambos archivos comparten la misma estructura, se aplica idéntico refactor:
 
-## Detalles técnicos
-- Añadir un mapa `{ v, label, activeClass, hoverClass }` dentro del `.map` de opciones y componer clases con `cn(...)`.
-- Los colores rojo/verde se toman de tokens semánticos (`destructive`) y utilidades Tailwind (`amber-500`, `emerald-600`) para evitar tener que añadir nuevos tokens al design system. Si prefieres tokens semánticos (`--success`, `--warning`) puedo agregarlos en `src/styles.css`; dime si lo hago.
-- No cambia el comportamiento de HE ni el header "HE".
+1. **Estado activo:** añadir `const [activeRowId, setActiveRowId] = useState<string | null>(null);` y resetearlo a `null` al hidratar `rows` desde `data.renglones`.
+2. **`addRow`:** insertar el nuevo renglón después de `activeRowId` (fallback: al final si no hay activo). Marcar el nuevo renglón como activo.
+3. **`removeRow`:** si se elimina el renglón activo, mover `activeRowId` al vecino anterior o siguiente.
+4. **`handleRowActivate`:** activar en `onFocus` y `onMouseDown` de cada `<tr>`.
+5. **Resaltado visual del `<tr>`:** aplicar la misma cascada de clases del presupuesto (error > padre > activo > hover) incluyendo `ring-1 ring-inset ring-primary/20` cuando `esActivo`.
+
+Sin cambios en la lógica de cálculo, guardado, validaciones ni columnas. Sin cambios en backend.
 
 ## Fuera de alcance
-- Colorear filas por total de días trabajados.
-- Cambios en otras pestañas o en la vista de nómina cerrada (se aplica también ahí porque usa el mismo `DiaCell`, lo cual es deseable).
+- Órdenes de cambio (`CapturaOrdenCambioSheet.tsx`) — no fue mencionado.
+- Otros comportamientos del sheet del presupuesto (headers sticky, imports, etc.) que ya existen o no en estos sheets.
