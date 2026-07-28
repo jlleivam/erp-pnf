@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { MoreHorizontal, type LucideIcon } from "lucide-react";
+import { PendientesBadge } from "@/components/PendientesBadge";
 
 export type BottomBarItem = {
   to: string;
@@ -7,7 +8,10 @@ export type BottomBarItem = {
   icon: LucideIcon;
   /** Active if pathname equals `to` (exact) or starts with `to` */
   exact?: boolean;
+  /** Pendientes count to show as a badge over the icon */
+  pendientes?: number;
 };
+
 
 type Props = {
   items: BottomBarItem[];
@@ -34,9 +38,15 @@ export function MobileBottomBar({ items, pathname, variant = "fixed", onMoreClic
                   active ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <Icon className="size-5 shrink-0" />
+                <span className="relative inline-flex">
+                  <Icon className="size-5 shrink-0" />
+                  {it.pendientes ? (
+                    <PendientesBadge count={it.pendientes} className="absolute -top-1.5 -right-2" />
+                  ) : null}
+                </span>
                 <span className="truncate max-w-full">{it.label}</span>
               </Link>
+
             );
           })}
         </div>
@@ -57,10 +67,16 @@ export function MobileBottomBar({ items, pathname, variant = "fixed", onMoreClic
               active ? "text-primary" : "text-muted-foreground"
             }`}
           >
-            <Icon className="size-5" />
+            <span className="relative inline-flex">
+              <Icon className="size-5" />
+              {it.pendientes ? (
+                <PendientesBadge count={it.pendientes} className="absolute -top-1.5 -right-2" />
+              ) : null}
+            </span>
             <span className="truncate max-w-[80%]">{it.label}</span>
           </Link>
         );
+
       })}
       {onMoreClick && (
         <button

@@ -46,6 +46,9 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { NotificacionesBell } from "@/components/NotificacionesBell";
 import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
+import { PendientesBadge } from "@/components/PendientesBadge";
+import { usePendientesAdmin, usePendientesObra, moduleKeyFromPath } from "@/hooks/usePendientes";
+
 
 
 
@@ -89,6 +92,10 @@ export function AppShell() {
   const showAdmin = director || effRoles.includes("administrativo");
   const showSupervisor = director || effRoles.includes("supervisor");
 
+  const adminPendientes = usePendientesAdmin();
+  const obraPendientes = usePendientesObra(obraId);
+
+
 
   const switchRole = (role: AppRole | null) => {
     setAssumedRole(role);
@@ -123,22 +130,23 @@ export function AppShell() {
 
   const obraNavItems: BottomBarItem[] = obraId
     ? [
-        { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt },
-        { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: BarChart3 },
-        { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList },
-        { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users },
-        { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer },
-        { to: `/app/obras/${obraId}/subcontratos`, label: "Subcontratos", icon: Handshake },
-        { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Warehouse },
-        { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck },
-        { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel },
-        { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins },
-        { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo },
+        { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt, pendientes: obraPendientes["presupuesto"] },
+        { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: BarChart3, pendientes: obraPendientes["estimaciones"] },
+        { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList, pendientes: obraPendientes["requisiciones"] },
+        { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users, pendientes: obraPendientes["nomina"] },
+        { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer, pendientes: obraPendientes["destajos"] },
+        { to: `/app/obras/${obraId}/subcontratos`, label: "Subcontratos", icon: Handshake, pendientes: obraPendientes["subcontratos"] },
+        { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Warehouse, pendientes: obraPendientes["almacen-obra"] },
+        { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck, pendientes: obraPendientes["rentas"] },
+        { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel, pendientes: obraPendientes["gasolinas"] },
+        { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins, pendientes: obraPendientes["caja-chica"] },
+        { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo, pendientes: obraPendientes["tareas"] },
         ...(director
           ? [{ to: `/app/obras/${obraId}/configuracion`, label: "Configuración", icon: Settings } as BottomBarItem]
           : []),
       ]
     : [];
+
 
   const renderNav = (onNavigate?: () => void) => (
     <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
@@ -157,9 +165,11 @@ export function AppShell() {
                 icon={<Icon className="size-4" />}
                 active={pathname === m.to || pathname.startsWith(m.to + "/")}
                 onNavigate={onNavigate}
+                pendientes={m.pendientes}
               />
             );
           })}
+
         </div>
       )}
 
@@ -199,10 +209,18 @@ export function AppShell() {
             Administración
           </p>
           {ADMIN_MODULES.map((m) => (
-            <NavItem key={m.to} to={m.to} label={m.label} active={pathname === m.to} onNavigate={onNavigate} />
+            <NavItem
+              key={m.to}
+              to={m.to}
+              label={m.label}
+              active={pathname === m.to}
+              onNavigate={onNavigate}
+              pendientes={adminPendientes[moduleKeyFromPath(m.to)]}
+            />
           ))}
         </div>
       )}
+
 
     </nav>
   );
@@ -296,15 +314,16 @@ export function AppShell() {
           pathname={pathname}
           variant="scroll"
           items={[
-            { to: "/app/admin/cuentas-por-pagar", label: "CXP", icon: FileText },
-            { to: "/app/admin/nomina", label: "Nómina", icon: Users },
+            { to: "/app/admin/cuentas-por-pagar", label: "CXP", icon: FileText, pendientes: adminPendientes["cuentas-por-pagar"] },
+            { to: "/app/admin/nomina", label: "Nómina", icon: Users, pendientes: adminPendientes["nomina"] },
             { to: "/app", label: "Obras", icon: HardHat, exact: true },
             { to: "/app/admin/condensado-semanal", label: "Condensado", icon: CalendarRange },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
             { to: "/app/admin/contabilidad", label: "Contabilidad", icon: Scale },
-            { to: "/app/admin/gastos-oficina", label: "Gastos", icon: Receipt },
+            { to: "/app/admin/gastos-oficina", label: "Gastos", icon: Receipt, pendientes: adminPendientes["gastos-oficina"] },
           ] satisfies BottomBarItem[]}
+
         />
       ) : (
         <MobileBottomBar
@@ -342,12 +361,14 @@ function NavItem({
   icon,
   active,
   onNavigate,
+  pendientes,
 }: {
   to: string;
   label: string;
   icon?: React.ReactNode;
   active?: boolean;
   onNavigate?: () => void;
+  pendientes?: number;
 }) {
   return (
     <Link
@@ -360,10 +381,12 @@ function NavItem({
       }`}
     >
       {icon}
-      <span className="truncate">{label}</span>
+      <span className="truncate flex-1">{label}</span>
+      {pendientes ? <PendientesBadge count={pendientes} /> : null}
     </Link>
   );
 }
+
 
 function DevUserSwitcher() {
   const profile = useAuthStore((s) => s.profile);

@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, HardHat } from "lucide-react";
 import { useEffectiveIsDirector } from "@/stores/auth";
+import { PendientesBadge } from "@/components/PendientesBadge";
+import { useTotalPendientesObra } from "@/hooks/usePendientes";
+
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
@@ -50,24 +53,7 @@ function Dashboard() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {obras.map((o) => (
-              <Link key={o.id} to="/app/obras/$obraId" params={{ obraId: o.id }}>
-                <Card className="p-4 hover:border-primary/40 transition-colors h-full">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium leading-snug">{o.nombre}</h3>
-                    {o.unidad_negocio && (
-                      <Badge variant="secondary" className="text-xs">
-                        {o.unidad_negocio.nombre}
-                      </Badge>
-                    )}
-                  </div>
-                  {o.cliente && (
-                    <p className="text-sm text-muted-foreground mt-2">{o.cliente.razon_social}</p>
-                  )}
-                  {o.numero_contrato && (
-                    <p className="text-xs text-muted-foreground mt-1">Contrato: {o.numero_contrato}</p>
-                  )}
-                </Card>
-              </Link>
+              <ObraCard key={o.id} obra={o} />
             ))}
           </div>
         )}
@@ -75,3 +61,31 @@ function Dashboard() {
     </div>
   );
 }
+
+function ObraCard({ obra: o }: { obra: any }) {
+  const total = useTotalPendientesObra(o.id);
+  return (
+    <Link to="/app/obras/$obraId" params={{ obraId: o.id }}>
+      <Card className="p-4 hover:border-primary/40 transition-colors h-full relative">
+        {total > 0 && (
+          <PendientesBadge count={total} className="absolute top-2 right-2" />
+        )}
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-medium leading-snug pr-6">{o.nombre}</h3>
+          {o.unidad_negocio && (
+            <Badge variant="secondary" className="text-xs">
+              {o.unidad_negocio.nombre}
+            </Badge>
+          )}
+        </div>
+        {o.cliente && (
+          <p className="text-sm text-muted-foreground mt-2">{o.cliente.razon_social}</p>
+        )}
+        {o.numero_contrato && (
+          <p className="text-xs text-muted-foreground mt-1">Contrato: {o.numero_contrato}</p>
+        )}
+      </Card>
+    </Link>
+  );
+}
+

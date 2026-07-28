@@ -1,51 +1,111 @@
-
 ## Objetivo
 
-Agregar una pestaña **"Nómina"** en Cuentas por Pagar donde el administrativo liquida la nómina semanal combinando **cheques bancarios** (a nombre de trabajadores activos) y el **complemento en vales de efectivo desde caja fuerte** (cuenta 1110). Se emite **un único vale de efectivo por obra** (no por trabajador) para simplificar el flujo, cargado a la obra correspondiente.
+Mostrar un globo (badge) con el número de pendientes de acción que corresponden al usuario según su rol, sobre cada módulo, en:
 
-## UI
+1. Sidebar de obra (módulos dentro de `/app/obras/:obraId/*`)
+2. Sidebar de administración (`/app/admin/*`)
+3. Bottom bar móvil (mismos badges replicados)
+4. Tarjetas de obra en Home (`/app/`) — un contador total de pendientes de esa obra para el usuario
 
-Nuevo `src/components/pagos/NominaPorPagarTab.tsx` con la misma mecánica visual de las otras pestañas:
+## Qué cuenta como "pendiente de acción" por rol
 
-- Lista de **semanas con nómina pendiente de pago** (todas las obras con `obra_nominas.estatus = 'cerrada'` en esa semana), agrupada por `semana_inicio/semana_fin`, con: rango, # obras, total a pagar.
-- Acción **"Pagar semana"** por fila, sólo habilitada si todas las nóminas de la semana están `cerrada`. Abre sheet `PagarNominaSemanaSheet`:
-  - Total a pagar.
-  - **Cheques**: lista editable con `cuenta bancaria` (combobox de `cuentas` tipo banco), `folio`, `beneficiario` (combobox de trabajadores activos), `monto`. Suma en vivo.
-  - **Remanente = Total − Σ cheques** en grande.
-  - **Vales de efectivo (auto)**: tabla read-only con **una fila por obra**, cada una con el monto del vale = remanente prorrateado por el peso de esa obra en la semana. Origen fijo: caja fuerte (1110). No se desglosa por trabajador.
-  - Botón **Confirmar pago** deshabilitado si Σ cheques > total, saldo caja fuerte < Σ vales, o hay cheques incompletos.
-- Sub-filtro **"Historial"** para semanas ya pagadas.
+Los conteos son por rol efectivo del usuario y, en obra, filtrados por esa obra.
 
-`NominaAdminPanel` mantiene sólo la visión consolidada (sin botón de pago).
+| Módulo | Rol que lo ve pendiente | Regla |
+|---|---|---|
+| Requisiciones (obra) | residente/auxiliar | requisiciones en `borrador` propias + rechazadas por corregir |
+| Requisiciones (admin) | administrativo/director | `enviada` sin cotización + `pendiente_autorizacion` |
+| Requisiciones (supervisor) | supervisor | `pendiente_autorizacion` en sus obras |
+| Almacén (obra) | residente/auxiliar | OC `autorizada`/`enviada` pendientes de recepción + semana abierta con capturas faltantes |
+| Nómina (obra) | residente | nómina de la semana en `borrador` sin cerrar |
+| Nómina (admin/CxP) | administrativo | semanas `cerrada` sin `pagada` |
+| Destajos (obra) | residente | estimaciones en `borrador` + destajos con anticipo `enviado` |
+| Destajos (admin) | administrativo | anticipos y estimaciones `enviado`/`cerrada` por autorizar/pagar |
+| Subcontratos | análogo a destajos | |
+| Rentas (obra) | residente | rentas en `borrador` y renovaciones `pendiente` |
+| Rentas (admin) | administrativo | `solicitada` por cotizar + `autorizada` sin activar |
+| Gasolinas (obra) | residente | vales `entregado` sin confirmar |
+| Gasolinas (admin) | administrativo | `pendiente_autorizacion` + `autorizado` sin entrega |
+| Caja chica (obra) | residente | fondos `pendiente_autorizacion`, gastos `rechazado`, reembolsos `rechazado` |
+| Caja chica (supervisor) | supervisor | fondos y reembolsos por revisar en sus obras |
+| Caja chica (admin/CxP) | administrativo | fondos `autorizado` + reembolsos `enviado_admin` |
+| CxP (admin) | administrativo | CxP `pendiente`/`parcial` |
+| Tesorería (admin) | administrativo/director | pagos/movimientos por conciliar (si aplica) |
+| Gastos de oficina | administrativo/director | `pendiente_aprobacion` |
+| Tareas | asignado | tareas asignadas al usuario abiertas |
+| Presupuestos / Estimaciones (obra) | residente | estimaciones en `borrador`; presupuestos `solicitada` (para director/admin en su vista) |
 
-## Contabilidad al confirmar
+## Diseño técnico
 
-Ya existente al cerrar cada nómina: cargo `5100 Costo de obra - Mano de obra` / abono `2140 Sueldos por pagar` (se mantiene).
+### 1. Un único endpoint agregador
 
-Al aplicar el pago:
-- Por cada **cheque**: cargo `2140` / abono `1110-<banco>`, prorrateado a las obras según su peso en la semana (trazabilidad por obra).
-- Por cada **vale (uno por obra)**: cargo `2140` / abono `1110 Caja fuerte` con `obra_id`.
-- Un `pagos` por cheque (`metodo='cheque'`, `referencia=folio`, `cuenta_id=banco`) y **un solo `pagos` por obra** (`metodo='efectivo'`, `cuenta_id=caja fuerte`, `obra_id`), todos con `origen_tipo='nomina_semana'`.
-- `cuenta_movimientos` para actualizar saldos.
+Nuevo `src/lib/api/pendientes.functions.ts`:
 
-## Datos
+- `getPendientesGlobales()` — con `requireSupabaseAuth`, devuelve `{ admin: Record<modulo, number>, obras: Record<obraId, Record<modulo, number>> }`.
+- Internamente, para cada categoría hace `select("id", { count: "exact", head: true })` con los filtros de estatus y RLS del usuario. Un único server fn evita N llamadas desde el cliente.
+- Sin cambios de esquema.
 
-- Enum `nomina_estatus`: agregar `pagada`.
-- `obra_nomina_pagos_semana`: `id, company_id, semana_inicio, semana_fin, monto_total, monto_cheques, monto_vales, pagado_por, pagado_at, notas`.
-- `obra_nomina_pagos_semana_cheques`: `pago_semana_id, cuenta_id, folio, trabajador_id, monto, pago_id`.
-- `obra_nomina_pagos_semana_vales`: **una fila por obra** — `pago_semana_id, obra_id, monto, pago_id` con `UNIQUE(pago_semana_id, obra_id)`.
-- GRANTs a `authenticated`/`service_role`, RLS por `company_id`.
-- Al confirmar, cada `obra_nominas` de la semana pasa `cerrada` → `pagada`.
+Ejemplo de shape:
 
-## API (`src/lib/api/nominas.functions.ts`)
+```text
+{
+  admin: {
+    requisiciones: 3, cxp: 5, nomina: 1, caja_chica: 2,
+    gasolinas: 0, destajos: 0, subcontratos: 0, rentas: 1,
+    gastos_oficina: 0, tareas: 4
+  },
+  obras: {
+    "<obraId>": {
+      requisiciones: 2, almacen: 1, nomina: 0, destajos: 0,
+      subcontratos: 0, rentas: 0, gasolinas: 0, caja_chica: 1,
+      tareas: 2
+    }
+  }
+}
+```
 
-- `listSemanasNominaPorPagar()` — semanas con al menos una `obra_nominas` cerrada no pagada.
-- `getResumenPagoSemana(semanaInicio)` — obras + importes para el sheet.
-- `pagarNominaSemana({ semanaInicio, cheques[] })` — valida, prorratea, crea asientos, `pagos`, `cuenta_movimientos`, marca nóminas como `pagada`.
-- `listHistorialPagosNomina()`.
+### 2. Hook cliente
 
-## Detalles
+`src/hooks/usePendientes.ts`:
 
-- Prorrateo cheque → obras y remanente → vale por obra: `monto * (importeObra / totalSemana)`, con ajuste de centavos en la última obra.
-- Notificación `nomina_pagada` al director al confirmar.
-- Pestaña visible sólo a `director` y `administrativo`.
+- `useQuery({ queryKey: ["pendientes"], queryFn: fetchPendientes, refetchInterval: 60_000 })`.
+- Exporta helpers: `usePendientesAdmin()`, `usePendientesObra(obraId)`, `useTotalPendientesObra(obraId)`.
+- Se invalida en `onSuccess` de mutaciones existentes (patrón: agregar `qc.invalidateQueries({ queryKey: ["pendientes"] })` en los flujos más impactantes: autorizar, cotizar, pagar, cerrar semana). Como fallback está el `refetchInterval`.
+
+### 3. Componente `<PendientesBadge count={n} />`
+
+- Reutilizable, mismo estilo que la campana: círculo rosa/rojo, texto `9+` cuando `count > 9`, oculto si `count === 0`.
+- Colocación: posicionado sobre el ícono (top-right absolute) tanto en sidebar/desktop como en botones de bottom bar y tarjetas.
+
+### 4. Puntos de integración
+
+- `src/components/AppShell.tsx` — sidebar admin: leer `usePendientesAdmin()` y mapear por `to` de `ADMIN_MODULES` en `src/lib/modules.ts` (agregar una `key` por entrada, ej. `key: "requisiciones"`).
+- `src/components/AppShell.tsx` — sidebar de obra (cuando la ruta actual es una obra): usar `usePendientesObra(obraId)`.
+- `src/components/MobileBottomBar.tsx` — mismo mapeo por key sobre los botones visibles.
+- `src/routes/_authenticated/app.index.tsx` — sobre cada tarjeta de obra, mostrar `useTotalPendientesObra(o.id)` como badge en la esquina superior derecha.
+
+### 5. Rendimiento y visibilidad
+
+- Un solo query global refrescado cada 60s. El payload es pequeño (números).
+- Directores no ven "pendientes" que no les toquen (p. ej. no cuentan borradores de residentes) para evitar ruido.
+- Si `count === 0`, no se renderiza nada.
+
+## Cambios de archivos
+
+Nuevos:
+- `src/lib/api/pendientes.functions.ts`
+- `src/hooks/usePendientes.ts`
+- `src/components/PendientesBadge.tsx`
+
+Modificados:
+- `src/lib/modules.ts` — agregar `key` a cada `ModuleEntry` (mapea al conteo).
+- `src/components/AppShell.tsx` — render de badge en sidebar admin y sidebar de obra.
+- `src/components/MobileBottomBar.tsx` — render de badge en botones.
+- `src/routes/_authenticated/app.index.tsx` — badge total en tarjetas de obra.
+- Invalidaciones en handlers clave de mutaciones (requisiciones, caja chica, rentas, nómina, CxP, gasolinas) — solo agregar `queryClient.invalidateQueries({ queryKey: ["pendientes"] })`.
+
+## Fuera de alcance
+
+- No se cambia el esquema de BD.
+- No se agregan notificaciones nuevas; se cuentan estados reales.
+- No se añade filtro/ordenamiento en los módulos por "pendientes"; solo el indicador visual.
