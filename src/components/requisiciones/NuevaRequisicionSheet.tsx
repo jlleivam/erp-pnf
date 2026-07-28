@@ -26,6 +26,8 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { listInsumos, listCategorias, solicitarInsumo, listUnidades } from "@/lib/api/insumos.functions";
+import { SolicitarInsumoRapidoDialog } from "@/components/insumos/SolicitarInsumoRapidoDialog";
+
 import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
 import {
   guardarBorradorRequisicion,
