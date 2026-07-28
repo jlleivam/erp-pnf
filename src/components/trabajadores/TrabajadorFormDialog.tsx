@@ -298,20 +298,40 @@ export function TrabajadorFormDialog({
                 </Select>
               </div>
               <div>
-                <Label>Sueldo diario (MXN){!isEdit && !canManage && <Req />}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={f.sueldo_diario ?? ""}
-                  onChange={(e) =>
-                    set(
-                      "sueldo_diario",
-                      e.target.value === "" ? null : Number(e.target.value),
-                    )
-                  }
-                />
+                <Label>Sueldo semanal (MXN){!isEdit && !canManage && <Req />}</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="Semanal"
+                    value={
+                      f.sueldo_diario == null || isNaN(Number(f.sueldo_diario))
+                        ? ""
+                        : Number((Number(f.sueldo_diario) * 6).toFixed(2))
+                    }
+                    onChange={(e) =>
+                      set(
+                        "sueldo_diario",
+                        e.target.value === "" ? null : Number(e.target.value) / 6,
+                      )
+                    }
+                  />
+                  <Input
+                    type="text"
+                    readOnly
+                    tabIndex={-1}
+                    className="bg-muted text-muted-foreground"
+                    placeholder="Diario ÷6"
+                    value={
+                      f.sueldo_diario == null || isNaN(Number(f.sueldo_diario))
+                        ? ""
+                        : `$${Number(f.sueldo_diario).toFixed(2)} / día`
+                    }
+                  />
+                </div>
               </div>
+
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
