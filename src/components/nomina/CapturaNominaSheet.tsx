@@ -380,9 +380,9 @@ function DiaCell({
     <div className="flex flex-col gap-1 items-center">
       <div className="inline-flex rounded-md border border-border overflow-hidden">
         {[
-          { v: 0, label: "·" },
-          { v: 0.5, label: "½" },
-          { v: 1, label: "1" },
+          { v: 0, label: "·", active: "bg-destructive text-destructive-foreground", hover: "hover:bg-destructive/10" },
+          { v: 0.5, label: "½", active: "bg-amber-500 text-white", hover: "hover:bg-amber-500/10" },
+          { v: 1, label: "1", active: "bg-emerald-600 text-white", hover: "hover:bg-emerald-500/10" },
         ].map((opt) => (
           <button
             key={opt.v}
@@ -394,7 +394,7 @@ function DiaCell({
             }}
             className={cn(
               "w-6 h-6 text-xs leading-none transition-colors",
-              j === opt.v ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted",
+              j === opt.v ? opt.active : cn("bg-background", opt.hover),
               disabled && "opacity-60 cursor-not-allowed",
             )}
           >
