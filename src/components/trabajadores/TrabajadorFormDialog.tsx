@@ -28,7 +28,9 @@ import { PUESTOS, type TrabajadorPuesto } from "./imss";
 
 export type TrabajadorFormInitial = {
   id?: string;
-  nombre_completo: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno?: string | null;
   telefono?: string | null;
   correo?: string | null;
   direccion?: string | null;
@@ -51,7 +53,9 @@ export type TrabajadorFormInitial = {
 };
 
 const EMPTY: TrabajadorFormInitial = {
-  nombre_completo: "",
+  nombres: "",
+  apellido_paterno: "",
+  apellido_materno: "",
   imss_estatus: "sin_alta",
 };
 
