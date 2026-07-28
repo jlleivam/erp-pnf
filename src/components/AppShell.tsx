@@ -209,10 +209,18 @@ export function AppShell() {
             Administración
           </p>
           {ADMIN_MODULES.map((m) => (
-            <NavItem key={m.to} to={m.to} label={m.label} active={pathname === m.to} onNavigate={onNavigate} />
+            <NavItem
+              key={m.to}
+              to={m.to}
+              label={m.label}
+              active={pathname === m.to}
+              onNavigate={onNavigate}
+              pendientes={adminPendientes[moduleKeyFromPath(m.to)]}
+            />
           ))}
         </div>
       )}
+
 
     </nav>
   );
