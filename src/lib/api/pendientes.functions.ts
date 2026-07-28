@@ -273,10 +273,11 @@ export const getPendientes = createServerFn({ method: "GET" })
                 .select("id", { count: "exact", head: true })
                 .eq("obra_id", obraId)
                 .eq("asignado_a", userId)
-                .neq("estatus", "completada"),
+                .in("estatus", ["pendiente", "en_progreso"]),
             );
           })(),
         );
+
 
         await Promise.all(tasks);
 
