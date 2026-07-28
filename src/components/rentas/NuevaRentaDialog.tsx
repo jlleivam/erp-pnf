@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PackagePlus } from "lucide-react";
 import { crearSolicitudRenta } from "@/lib/api/rentas.functions";
-import { listInsumos } from "@/lib/api/insumos.functions";
+import { listInsumos, listCategorias, listUnidades } from "@/lib/api/insumos.functions";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -14,6 +15,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { SolicitarInsumoRapidoDialog } from "@/components/insumos/SolicitarInsumoRapidoDialog";
+import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
+
 
 export function NuevaRentaDialog({
   obraId,
