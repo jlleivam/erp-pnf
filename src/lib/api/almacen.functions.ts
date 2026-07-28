@@ -301,8 +301,16 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
       folioRemision: z.string().trim().max(100).optional().nullable(),
       fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       notas: z.string().trim().max(500).optional().nullable(),
+      sinRemision: z.boolean().default(false),
+      motivoSinRemision: z.string().trim().max(300).optional().nullable(),
+      evidenciaPath: z.string().trim().max(500).optional().nullable(),
       partidas: z.array(PartidaInput).min(1),
-    }).parse(d),
+    })
+      .refine(
+        (v) => (v.sinRemision ? !v.evidenciaPath : !!v.evidenciaPath),
+        { message: "Se requiere foto de la remisión o marcar 'Sin remisión'", path: ["evidenciaPath"] },
+      )
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -333,11 +341,14 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
         company_id: companyId,
         obra_id: oc.obra_id,
         oc_id: oc.id,
-        folio_remision: data.folioRemision ?? null,
+        folio_remision: data.sinRemision ? null : (data.folioRemision ?? null),
         fecha: data.fecha,
         recibido_por: userId,
         notas: data.notas ?? null,
-      })
+        sin_remision: data.sinRemision,
+        motivo_sin_remision: data.sinRemision ? (data.motivoSinRemision ?? null) : null,
+        evidencia_path: data.sinRemision ? null : (data.evidenciaPath ?? null),
+      } as any)
       .select("id").single();
     if (recErr) throw new Error(recErr.message);
 
