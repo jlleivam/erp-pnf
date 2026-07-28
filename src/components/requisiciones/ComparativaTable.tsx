@@ -22,6 +22,7 @@ import {
   autorizarOC, rechazarOC, reabrirOC, eliminarPaquete,
 } from "@/lib/api/cotizaciones.functions";
 import type { AppRole } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 
 interface Props {
   reqItems: any[];
@@ -63,7 +64,10 @@ export function ComparativaTable({
   const eliminarFn = useServerFn(eliminarPaquete);
 
   const isAdmin = roles.includes("director") || roles.includes("administrativo");
-  const isSupervisor = roles.includes("director") || roles.includes("supervisor");
+  const { can } = usePermisos();
+  const puedeAutorizar = can("requisiciones.aprobar");
+  const puedeRechazar = can("requisiciones.rechazar");
+  const puedeRevisarOC = puedeAutorizar || puedeRechazar;
 
   const recibidas = solicitudes.filter((s) => s.estatus === "recibida");
 
