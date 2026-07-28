@@ -122,7 +122,8 @@ export function TrabajadorFormDialog({
   });
 
   const submit = () => {
-    if (!f.nombre_completo.trim()) return toast.error("Nombre requerido");
+    if (!f.nombres.trim()) return toast.error("Nombre(s) requerido");
+    if (!f.apellido_paterno.trim()) return toast.error("Apellido paterno requerido");
     if (!isEdit && !canManage) {
       if (!f.sexo) return toast.error("Sexo requerido");
       if (!f.puesto) return toast.error("Puesto requerido");
@@ -130,7 +131,9 @@ export function TrabajadorFormDialog({
         return toast.error("Sueldo diario requerido");
     }
     const payload = {
-      nombre_completo: f.nombre_completo.trim(),
+      nombres: f.nombres.trim(),
+      apellido_paterno: f.apellido_paterno.trim(),
+      apellido_materno: f.apellido_materno?.trim() || null,
       telefono: f.telefono?.trim() || null,
       correo: f.correo?.trim() || null,
       direccion: f.direccion?.trim() || null,
