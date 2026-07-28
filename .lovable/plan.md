@@ -1,14 +1,40 @@
-## Objetivo
-Permitir crear/solicitar un insumo directamente desde el diálogo "Nueva solicitud de renta" cuando el equipo no está en el catálogo, replicando el flujo del sheet de requisiciones.
+## Cambio
+Renombrar el estatus `cotizada` → `solicitada` en el enum `renta_estatus`. El estado ahora significa "solicitud enviada, pendiente de autorización" (haya sido cotizada por el administrativo o no). El hecho de "estar cotizada" se infiere de tener `proveedor_id` y `tarifa_unitaria` capturados.
 
-## Cambios
+Además: eliminar el botón "Guardar borrador" en la creación — la única acción será **Enviar solicitud**, que deja la renta en `solicitada` y notifica al administrativo/director.
+
+## Flujo resultante
+`solicitada` → (administrativo cotiza: llena proveedor, tarifa, etc. — sigue en `solicitada`) → `autorizada` (supervisor/director) → `activa` (al marcar llegada) → `devuelta`.
+Rama alterna: `rechazada` (re-editable).
+
+## Migración de base de datos
+1. Agregar valor `solicitada` al enum `renta_estatus`.
+2. `UPDATE obra_rentas SET estatus = 'solicitada' WHERE estatus IN ('cotizada','borrador')` — los borradores existentes se envían también, dado que el flujo de borrador desaparece.
+3. Nota: PostgreSQL no permite eliminar valores de enum, así que `cotizada` y `borrador` quedan en el tipo pero sin uso.
+
+## Archivos a modificar
+
+**`src/lib/api/rentas.functions.ts`**
+- `crearSolicitudRenta`: quitar el parámetro `enviar`, forzar `estatus: "solicitada"` y siempre notificar administrativos/directores.
+- `cotizarRenta`: cambiar validación `renta.estatus !== "borrador" && "rechazada"` → aceptar `solicitada` y `rechazada`; al guardar mantener `estatus: "solicitada"` (sólo actualiza proveedor/tarifa/etc.).
+- `autorizarRenta`: aceptar `solicitada` en lugar de `cotizada`.
+- `eliminarRenta`: la restricción "solo borrador salvo director" se cambia a "solo solicitada sin cotizar (sin proveedor_id) salvo director".
 
 **`src/components/rentas/NuevaRentaDialog.tsx`**
-- Agregar botón "Solicitar insumo" al lado del label "Equipo" (link/ghost) que abre un dialog interno.
-- Detectar rol director con `useAuth()`/`useRoles()` como se hace en requisiciones (revisar cómo se determina `isDirector` en `NuevaRequisicionSheet.tsx` y replicar).
-- Cargar `insumo_categorias` y `insumo_unidades` con `listCategoriasInsumos` / `listUnidadesInsumos` (los mismos que usa el sheet).
-- Reutilizar el componente `SolicitarInsumoRapidoDialog`: extraerlo de `NuevaRequisicionSheet.tsx` a `src/components/insumos/SolicitarInsumoRapidoDialog.tsx` (export nombrado) y actualizar el import en el sheet de requisiciones para consumirlo desde ahí (sin cambio de comportamiento). Añadir prop opcional `disponibleRenta?: boolean` que se pase a `solicitarInsumo` para que el nuevo insumo quede marcado como disponible para rentas.
-- En el diálogo de renta, pasar `disponibleRenta={true}`. En el sheet de requisiciones no pasarlo (default false), preservando el comportamiento actual.
-- `onCreated`: invalidar `["insumos-renta"]` y, si el usuario es director (insumo creado autorizado con `newId`), pre-seleccionarlo en `insumoId`.
+- Un solo botón **Enviar solicitud**; quitar "Guardar borrador".
+- Toast: "Solicitud enviada".
 
-Sin cambios de BD ni de otros módulos.
+**`src/components/rentas/RentaDetalleSheet.tsx` y `RentasModule.tsx`**
+- Reemplazar `"cotizada"` por `"solicitada"` en los tipos y en `ESTATUS_LABEL` / `ESTATUS_VARIANT`. Label: "Solicitada".
+- El botón "Cotizar" aparece cuando `estatus === "solicitada"` y el usuario es administrativo/director; se puede re-cotizar hasta que se autorice.
+- Botón "Autorizar" cuando `estatus === "solicitada"` y hay `proveedor_id` + `tarifa_unitaria` capturados (evita autorizar sin datos).
+
+**`src/lib/notificaciones/catalogo.ts`**
+- Renombrar la clave/label `renta_cotizada` → `renta_solicitada` ("Renta solicitada"). Ajustar la referencia en `rentas.functions.ts`.
+
+**`src/integrations/supabase/types.ts`**
+- Se regenera automáticamente al aplicar la migración.
+
+## Fuera de alcance
+- No se elimina el valor `cotizada` ni `borrador` del enum (Postgres no lo permite sin recrear el tipo). Sólo dejan de usarse.
+- No se toca cotización, autorización, activación ni devolución más allá del rename.

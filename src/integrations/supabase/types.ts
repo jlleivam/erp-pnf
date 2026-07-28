@@ -4290,6 +4290,7 @@ export type Database = {
         | "rechazada"
         | "activa"
         | "devuelta"
+        | "solicitada"
       renta_evento_tipo: "averia" | "inactividad" | "nota"
       renta_periodicidad: "diaria" | "semanal" | "quincenal" | "mensual"
       renta_renovacion_estatus: "pendiente" | "autorizada" | "rechazada"
@@ -4549,6 +4550,7 @@ export const Constants = {
         "rechazada",
         "activa",
         "devuelta",
+        "solicitada",
       ],
       renta_evento_tipo: ["averia", "inactividad", "nota"],
       renta_periodicidad: ["diaria", "semanal", "quincenal", "mensual"],

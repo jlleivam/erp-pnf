@@ -69,14 +69,14 @@ export function NuevaRentaDialog({
   const crear = useServerFn(crearSolicitudRenta);
   const m = useMutation({
     mutationFn: crear,
-    onSuccess: (res, vars: any) => {
-      toast.success(vars?.data?.enviar ? "Solicitud enviada a cotizar" : "Borrador guardado");
+    onSuccess: (res) => {
+      toast.success("Solicitud enviada");
       onCreated(res.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const submit = (enviar: boolean) =>
+  const submit = () =>
     m.mutate({
       data: {
         obraId,
@@ -87,7 +87,6 @@ export function NuevaRentaDialog({
         periodicidadSugerida: (periodicidad || undefined) as any,
         periodosEstimados: periodos && Number(periodos) > 0 ? Number(periodos) : undefined,
         diasAvisoVencimiento: Number(diasAviso) || 3,
-        enviar,
       },
     });
 
@@ -218,15 +217,8 @@ export function NuevaRentaDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
-            variant="secondary"
             disabled={m.isPending || !insumoId || Number(cantidad) <= 0}
-            onClick={() => submit(false)}
-          >
-            {m.isPending ? "Guardando…" : "Guardar borrador"}
-          </Button>
-          <Button
-            disabled={m.isPending || !insumoId || Number(cantidad) <= 0}
-            onClick={() => submit(true)}
+            onClick={() => submit()}
           >
             {m.isPending ? "Enviando…" : "Enviar solicitud"}
           </Button>

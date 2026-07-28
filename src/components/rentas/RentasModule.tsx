@@ -22,7 +22,7 @@ type Renta = {
   descripcion: string | null;
   periodicidad: "diaria" | "semanal" | "quincenal" | "mensual" | null;
   tarifa_unitaria: number;
-  estatus: "borrador" | "cotizada" | "autorizada" | "rechazada" | "activa" | "devuelta";
+  estatus: "borrador" | "solicitada" | "cotizada" | "autorizada" | "rechazada" | "activa" | "devuelta";
   fecha_llegada_real: string | null;
   fecha_fin_programada: string | null;
   dias_aviso_vencimiento: number;
@@ -33,6 +33,7 @@ type Renta = {
 
 const ESTATUS_LABEL: Record<Renta["estatus"], string> = {
   borrador: "Borrador",
+  solicitada: "Solicitada",
   cotizada: "Cotizada",
   autorizada: "Autorizada",
   rechazada: "Rechazada",
@@ -41,6 +42,7 @@ const ESTATUS_LABEL: Record<Renta["estatus"], string> = {
 };
 const ESTATUS_VARIANT: Record<Renta["estatus"], "default" | "secondary" | "destructive" | "outline"> = {
   borrador: "secondary",
+  solicitada: "outline",
   cotizada: "outline",
   autorizada: "default",
   rechazada: "destructive",

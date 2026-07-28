@@ -207,7 +207,6 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
       periodicidadSugerida: z.enum(["diaria", "semanal", "quincenal", "mensual"]).optional(),
       periodosEstimados: z.number().positive().nullable().optional(),
       diasAvisoVencimiento: z.number().int().min(0).max(60).default(3),
-      enviar: z.boolean().default(false),
     }).parse(d),
 
   )
@@ -261,31 +260,29 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
         periodicidad: data.periodicidadSugerida ?? null,
         periodos_estimados: data.periodosEstimados ?? null,
         dias_aviso_vencimiento: data.diasAvisoVencimiento,
-        estatus: data.enviar ? "cotizada" : "borrador",
+        estatus: "solicitada",
         creado_por: userId,
       })
       .select("id").single();
     if (error) throw new Error(error.message);
 
-    if (data.enviar) {
-      await notifyRentaRoles(supabase, {
-        companyId,
-        obraId: data.obraId,
-        excludeUserId: userId,
-        roles: ["administrativo", "director"],
-        tipo: "renta_solicitada",
-        titulo: `Nueva solicitud de renta #${siguiente}`,
-        mensaje: `${equipoLabel} — pendiente de cotizar`,
-        link: `/app/obras/${data.obraId}/rentas`,
-      });
-    }
+    await notifyRentaRoles(supabase, {
+      companyId,
+      obraId: data.obraId,
+      excludeUserId: userId,
+      roles: ["administrativo", "director"],
+      tipo: "renta_solicitada",
+      titulo: `Nueva solicitud de renta #${siguiente}`,
+      mensaje: `${equipoLabel} — pendiente de cotizar`,
+      link: `/app/obras/${data.obraId}/rentas`,
+    });
 
 
     return { id: ins.id as string };
   });
 
 // ============================================================
-// COTIZAR (administrativo) -> cotizada
+// COTIZAR (administrativo) -> se mantiene en "solicitada" con proveedor/tarifa
 // ============================================================
 
 export const cotizarRenta = createServerFn({ method: "POST" })
@@ -309,8 +306,8 @@ export const cotizarRenta = createServerFn({ method: "POST" })
     const { data: renta } = await supabase
       .from("obra_rentas").select("estatus, obra_id, numero, equipo").eq("id", data.id).maybeSingle();
     if (!renta) throw new Error("Renta no encontrada");
-    if (renta.estatus !== "borrador" && renta.estatus !== "rechazada") {
-      throw new Error("Solo se puede cotizar una renta en borrador o rechazada");
+    if (renta.estatus !== "solicitada" && renta.estatus !== "rechazada") {
+      throw new Error("Solo se puede cotizar una renta solicitada o rechazada");
     }
     const { error } = await supabase
       .from("obra_rentas")
@@ -320,7 +317,7 @@ export const cotizarRenta = createServerFn({ method: "POST" })
         tarifa_unitaria: data.tarifaUnitaria,
         deposito: data.deposito,
         condiciones: data.condiciones ?? null,
-        estatus: "cotizada",
+        estatus: "solicitada",
         cotizado_por: userId,
         cotizado_at: new Date().toISOString(),
         rechazo_motivo: null,
@@ -355,7 +352,7 @@ export const autorizarRenta = createServerFn({ method: "POST" })
     if (!isDirector && !isSupervisor) throw new Error("Solo supervisor o director autoriza");
     const { data: renta } = await supabase
       .from("obra_rentas").select("estatus, obra_id, numero, equipo, creado_por").eq("id", data.id).maybeSingle();
-    if (renta?.estatus !== "cotizada") throw new Error("Solo se autoriza una renta cotizada");
+    if (renta?.estatus !== "solicitada") throw new Error("Solo se autoriza una renta solicitada");
     const { error } = await supabase
       .from("obra_rentas")
       .update({
@@ -664,10 +661,11 @@ export const eliminarRenta = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { isDirector } = await getCtx(supabase, userId);
     const { data: renta } = await supabase
-      .from("obra_rentas").select("estatus").eq("id", data.id).maybeSingle();
+      .from("obra_rentas").select("estatus, proveedor_id").eq("id", data.id).maybeSingle();
     if (!renta) throw new Error("Renta no encontrada");
-    if (renta.estatus !== "borrador" && !isDirector) {
-      throw new Error("Solo el director puede eliminar rentas que no estén en borrador");
+    const sinCotizar = renta.estatus === "solicitada" && !renta.proveedor_id;
+    if (!sinCotizar && !isDirector) {
+      throw new Error("Solo el director puede eliminar rentas ya cotizadas");
     }
     const { error } = await supabase.from("obra_rentas").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
