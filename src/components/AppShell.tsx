@@ -30,7 +30,7 @@ import {
   CalendarRange,
   User,
 } from "lucide-react";
-import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
+import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -53,11 +53,21 @@ import { usePermisos } from "@/hooks/usePermisos";
 
 
 
+const ROLE_LABELS: Record<AppRole, string> = {
+  director: "Director",
+  residente: "Residente",
+  auxiliar: "Auxiliar",
+  administrativo: "Administrativo",
+  supervisor: "Supervisor",
+};
+
+
 export function AppShell() {
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
+  const assumedRole = useAuthStore((s) => s.assumedRole);
+  const setAssumedRole = useAuthStore((s) => s.setAssumedRole);
   const reset = useAuthStore((s) => s.reset);
-
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const params = useParams({ strict: false }) as { obraId?: string };
   const obraId = params.obraId;
@@ -77,6 +87,7 @@ export function AppShell() {
   const logoUrl = logoSigned.data?.url ?? null;
 
 
+  const realDirector = useRealIsDirector();
   const effRoles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
@@ -91,6 +102,12 @@ export function AppShell() {
   const puedeConfigurarObra = canPerm("obras.editar") || canPerm("obras.asignar_team");
 
 
+
+
+  const switchRole = (role: AppRole | null) => {
+    setAssumedRole(role);
+    navigate({ to: "/app" });
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -284,8 +301,6 @@ export function AppShell() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-
           </div>
         </header>
 
