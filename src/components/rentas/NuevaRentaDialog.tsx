@@ -43,6 +43,7 @@ export function NuevaRentaDialog({
     : periodicidad === "mensual" ? "meses"
     : "periodos";
 
+  const qc = useQueryClient();
   const listFn = useServerFn(listInsumos);
   const insumosQ = useQuery({
     queryKey: ["insumos-renta"],
@@ -52,6 +53,18 @@ export function NuevaRentaDialog({
     () => (insumosQ.data ?? []).slice().sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)),
     [insumosQ.data],
   );
+
+  const fetchCategorias = useServerFn(listCategorias);
+  const categoriasQ = useQuery({ queryKey: ["insumo-categorias"], queryFn: () => fetchCategorias() });
+  const categorias = (categoriasQ.data ?? []) as Array<{ id: string; nombre: string }>;
+  const fetchUnidades = useServerFn(listUnidades);
+  const unidadesQ = useQuery({ queryKey: ["insumo-unidades"], queryFn: () => fetchUnidades() });
+  const unidades = (unidadesQ.data ?? []) as Array<{ id: string; codigo: string; nombre?: string }>;
+
+  const roles = useEffectiveRoles();
+  const isDirector = checkDirector(roles);
+  const [solicitarOpen, setSolicitarOpen] = useState(false);
+
 
   const crear = useServerFn(crearSolicitudRenta);
   const m = useMutation({
