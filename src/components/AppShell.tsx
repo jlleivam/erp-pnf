@@ -352,12 +352,14 @@ function NavItem({
   icon,
   active,
   onNavigate,
+  pendientes,
 }: {
   to: string;
   label: string;
   icon?: React.ReactNode;
   active?: boolean;
   onNavigate?: () => void;
+  pendientes?: number;
 }) {
   return (
     <Link
@@ -370,10 +372,12 @@ function NavItem({
       }`}
     >
       {icon}
-      <span className="truncate">{label}</span>
+      <span className="truncate flex-1">{label}</span>
+      {pendientes ? <PendientesBadge count={pendientes} /> : null}
     </Link>
   );
 }
+
 
 function DevUserSwitcher() {
   const profile = useAuthStore((s) => s.profile);
