@@ -207,7 +207,9 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
       periodicidadSugerida: z.enum(["diaria", "semanal", "quincenal", "mensual"]).optional(),
       periodosEstimados: z.number().positive().nullable().optional(),
       diasAvisoVencimiento: z.number().int().min(0).max(60).default(3),
+      enviar: z.boolean().default(false),
     }).parse(d),
+
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -259,22 +261,25 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
         periodicidad: data.periodicidadSugerida ?? null,
         periodos_estimados: data.periodosEstimados ?? null,
         dias_aviso_vencimiento: data.diasAvisoVencimiento,
-        estatus: "borrador",
+        estatus: data.enviar ? "cotizada" : "borrador",
         creado_por: userId,
       })
       .select("id").single();
     if (error) throw new Error(error.message);
 
-    await notifyRentaRoles(supabase, {
-      companyId,
-      obraId: data.obraId,
-      excludeUserId: userId,
-      roles: ["administrativo", "director"],
-      tipo: "renta_solicitada",
-      titulo: `Nueva solicitud de renta #${siguiente}`,
-      mensaje: `${equipoLabel} — pendiente de cotizar`,
-      link: `/app/obras/${data.obraId}/rentas`,
-    });
+    if (data.enviar) {
+      await notifyRentaRoles(supabase, {
+        companyId,
+        obraId: data.obraId,
+        excludeUserId: userId,
+        roles: ["administrativo", "director"],
+        tipo: "renta_solicitada",
+        titulo: `Nueva solicitud de renta #${siguiente}`,
+        mensaje: `${equipoLabel} — pendiente de cotizar`,
+        link: `/app/obras/${data.obraId}/rentas`,
+      });
+    }
+
 
     return { id: ins.id as string };
   });
