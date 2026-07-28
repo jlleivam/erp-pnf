@@ -211,7 +211,7 @@ export function TrabajadorFormDialog({
                 />
               </div>
               <div>
-                <Label>Apellido materno</Label>
+                <Label>Apellido materno<Req /></Label>
                 <Input
                   value={f.apellido_materno ?? ""}
                   onChange={(e) => set("apellido_materno", e.target.value)}
