@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -107,6 +107,7 @@ function RootComponent() {
 
 function AuthSync() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const setSession = useAuthStore((s) => s.setSession);
   const reset = useAuthStore((s) => s.reset);
   const setLoading = useAuthStore((s) => s.setLoading);
@@ -133,6 +134,9 @@ function AuthSync() {
         if (!ctx.roles.includes("director")) {
           useAuthStore.getState().setAssumedRole(null);
         }
+        queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
+        queryClient.invalidateQueries({ queryKey: ["dev-switchable-users"] });
+        queryClient.invalidateQueries({ queryKey: ["obras"] });
       } catch (e) {
         console.error("session sync failed", e);
         reset();
@@ -155,7 +159,7 @@ function AuthSync() {
       active = false;
       subscription.unsubscribe();
     };
-  }, [router, setSession, reset, setLoading]);
+  }, [router, queryClient, setSession, reset, setLoading]);
 
   return null;
 }

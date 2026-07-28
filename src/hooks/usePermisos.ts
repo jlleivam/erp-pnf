@@ -13,9 +13,10 @@ export function usePermisos() {
   const listFn = useServerFn(listRolePermissions);
   const roles = useEffectiveRoles();
   const isDirector = useRealIsDirector();
+  const rolesKey = roles.slice().sort().join("|") || "none";
 
   const q = useQuery({
-    queryKey: ["role_permissions"],
+    queryKey: ["role_permissions", rolesKey],
     queryFn: () => listFn(),
     staleTime: 5 * 60 * 1000,
   });
@@ -26,8 +27,11 @@ export function usePermisos() {
   }, [q.data]);
 
   const can = useMemo(() => {
-    return (actionKey: string) => hasPermission(actionKey, roles, overrides);
-  }, [roles, overrides]);
+    return (actionKey: string) => {
+      if (!roles.includes("director") && q.data === undefined) return false;
+      return hasPermission(actionKey, roles, overrides);
+    };
+  }, [roles, overrides, q.data]);
 
   return { can, isDirector, isLoading: q.isLoading };
 }

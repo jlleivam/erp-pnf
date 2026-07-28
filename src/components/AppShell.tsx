@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -64,6 +64,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
 
 export function AppShell() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);
   const assumedRole = useAuthStore((s) => s.assumedRole);
   const setAssumedRole = useAuthStore((s) => s.setAssumedRole);
@@ -99,6 +100,11 @@ export function AppShell() {
 
   const { can: canPerm } = usePermisos();
   const puedeCrearObra = canPerm("obras.crear");
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
+    queryClient.invalidateQueries({ queryKey: ["obras"] });
+  }, [assumedRole, profile?.id, queryClient]);
   const puedeConfigurarObra = canPerm("obras.editar") || canPerm("obras.asignar_team");
 
 
@@ -106,6 +112,10 @@ export function AppShell() {
 
   const switchRole = (role: AppRole | null) => {
     setAssumedRole(role);
+    queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
+    queryClient.invalidateQueries({ queryKey: ["obras"] });
+    queryClient.invalidateQueries({ queryKey: ["pendientes"] });
+    queryClient.invalidateQueries({ queryKey: ["notificaciones"] });
     navigate({ to: "/app" });
   };
 
@@ -419,6 +429,13 @@ function DevUserSwitcher() {
       reset();
       const { error } = await supabase.auth.verifyOtp({ type: "magiclink", token_hash });
       if (error) throw error;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["role_permissions"] }),
+        queryClient.invalidateQueries({ queryKey: ["dev-switchable-users"] }),
+        queryClient.invalidateQueries({ queryKey: ["obras"] }),
+        queryClient.invalidateQueries({ queryKey: ["pendientes"] }),
+        queryClient.invalidateQueries({ queryKey: ["notificaciones"] }),
+      ]);
       queryClient.clear();
       navigate({ to: "/app", replace: true });
       window.location.reload();
