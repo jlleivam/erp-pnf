@@ -124,7 +124,8 @@ export function CapturaNominaSheet({
   const nomina = data?.nomina;
   const renglones = (data?.renglones ?? []) as Renglon[];
   const asistencias = (data?.asistencias ?? []) as Asistencia[];
-  const isClosed = readOnly || nomina?.estatus === "cerrada";
+  const isClosed = nomina?.estatus === "cerrada";
+  const isReadOnly = readOnly || isClosed;
   const dias = useMemo(() => diasSemana(semanaInicio), [semanaInicio]);
 
   const asistMap = useMemo(() => {
@@ -179,7 +180,7 @@ export function CapturaNominaSheet({
               </Card>
             </div>
 
-            {!isClosed && (
+            {!isReadOnly && (
               <div className="flex justify-between gap-2">
                 <Button variant="outline" onClick={() => setAsignarOpen(true)}>
                   <UserPlus className="size-4 mr-1" /> Asignar trabajadores
@@ -189,6 +190,7 @@ export function CapturaNominaSheet({
                 </Button>
               </div>
             )}
+
 
             {renglones.length === 0 ? (
               <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -254,7 +256,7 @@ export function CapturaNominaSheet({
                                 jornada={Number(a?.jornada ?? 0)}
                                 horasExtras={Number(a?.horas_extras ?? 0)}
                                 notaExtras={a?.nota_extras ?? null}
-                                disabled={!!isClosed}
+                                disabled={!!isReadOnly}
                                 onSaved={() => {
                                   qc.invalidateQueries({
                                     queryKey: ["nomina", obraId, semanaInicio],
