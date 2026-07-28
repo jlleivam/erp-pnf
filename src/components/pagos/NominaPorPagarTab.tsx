@@ -92,7 +92,7 @@ export function NominaPorPagarTab() {
         <PagarNominaSemanaSheet
           semana={pagar}
           open={!!pagar}
-          onOpenChange={(o) => !o && setPagar(null)}
+          onOpenChange={(o: boolean) => !o && setPagar(null)}
         />
       )}
     </div>
