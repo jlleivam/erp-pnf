@@ -281,6 +281,11 @@ export function AppShell() {
                     <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                   </Avatar>
                   <span className="hidden sm:inline text-sm">{profile?.nombre_completo}</span>
+                  {assumedRole && (
+                    <Badge variant="secondary" className="text-[10px] capitalize hidden md:inline-flex">
+                      como {assumedRole}
+                    </Badge>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
