@@ -199,7 +199,7 @@ export const getPendientes = createServerFn({ method: "GET" })
         tasks.push(
           (async () => {
             if (!isResidente && !isSuperv) return;
-            const statuses = isSuperv
+            const statuses: string[] = isSuperv
               ? ["pendiente_autorizacion"]
               : ["autorizado", "entregado"];
             c["gasolinas"] = await safeCount(
@@ -207,10 +207,11 @@ export const getPendientes = createServerFn({ method: "GET" })
                 .from("vales_gasolina")
                 .select("id", { count: "exact", head: true })
                 .eq("obra_id", obraId)
-                .in("estatus", statuses),
+                .in("estatus", statuses as any),
             );
           })(),
         );
+
 
         // Caja chica
         tasks.push(
