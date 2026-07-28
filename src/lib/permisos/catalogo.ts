@@ -26,6 +26,9 @@ export const CATALOGO_ACCIONES: AccionCatalogo[] = [
 
   // Requisiciones
   { key: "requisiciones.crear", modulo: "Requisiciones", label: "Crear requisición", defaults: { ...T, supervisor: true } },
+  { key: "requisiciones.cotizar", modulo: "Requisiciones", label: "Cotizar requisición", defaults: A },
+  { key: "requisiciones.generar_oc", modulo: "Requisiciones", label: "Generar orden de compra", defaults: A },
+  { key: "requisiciones.ver_oc", modulo: "Requisiciones", label: "Ver órdenes de compra", defaults: AS },
   { key: "requisiciones.aprobar", modulo: "Requisiciones", label: "Aprobar requisición", defaults: S },
   { key: "requisiciones.rechazar", modulo: "Requisiciones", label: "Rechazar requisición", defaults: S },
 
