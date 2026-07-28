@@ -67,10 +67,16 @@ export function MobileBottomBar({ items, pathname, variant = "fixed", onMoreClic
               active ? "text-primary" : "text-muted-foreground"
             }`}
           >
-            <Icon className="size-5" />
+            <span className="relative inline-flex">
+              <Icon className="size-5" />
+              {it.pendientes ? (
+                <PendientesBadge count={it.pendientes} className="absolute -top-1.5 -right-2" />
+              ) : null}
+            </span>
             <span className="truncate max-w-[80%]">{it.label}</span>
           </Link>
         );
+
       })}
       {onMoreClick && (
         <button
