@@ -240,12 +240,21 @@ export function CapturaDestajoSheet({
                     const errs = erroresPorClave.get(claveTrim) ?? [];
                     const importe = importePorClave.get(claveTrim) ?? 0;
                     const esPadre = claveTrim !== "" && clavesPadre.has(claveTrim);
+                    const esActivo = activeRowId === r._id;
                     return (
                       <tr
                         key={r._id}
-                        className={`border-t border-border ${
-                          errs.length ? "bg-destructive/5" : esPadre ? "bg-accent/40 font-medium" : ""
-                        }`}
+                        onFocus={handleRowActivate(r._id)}
+                        onMouseDown={handleRowActivate(r._id)}
+                        className={`border-t border-border cursor-pointer transition-colors ${
+                          errs.length
+                            ? "bg-destructive/5"
+                            : esPadre
+                              ? "bg-accent/40 font-medium"
+                              : esActivo
+                                ? "bg-muted/60"
+                                : "hover:bg-muted/20"
+                        } ${esActivo ? "ring-1 ring-inset ring-primary/20" : ""}`}
                       >
                         <td className="p-1">
                           <Input
