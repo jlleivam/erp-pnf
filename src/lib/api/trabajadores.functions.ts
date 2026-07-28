@@ -18,7 +18,15 @@ const PUESTO = z.enum([
 ]);
 
 const trabajadorFieldsSchema = z.object({
-  nombre_completo: z.string().trim().min(1).max(255),
+  nombres: z.string().trim().min(1).max(120),
+  apellido_paterno: z.string().trim().min(1).max(120),
+  apellido_materno: z
+    .string()
+    .trim()
+    .max(120)
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
   telefono: z.string().trim().max(50).nullable().optional(),
   correo: z.string().trim().max(255).nullable().optional(),
   direccion: z.string().trim().max(1000).nullable().optional(),
@@ -47,10 +55,10 @@ const trabajadorFieldsSchema = z.object({
 });
 
 const SELECT_LIST =
-  "id, nombre_completo, curp, nss, puesto, imss_estatus, estatus_autorizacion, fecha_ingreso, trabajadores_documentos(tipo, fecha_vencimiento, url)";
+  "id, nombre_completo, nombres, apellido_paterno, apellido_materno, curp, nss, puesto, imss_estatus, estatus_autorizacion, fecha_ingreso, trabajadores_documentos(tipo, fecha_vencimiento, url)";
 
 const SELECT_FULL =
-  "id, company_id, nombre_completo, telefono, correo, direccion, curp, nss, rfc, fecha_nacimiento, sexo, estado_civil, puesto, sueldo_diario, tipo_contrato, fecha_ingreso, fecha_baja, imss_estatus, imss_fecha_alta, imss_nss, imss_sbc, imss_tipo_trabajador, estatus_autorizacion, creado_por, created_at";
+  "id, company_id, nombre_completo, nombres, apellido_paterno, apellido_materno, telefono, correo, direccion, curp, nss, rfc, fecha_nacimiento, sexo, estado_civil, puesto, sueldo_diario, tipo_contrato, fecha_ingreso, fecha_baja, imss_estatus, imss_fecha_alta, imss_nss, imss_sbc, imss_tipo_trabajador, estatus_autorizacion, creado_por, created_at";
 
 async function getMyContext(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -189,9 +197,17 @@ export const crearTrabajador = createServerFn({ method: "POST" })
       ? "autorizado"
       : "pendiente";
 
+    const nombreCompleto = [data.nombres, data.apellido_paterno, data.apellido_materno]
+      .map((s) => (s ?? "").trim())
+      .filter(Boolean)
+      .join(" ");
+
     const insertPayload = {
       company_id: companyId,
-      nombre_completo: data.nombre_completo,
+      nombre_completo: nombreCompleto,
+      nombres: data.nombres,
+      apellido_paterno: data.apellido_paterno,
+      apellido_materno: data.apellido_materno ?? null,
       telefono: data.telefono ?? null,
       correo: data.correo ?? null,
       direccion: data.direccion ?? null,
@@ -264,7 +280,7 @@ export const crearTrabajador = createServerFn({ method: "POST" })
               obra_id: data.obraId ?? null,
               tipo: "trabajador_alta_solicitada",
               titulo: "Solicitud de alta de trabajador",
-              mensaje: `${quien} solicitó dar de alta a ${data.nombre_completo}. Requiere autorización.`,
+              mensaje: `${quien} solicitó dar de alta a ${nombreCompleto}. Requiere autorización.`,
               link: `/app/catalogos/trabajadores?tab=pendientes&id=${trabajador.id}`,
             })),
           );
@@ -303,7 +319,13 @@ export const actualizarTrabajador = createServerFn({ method: "POST" })
     }
 
     const updatePayload = {
-      nombre_completo: data.nombre_completo,
+      nombre_completo: [data.nombres, data.apellido_paterno, data.apellido_materno]
+        .map((s) => (s ?? "").trim())
+        .filter(Boolean)
+        .join(" "),
+      nombres: data.nombres,
+      apellido_paterno: data.apellido_paterno,
+      apellido_materno: data.apellido_materno ?? null,
       telefono: data.telefono ?? null,
       correo: data.correo ?? null,
       direccion: data.direccion ?? null,

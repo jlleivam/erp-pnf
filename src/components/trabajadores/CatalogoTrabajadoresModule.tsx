@@ -59,6 +59,9 @@ import { TrabajadorDetalle } from "./TrabajadorDetalle";
 type Row = {
   id: string;
   nombre_completo: string;
+  nombres: string | null;
+  apellido_paterno: string | null;
+  apellido_materno: string | null;
   curp: string | null;
   nss: string | null;
   puesto: TrabajadorPuesto | null;
@@ -412,7 +415,16 @@ export function CatalogoTrabajadoresModule() {
         <TrabajadorFormDialog
           open
           canManage={canManage}
-          initial={editing ?? null}
+          initial={
+            editing
+              ? {
+                  ...editing,
+                  nombres: editing.nombres ?? editing.nombre_completo ?? "",
+                  apellido_paterno: editing.apellido_paterno ?? "",
+                  apellido_materno: editing.apellido_materno ?? "",
+                }
+              : null
+          }
           onClose={() => {
             setCreating(false);
             setEditing(null);

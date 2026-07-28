@@ -28,7 +28,9 @@ import { PUESTOS, type TrabajadorPuesto } from "./imss";
 
 export type TrabajadorFormInitial = {
   id?: string;
-  nombre_completo: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno?: string | null;
   telefono?: string | null;
   correo?: string | null;
   direccion?: string | null;
@@ -51,7 +53,9 @@ export type TrabajadorFormInitial = {
 };
 
 const EMPTY: TrabajadorFormInitial = {
-  nombre_completo: "",
+  nombres: "",
+  apellido_paterno: "",
+  apellido_materno: "",
   imss_estatus: "sin_alta",
 };
 
@@ -118,7 +122,8 @@ export function TrabajadorFormDialog({
   });
 
   const submit = () => {
-    if (!f.nombre_completo.trim()) return toast.error("Nombre requerido");
+    if (!f.nombres.trim()) return toast.error("Nombre(s) requerido");
+    if (!f.apellido_paterno.trim()) return toast.error("Apellido paterno requerido");
     if (!isEdit && !canManage) {
       if (!f.sexo) return toast.error("Sexo requerido");
       if (!f.puesto) return toast.error("Puesto requerido");
@@ -126,7 +131,9 @@ export function TrabajadorFormDialog({
         return toast.error("Sueldo diario requerido");
     }
     const payload = {
-      nombre_completo: f.nombre_completo.trim(),
+      nombres: f.nombres.trim(),
+      apellido_paterno: f.apellido_paterno.trim(),
+      apellido_materno: f.apellido_materno?.trim() || null,
       telefono: f.telefono?.trim() || null,
       correo: f.correo?.trim() || null,
       direccion: f.direccion?.trim() || null,
@@ -187,14 +194,28 @@ export function TrabajadorFormDialog({
             </p>
           )}
           <Section title="Datos personales">
-            <div>
-              <Label>
-                Nombre completo<Req />
-              </Label>
-              <Input
-                value={f.nombre_completo}
-                onChange={(e) => set("nombre_completo", e.target.value)}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <Label>Nombre(s)<Req /></Label>
+                <Input
+                  value={f.nombres}
+                  onChange={(e) => set("nombres", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Apellido paterno<Req /></Label>
+                <Input
+                  value={f.apellido_paterno}
+                  onChange={(e) => set("apellido_paterno", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Apellido materno</Label>
+                <Input
+                  value={f.apellido_materno ?? ""}
+                  onChange={(e) => set("apellido_materno", e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

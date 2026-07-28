@@ -1,20 +1,35 @@
-## Cambio: capturar sueldo semanal, mostrar diario calculado
+## Dividir "Nombre completo" en 3 campos
 
-En `src/components/trabajadores/TrabajadorFormDialog.tsx`, reemplazar el input de "Sueldo diario (MXN)" por dos campos lado a lado dentro de la misma celda del grid:
+### Base de datos (migración)
 
-- **Sueldo semanal (MXN)** — input numérico editable. Es el valor que captura el usuario.
-- **Sueldo diario (MXN)** — campo de solo lectura (`readOnly`, estilizado como muted) que muestra `semanal / 6` con 2 decimales.
+Agregar a `trabajadores`:
+- `nombres text` (nombre(s) de pila)
+- `apellido_paterno text`
+- `apellido_materno text` (opcional)
 
-### Detalles
+Mantener `nombre_completo` como columna existente (fuente única para búsquedas, listados, notificaciones y snapshots de nómina). Se sigue escribiendo desde el backend, ahora compuesto como `trim("${nombres} ${apellido_paterno} ${apellido_materno}")`.
 
-- El estado interno sigue siendo `sueldo_diario` (la BD y el resto del sistema —nómina, snapshots, listados— no cambian).
-- Se agrega un estado local derivado `sueldoSemanal`. Al editarlo se hace `set("sueldo_diario", semanal / 6)`. Si se abre en modo edición con un `sueldo_diario` existente, se inicializa `sueldoSemanal = sueldo_diario * 6`.
-- La validación obligatoria en modo solicitud sigue exigiendo `sueldo_diario > 0` (indirectamente valida que se capturó el semanal). El asterisco rojo `<Req />` se mueve a la etiqueta de "Sueldo semanal".
-- La leyenda de campos obligatorios ya existente no cambia.
+Backfill: para filas existentes, dejar los 3 campos nuevos en `null` y `nombre_completo` intacto (no se intenta parsear el string existente, evita errores).
 
-No hay otras "solicitudes de alta de trabajadores": `TrabajadorFormDialog` es el único formulario usado tanto por residentes (solicitud) como por admin (alta directa), así el cambio cubre todos los casos.
+### Backend (`src/lib/api/trabajadores.functions.ts`)
+
+- Ampliar el Zod schema con `nombres` (requerido, min 1), `apellido_paterno` (requerido, min 1) y `apellido_materno` (opcional, nullable).
+- Quitar `nombre_completo` del input; el handler lo compone: `[nombres, apellido_paterno, apellido_materno].filter(Boolean).join(" ").trim()`.
+- Persistir los 3 campos nuevos + el compuesto en `insert` y `update`.
+- `SELECT_LIST` y el select de detalle incluyen los 3 nuevos.
+
+### Formulario (`TrabajadorFormDialog.tsx`)
+
+Reemplazar el input único por una fila grid de 3 columnas dentro de "Datos personales":
+- **Nombre(s)** * (obligatorio siempre)
+- **Apellido paterno** * (obligatorio siempre)
+- **Apellido materno** (opcional)
+
+Validación: `nombres` y `apellido_paterno` requeridos en creación (ambos modos, coincide con el requisito previo de "nombre requerido"); en edición sin cambios se envían los valores actuales. Se elimina `nombre_completo` del estado del formulario.
+
+`TrabajadorFormInitial` reemplaza `nombre_completo` por los 3 campos nuevos. `TrabajadorDetalle` y `CatalogoTrabajadoresModule` siguen leyendo `nombre_completo` (compuesto), sin cambios visibles.
 
 ### Fuera de alcance
 
-- Migraciones de BD: se conserva `sueldo_diario` como fuente de verdad.
-- Vistas de nómina, detalle de trabajador y listados: siguen mostrando "/día" como hoy.
+- No se toca nómina, notificaciones, ni otros módulos: siguen consumiendo `nombre_completo`.
+- No se hace parsing retroactivo de nombres ya capturados.
