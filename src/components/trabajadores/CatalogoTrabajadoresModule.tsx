@@ -415,7 +415,16 @@ export function CatalogoTrabajadoresModule() {
         <TrabajadorFormDialog
           open
           canManage={canManage}
-          initial={editing ?? null}
+          initial={
+            editing
+              ? {
+                  ...editing,
+                  nombres: editing.nombres ?? editing.nombre_completo ?? "",
+                  apellido_paterno: editing.apellido_paterno ?? "",
+                  apellido_materno: editing.apellido_materno ?? "",
+                }
+              : null
+          }
           onClose={() => {
             setCreating(false);
             setEditing(null);
