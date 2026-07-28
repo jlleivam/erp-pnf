@@ -207,7 +207,9 @@ export const crearSolicitudRenta = createServerFn({ method: "POST" })
       periodicidadSugerida: z.enum(["diaria", "semanal", "quincenal", "mensual"]).optional(),
       periodosEstimados: z.number().positive().nullable().optional(),
       diasAvisoVencimiento: z.number().int().min(0).max(60).default(3),
+      enviar: z.boolean().default(false),
     }).parse(d),
+
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
