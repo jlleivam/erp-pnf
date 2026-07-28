@@ -13,6 +13,7 @@ import {
   solicitarPagoAnticipoSubcontrato,
   cancelarSolicitudAnticipoSubcontrato,
 } from "@/lib/api/subcontratos.functions";
+import { RenglonesSubcontratoView } from "./RenglonesSubcontratoView";
 import {
   Sheet,
   SheetContent,
@@ -163,18 +164,21 @@ export function SubcontratoDetalleSheet({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="presupuesto" className="mt-4 space-y-3">
+              <TabsContent value="presupuesto" className="mt-4 space-y-4">
                 {base && (
-                  <PresupuestoCard
-                    p={base}
-                    canAuthorize={canAuthorize}
-                    canEditDraft={canEditDraft}
-                    onEdit={() => setEditingBaseId(base.id)}
-                    onEnviar={() => enviarM.mutate({ data: { presupuestoId: base.id } })}
-                    onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: base.id } })}
-                    onRechazar={() => setRejecting(base)}
-                    onReabrir={() => reabrirM.mutate({ data: { presupuestoId: base.id } })}
-                  />
+                  <div className="space-y-2">
+                    <PresupuestoCard
+                      p={base}
+                      canAuthorize={canAuthorize}
+                      canEditDraft={canEditDraft}
+                      onEdit={() => setEditingBaseId(base.id)}
+                      onEnviar={() => enviarM.mutate({ data: { presupuestoId: base.id } })}
+                      onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: base.id } })}
+                      onRechazar={() => setRejecting(base)}
+                      onReabrir={() => reabrirM.mutate({ data: { presupuestoId: base.id } })}
+                    />
+                    <RenglonesSubcontratoView presupuestoSubcontratoId={base.id} />
+                  </div>
                 )}
                 {baseAutorizada && canEditDraft && (
                   <div>
@@ -188,17 +192,19 @@ export function SubcontratoDetalleSheet({
                   </div>
                 )}
                 {adendas.map((oc) => (
-                  <PresupuestoCard
-                    key={oc.id}
-                    p={oc}
-                    canAuthorize={canAuthorize}
-                    canEditDraft={canEditDraft}
-                    onEdit={() => setEditingOcId(oc.id)}
-                    onEnviar={() => enviarM.mutate({ data: { presupuestoId: oc.id } })}
-                    onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: oc.id } })}
-                    onRechazar={() => setRejecting(oc)}
-                    onReabrir={() => reabrirM.mutate({ data: { presupuestoId: oc.id } })}
-                  />
+                  <div key={oc.id} className="space-y-2">
+                    <PresupuestoCard
+                      p={oc}
+                      canAuthorize={canAuthorize}
+                      canEditDraft={canEditDraft}
+                      onEdit={() => setEditingOcId(oc.id)}
+                      onEnviar={() => enviarM.mutate({ data: { presupuestoId: oc.id } })}
+                      onAutorizar={() => autorizarM.mutate({ data: { presupuestoId: oc.id } })}
+                      onRechazar={() => setRejecting(oc)}
+                      onReabrir={() => reabrirM.mutate({ data: { presupuestoId: oc.id } })}
+                    />
+                    <RenglonesSubcontratoView presupuestoSubcontratoId={oc.id} />
+                  </div>
                 ))}
               </TabsContent>
 
