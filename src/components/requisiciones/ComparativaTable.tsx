@@ -834,7 +834,7 @@ export function ComparativaTable({
             const badge = estatus ? OC_BADGE[estatus] : null;
             const bloqueado = provBloqueado(provId) || isOptimisticPendiente;
             const enviandoEsta = enviandoProv === provId;
-            const puedeEnviar = isAdmin && !bloqueado && !enviandoEsta && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
+            const puedeEnviar = puedeGestionar && puedeCrearOC && !bloqueado && !enviandoEsta && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
 
 
 
