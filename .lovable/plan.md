@@ -1,22 +1,15 @@
 ## Problema
 
-En `CapturaNominaSheet.tsx` (línea 127) se calcula:
+En `src/lib/api/subcontratos.functions.ts` (`autorizarPresupuestoSubcontrato`, línea 676) la notificación al residente solo se dispara cuando `p.tipo === "adenda"`. Cuando se autoriza el **presupuesto base** del subcontrato no se notifica a nadie.
 
-```ts
-const isClosed = readOnly || nomina?.estatus === "cerrada";
-```
-
-Y el badge "Cerrada" se muestra cuando `isClosed` es true (línea 142-146).
-
-El supervisor no es director ni residente de la obra, por lo que en `NominaModule.tsx` (línea 158) recibe `readOnly: true` aunque el estatus real sea `borrador`. Resultado: ve el badge "Cerrada" aunque la nómina esté activa.
+Destajos ya está bien: notifica `destajo_autorizado` para base y `oc_destajo_autorizada` para adenda.
 
 ## Fix
 
-En `src/components/nomina/CapturaNominaSheet.tsx`:
+1. **`src/lib/api/_oc-notify.server.ts`**: agregar los tipos `"subcontrato_autorizado"` y `"subcontrato_rechazado"` a `TipoRespuesta` y `TIPO_LABEL_RES` (label `"subcontrato"`), y extender `esSubcontratoBase` de manera análoga a `esDestajoBase` para que el título sea "Subcontrato autorizado / rechazado" y el mensaje diga "autorizó tu subcontrato…".
 
-1. Separar los dos conceptos:
-   - `isClosed = nomina?.estatus === "cerrada"` → controla el badge "Cerrada" y bloquea el botón de cerrar semana.
-   - `isReadOnly = readOnly || isClosed` → controla que los inputs de asistencia/HE, "Asignar trabajadores" y demás acciones queden deshabilitados.
-2. Reemplazar los usos actuales de `isClosed` que en realidad significan "no editable" por `isReadOnly`, y dejar `isClosed` sólo para el badge y la lógica de cierre.
+2. **`src/lib/api/subcontratos.functions.ts`** en `autorizarPresupuestoSubcontrato`: mover el bloque `notifyResidenteOC` fuera del `if (p.tipo === "adenda")` y usar:
+   - `tipo: p.tipo === "adenda" ? "oc_subcontrato_autorizada" : "subcontrato_autorizado"`
+   - `link: /app/obras/${obraId}/subcontratos?subcontrato=${p.subcontrato_id}` (equivalente al de destajos).
 
-Así el supervisor ve la nómina en modo consulta con badge "Activa" (o sin badge) en lugar de "Cerrada", igual que en la lista del módulo.
+3. Aplicar el mismo cambio en `rechazarPresupuestoSubcontrato` (revisar que también notifique en base con `subcontrato_rechazado`).
