@@ -17,6 +17,7 @@ import {
 export function NotificacionesBell() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const fetchList = useServerFn(listMisNotificaciones);
   const markOneFn = useServerFn(marcarNotificacionLeida);
   const markAllFn = useServerFn(marcarTodasLeidas);
