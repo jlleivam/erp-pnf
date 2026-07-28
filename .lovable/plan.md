@@ -1,36 +1,13 @@
 ## Objetivo
-Al registrar una recepción de OC, requerir foto de la remisión física como evidencia. Si no hay remisión, se marca "Sin remisión" (con motivo opcional) y no se sube foto.
+Mostrar la tabla de conceptos (renglones) debajo de cada tarjeta de presupuesto en el detalle de Subcontratos, tal como se ve en Destajos.
 
-## Backend
+## Cambios
 
-**Storage bucket** (nuevo, privado): `almacen-remisiones`
-- Políticas RLS en `storage.objects`:
-  - INSERT/SELECT para `authenticated` cuya `company_id` (path prefijo) coincida.
-  - Ruta: `{company_id}/{obra_id}/{recepcion_id}/{filename}`.
+**Nuevo** `src/components/subcontratos/RenglonesSubcontratoView.tsx`
+- Copia del componente `RenglonesDestajoView` pero usando `getSubcontratoPresupuesto` (ya existe en `subcontratos.functions.ts`) y queryKey `["subcontrato-presupuesto", id]`.
+- Misma tabla: Clave / Concepto / Unidad / Cantidad / PU / Importe + total, con manejo de renglones agrupados vía `procesarRenglones`.
 
-**Migración** `almacen_recepciones`:
-- `sin_remision boolean not null default false`
-- `motivo_sin_remision text` (nullable, max 300)
-- `evidencia_path text` (nullable) — ruta en el bucket
+**Editar** `src/components/subcontratos/SubcontratoDetalleSheet.tsx`
+- Envolver cada `<PresupuestoCard>` (base y adendas) en un `<div className="space-y-2">` y renderizar `<RenglonesSubcontratoView presupuestoSubcontratoId={p.id} />` justo debajo, replicando el patrón de `DestajoDetalleSheet` (líneas 174-214).
 
-**`registrarRecepcion`** (`src/lib/api/almacen.functions.ts`):
-- Añadir al input: `sinRemision: boolean`, `motivoSinRemision: string|null`, `evidenciaPath: string|null`.
-- Reglas:
-  - Si `sinRemision === false` → `evidenciaPath` requerido; `folioRemision` sigue opcional (o requerido, ver Pregunta).
-  - Si `sinRemision === true` → `evidenciaPath` debe ser null; `folioRemision` se ignora.
-- Persistir los nuevos campos en el insert.
-
-## Frontend (`src/components/almacen/RecepcionDialog.tsx`)
-- Estado nuevo: `sinRemision`, `motivoSinRemision`, `file`, `uploadedPath`.
-- UI en el bloque superior:
-  - Checkbox "Sin remisión física".
-  - Si NO está marcado: input `<Input type="file" accept="image/*,application/pdf">` (obligatorio, marcado con asterisco rojo) + preview y botón para reemplazar.
-  - Si SÍ está marcado: `Textarea` opcional "Motivo (opcional)", oculta folio/archivo.
-- Al guardar:
-  1. Si hay archivo, subirlo con `supabase.storage.from('almacen-remisiones').upload(path, file)` usando `crypto.randomUUID()` + extensión.
-  2. Llamar `registrarRecepcion` con los nuevos campos.
-  3. Validar en cliente antes de mutar (mostrar toast si falta evidencia).
-
-## Preguntas
-1. Cuando hay remisión física, ¿el **folio de remisión** también debe volverse obligatorio, o sigue opcional (solo la foto es obligatoria)?
-2. ¿Aceptar solo imágenes (jpg/png/heic) o también PDF?
+Sin cambios en backend, tipos, ni otras vistas.
