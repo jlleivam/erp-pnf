@@ -908,31 +908,35 @@ export function ComparativaTable({
                   {/* Pendiente → supervisor autoriza/rechaza */}
                   {estatus === "pendiente_autorizacion" && (
                     <>
-                      {(!isSupervisor || !oc || oc.estatus !== "pendiente_autorizacion") && (
+                      {(!puedeRevisarOC || !oc || oc.estatus !== "pendiente_autorizacion") && (
                         <Button size="sm" variant="outline" disabled>
                           <Clock className="size-4 mr-1" />
                           Pendiente de autorización
                         </Button>
                       )}
-                      {isSupervisor && oc && oc.estatus === "pendiente_autorizacion" && (
+                      {puedeRevisarOC && oc && oc.estatus === "pendiente_autorizacion" && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setRechazoDialog({ ocId: oc.id, folio: oc.folio })}
-                            disabled={rechazarMut.isPending}
-                          >
-                            <XCircle className="size-4 mr-1" />
-                            Rechazar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => autorizarMut.mutate(oc.id)}
-                            disabled={autorizarMut.isPending}
-                          >
-                            <CheckCircle2 className="size-4 mr-1" />
-                            Autorizar
-                          </Button>
+                          {puedeRechazar && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setRechazoDialog({ ocId: oc.id, folio: oc.folio })}
+                              disabled={rechazarMut.isPending}
+                            >
+                              <XCircle className="size-4 mr-1" />
+                              Rechazar
+                            </Button>
+                          )}
+                          {puedeAutorizar && (
+                            <Button
+                              size="sm"
+                              onClick={() => autorizarMut.mutate(oc.id)}
+                              disabled={autorizarMut.isPending}
+                            >
+                              <CheckCircle2 className="size-4 mr-1" />
+                              Autorizar
+                            </Button>
+                          )}
                         </>
                       )}
                     </>
