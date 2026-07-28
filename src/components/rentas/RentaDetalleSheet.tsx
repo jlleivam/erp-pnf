@@ -172,7 +172,7 @@ export function RentaDetalleSheet({
           <SheetDescription>
             {renta?.proveedor?.razon_social
               ? `Proveedor: ${renta.proveedor.razon_social}`
-              : renta?.estatus === "borrador"
+              : renta?.estatus === "solicitada"
                 ? "Sin cotización aún"
                 : "Cargando proveedor…"}
           </SheetDescription>
