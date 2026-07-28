@@ -56,7 +56,10 @@ export function PermisosTab() {
       if (ctx?.prev) qc.setQueryData(["role_permissions"], ctx.prev);
       toast.error("No se pudo guardar el permiso");
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["role_permissions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["role_permissions"] });
+      qc.invalidateQueries({ queryKey: ["permisos-overrides"] });
+    },
   });
 
   const isChecked = (role: PermRole, action_key: string, def: boolean) => {
@@ -69,8 +72,7 @@ export function PermisosTab() {
       <Alert>
         <Info className="size-4" />
         <AlertDescription>
-          Los permisos configurados aquí aún no se aplican al sistema — estamos preparando la migración.
-          Por ahora sirven para definir el modelo de acceso deseado.
+          Los cambios se aplican de inmediato al sistema. El Director siempre conserva acceso total.
         </AlertDescription>
       </Alert>
 
