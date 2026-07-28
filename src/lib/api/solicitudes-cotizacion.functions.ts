@@ -74,8 +74,8 @@ export const crearSolicitud = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
+    const { companyId } = await getCtx(supabase, userId);
 
     const { data: req } = await supabase
       .from("requisiciones").select("id, company_id").eq("id", data.requisicionId).maybeSingle();
@@ -123,8 +123,7 @@ export const actualizarSolicitud = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
 
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus").eq("id", data.solicitudId).maybeSingle();
@@ -158,8 +157,7 @@ export const eliminarSolicitud = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ solicitudId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus, requisicion_id").eq("id", data.solicitudId).maybeSingle();
     if (!sc) throw new Error("Solicitud no encontrada");
@@ -177,8 +175,7 @@ export const marcarSCEnviada = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ solicitudId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus").eq("id", data.solicitudId).maybeSingle();
     if (!sc) throw new Error("Solicitud no encontrada");
@@ -202,8 +199,7 @@ export const capturarRespuesta = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus").eq("id", data.solicitudId).maybeSingle();
     if (!sc) throw new Error("Solicitud no encontrada");
@@ -239,8 +235,7 @@ export const descartarSolicitud = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ solicitudId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { error } = await supabase
       .from("cotizacion_solicitudes")
       .update({ estatus: "descartada" })
