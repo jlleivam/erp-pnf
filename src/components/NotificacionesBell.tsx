@@ -57,7 +57,7 @@ export function NotificacionesBell() {
 
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Notificaciones">
           <Bell className="size-5" />
