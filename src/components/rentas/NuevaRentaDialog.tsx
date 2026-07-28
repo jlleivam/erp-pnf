@@ -217,15 +217,8 @@ export function NuevaRentaDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
-            variant="secondary"
             disabled={m.isPending || !insumoId || Number(cantidad) <= 0}
-            onClick={() => submit(false)}
-          >
-            {m.isPending ? "Guardando…" : "Guardar borrador"}
-          </Button>
-          <Button
-            disabled={m.isPending || !insumoId || Number(cantidad) <= 0}
-            onClick={() => submit(true)}
+            onClick={() => submit()}
           >
             {m.isPending ? "Enviando…" : "Enviar solicitud"}
           </Button>
