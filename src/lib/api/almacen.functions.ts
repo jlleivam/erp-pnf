@@ -414,9 +414,13 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
       }
     }
     const nuevoEstatus = completa ? "recibida" : "recibida_parcial";
-    await supabase.from("ordenes_compra")
-      .update({ estatus: nuevoEstatus })
-      .eq("id", oc.id);
+    {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: updErr } = await supabaseAdmin.from("ordenes_compra")
+        .update({ estatus: nuevoEstatus })
+        .eq("id", oc.id);
+      if (updErr) throw new Error(`No se pudo actualizar estatus de OC: ${updErr.message}`);
+    }
 
     // Notificar a administrativos y supervisores en cada recepción
     try {
