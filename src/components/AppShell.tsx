@@ -96,6 +96,10 @@ export function AppShell() {
   const obraPendientes = usePendientesObra(obraId);
   usePendientesRealtime();
 
+  const { can: canPerm } = usePermisos();
+  const puedeCrearObra = canPerm("obras.crear");
+  const puedeConfigurarObra = canPerm("obras.editar") || canPerm("obras.asignar_team");
+
 
 
 
@@ -143,7 +147,7 @@ export function AppShell() {
         { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel, pendientes: obraPendientes["gasolinas"] },
         { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins, pendientes: obraPendientes["caja-chica"] },
         { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo, pendientes: obraPendientes["tareas"] },
-        ...(director
+        ...(puedeConfigurarObra
           ? [{ to: `/app/obras/${obraId}/configuracion`, label: "Configuración", icon: Settings } as BottomBarItem]
           : []),
       ]
@@ -181,7 +185,7 @@ export function AppShell() {
         </p>
         <NavItem to="/app" label="Dashboard" icon={<LayoutDashboard className="size-4" />} active={pathname === "/app"} onNavigate={onNavigate} />
         <NavItem to="/app/catalogos" label="Catálogos" icon={<BookOpen className="size-4" />} active={pathname.startsWith("/app/catalogos")} onNavigate={onNavigate} />
-        {director && (
+        {puedeCrearObra && (
           <NavItem to="/app/obras/nueva" label="Nueva obra" icon={<HardHat className="size-4" />} active={pathname === "/app/obras/nueva"} onNavigate={onNavigate} />
         )}
         {director && (
