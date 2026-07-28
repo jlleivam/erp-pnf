@@ -1463,6 +1463,202 @@ export type Database = {
           },
         ]
       }
+      nomina_pagos_cheque: {
+        Row: {
+          company_id: string
+          created_at: string
+          cuenta_id: string
+          folio_cheque: string
+          id: string
+          monto: number
+          pago_id: string | null
+          pago_semana_id: string
+          trabajador_id: string | null
+          trabajador_nombre: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          cuenta_id: string
+          folio_cheque: string
+          id?: string
+          monto: number
+          pago_id?: string | null
+          pago_semana_id: string
+          trabajador_id?: string | null
+          trabajador_nombre: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          cuenta_id?: string
+          folio_cheque?: string
+          id?: string
+          monto?: number
+          pago_id?: string | null
+          pago_semana_id?: string
+          trabajador_id?: string | null
+          trabajador_nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nomina_pagos_cheque_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nomina_pagos_cheque_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nomina_pagos_cheque_pago_semana_id_fkey"
+            columns: ["pago_semana_id"]
+            isOneToOne: false
+            referencedRelation: "nomina_pagos_semana"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nomina_pagos_cheque_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nomina_pagos_semana: {
+        Row: {
+          company_id: string
+          creado_por: string
+          created_at: string
+          fecha_pago: string
+          id: string
+          notas: string | null
+          semana_fin: string
+          semana_inicio: string
+          total_cheques: number
+          total_nomina: number
+          total_vales: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          creado_por: string
+          created_at?: string
+          fecha_pago: string
+          id?: string
+          notas?: string | null
+          semana_fin: string
+          semana_inicio: string
+          total_cheques?: number
+          total_nomina: number
+          total_vales?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          creado_por?: string
+          created_at?: string
+          fecha_pago?: string
+          id?: string
+          notas?: string | null
+          semana_fin?: string
+          semana_inicio?: string
+          total_cheques?: number
+          total_nomina?: number
+          total_vales?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nomina_pagos_semana_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nomina_pagos_vale: {
+        Row: {
+          company_id: string
+          created_at: string
+          cuenta_id: string
+          id: string
+          monto: number
+          nomina_id: string | null
+          obra_id: string
+          obra_nombre: string
+          pago_id: string | null
+          pago_semana_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          cuenta_id: string
+          id?: string
+          monto: number
+          nomina_id?: string | null
+          obra_id: string
+          obra_nombre: string
+          pago_id?: string | null
+          pago_semana_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          cuenta_id?: string
+          id?: string
+          monto?: number
+          nomina_id?: string | null
+          obra_id?: string
+          obra_nombre?: string
+          pago_id?: string | null
+          pago_semana_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nomina_pagos_vale_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nomina_pagos_vale_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nomina_pagos_vale_nomina_id_fkey"
+            columns: ["nomina_id"]
+            isOneToOne: false
+            referencedRelation: "obra_nominas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nomina_pagos_vale_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nomina_pagos_vale_pago_semana_id_fkey"
+            columns: ["pago_semana_id"]
+            isOneToOne: false
+            referencedRelation: "nomina_pagos_semana"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacion_preferencias: {
         Row: {
           company_id: string
@@ -4261,7 +4457,7 @@ export type Database = {
         | "cancelada"
       gasto_oficina_tipo: "nomina_oficina" | "servicio" | "papeleria" | "otro"
       insumo_estatus: "autorizado" | "pendiente"
-      nomina_estatus: "borrador" | "cerrada"
+      nomina_estatus: "borrador" | "cerrada" | "pagada"
       nomina_oficina_periodicidad: "semanal" | "quincenal" | "mensual"
       oc_estatus:
         | "borrador"
@@ -4518,7 +4714,7 @@ export const Constants = {
       ],
       gasto_oficina_tipo: ["nomina_oficina", "servicio", "papeleria", "otro"],
       insumo_estatus: ["autorizado", "pendiente"],
-      nomina_estatus: ["borrador", "cerrada"],
+      nomina_estatus: ["borrador", "cerrada", "pagada"],
       nomina_oficina_periodicidad: ["semanal", "quincenal", "mensual"],
       oc_estatus: [
         "borrador",

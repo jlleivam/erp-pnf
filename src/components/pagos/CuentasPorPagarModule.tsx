@@ -26,6 +26,8 @@ import { RegistrarPagoOCDialog } from "./RegistrarPagoOCDialog";
 import { RegistrarPagoCxPDialog } from "./RegistrarPagoCxPDialog";
 import { GasolinasPorPagarTab } from "./GasolinasPorPagarTab";
 import { CajaChicaPorPagarTab } from "./CajaChicaPorPagarTab";
+import { NominaPorPagarTab } from "./NominaPorPagarTab";
+import { listSemanasNominaPorPagar } from "@/lib/api/nominas.functions";
 import { formatMXN, formatDate } from "@/lib/format";
 
 type Row = {
@@ -88,6 +90,12 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchCajaChicaCount(),
   });
 
+  const fetchNominaCount = useServerFn(listSemanasNominaPorPagar);
+  const nominaCountQ = useQuery({
+    queryKey: ["nomina-por-pagar"],
+    queryFn: () => fetchNominaCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
@@ -103,6 +111,7 @@ export function CuentasPorPagarModule() {
     + ((estSubCountQ.data ?? []) as unknown[]).length;
   const gasolinasPendientesCount = ((valesCountQ.data ?? []) as unknown[]).length;
   const cajaChicaPendientesCount = ((cajaChicaCountQ.data ?? []) as unknown[]).length;
+  const nominaPendientesCount = ((nominaCountQ.data ?? []) as unknown[]).length;
 
 
   return (
@@ -154,6 +163,14 @@ export function CuentasPorPagarModule() {
             {cajaChicaPendientesCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
                 {cajaChicaPendientesCount > 99 ? "99+" : cajaChicaPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="nomina">
+            Nómina
+            {nominaPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {nominaPendientesCount > 99 ? "99+" : nominaPendientesCount}
               </span>
             )}
           </TabsTrigger>
@@ -237,6 +254,10 @@ export function CuentasPorPagarModule() {
 
         <TabsContent value="caja-chica" className="mt-4">
           <CajaChicaPorPagarTab />
+        </TabsContent>
+
+        <TabsContent value="nomina" className="mt-4">
+          <NominaPorPagarTab />
         </TabsContent>
       </Tabs>
 
