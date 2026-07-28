@@ -30,7 +30,7 @@ import {
   CalendarRange,
   User,
 } from "lucide-react";
-import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
+import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -77,7 +77,6 @@ export function AppShell() {
   const logoUrl = logoSigned.data?.url ?? null;
 
 
-  const realDirector = useRealIsDirector();
   const effRoles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
@@ -92,12 +91,6 @@ export function AppShell() {
   const puedeConfigurarObra = canPerm("obras.editar") || canPerm("obras.asignar_team");
 
 
-
-
-  const switchRole = (role: AppRole | null) => {
-    setAssumedRole(role);
-    navigate({ to: "/app" });
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
