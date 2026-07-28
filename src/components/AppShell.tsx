@@ -48,6 +48,7 @@ import { NotificacionesBell } from "@/components/NotificacionesBell";
 import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
 import { PendientesBadge } from "@/components/PendientesBadge";
 import { usePendientesAdmin, usePendientesObra, usePendientesRealtime, moduleKeyFromPath } from "@/hooks/usePendientes";
+import { usePermisos } from "@/hooks/usePermisos";
 
 
 
