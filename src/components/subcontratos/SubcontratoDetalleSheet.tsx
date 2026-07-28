@@ -13,6 +13,7 @@ import {
   solicitarPagoAnticipoSubcontrato,
   cancelarSolicitudAnticipoSubcontrato,
 } from "@/lib/api/subcontratos.functions";
+import { RenglonesSubcontratoView } from "./RenglonesSubcontratoView";
 import {
   Sheet,
   SheetContent,
