@@ -210,7 +210,7 @@ export function CapturaNominaSheet({
                         </th>
                       ))}
                       <th className="text-right p-2 w-20">Días</th>
-                      <th className="text-right p-2 w-20">Extras h</th>
+                      <th className="text-right p-2 w-20">HE</th>
                       <th className="text-right p-2 w-28">Importe</th>
                     </tr>
                   </thead>
