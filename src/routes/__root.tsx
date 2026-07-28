@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/auth";
 import { getSessionContext } from "@/lib/api/auth.functions";
@@ -95,9 +96,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthSync />
-      <Outlet />
-      <Toaster />
+      <TooltipProvider delayDuration={200}>
+        <AuthSync />
+        <Outlet />
+        <Toaster />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
