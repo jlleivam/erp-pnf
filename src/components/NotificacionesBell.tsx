@@ -45,8 +45,15 @@ export function NotificacionesBell() {
     if (!n.link) return;
     const url = new URL(n.link, window.location.origin);
     const search = Object.fromEntries(url.searchParams.entries());
+    setOpen(false);
     navigate({ to: url.pathname as any, search: search as any });
   };
+
+  const goToAll = () => {
+    setOpen(false);
+    navigate({ to: "/app/notificaciones" });
+  };
+
 
 
   return (
