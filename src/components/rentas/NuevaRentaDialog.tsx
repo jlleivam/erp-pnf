@@ -90,7 +90,20 @@ export function NuevaRentaDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>Equipo</Label>
+            <div className="flex items-center justify-between">
+              <Label>Equipo</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setSolicitarOpen(true)}
+              >
+                <PackagePlus className="size-3.5 mr-1" />
+                {isDirector ? "Nuevo insumo" : "Solicitar insumo"}
+              </Button>
+            </div>
+
             <Select value={insumoId} onValueChange={setInsumoId} disabled={sinInsumos}>
               <SelectTrigger>
                 <SelectValue placeholder={
