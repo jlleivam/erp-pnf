@@ -55,10 +55,10 @@ const trabajadorFieldsSchema = z.object({
 });
 
 const SELECT_LIST =
-  "id, nombre_completo, curp, nss, puesto, imss_estatus, estatus_autorizacion, fecha_ingreso, trabajadores_documentos(tipo, fecha_vencimiento, url)";
+  "id, nombre_completo, nombres, apellido_paterno, apellido_materno, curp, nss, puesto, imss_estatus, estatus_autorizacion, fecha_ingreso, trabajadores_documentos(tipo, fecha_vencimiento, url)";
 
 const SELECT_FULL =
-  "id, company_id, nombre_completo, telefono, correo, direccion, curp, nss, rfc, fecha_nacimiento, sexo, estado_civil, puesto, sueldo_diario, tipo_contrato, fecha_ingreso, fecha_baja, imss_estatus, imss_fecha_alta, imss_nss, imss_sbc, imss_tipo_trabajador, estatus_autorizacion, creado_por, created_at";
+  "id, company_id, nombre_completo, nombres, apellido_paterno, apellido_materno, telefono, correo, direccion, curp, nss, rfc, fecha_nacimiento, sexo, estado_civil, puesto, sueldo_diario, tipo_contrato, fecha_ingreso, fecha_baja, imss_estatus, imss_fecha_alta, imss_nss, imss_sbc, imss_tipo_trabajador, estatus_autorizacion, creado_por, created_at";
 
 async function getMyContext(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
