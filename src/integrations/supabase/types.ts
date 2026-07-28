@@ -111,35 +111,44 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          evidencia_path: string | null
           fecha: string
           folio_remision: string | null
           id: string
+          motivo_sin_remision: string | null
           notas: string | null
           obra_id: string
           oc_id: string
           recibido_por: string
+          sin_remision: boolean
         }
         Insert: {
           company_id: string
           created_at?: string
+          evidencia_path?: string | null
           fecha?: string
           folio_remision?: string | null
           id?: string
+          motivo_sin_remision?: string | null
           notas?: string | null
           obra_id: string
           oc_id: string
           recibido_por: string
+          sin_remision?: boolean
         }
         Update: {
           company_id?: string
           created_at?: string
+          evidencia_path?: string | null
           fecha?: string
           folio_remision?: string | null
           id?: string
+          motivo_sin_remision?: string | null
           notas?: string | null
           obra_id?: string
           oc_id?: string
           recibido_por?: string
+          sin_remision?: boolean
         }
         Relationships: [
           {
