@@ -33,6 +33,7 @@ import { RechazarDialog } from "./RechazarDialog";
 
 const ESTATUS_LABEL: Record<string, string> = {
   borrador: "Borrador",
+  solicitada: "Solicitada",
   cotizada: "Cotizada",
   autorizada: "Autorizada",
   rechazada: "Rechazada",
@@ -41,6 +42,7 @@ const ESTATUS_LABEL: Record<string, string> = {
 };
 const ESTATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   borrador: "secondary",
+  solicitada: "outline",
   cotizada: "outline",
   autorizada: "default",
   rechazada: "destructive",
