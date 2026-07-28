@@ -1,24 +1,23 @@
-## Plan
+## Problema
 
-1. **Corregir el cambio de rol simulado en el header**
-   - En `AppShell`, al ejecutar `switchRole`, invalidar inmediatamente las consultas de permisos (`role_permissions`) y datos dependientes después de actualizar `assumedRole`.
-   - Esto hará que `usePermisos()` recalcule `can("obras.crear")` y oculte el botón “Nueva obra” cuando el rol administrativo no tenga el check.
+La RLS de `role_permissions` sólo permite **SELECT al Director**. Cuando un residente (o cualquier no-director) carga la app:
 
-2. **Corregir el cambio de usuario desde el dropdown DEV**
-   - Después de impersonar/cambiar usuario, limpiar o invalidar explícitamente las caches relevantes antes de navegar/recargar:
-     - `role_permissions`
-     - `dev-switchable-users`
-     - `obras`
-     - pendientes/notificaciones si aplica
-   - Mantener el reload actual, pero asegurar que el estado local de roles/permisos no quede usando datos del usuario anterior durante el cambio.
+- `listRolePermissions` corre como ese usuario y devuelve `[]` (RLS filtra todo).
+- `usePermisos` cae al catálogo por defecto → residente NO tiene `obras.crear` por default → botón oculto.
+- El mismo problema afecta al enforcement server-side (`requirePermission` en `src/lib/permisos/require.ts`), que también leería vacío y denegaría aun si la UI lo mostrara.
 
-3. **Hacer el hook de permisos sensible al rol efectivo**
-   - Ajustar `usePermisos()` para que su cache/resultado dependa también de los roles efectivos actuales.
-   - Si cambia `assumedRole`, el permiso se recalcula inmediatamente aunque la consulta de overrides ya esté cacheada.
+Verificado en DB: el override `residente → obras.crear = true` sí está guardado.
 
-4. **Verificar puntos donde aparece “Nueva obra”**
-   - Confirmar que tanto el botón del dashboard (`/app`) como el item del sidebar/mobile usan `can("obras.crear")` y no un check antiguo de director/admin.
+## Solución
 
-## Resultado esperado
+Permitir a todos los miembros autenticados de la empresa **leer** `role_permissions` (los overrides no son sensibles: son configuración de UI/enforcement compartida). Mantener INSERT/UPDATE/DELETE sólo para Director.
 
-Cuando simules el rol administrativo y ese rol no tenga permiso para `Crear obra`, el botón/link “Nueva obra” desaparecerá de inmediato en el dashboard y navegación, sin tener que cerrar sesión ni refrescar manualmente.
+### Cambios
+
+1. **Migración SQL**: nueva policy SELECT en `public.role_permissions`
+   - `USING (company_id = current_company_id())` (o el helper equivalente que ya usan otras tablas de la empresa), para role `authenticated`.
+   - Mantener las 4 políticas existentes de Director tal cual.
+
+Con eso, `usePermisos` recibe los overrides reales, el residente ve el botón "Nueva obra", y `requirePermission` autoriza la acción en el servidor.
+
+No se requieren cambios en cliente ni en los server functions.
