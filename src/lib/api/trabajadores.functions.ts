@@ -197,9 +197,17 @@ export const crearTrabajador = createServerFn({ method: "POST" })
       ? "autorizado"
       : "pendiente";
 
+    const nombreCompleto = [data.nombres, data.apellido_paterno, data.apellido_materno]
+      .map((s) => (s ?? "").trim())
+      .filter(Boolean)
+      .join(" ");
+
     const insertPayload = {
       company_id: companyId,
-      nombre_completo: data.nombre_completo,
+      nombre_completo: nombreCompleto,
+      nombres: data.nombres,
+      apellido_paterno: data.apellido_paterno,
+      apellido_materno: data.apellido_materno ?? null,
       telefono: data.telefono ?? null,
       correo: data.correo ?? null,
       direccion: data.direccion ?? null,
