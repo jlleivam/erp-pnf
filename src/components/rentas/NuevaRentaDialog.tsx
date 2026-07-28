@@ -218,25 +218,20 @@ export function NuevaRentaDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
+            variant="secondary"
             disabled={m.isPending || !insumoId || Number(cantidad) <= 0}
-            onClick={() =>
-              m.mutate({
-                data: {
-                  obraId,
-                  insumoId,
-                  cantidad: Number(cantidad),
-                  descripcion: descripcion.trim() || undefined,
-                  fechaEstimadaInicio: fechaEstimada || undefined,
-                  periodicidadSugerida: (periodicidad || undefined) as any,
-                  periodosEstimados: periodos && Number(periodos) > 0 ? Number(periodos) : undefined,
-                  diasAvisoVencimiento: Number(diasAviso) || 3,
-                },
-              })
-            }
+            onClick={() => submit(false)}
           >
-            {m.isPending ? "Creando…" : "Crear solicitud"}
+            {m.isPending ? "Guardando…" : "Guardar borrador"}
+          </Button>
+          <Button
+            disabled={m.isPending || !insumoId || Number(cantidad) <= 0}
+            onClick={() => submit(true)}
+          >
+            {m.isPending ? "Enviando…" : "Enviar solicitud"}
           </Button>
         </DialogFooter>
+
       </DialogContent>
       <SolicitarInsumoRapidoDialog
         open={solicitarOpen}
