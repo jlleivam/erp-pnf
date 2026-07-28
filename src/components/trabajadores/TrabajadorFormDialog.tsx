@@ -302,7 +302,7 @@ export function TrabajadorFormDialog({
           <Section title="Datos laborales">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Puesto{!isEdit && !canManage && <Req />}</Label>
+                <Label>Puesto<Req /></Label>
                 <Select
                   value={f.puesto ?? ""}
                   onValueChange={(v) => set("puesto", v as TrabajadorPuesto)}
