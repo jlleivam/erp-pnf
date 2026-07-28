@@ -179,14 +179,22 @@ export function TrabajadorFormDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-2">
+          {!isEdit && !canManage && (
+            <p className="text-xs text-muted-foreground">
+              Los campos marcados con <Req /> son obligatorios.
+            </p>
+          )}
           <Section title="Datos personales">
             <div>
-              <Label>Nombre completo</Label>
+              <Label>
+                Nombre completo<Req />
+              </Label>
               <Input
                 value={f.nombre_completo}
                 onChange={(e) => set("nombre_completo", e.target.value)}
               />
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Fecha de nacimiento</Label>
