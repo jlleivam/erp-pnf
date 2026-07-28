@@ -965,7 +965,7 @@ export function ComparativaTable({
                     <div className="flex-1">
                       <strong>Motivo del rechazo:</strong> {oc.notas_supervisor}
                     </div>
-                    {isAdmin && (
+                    {puedeRechazar && (
                       <Button
                         size="sm"
                         variant="ghost"
