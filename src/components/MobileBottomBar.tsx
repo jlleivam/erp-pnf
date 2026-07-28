@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { MoreHorizontal, type LucideIcon } from "lucide-react";
+import { PendientesBadge } from "@/components/PendientesBadge";
 
 export type BottomBarItem = {
   to: string;
@@ -7,7 +8,10 @@ export type BottomBarItem = {
   icon: LucideIcon;
   /** Active if pathname equals `to` (exact) or starts with `to` */
   exact?: boolean;
+  /** Pendientes count to show as a badge over the icon */
+  pendientes?: number;
 };
+
 
 type Props = {
   items: BottomBarItem[];
