@@ -352,7 +352,7 @@ export const autorizarRenta = createServerFn({ method: "POST" })
     if (!isDirector && !isSupervisor) throw new Error("Solo supervisor o director autoriza");
     const { data: renta } = await supabase
       .from("obra_rentas").select("estatus, obra_id, numero, equipo, creado_por").eq("id", data.id).maybeSingle();
-    if (renta?.estatus !== "cotizada") throw new Error("Solo se autoriza una renta cotizada");
+    if (renta?.estatus !== "solicitada") throw new Error("Solo se autoriza una renta solicitada");
     const { error } = await supabase
       .from("obra_rentas")
       .update({
