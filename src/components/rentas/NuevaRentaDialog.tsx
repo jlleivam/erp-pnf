@@ -222,6 +222,21 @@ export function NuevaRentaDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <SolicitarInsumoRapidoDialog
+        open={solicitarOpen}
+        onOpenChange={setSolicitarOpen}
+        categorias={categorias}
+        unidades={unidades}
+        isDirector={isDirector}
+        disponibleRenta={true}
+        onCreated={(newId) => {
+          qc.invalidateQueries({ queryKey: ["insumos-renta"] });
+          qc.invalidateQueries({ queryKey: ["insumos"] });
+          if (newId) setInsumoId(newId);
+          setSolicitarOpen(false);
+        }}
+      />
     </Dialog>
+
   );
 }
