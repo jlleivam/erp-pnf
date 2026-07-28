@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crearObra, listCompanyUsers } from "@/lib/api/obras.functions";
 import { listClientes, crearCliente } from "@/lib/api/clientes.functions";
 import { listUnidadesNegocio } from "@/lib/api/unidades-negocio.functions";
-import { useEffectiveIsDirector } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,7 +47,8 @@ type ComisionRow = { user_id: string; porcentaje: number; base_calculo: "monto_c
 function NuevaObra() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const director = useEffectiveIsDirector();
+  const { can } = usePermisos();
+  const puedeCrearObra = can("obras.crear");
 
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -126,8 +127,8 @@ function NuevaObra() {
   };
 
 
-  if (!director) {
-    return <p className="text-sm text-destructive">Solo el Director puede crear obras.</p>;
+  if (!puedeCrearObra) {
+    return <p className="text-sm text-destructive">No tienes permiso para crear obras.</p>;
   }
 
   return (

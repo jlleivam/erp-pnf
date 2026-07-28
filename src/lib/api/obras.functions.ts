@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission } from "@/lib/permisos/require";
+
 
 export const listObras = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -95,6 +97,7 @@ export const crearObra = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => crearObraSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePermission(supabase, userId, "obras.crear");
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -102,6 +105,7 @@ export const crearObra = createServerFn({ method: "POST" })
       .eq("id", userId)
       .maybeSingle();
     if (!profile?.company_id) throw new Error("Sin empresa asociada");
+
 
     const roles = new Set(data.team.map((m) => m.role));
     if (!roles.has("residente") || !roles.has("administrativo") || !roles.has("supervisor")) {
@@ -161,40 +165,16 @@ export const listCompanyUsers = createServerFn({ method: "GET" })
   });
 
 // ============================================================
-// Edición de obra (Director)
+// Edición de obra (permiso `obras.editar` / `obras.asignar_team`)
 // ============================================================
-
-async function assertDirectorDeObra(
-  supabase: import("@supabase/supabase-js").SupabaseClient,
-  userId: string,
-  obraId: string
-): Promise<string> {
-  const { data: obra, error } = await supabase
-    .from("obras")
-    .select("company_id")
-    .eq("id", obraId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!obra) throw new Error("Obra no encontrada");
-
-  const { data: roleRow, error: rErr } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("company_id", obra.company_id)
-    .eq("role", "director")
-    .maybeSingle();
-  if (rErr) throw new Error(rErr.message);
-  if (!roleRow) throw new Error("Solo el Director puede editar la obra");
-  return obra.company_id as string;
-}
 
 export const getObraConfiguracion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ obraId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDirectorDeObra(supabase, userId, data.obraId);
+    await requirePermission(supabase, userId, "obras.editar");
+
 
     const { data: obra, error } = await supabase
       .from("obras")
@@ -237,7 +217,7 @@ export const actualizarObra = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => actualizarObraSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDirectorDeObra(supabase, userId, data.obraId);
+    await requirePermission(supabase, userId, "obras.editar");
 
     const { error } = await supabase
       .from("obras")
@@ -271,7 +251,7 @@ export const actualizarObraTeam = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => actualizarObraTeamSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDirectorDeObra(supabase, userId, data.obraId);
+    await requirePermission(supabase, userId, "obras.asignar_team");
 
     const roles = new Set(data.team.map((m) => m.role));
     if (!roles.has("residente") || !roles.has("administrativo") || !roles.has("supervisor")) {
@@ -309,7 +289,7 @@ export const actualizarObraComisiones = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => actualizarObraComisionesSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDirectorDeObra(supabase, userId, data.obraId);
+    await requirePermission(supabase, userId, "obras.asignar_team");
 
     const { error: delErr } = await supabase
       .from("obra_comisiones")

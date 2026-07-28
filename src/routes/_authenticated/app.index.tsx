@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, HardHat } from "lucide-react";
-import { useEffectiveIsDirector } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 import { PendientesBadge } from "@/components/PendientesBadge";
 import { useTotalPendientesObra } from "@/hooks/usePendientes";
 
@@ -21,7 +21,8 @@ function Dashboard() {
     queryKey: ["obras"],
     queryFn: () => fetchObras(),
   });
-  const director = useEffectiveIsDirector();
+  const { can } = usePermisos();
+  const puedeCrearObra = can("obras.crear");
 
   return (
     <div className="space-y-10">
@@ -31,7 +32,7 @@ function Dashboard() {
             <h1 className="text-2xl font-semibold tracking-tight">Obras</h1>
             <p className="text-sm text-muted-foreground">Selecciona una obra para abrir sus módulos.</p>
           </div>
-          {director && (
+          {puedeCrearObra && (
             <Button asChild>
               <Link to="/app/obras/nueva">
                 <Plus className="size-4 mr-1" /> Nueva obra
@@ -47,9 +48,10 @@ function Dashboard() {
             <HardHat className="size-8 mx-auto text-muted-foreground" />
             <p className="mt-3 font-medium">Aún no hay obras</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {director ? "Crea tu primera obra para comenzar." : "Pide al Director que dé de alta una obra."}
+              {puedeCrearObra ? "Crea tu primera obra para comenzar." : "Pide al Director o Administrativo que dé de alta una obra."}
             </p>
           </Card>
+
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {obras.map((o) => (
