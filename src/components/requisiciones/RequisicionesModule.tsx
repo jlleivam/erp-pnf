@@ -27,10 +27,13 @@ interface Props { obraId: string }
 
 export function RequisicionesModule({ obraId }: Props) {
   const roles = useEffectiveRoles();
-  const isAdministrativo = roles.includes("administrativo");
+  void roles;
   const { can } = usePermisos();
   const puedeCrear = can("requisiciones.crear");
   const puedeRevisar = can("requisiciones.aprobar") || can("requisiciones.rechazar");
+  const puedeGestionar = can("cotizaciones.gestionar") || can("oc.crear");
+  const puedeVerOC = can("requisiciones.ver_oc") || can("oc.autorizar") || can("oc.cancelar");
+  const usarVistaTabla = puedeGestionar || puedeVerOC;
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
