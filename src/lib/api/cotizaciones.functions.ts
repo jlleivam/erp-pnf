@@ -13,11 +13,10 @@ async function getCtx(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, roles: r };
 }
 
-function assertAdmin(roles: string[]) {
-  if (!roles.includes("director") && !roles.includes("administrativo")) {
-    throw new Error("Solo Director o Administrativo pueden gestionar cotizaciones");
-  }
-}
+// Guards de rol reemplazados por requirePermission — se mantiene el helper por
+// compatibilidad de imports internos, pero no debe usarse en nuevas funciones.
+function assertAdmin(_roles: string[]) { void _roles; }
+void assertAdmin;
 
 async function recalcEstatusRequisicion(supabase: any, requisicionId: string, userId?: string) {
   const { data: paquetes } = await supabase
@@ -164,8 +163,8 @@ export const guardarPaquete = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
+    const { companyId } = await getCtx(supabase, userId);
 
     const { data: req } = await supabase
       .from("requisiciones").select("id, company_id").eq("id", data.requisicionId).maybeSingle();
@@ -251,8 +250,7 @@ export const eliminarPaquete = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ paqueteId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: paquete } = await supabase
       .from("cotizacion_paquetes").select("id, requisicion_id").eq("id", data.paqueteId).maybeSingle();
     if (!paquete) throw new Error("Paquete no encontrado");
@@ -271,8 +269,8 @@ export const generarOC = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ paqueteId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "oc.crear");
+    const { companyId } = await getCtx(supabase, userId);
 
     const { data: paquete } = await supabase
       .from("cotizacion_paquetes")
@@ -332,8 +330,8 @@ export const enviarOCASupervisor = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "oc.crear");
+    const { companyId } = await getCtx(supabase, userId);
     const { data: oc } = await supabase
       .from("ordenes_compra").select("id, folio, requisicion_id, obra_id, estatus").eq("id", data.ocId).maybeSingle();
     if (!oc) throw new Error("OC no encontrada");
@@ -381,8 +379,7 @@ export const reabrirOC = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "oc.cancelar");
     const { data: oc } = await supabase
       .from("ordenes_compra").select("id, requisicion_id, estatus").eq("id", data.ocId).maybeSingle();
     if (!oc) throw new Error("OC no encontrada");
@@ -396,18 +393,14 @@ export const reabrirOC = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-function assertSupervisor(roles: string[]) {
-  if (!roles.includes("director") && !roles.includes("supervisor")) {
-    throw new Error("Solo Director o Supervisor pueden autorizar OCs");
-  }
-}
+
 
 export const autorizarOC = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePermission(supabase, userId, "requisiciones.aprobar");
+    await requirePermission(supabase, userId, "oc.autorizar");
     const { companyId } = await getCtx(supabase, userId);
     const { data: oc } = await supabase
       .from("ordenes_compra").select("id, folio, requisicion_id, obra_id, estatus").eq("id", data.ocId).maybeSingle();
@@ -456,7 +449,7 @@ export const rechazarOC = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePermission(supabase, userId, "requisiciones.rechazar");
+    await requirePermission(supabase, userId, "oc.cancelar");
     const { data: oc } = await supabase
       .from("ordenes_compra").select("id, requisicion_id, estatus").eq("id", data.ocId).maybeSingle();
     if (!oc) throw new Error("OC no encontrada");
@@ -494,8 +487,7 @@ export const enviarOCAProveedor = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "oc.crear");
 
     const { data: oc } = await supabase
       .from("ordenes_compra")

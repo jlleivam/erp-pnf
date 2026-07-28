@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission } from "@/lib/permisos/require";
 
 async function getCtx(supabase: any, userId: string) {
   const { data: profile } = await supabase
@@ -12,11 +13,6 @@ async function getCtx(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, roles: r };
 }
 
-function assertAdmin(roles: string[]) {
-  if (!roles.includes("director") && !roles.includes("administrativo")) {
-    throw new Error("Solo Director o Administrativo pueden gestionar solicitudes de cotización");
-  }
-}
 
 async function recalcEstatusRequisicion(supabase: any, requisicionId: string, userId?: string) {
   // Reusar regla: si hay SC y aún no hay paquetes/OCs, requisición → en_cotizacion
