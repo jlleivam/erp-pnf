@@ -111,6 +111,7 @@ export function CuentasPorPagarModule() {
     + ((estSubCountQ.data ?? []) as unknown[]).length;
   const gasolinasPendientesCount = ((valesCountQ.data ?? []) as unknown[]).length;
   const cajaChicaPendientesCount = ((cajaChicaCountQ.data ?? []) as unknown[]).length;
+  const nominaPendientesCount = ((nominaCountQ.data ?? []) as unknown[]).length;
 
 
   return (
