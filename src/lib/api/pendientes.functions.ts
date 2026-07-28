@@ -12,16 +12,22 @@ export type PendientesResult = {
 };
 
 async function safeCount(
+  label: string,
   q: PromiseLike<{ count: number | null; error: unknown }>,
 ): Promise<number> {
   try {
     const { count, error } = (await q) as { count: number | null; error: unknown };
-    if (error) return 0;
+    if (error) {
+      console.warn(`[pendientes] ${label}:`, (error as any)?.message ?? error);
+      return 0;
+    }
     return count ?? 0;
-  } catch {
+  } catch (e) {
+    console.warn(`[pendientes] ${label} threw:`, (e as any)?.message ?? e);
     return 0;
   }
 }
+
 
 export const getPendientes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
