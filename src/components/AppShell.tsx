@@ -29,10 +29,8 @@ import {
   Scale,
   CalendarRange,
   User,
-  UserCog,
-  Check,
 } from "lucide-react";
-import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
+import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,12 +42,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { NotificacionesBell } from "@/components/NotificacionesBell";
 import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
@@ -60,21 +53,11 @@ import { usePermisos } from "@/hooks/usePermisos";
 
 
 
-const ROLE_LABELS: Record<AppRole, string> = {
-  director: "Director",
-  residente: "Residente",
-  auxiliar: "Auxiliar",
-  administrativo: "Administrativo",
-  supervisor: "Supervisor",
-};
-
-
 export function AppShell() {
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
-  const assumedRole = useAuthStore((s) => s.assumedRole);
-  const setAssumedRole = useAuthStore((s) => s.setAssumedRole);
   const reset = useAuthStore((s) => s.reset);
+
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const params = useParams({ strict: false }) as { obraId?: string };
   const obraId = params.obraId;
@@ -94,7 +77,6 @@ export function AppShell() {
   const logoUrl = logoSigned.data?.url ?? null;
 
 
-  const realDirector = useRealIsDirector();
   const effRoles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
@@ -109,12 +91,6 @@ export function AppShell() {
   const puedeConfigurarObra = canPerm("obras.editar") || canPerm("obras.asignar_team");
 
 
-
-
-  const switchRole = (role: AppRole | null) => {
-    setAssumedRole(role);
-    navigate({ to: "/app" });
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -281,11 +257,6 @@ export function AppShell() {
                     <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                   </Avatar>
                   <span className="hidden sm:inline text-sm">{profile?.nombre_completo}</span>
-                  {assumedRole && (
-                    <Badge variant="secondary" className="text-[10px] capitalize hidden md:inline-flex">
-                      como {assumedRole}
-                    </Badge>
-                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -296,34 +267,6 @@ export function AppShell() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {realDirector && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <UserCog className="size-4 mr-2" />
-                      Actuar como
-                      {assumedRole && (
-                        <Badge variant="secondary" className="ml-2 text-[10px] capitalize">
-                          {assumedRole}
-                        </Badge>
-                      )}
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem onClick={() => switchRole(null)}>
-                          {assumedRole === null && <Check className="size-4 mr-2" />}
-                          <span className={assumedRole === null ? "" : "ml-6"}>Director (yo)</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {(["administrativo", "residente", "supervisor", "auxiliar"] as AppRole[]).map((r) => (
-                          <DropdownMenuItem key={r} onClick={() => switchRole(r)}>
-                            {assumedRole === r && <Check className="size-4 mr-2" />}
-                            <span className={`capitalize ${assumedRole === r ? "" : "ml-6"}`}>{r}</span>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                )}
                 {director && (
                   <DropdownMenuItem onClick={() => navigate({ to: "/app/configuracion" })}>
                     <Building2 className="size-4 mr-2" />
@@ -341,6 +284,7 @@ export function AppShell() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
 
           </div>
         </header>
