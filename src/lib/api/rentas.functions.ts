@@ -661,10 +661,11 @@ export const eliminarRenta = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { isDirector } = await getCtx(supabase, userId);
     const { data: renta } = await supabase
-      .from("obra_rentas").select("estatus").eq("id", data.id).maybeSingle();
+      .from("obra_rentas").select("estatus, proveedor_id").eq("id", data.id).maybeSingle();
     if (!renta) throw new Error("Renta no encontrada");
-    if (renta.estatus !== "borrador" && !isDirector) {
-      throw new Error("Solo el director puede eliminar rentas que no estén en borrador");
+    const sinCotizar = renta.estatus === "solicitada" && !renta.proveedor_id;
+    if (!sinCotizar && !isDirector) {
+      throw new Error("Solo el director puede eliminar rentas ya cotizadas");
     }
     const { error } = await supabase.from("obra_rentas").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
