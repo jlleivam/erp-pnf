@@ -25,6 +25,7 @@ import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.func
 import { SolicitudesTab } from "./SolicitudesTab";
 import { ComparativaTable } from "./ComparativaTable";
 import { useEffectiveRoles } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 
 export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs";
 
