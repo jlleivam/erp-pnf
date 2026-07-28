@@ -124,6 +124,7 @@ export function TrabajadorFormDialog({
   const submit = () => {
     if (!f.nombres.trim()) return toast.error("Nombre(s) requerido");
     if (!f.apellido_paterno.trim()) return toast.error("Apellido paterno requerido");
+    if (!f.apellido_materno?.trim()) return toast.error("Apellido materno requerido");
     if (!isEdit && !canManage) {
       if (!f.sexo) return toast.error("Sexo requerido");
       if (!f.puesto) return toast.error("Puesto requerido");
