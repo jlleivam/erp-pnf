@@ -50,6 +50,7 @@ export function CapturaSubcontratoSheet({
   });
 
   const [rows, setRows] = useState<RowDraft[]>([emptyRow()]);
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
 
   useEffect(() => {
     if (data?.renglones && data.renglones.length > 0) {
@@ -63,13 +64,36 @@ export function CapturaSubcontratoSheet({
           precio_unitario: r.precio_unitario,
         })),
       );
+      setActiveRowId(null);
     }
   }, [data]);
 
   const updateRow = (id: string, patch: Partial<RowDraft>) =>
     setRows((rs) => rs.map((r) => (r._id === id ? { ...r, ...patch } : r)));
-  const removeRow = (id: string) => setRows((rs) => rs.filter((r) => r._id !== id));
-  const addRow = () => setRows((rs) => [...rs, emptyRow()]);
+  const removeRow = (id: string) => {
+    let nextActive: string | null = activeRowId;
+    setRows((rs) => {
+      if (activeRowId === id) {
+        const idx = rs.findIndex((r) => r._id === id);
+        nextActive = rs[idx - 1]?._id ?? rs[idx + 1]?._id ?? null;
+      }
+      return rs.filter((r) => r._id !== id);
+    });
+    setActiveRowId(nextActive);
+  };
+  const addRow = () => {
+    const newRow = emptyRow();
+    setRows((rs) => {
+      if (!activeRowId) return [...rs, newRow];
+      const idx = rs.findIndex((r) => r._id === activeRowId);
+      if (idx === -1) return [...rs, newRow];
+      const next = [...rs];
+      next.splice(idx + 1, 0, newRow);
+      return next;
+    });
+    setActiveRowId(newRow._id);
+  };
+  const handleRowActivate = (id: string) => () => setActiveRowId(id);
 
   const calc = useMemo(() => {
     const input: RenglonInput[] = rows
@@ -195,12 +219,21 @@ export function CapturaSubcontratoSheet({
                     const errs = erroresPorClave.get(claveTrim) ?? [];
                     const importe = importePorClave.get(claveTrim) ?? 0;
                     const esPadre = claveTrim !== "" && clavesPadre.has(claveTrim);
+                    const esActivo = activeRowId === r._id;
                     return (
                       <tr
                         key={r._id}
-                        className={`border-t border-border ${
-                          errs.length ? "bg-destructive/5" : esPadre ? "bg-accent/40 font-medium" : ""
-                        }`}
+                        onFocus={handleRowActivate(r._id)}
+                        onMouseDown={handleRowActivate(r._id)}
+                        className={`border-t border-border cursor-pointer transition-colors ${
+                          errs.length
+                            ? "bg-destructive/5"
+                            : esPadre
+                              ? "bg-accent/40 font-medium"
+                              : esActivo
+                                ? "bg-muted/60"
+                                : "hover:bg-muted/20"
+                        } ${esActivo ? "ring-1 ring-inset ring-primary/20" : ""}`}
                       >
                         <td className="p-1">
                           <Input
