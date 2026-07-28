@@ -255,31 +255,44 @@ export function RentaDetalleSheet({
                   </Card>
                 )}
                 <div className="flex gap-2 flex-wrap">
-                  {(renta.estatus === "borrador" || renta.estatus === "rechazada") && canCotizar && (
-                    <Button size="sm" onClick={() => setCotizando(true)}>
-                      {renta.estatus === "rechazada" ? "Re-cotizar" : "Cotizar"}
-                    </Button>
-                  )}
-                  {renta.estatus === "cotizada" && canAuthorize && (
-                    <>
-                      <Button size="sm" onClick={() => autorizarM.mutate({ data: { id: rentaId } })}>
-                        <CheckCircle2 className="size-4 mr-1" /> Autorizar
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setRechazando(true)}>
-                        <XCircle className="size-4 mr-1" /> Rechazar
-                      </Button>
-                    </>
-                  )}
-                  {renta.estatus === "cotizada" && !canAuthorize && (
-                    <p className="text-xs text-muted-foreground">
-                      Esperando autorización del supervisor.
-                    </p>
-                  )}
-                  {renta.estatus === "cotizada" && canCotizar && (
-                    <Button size="sm" variant="ghost" onClick={() => setCotizando(true)}>
-                      Editar cotización
-                    </Button>
-                  )}
+                  {(() => {
+                    const yaCotizada = !!renta.proveedor_id && Number(renta.tarifa_unitaria) > 0;
+                    const puedeCotizar =
+                      (renta.estatus === "solicitada" || renta.estatus === "rechazada") && canCotizar;
+                    const puedeAutorizar =
+                      renta.estatus === "solicitada" && yaCotizada && canAuthorize;
+                    const esperandoAutorizacion =
+                      renta.estatus === "solicitada" && yaCotizada && !canAuthorize;
+                    return (
+                      <>
+                        {puedeCotizar && !yaCotizada && (
+                          <Button size="sm" onClick={() => setCotizando(true)}>
+                            {renta.estatus === "rechazada" ? "Re-cotizar" : "Cotizar"}
+                          </Button>
+                        )}
+                        {puedeAutorizar && (
+                          <>
+                            <Button size="sm" onClick={() => autorizarM.mutate({ data: { id: rentaId } })}>
+                              <CheckCircle2 className="size-4 mr-1" /> Autorizar
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setRechazando(true)}>
+                              <XCircle className="size-4 mr-1" /> Rechazar
+                            </Button>
+                          </>
+                        )}
+                        {esperandoAutorizacion && (
+                          <p className="text-xs text-muted-foreground">
+                            Esperando autorización del supervisor.
+                          </p>
+                        )}
+                        {yaCotizada && canCotizar && renta.estatus === "solicitada" && (
+                          <Button size="sm" variant="ghost" onClick={() => setCotizando(true)}>
+                            Editar cotización
+                          </Button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </TabsContent>
 
