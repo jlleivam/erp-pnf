@@ -29,6 +29,8 @@ import {
   Scale,
   CalendarRange,
   User,
+  UserCog,
+  Check,
 } from "lucide-react";
 import { useAuthStore, useEffectiveRoles, useEffectiveIsDirector, useRealIsDirector, type AppRole } from "@/stores/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +44,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { NotificacionesBell } from "@/components/NotificacionesBell";
 import { MobileBottomBar, type BottomBarItem } from "@/components/MobileBottomBar";
@@ -274,6 +281,11 @@ export function AppShell() {
                     <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                   </Avatar>
                   <span className="hidden sm:inline text-sm">{profile?.nombre_completo}</span>
+                  {assumedRole && (
+                    <Badge variant="secondary" className="text-[10px] capitalize hidden md:inline-flex">
+                      como {assumedRole}
+                    </Badge>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -284,6 +296,34 @@ export function AppShell() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {realDirector && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <UserCog className="size-4 mr-2" />
+                      Actuar como
+                      {assumedRole && (
+                        <Badge variant="secondary" className="ml-2 text-[10px] capitalize">
+                          {assumedRole}
+                        </Badge>
+                      )}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={() => switchRole(null)}>
+                          {assumedRole === null && <Check className="size-4 mr-2" />}
+                          <span className={assumedRole === null ? "" : "ml-6"}>Director (yo)</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {(["administrativo", "residente", "supervisor", "auxiliar"] as AppRole[]).map((r) => (
+                          <DropdownMenuItem key={r} onClick={() => switchRole(r)}>
+                            {assumedRole === r && <Check className="size-4 mr-2" />}
+                            <span className={`capitalize ${assumedRole === r ? "" : "ml-6"}`}>{r}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                )}
                 {director && (
                   <DropdownMenuItem onClick={() => navigate({ to: "/app/configuracion" })}>
                     <Building2 className="size-4 mr-2" />
@@ -301,6 +341,7 @@ export function AppShell() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
           </div>
         </header>
 
