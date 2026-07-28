@@ -92,7 +92,6 @@ export function AppShell() {
   const effRoles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
-  const showSupervisor = director || effRoles.includes("supervisor") || canPerm("requisiciones.aprobar") || canPerm("requisiciones.rechazar");
 
   const adminPendientes = usePendientesAdmin();
   const obraPendientes = usePendientesObra(obraId);
@@ -100,6 +99,7 @@ export function AppShell() {
 
   const { can: canPerm } = usePermisos();
   const puedeCrearObra = canPerm("obras.crear");
+  const showSupervisor = director || effRoles.includes("supervisor") || canPerm("requisiciones.aprobar") || canPerm("requisiciones.rechazar");
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
