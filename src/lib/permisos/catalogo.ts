@@ -28,11 +28,15 @@ export const CATALOGO_ACCIONES: AccionCatalogo[] = [
   { key: "requisiciones.crear", modulo: "Requisiciones", label: "Crear requisición", defaults: { ...T, supervisor: true } },
   { key: "requisiciones.aprobar", modulo: "Requisiciones", label: "Aprobar requisición", defaults: S },
   { key: "requisiciones.rechazar", modulo: "Requisiciones", label: "Rechazar requisición", defaults: S },
+  { key: "requisiciones.ver_oc", modulo: "Requisiciones", label: "Ver órdenes de compra generadas", defaults: AS },
+
+  // Cotizaciones
+  { key: "cotizaciones.gestionar", modulo: "Cotizaciones", label: "Gestionar cotizaciones (SC, capturar respuestas, paquetes)", defaults: A },
 
   // Órdenes de compra
-  { key: "oc.crear", modulo: "Órdenes de compra", label: "Crear orden de compra", defaults: A },
-  { key: "oc.autorizar", modulo: "Órdenes de compra", label: "Autorizar orden de compra", defaults: NONE },
-  { key: "oc.cancelar", modulo: "Órdenes de compra", label: "Cancelar orden de compra", defaults: A },
+  { key: "oc.crear", modulo: "Órdenes de compra", label: "Crear y enviar orden de compra", defaults: A },
+  { key: "oc.autorizar", modulo: "Órdenes de compra", label: "Autorizar orden de compra", defaults: S },
+  { key: "oc.cancelar", modulo: "Órdenes de compra", label: "Rechazar / cancelar / reabrir orden de compra", defaults: AS },
 
   // Almacén
   { key: "almacen.recibir", modulo: "Almacén", label: "Recibir material", defaults: T },
