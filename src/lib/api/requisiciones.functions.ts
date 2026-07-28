@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission } from "@/lib/permisos/require";
 
 const InsumoInput = z.object({
   insumo_id: z.string().uuid(),
@@ -204,6 +205,7 @@ export const crearRequisicion = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePermission(supabase, userId, "requisiciones.crear");
     const { data: profile } = await supabase
       .from("profiles").select("company_id").eq("id", userId).maybeSingle();
     if (!profile?.company_id) throw new Error("Sin empresa asociada");
@@ -378,6 +380,7 @@ export const guardarBorradorRequisicion = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePermission(supabase, userId, "requisiciones.crear");
     const { data: profile } = await supabase
       .from("profiles").select("company_id").eq("id", userId).maybeSingle();
     if (!profile?.company_id) throw new Error("Sin empresa asociada");
@@ -442,6 +445,7 @@ export const enviarBorradorRequisicion = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePermission(supabase, userId, "requisiciones.crear");
     const { data: existing } = await supabase
       .from("requisiciones")
       .select("id, estatus, creado_por, obra_id, company_id")

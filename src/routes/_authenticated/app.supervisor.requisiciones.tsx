@@ -17,16 +17,15 @@ import { listRequisicionesAsignadas } from "@/lib/api/requisiciones.functions";
 import { CotizacionSheet, type CotizacionTab } from "@/components/requisiciones/CotizacionSheet";
 import { ESTATUS_META, type RequisicionEstatus } from "@/components/requisiciones/constants";
 import { formatDate } from "@/lib/format";
-import { useEffectiveRoles, useEffectiveIsDirector } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 
 export const Route = createFileRoute("/_authenticated/app/supervisor/requisiciones")({
   component: SupervisorRequisicionesPage,
 });
 
 function SupervisorRequisicionesPage() {
-  const roles = useEffectiveRoles();
-  const director = useEffectiveIsDirector();
-  const allowed = director || roles.includes("supervisor");
+  const { can } = usePermisos();
+  const allowed = can("requisiciones.aprobar") || can("requisiciones.rechazar");
 
   const [tab, setTab] = useState<"pendientes" | "historial">("pendientes");
   const [obraFilter, setObraFilter] = useState<string>("todas");

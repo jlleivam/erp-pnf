@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission } from "@/lib/permisos/require";
 
 async function getCtx(supabase: any, userId: string) {
   const { data: profile } = await supabase
@@ -406,8 +407,8 @@ export const autorizarOC = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ ocId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
-    assertSupervisor(roles);
+    await requirePermission(supabase, userId, "requisiciones.aprobar");
+    const { companyId } = await getCtx(supabase, userId);
     const { data: oc } = await supabase
       .from("ordenes_compra").select("id, folio, requisicion_id, obra_id, estatus").eq("id", data.ocId).maybeSingle();
     if (!oc) throw new Error("OC no encontrada");
@@ -455,8 +456,7 @@ export const rechazarOC = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertSupervisor(roles);
+    await requirePermission(supabase, userId, "requisiciones.rechazar");
     const { data: oc } = await supabase
       .from("ordenes_compra").select("id, requisicion_id, estatus").eq("id", data.ocId).maybeSingle();
     if (!oc) throw new Error("OC no encontrada");

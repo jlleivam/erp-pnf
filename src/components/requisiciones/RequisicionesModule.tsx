@@ -18,7 +18,8 @@ import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
 import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
 import { CotizacionSheet, type CotizacionTab } from "./CotizacionSheet";
-import { useEffectiveRoles, isDirector } from "@/stores/auth";
+import { useEffectiveRoles } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 import { formatDate } from "@/lib/format";
 
 
@@ -27,10 +28,9 @@ interface Props { obraId: string }
 export function RequisicionesModule({ obraId }: Props) {
   const roles = useEffectiveRoles();
   const isAdministrativo = roles.includes("administrativo");
-  const puedeCrear = !isAdministrativo && (isDirector(roles) || roles.some((r) =>
-    ["pm", "auxiliar", "residente"].includes(r as string)
-  ));
-  const isSupervisor = isDirector(roles) || roles.includes("supervisor");
+  const { can } = usePermisos();
+  const puedeCrear = can("requisiciones.crear");
+  const puedeRevisar = can("requisiciones.aprobar") || can("requisiciones.rechazar");
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
@@ -187,7 +187,7 @@ export function RequisicionesModule({ obraId }: Props) {
           {!isAdministrativo && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
             const esBorrador = r.estatus === "borrador";
-            const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
+            const mostrarRevisar = puedeRevisar && r.estatus === "pendiente_autorizacion";
             const isExpanded = expandidos.has(r.id);
             const items = r.items ?? [];
             return (
