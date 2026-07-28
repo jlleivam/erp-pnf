@@ -92,7 +92,7 @@ export function AppShell() {
   const effRoles = useEffectiveRoles();
   const director = useEffectiveIsDirector();
   const showAdmin = director || effRoles.includes("administrativo");
-  const showSupervisor = director || effRoles.includes("supervisor");
+  const showSupervisor = director || effRoles.includes("supervisor") || canPerm("requisiciones.aprobar") || canPerm("requisiciones.rechazar");
 
   const adminPendientes = usePendientesAdmin();
   const obraPendientes = usePendientesObra(obraId);
