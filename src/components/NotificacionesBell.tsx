@@ -73,7 +73,7 @@ export function NotificacionesBell() {
           <button
             type="button"
             className="text-sm font-semibold hover:underline"
-            onClick={() => navigate({ to: "/app/notificaciones" })}
+            onClick={goToAll}
           >
             Notificaciones
           </button>
