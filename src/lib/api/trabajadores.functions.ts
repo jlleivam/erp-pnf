@@ -18,7 +18,15 @@ const PUESTO = z.enum([
 ]);
 
 const trabajadorFieldsSchema = z.object({
-  nombre_completo: z.string().trim().min(1).max(255),
+  nombres: z.string().trim().min(1).max(120),
+  apellido_paterno: z.string().trim().min(1).max(120),
+  apellido_materno: z
+    .string()
+    .trim()
+    .max(120)
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
   telefono: z.string().trim().max(50).nullable().optional(),
   correo: z.string().trim().max(255).nullable().optional(),
   direccion: z.string().trim().max(1000).nullable().optional(),
