@@ -80,7 +80,9 @@ type TipoRespuesta =
   | "oc_destajo_rechazada"
   | "oc_subcontrato_rechazada"
   | "destajo_autorizado"
-  | "destajo_rechazado";
+  | "destajo_rechazado"
+  | "subcontrato_autorizado"
+  | "subcontrato_rechazado";
 
 const TIPO_LABEL_RES: Record<TipoRespuesta, string> = {
   oc_presupuesto_autorizada: "presupuesto",
@@ -91,6 +93,8 @@ const TIPO_LABEL_RES: Record<TipoRespuesta, string> = {
   oc_subcontrato_rechazada: "subcontrato",
   destajo_autorizado: "destajo",
   destajo_rechazado: "destajo",
+  subcontrato_autorizado: "subcontrato",
+  subcontrato_rechazado: "subcontrato",
 };
 
 export async function notifyResidenteOC(
@@ -113,8 +117,13 @@ export async function notifyResidenteOC(
   ]);
   if (!obra?.company_id) return;
 
-  const esAutorizada = tipo.endsWith("autorizada") || tipo === "destajo_autorizado";
+  const esAutorizada =
+    tipo.endsWith("autorizada") ||
+    tipo === "destajo_autorizado" ||
+    tipo === "subcontrato_autorizado";
   const esDestajoBase = tipo === "destajo_autorizado" || tipo === "destajo_rechazado";
+  const esSubcontratoBase = tipo === "subcontrato_autorizado" || tipo === "subcontrato_rechazado";
+  const esBase = esDestajoBase || esSubcontratoBase;
   const accion = esAutorizada ? "autorizó" : "rechazó";
   const quien = actor?.nombre_completo ?? "El supervisor";
   const donde = obra?.nombre ? ` en la obra ${obra.nombre}` : "";
@@ -125,12 +134,17 @@ export async function notifyResidenteOC(
     ? esAutorizada
       ? "Destajo autorizado"
       : "Destajo rechazado"
-    : esAutorizada
-      ? "OC autorizada"
-      : "OC rechazada";
-  const mensaje = esDestajoBase
+    : esSubcontratoBase
+      ? esAutorizada
+        ? "Subcontrato autorizado"
+        : "Subcontrato rechazado"
+      : esAutorizada
+        ? "OC autorizada"
+        : "OC rechazada";
+  const mensaje = esBase
     ? `${quien} ${accion} tu ${label}${donde}.${sufMotivo}`
     : `${quien} ${accion} tu OC de ${label}${donde}.${sufMotivo}`;
+
 
   const row = {
     user_id: residenteId,
