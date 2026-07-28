@@ -319,7 +319,13 @@ export const actualizarTrabajador = createServerFn({ method: "POST" })
     }
 
     const updatePayload = {
-      nombre_completo: data.nombre_completo,
+      nombre_completo: [data.nombres, data.apellido_paterno, data.apellido_materno]
+        .map((s) => (s ?? "").trim())
+        .filter(Boolean)
+        .join(" "),
+      nombres: data.nombres,
+      apellido_paterno: data.apellido_paterno,
+      apellido_materno: data.apellido_materno ?? null,
       telefono: data.telefono ?? null,
       correo: data.correo ?? null,
       direccion: data.direccion ?? null,
