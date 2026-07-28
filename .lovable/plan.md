@@ -1,111 +1,65 @@
+# Badges de pendientes: reactivos y confiables
+
 ## Objetivo
 
-Mostrar un globo (badge) con el número de pendientes de acción que corresponden al usuario según su rol, sobre cada módulo, en:
+1. Que los globos aparezcan (hoy hay datos pendientes en BD pero no se muestran).
+2. Eliminar el refetch cada 60s. Los badges se actualizan solo cuando cambian los registros relevantes en la base.
 
-1. Sidebar de obra (módulos dentro de `/app/obras/:obraId/*`)
-2. Sidebar de administración (`/app/admin/*`)
-3. Bottom bar móvil (mismos badges replicados)
-4. Tarjetas de obra en Home (`/app/`) — un contador total de pendientes de esa obra para el usuario
+## Diagnóstico
 
-## Qué cuenta como "pendiente de acción" por rol
+- Ya hay datos que deberían pintar badge (1 requisición enviada, 1 renta solicitada, 1 vale autorizado, etc.).
+- `safeCount` traga cualquier error de RLS / query y devuelve 0, así que si algo falla la UI queda muda. Hay que exponer errores en dev y verificar que los `count: "exact", head: true` pasen RLS para cada rol.
+- `moduleKeyFromPath` toma solo el último segmento; sirve para admin (`/app/admin/nomina`) y obra (`/app/obras/:id/nomina`). Se conserva.
 
-Los conteos son por rol efectivo del usuario y, en obra, filtrados por esa obra.
+## Cambios
 
-| Módulo | Rol que lo ve pendiente | Regla |
-|---|---|---|
-| Requisiciones (obra) | residente/auxiliar | requisiciones en `borrador` propias + rechazadas por corregir |
-| Requisiciones (admin) | administrativo/director | `enviada` sin cotización + `pendiente_autorizacion` |
-| Requisiciones (supervisor) | supervisor | `pendiente_autorizacion` en sus obras |
-| Almacén (obra) | residente/auxiliar | OC `autorizada`/`enviada` pendientes de recepción + semana abierta con capturas faltantes |
-| Nómina (obra) | residente | nómina de la semana en `borrador` sin cerrar |
-| Nómina (admin/CxP) | administrativo | semanas `cerrada` sin `pagada` |
-| Destajos (obra) | residente | estimaciones en `borrador` + destajos con anticipo `enviado` |
-| Destajos (admin) | administrativo | anticipos y estimaciones `enviado`/`cerrada` por autorizar/pagar |
-| Subcontratos | análogo a destajos | |
-| Rentas (obra) | residente | rentas en `borrador` y renovaciones `pendiente` |
-| Rentas (admin) | administrativo | `solicitada` por cotizar + `autorizada` sin activar |
-| Gasolinas (obra) | residente | vales `entregado` sin confirmar |
-| Gasolinas (admin) | administrativo | `pendiente_autorizacion` + `autorizado` sin entrega |
-| Caja chica (obra) | residente | fondos `pendiente_autorizacion`, gastos `rechazado`, reembolsos `rechazado` |
-| Caja chica (supervisor) | supervisor | fondos y reembolsos por revisar en sus obras |
-| Caja chica (admin/CxP) | administrativo | fondos `autorizado` + reembolsos `enviado_admin` |
-| CxP (admin) | administrativo | CxP `pendiente`/`parcial` |
-| Tesorería (admin) | administrativo/director | pagos/movimientos por conciliar (si aplica) |
-| Gastos de oficina | administrativo/director | `pendiente_aprobacion` |
-| Tareas | asignado | tareas asignadas al usuario abiertas |
-| Presupuestos / Estimaciones (obra) | residente | estimaciones en `borrador`; presupuestos `solicitada` (para director/admin en su vista) |
+### 1. Suscripción Realtime en lugar de polling
 
-## Diseño técnico
+- Migración: `ALTER PUBLICATION supabase_realtime ADD TABLE` para las tablas fuente de conteos:
+  `requisiciones`, `cuentas_por_pagar`, `obra_nominas`, `caja_chica_fondos`, `caja_chica_reembolsos`, `caja_chica_gastos`, `vales_gasolina`, `gastos_oficina`, `obra_rentas`, `ordenes_compra`, `obra_tareas`.
+- Nuevo hook `usePendientesRealtime()` montado una sola vez en `AppShell`:
+  - Se suscribe con `supabase.channel("pendientes")` a `postgres_changes` (`event: "*"`) de cada tabla.
+  - En cada evento hace `queryClient.invalidateQueries({ queryKey: ["pendientes"] })` con un debounce de ~300 ms para agrupar ráfagas.
+  - Limpia el canal en el `useEffect` cleanup.
+- `usePendientes()`:
+  - Quitar `refetchInterval`.
+  - `staleTime: Infinity` (la fuente de verdad son los eventos Realtime).
+  - Mantener `refetchOnWindowFocus: true` como respaldo por si se pierde un evento.
+  - Invalidar también en `supabase.auth.onAuthStateChange` sign-in.
 
-### 1. Un único endpoint agregador
+### 2. Que los badges realmente se pinten
 
-Nuevo `src/lib/api/pendientes.functions.ts`:
+- Reemplazar `safeCount` por una versión que en dev haga `console.warn` con la tabla y el error, para detectar fallas silenciosas de RLS.
+- Verificar por rol que las queries head-count pasen RLS (residente sobre `ordenes_compra` de su obra, supervisor sobre `caja_chica_*`, admin sobre tablas de company). Ajustar policies faltantes en la misma migración si aparece alguna.
+- `PendientesBadge`: subir el z-index y ajustar posición absoluta en:
+  - Sidebar (ya renderiza al final del `NavItem`, ok).
+  - Bottom bar móvil (badge sobre el icono).
+  - Tarjetas de obra en Home (esquina superior derecha).
+- Añadir estado inicial: en el primer render `usePendientes()` devuelve `undefined`; asegurar que `usePendientesAdmin/Obra` devuelvan `{}` (ya lo hacen) y que ningún consumidor rompa cuando aún no hay datos.
 
-- `getPendientesGlobales()` — con `requireSupabaseAuth`, devuelve `{ admin: Record<modulo, number>, obras: Record<obraId, Record<modulo, number>> }`.
-- Internamente, para cada categoría hace `select("id", { count: "exact", head: true })` con los filtros de estatus y RLS del usuario. Un único server fn evita N llamadas desde el cliente.
-- Sin cambios de esquema.
+### 3. Ampliar cobertura de conteos que faltan
 
-Ejemplo de shape:
+Revisar y añadir los que hoy no cuentan pero sí son "acción pendiente":
 
-```text
-{
-  admin: {
-    requisiciones: 3, cxp: 5, nomina: 1, caja_chica: 2,
-    gasolinas: 0, destajos: 0, subcontratos: 0, rentas: 1,
-    gastos_oficina: 0, tareas: 4
-  },
-  obras: {
-    "<obraId>": {
-      requisiciones: 2, almacen: 1, nomina: 0, destajos: 0,
-      subcontratos: 0, rentas: 0, gasolinas: 0, caja_chica: 1,
-      tareas: 2
-    }
-  }
-}
-```
+- Obra:
+  - `presupuesto`: presupuestos en estatus `solicitada` (residente) o `borrador` propio.
+  - `estimaciones`: estimaciones en `borrador` del residente.
+  - `nomina` (obra): nóminas en `borrador` del residente / `cerrada` sin pagar para admin.
+  - `destajos` y `subcontratos`: documentos `enviado` pendientes de autorizar.
+- Admin:
+  - `condensado-semanal`: sin conteo (informativo).
+  - `contabilidad` / `tesoreria`: sin conteo.
 
-### 2. Hook cliente
+## Archivos afectados
 
-`src/hooks/usePendientes.ts`:
+- `src/lib/api/pendientes.functions.ts` — añadir conteos faltantes y logging de errores.
+- `src/hooks/usePendientes.ts` — quitar polling, exponer `usePendientesRealtime`.
+- `src/components/AppShell.tsx` — montar `usePendientesRealtime()` una vez.
+- `src/components/PendientesBadge.tsx` — z-index y tamaños.
+- Migración SQL — `ALTER PUBLICATION supabase_realtime ADD TABLE ...` para las 11 tablas.
 
-- `useQuery({ queryKey: ["pendientes"], queryFn: fetchPendientes, refetchInterval: 60_000 })`.
-- Exporta helpers: `usePendientesAdmin()`, `usePendientesObra(obraId)`, `useTotalPendientesObra(obraId)`.
-- Se invalida en `onSuccess` de mutaciones existentes (patrón: agregar `qc.invalidateQueries({ queryKey: ["pendientes"] })` en los flujos más impactantes: autorizar, cotizar, pagar, cerrar semana). Como fallback está el `refetchInterval`.
+## Notas técnicas
 
-### 3. Componente `<PendientesBadge count={n} />`
-
-- Reutilizable, mismo estilo que la campana: círculo rosa/rojo, texto `9+` cuando `count > 9`, oculto si `count === 0`.
-- Colocación: posicionado sobre el ícono (top-right absolute) tanto en sidebar/desktop como en botones de bottom bar y tarjetas.
-
-### 4. Puntos de integración
-
-- `src/components/AppShell.tsx` — sidebar admin: leer `usePendientesAdmin()` y mapear por `to` de `ADMIN_MODULES` en `src/lib/modules.ts` (agregar una `key` por entrada, ej. `key: "requisiciones"`).
-- `src/components/AppShell.tsx` — sidebar de obra (cuando la ruta actual es una obra): usar `usePendientesObra(obraId)`.
-- `src/components/MobileBottomBar.tsx` — mismo mapeo por key sobre los botones visibles.
-- `src/routes/_authenticated/app.index.tsx` — sobre cada tarjeta de obra, mostrar `useTotalPendientesObra(o.id)` como badge en la esquina superior derecha.
-
-### 5. Rendimiento y visibilidad
-
-- Un solo query global refrescado cada 60s. El payload es pequeño (números).
-- Directores no ven "pendientes" que no les toquen (p. ej. no cuentan borradores de residentes) para evitar ruido.
-- Si `count === 0`, no se renderiza nada.
-
-## Cambios de archivos
-
-Nuevos:
-- `src/lib/api/pendientes.functions.ts`
-- `src/hooks/usePendientes.ts`
-- `src/components/PendientesBadge.tsx`
-
-Modificados:
-- `src/lib/modules.ts` — agregar `key` a cada `ModuleEntry` (mapea al conteo).
-- `src/components/AppShell.tsx` — render de badge en sidebar admin y sidebar de obra.
-- `src/components/MobileBottomBar.tsx` — render de badge en botones.
-- `src/routes/_authenticated/app.index.tsx` — badge total en tarjetas de obra.
-- Invalidaciones en handlers clave de mutaciones (requisiciones, caja chica, rentas, nómina, CxP, gasolinas) — solo agregar `queryClient.invalidateQueries({ queryKey: ["pendientes"] })`.
-
-## Fuera de alcance
-
-- No se cambia el esquema de BD.
-- No se agregan notificaciones nuevas; se cuentan estados reales.
-- No se añade filtro/ordenamiento en los módulos por "pendientes"; solo el indicador visual.
+- Realtime respeta RLS: cada usuario solo recibe eventos de filas que puede leer, así que el canal global no filtra data ajena.
+- El debounce evita invalidar 5 veces cuando se guardan varias filas seguidas (ej. una nómina completa).
+- No se agregan tablas de catálogos (`terceros`, `clientes`, `trabajadores`) a Realtime; no alimentan badges.
