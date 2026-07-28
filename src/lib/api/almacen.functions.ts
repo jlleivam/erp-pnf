@@ -536,7 +536,7 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
 
     const { data: mov } = await supabase
       .from("almacen_movimientos_semana")
-      .select("id, semana:almacen_semanas(id, obra_id, company_id, estatus)")
+      .select("id, inv_inicial, recibido, insumo:insumos(nombre), semana:almacen_semanas(id, obra_id, company_id, estatus)")
       .eq("id", data.movimientoId).maybeSingle();
     if (!mov) throw new Error("Movimiento no encontrado");
     const s = (mov as any).semana;
@@ -544,11 +544,18 @@ export const actualizarUtilizado = createServerFn({ method: "POST" })
     if (s.estatus !== "abierta") throw new Error("La semana está bloqueada o cerrada");
     await assertPuedeEditarAlmacen(supabase, userId, s.obra_id, roles);
 
+    const disponible = Number((mov as any).inv_inicial) + Number((mov as any).recibido);
+    if (data.utilizado > disponible + 1e-6) {
+      const nombre = (mov as any).insumo?.nombre ?? "insumo";
+      throw new Error(`El utilizado (${data.utilizado}) supera el inventario disponible (${disponible}) para ${nombre}`);
+    }
+
     const { error } = await supabase
       .from("almacen_movimientos_semana")
       .update({ utilizado: data.utilizado })
       .eq("id", data.movimientoId);
     if (error) throw new Error(error.message);
+
     return { ok: true };
   });
 

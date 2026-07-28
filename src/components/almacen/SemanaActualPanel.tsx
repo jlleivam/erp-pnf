@@ -324,18 +324,25 @@ function MovRow({ mov, disabled, onSave }: { mov: any; disabled: boolean; onSave
           type="number"
           step="0.01"
           min={0}
+          max={max}
           value={val}
           disabled={disabled}
           onChange={(e) => setVal(e.target.value)}
           onBlur={() => {
             const n = Number(val);
             if (isNaN(n) || n < 0) { setVal(String(Number(mov.utilizado))); return; }
+            if (n > max + 1e-6) {
+              toast.error(`El utilizado no puede superar el inventario disponible (${max}) para ${insumoNombre}`);
+              setVal(String(Number(mov.utilizado)));
+              return;
+            }
             if (n === Number(mov.utilizado)) return;
             onSave(n);
           }}
           className={`h-7 w-full max-w-[64px] px-1 text-center mx-auto tabular-nums ${overflow ? "border-rose-500" : ""}`}
         />
       </TableCell>
+
       <TableCell className={`py-1.5 px-1 text-center tabular-nums font-medium ${final < 0 ? "text-rose-600" : ""}`}>
         {final}
       </TableCell>
