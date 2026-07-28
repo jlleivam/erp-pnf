@@ -150,7 +150,7 @@ export const getPendientes = createServerFn({ method: "GET" })
         // Requisiciones en obra
         tasks.push(
           (async () => {
-            const statuses = isResidente
+            const statuses: string[] = isResidente
               ? ["borrador", "rechazada"]
               : isSuperv
                 ? ["pendiente_autorizacion"]
@@ -161,10 +161,11 @@ export const getPendientes = createServerFn({ method: "GET" })
                 .from("requisiciones")
                 .select("id", { count: "exact", head: true })
                 .eq("obra_id", obraId)
-                .in("estatus", statuses),
+                .in("estatus", statuses as any),
             );
           })(),
         );
+
 
         // Almacén: OC pendientes de recibir
         tasks.push(
