@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, HardHat } from "lucide-react";
 import { useEffectiveIsDirector } from "@/stores/auth";
+import { PendientesBadge } from "@/components/PendientesBadge";
+import { useTotalPendientesObra } from "@/hooks/usePendientes";
+
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
