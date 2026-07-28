@@ -59,6 +59,9 @@ import { TrabajadorDetalle } from "./TrabajadorDetalle";
 type Row = {
   id: string;
   nombre_completo: string;
+  nombres: string | null;
+  apellido_paterno: string | null;
+  apellido_materno: string | null;
   curp: string | null;
   nss: string | null;
   puesto: TrabajadorPuesto | null;
