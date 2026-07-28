@@ -122,7 +122,7 @@ export function RequisicionesModule({ obraId }: Props) {
             </Card>
           )}
 
-          {isAdministrativo && activas.length > 0 && (
+          {vistaAdmin && activas.length > 0 && (
             <Card className="overflow-x-auto">
               <Table>
                 <TableHeader>
