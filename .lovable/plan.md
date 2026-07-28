@@ -1,57 +1,39 @@
-# Implementar permisos por rol en Requisiciones
+## Problema
 
-Reemplazar los checks basados en rol crudo (`roles.includes("supervisor")`, `isDirector(roles)`, `isAdministrativo`) por los checks del catálogo de permisos (`requisiciones.crear`, `requisiciones.aprobar`, `requisiciones.rechazar`) tanto en UI como en servidor.
+En `RequisicionesModule.tsx` (líneas 30 y 122), la vista con botones **Cotizar / Continuar / Ver OCs** se muestra sólo si `roles.includes("administrativo")`. El director no tiene ese rol literal, y aunque `usePermisos.can()` le da bypass, nunca se consulta un permiso — sólo el nombre del rol. Resultado: José Luis (director) cae en la vista de tarjetas de residente sin acceso a cotizar ni ver OCs.
 
-## Acciones del catálogo (ya existentes)
-- `requisiciones.crear` — mostrar botón "Nueva requisición" y permitir enviar.
-- `requisiciones.aprobar` — mostrar botón "Autorizar OC" en la comparativa.
-- `requisiciones.rechazar` — mostrar botón "Rechazar OC" en la comparativa.
+Además falta cubrir las acciones nuevas que pide el usuario dentro de la matriz de permisos: **cotizar** una requisición y **generar OC**.
 
-No se agregan acciones nuevas; se cablean las que ya están en `CATALOGO_ACCIONES`.
+## Cambios
 
-## Cambios en cliente (visibilidad de botones)
+### 1. `src/lib/permisos/catalogo.ts`
+Agregar dos acciones nuevas (default: administrativo):
+- `requisiciones.cotizar` — cotizar requisiciones y capturar respuestas de proveedores
+- `requisiciones.generar_oc` — generar orden(es) de compra desde la comparativa
 
-1. `src/components/requisiciones/RequisicionesModule.tsx`
-   - `puedeCrear = can("requisiciones.crear")` (reemplaza el cálculo actual con `isAdministrativo` + roles hardcoded).
-   - `puedeRevisar = can("requisiciones.aprobar") || can("requisiciones.rechazar")` para el botón "Revisar / Autorizar" de renglones `pendiente_autorizacion`.
+Reutilizamos `requisiciones.aprobar` / `requisiciones.rechazar` ya existentes para la revisión de OCs, y agregamos `requisiciones.ver_oc` (default: administrativo + supervisor) para el listado/tabla de OCs.
 
-2. `src/components/requisiciones/NuevaRequisicionSheet.tsx`
-   - Bloquear submit si `!can("requisiciones.crear")`.
-   - Quitar `isDirector` prop-passing basado en rol; usar permiso para decidir si aparece el botón "Enviar" vs solo "Guardar borrador".
+### 2. `src/components/requisiciones/RequisicionesModule.tsx` (UI)
+- Reemplazar `isAdministrativo` por:
+  - `puedeCotizar = can("requisiciones.cotizar")`
+  - `puedeVerOC = can("requisiciones.ver_oc")`
+- La tabla admin de Activas se muestra si `puedeCotizar || puedeVerOC` (director entra por bypass).
+- Botones de acción por permiso: **Cotizar / Continuar** requiere `puedeCotizar`; **Ver OCs** requiere `puedeVerOC`.
+- Historial: el gate `isAdministrativo` (líneas 317, 331) pasa a `puedeVerOC`.
 
-3. `src/components/requisiciones/ComparativaTable.tsx`
-   - `puedeAutorizar = can("requisiciones.aprobar")`, `puedeRechazar = can("requisiciones.rechazar")`.
-   - Sustituye `isSupervisor` para mostrar/ocultar los botones "Autorizar" y "Rechazar" de la OC en estado `pendiente_autorizacion`.
+### 3. `src/components/requisiciones/CotizacionSheet.tsx` + `ComparativaTable.tsx` (UI)
+- Botón/acción **Capturar respuesta** y edición de precios de cotización: gate por `requisiciones.cotizar`.
+- Botón **Generar OC** en la comparativa: gate por `requisiciones.generar_oc`.
+- Mantener los gates ya cableados de `aprobar` / `rechazar` para autorizar/rechazar la OC generada.
 
-4. `src/components/requisiciones/CotizacionSheet.tsx`
-   - `puedeCancelarOC = can("requisiciones.rechazar")` (o dejar director-only si prefieres; ver "decisión" abajo). Reemplaza `isDirector` directo.
+### 4. Servidor (enforcement) en `src/lib/api/cotizaciones.functions.ts`
+Agregar `requirePermission(...)` a:
+- funciones de captura/edición de respuestas de proveedor → `requisiciones.cotizar`
+- función que genera la OC desde la comparativa → `requisiciones.generar_oc`
 
-5. `src/routes/_authenticated/app.supervisor.requisiciones.tsx`
-   - Gate de la ruta: si `!can("requisiciones.aprobar") && !can("requisiciones.rechazar")` → mostrar `ModulePlaceholder` "Sin acceso" en lugar del listado.
-   - Quitar `useEffectiveIsDirector` como bypass y confiar en `can()` (el director ya bypasa por diseño).
+Sin migración: `role_permissions` sólo guarda overrides; los defaults viven en el catálogo.
 
-6. `src/components/AppShell.tsx`
-   - El link del sidebar "Supervisión → Por autorizar" queda visible cuando `can("requisiciones.aprobar") || can("requisiciones.rechazar")` (hoy usa `showSupervisor = director || roles.includes("supervisor")`).
-
-## Cambios en servidor (enforcement, defensa en profundidad)
-
-Agregar `requirePermission(supabase, userId, "<key>")` al inicio de cada handler:
-
-- `src/lib/api/requisiciones.functions.ts`
-  - `crearRequisicion` → `requisiciones.crear`
-  - `guardarBorradorRequisicion` → `requisiciones.crear`
-  - `enviarBorradorRequisicion` → `requisiciones.crear`
-  - `cancelarRequisicion` — se conserva el gate existente "solo el creador"; no requiere permiso adicional.
-
-- `src/lib/api/cotizaciones.functions.ts`
-  - `autorizarOC` → `requisiciones.aprobar`
-  - `rechazarOC` → `requisiciones.rechazar`
-
-## Decisiones tomadas por defecto
-- La cancelación de OC desde `CotizacionSheet` se ata a `requisiciones.rechazar` (misma semántica de "no proceder"). Si prefieres una acción separada `oc.cancelar` (ya está en el catálogo), la ato a esa en su lugar — indícalo.
-- El director sigue con bypass total (política vigente del sistema).
-
-## Fuera de alcance
-- No se toca RLS de `requisiciones` ni `ordenes_compra` (la validación va por permisos aplicativos, igual que en Obras).
-- No se refactoriza la lógica de negocio, solo los gates.
-- Pruebas E2E de los checks quedan pendientes (fue el plan anterior que descartaste).
+## Resultado esperado
+- Director: ve todo por bypass (tabla admin con Cotizar y Ver OCs).
+- Administrativo (por defecto): igual que hoy.
+- Cualquier rol al que en Configuración → Permisos se le active el check de `cotizar` o `generar OC` obtiene esas acciones inmediatamente, sin tocar código.
