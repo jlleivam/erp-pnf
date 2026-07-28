@@ -28,7 +28,6 @@ async function safeCount(
   }
 }
 
-
 export const getPendientes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PendientesResult> => {
@@ -69,56 +68,56 @@ export const getPendientes = createServerFn({ method: "GET" })
 
     if (isAdmin && companyId) {
       const [req, cxp, nom, fondos, reemb, gas, gastosOf, rentas] = await Promise.all([
-        safeCount(
+        safeCount("admin.requisiciones",
           supabase
             .from("requisiciones")
             .select("id", { count: "exact", head: true })
             .eq("company_id", companyId)
             .in("estatus", ["enviada", "en_cotizacion", "pendiente_autorizacion"]),
         ),
-        safeCount(
+        safeCount("admin.cxp",
           supabase
             .from("cuentas_por_pagar")
             .select("id", { count: "exact", head: true })
             .eq("company_id", companyId)
             .in("estatus", ["pendiente", "parcial"]),
         ),
-        safeCount(
+        safeCount("admin.nomina",
           supabase
             .from("obra_nominas")
             .select("id", { count: "exact", head: true })
             .eq("company_id", companyId)
             .eq("estatus", "cerrada"),
         ),
-        safeCount(
+        safeCount("admin.caja_chica.fondos",
           supabase
             .from("caja_chica_fondos")
             .select("id", { count: "exact", head: true })
             .eq("company_id", companyId)
             .eq("estatus", "autorizado"),
         ),
-        safeCount(
+        safeCount("admin.caja_chica.reemb",
           supabase
             .from("caja_chica_reembolsos")
             .select("id", { count: "exact", head: true })
             .eq("company_id", companyId)
             .eq("estatus", "enviado_admin"),
         ),
-        safeCount(
+        safeCount("admin.gasolinas",
           supabase
             .from("vales_gasolina")
             .select("id", { count: "exact", head: true })
             .eq("company_id", companyId)
             .in("estatus", ["pendiente_autorizacion", "autorizado"]),
         ),
-        safeCount(
+        safeCount("admin.gastos_oficina",
           supabase
             .from("gastos_oficina")
             .select("id", { count: "exact", head: true })
             .eq("company_id", companyId)
             .eq("estatus", "pendiente_aprobacion"),
         ),
-        safeCount(
+        safeCount("admin.rentas",
           supabase
             .from("obra_rentas")
             .select("id", { count: "exact", head: true })
@@ -153,7 +152,7 @@ export const getPendientes = createServerFn({ method: "GET" })
 
         const tasks: Array<Promise<void>> = [];
 
-        // Requisiciones en obra
+        // Requisiciones
         tasks.push(
           (async () => {
             const statuses: string[] = isResidente
@@ -162,7 +161,7 @@ export const getPendientes = createServerFn({ method: "GET" })
                 ? ["pendiente_autorizacion"]
                 : [];
             if (!statuses.length) return;
-            c["requisiciones"] = await safeCount(
+            c["requisiciones"] = await safeCount("obra.requisiciones",
               supabase
                 .from("requisiciones")
                 .select("id", { count: "exact", head: true })
@@ -172,12 +171,11 @@ export const getPendientes = createServerFn({ method: "GET" })
           })(),
         );
 
-
         // Almacén: OC pendientes de recibir
         tasks.push(
           (async () => {
             if (!isResidente) return;
-            c["almacen-obra"] = await safeCount(
+            c["almacen-obra"] = await safeCount("obra.almacen",
               supabase
                 .from("ordenes_compra")
                 .select("id", { count: "exact", head: true })
@@ -191,7 +189,7 @@ export const getPendientes = createServerFn({ method: "GET" })
         tasks.push(
           (async () => {
             if (!isResidente) return;
-            c["rentas"] = await safeCount(
+            c["rentas"] = await safeCount("obra.rentas",
               supabase
                 .from("obra_rentas")
                 .select("id", { count: "exact", head: true })
@@ -201,14 +199,14 @@ export const getPendientes = createServerFn({ method: "GET" })
           })(),
         );
 
-        // Gasolinas: vales por revisar
+        // Gasolinas
         tasks.push(
           (async () => {
             if (!isResidente && !isSuperv) return;
             const statuses: string[] = isSuperv
               ? ["pendiente_autorizacion"]
               : ["autorizado", "entregado"];
-            c["gasolinas"] = await safeCount(
+            c["gasolinas"] = await safeCount("obra.gasolinas",
               supabase
                 .from("vales_gasolina")
                 .select("id", { count: "exact", head: true })
@@ -218,20 +216,19 @@ export const getPendientes = createServerFn({ method: "GET" })
           })(),
         );
 
-
         // Caja chica
         tasks.push(
           (async () => {
             if (isSuperv) {
               const [fondos, reemb] = await Promise.all([
-                safeCount(
+                safeCount("obra.cc.fondos.sup",
                   supabase
                     .from("caja_chica_fondos")
                     .select("id", { count: "exact", head: true })
                     .eq("obra_id", obraId)
                     .eq("estatus", "pendiente_autorizacion"),
                 ),
-                safeCount(
+                safeCount("obra.cc.reemb.sup",
                   supabase
                     .from("caja_chica_reembolsos")
                     .select("id", { count: "exact", head: true })
@@ -243,21 +240,21 @@ export const getPendientes = createServerFn({ method: "GET" })
             }
             if (isResidente) {
               const [fondosR, reembR, gastosR] = await Promise.all([
-                safeCount(
+                safeCount("obra.cc.fondos.res",
                   supabase
                     .from("caja_chica_fondos")
                     .select("id", { count: "exact", head: true })
                     .eq("obra_id", obraId)
                     .eq("estatus", "rechazado"),
                 ),
-                safeCount(
+                safeCount("obra.cc.reemb.res",
                   supabase
                     .from("caja_chica_reembolsos")
                     .select("id", { count: "exact", head: true })
                     .eq("obra_id", obraId)
                     .eq("estatus", "rechazado"),
                 ),
-                safeCount(
+                safeCount("obra.cc.gastos.res",
                   supabase
                     .from("caja_chica_gastos")
                     .select("id", { count: "exact", head: true })
@@ -270,10 +267,10 @@ export const getPendientes = createServerFn({ method: "GET" })
           })(),
         );
 
-        // Tareas asignadas al usuario
+        // Tareas
         tasks.push(
           (async () => {
-            c["tareas"] = await safeCount(
+            c["tareas"] = await safeCount("obra.tareas",
               supabase
                 .from("obra_tareas")
                 .select("id", { count: "exact", head: true })
@@ -284,6 +281,72 @@ export const getPendientes = createServerFn({ method: "GET" })
           })(),
         );
 
+        // Presupuestos
+        tasks.push(
+          (async () => {
+            if (isSuperv) {
+              c["presupuesto"] = await safeCount("obra.presupuesto.sup",
+                supabase
+                  .from("obra_presupuestos")
+                  .select("id", { count: "exact", head: true })
+                  .eq("obra_id", obraId)
+                  .eq("estatus", "solicitada"),
+              );
+            }
+          })(),
+        );
+
+        // Estimaciones (admin: cerradas pendientes de pago; supervisor las revisa)
+        tasks.push(
+          (async () => {
+            if (isSuperv) {
+              c["estimaciones"] = await safeCount("obra.estimaciones",
+                supabase
+                  .from("obra_estimaciones")
+                  .select("id", { count: "exact", head: true })
+                  .eq("obra_id", obraId)
+                  .eq("estatus", "cerrada"),
+              );
+            }
+          })(),
+        );
+
+        // Destajos / Subcontratos: docs enviados a autorizar
+        tasks.push(
+          (async () => {
+            if (!isSuperv) return;
+            const [dest, sub] = await Promise.all([
+              safeCount("obra.destajos",
+                supabase
+                  .from("obra_destajo_presupuestos")
+                  .select("id", { count: "exact", head: true })
+                  .eq("estatus", "enviado"),
+              ),
+              safeCount("obra.subcontratos",
+                supabase
+                  .from("obra_subcontrato_presupuestos")
+                  .select("id", { count: "exact", head: true })
+                  .eq("estatus", "enviado"),
+              ),
+            ]);
+            if (dest) c["destajos"] = dest;
+            if (sub) c["subcontratos"] = sub;
+          })(),
+        );
+
+        // Nómina obra: borradores del residente
+        tasks.push(
+          (async () => {
+            if (!isResidente) return;
+            c["nomina"] = await safeCount("obra.nomina.res",
+              supabase
+                .from("obra_nominas")
+                .select("id", { count: "exact", head: true })
+                .eq("obra_id", obraId)
+                .eq("estatus", "borrador"),
+            );
+          })(),
+        );
 
         await Promise.all(tasks);
 
