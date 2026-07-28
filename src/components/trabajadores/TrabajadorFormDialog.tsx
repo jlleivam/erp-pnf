@@ -320,7 +320,7 @@ export function TrabajadorFormDialog({
                 </Select>
               </div>
               <div>
-                <Label>Sueldo semanal (MXN){!isEdit && !canManage && <Req />}</Label>
+                <Label>Sueldo semanal (MXN)<Req /></Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Input
                     type="number"
