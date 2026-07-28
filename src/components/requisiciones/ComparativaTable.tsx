@@ -882,7 +882,7 @@ export function ComparativaTable({
                 {/* Acciones por estatus */}
                 <div className="flex items-center justify-end gap-2 flex-wrap">
                   {/* Sin OC o borrador o rechazada → admin envía */}
-                  {(!estatus || estatus === "borrador" || estatus === "rechazada") && isAdmin && (
+                  {(!estatus || estatus === "borrador" || estatus === "rechazada") && (puedeGestionar || puedeCrearOC) && (
                     <>
                       {paquete && (
                         <Button
