@@ -205,7 +205,7 @@ export function TrabajadorFormDialog({
                 />
               </div>
               <div>
-                <Label>Sexo</Label>
+                <Label>Sexo{!isEdit && !canManage && <Req />}</Label>
                 <Select
                   value={f.sexo ?? ""}
                   onValueChange={(v) =>
