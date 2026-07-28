@@ -187,7 +187,7 @@ export function RequisicionesModule({ obraId }: Props) {
           {!isAdministrativo && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
             const esBorrador = r.estatus === "borrador";
-            const mostrarRevisar = isSupervisor && r.estatus === "pendiente_autorizacion";
+            const mostrarRevisar = puedeRevisar && r.estatus === "pendiente_autorizacion";
             const isExpanded = expandidos.has(r.id);
             const items = r.items ?? [];
             return (
