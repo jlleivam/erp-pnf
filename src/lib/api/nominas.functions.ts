@@ -519,3 +519,341 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
 
     return { semana, trabajadores, obrasConNomina: nominasArr.length };
   });
+
+// ============================================================
+// PAGO DE NÓMINA SEMANAL (Cuentas por pagar)
+// ============================================================
+
+async function assertAdmin(supabase: any, userId: string): Promise<string> {
+  const { data: profile } = await supabase
+    .from("profiles").select("company_id").eq("id", userId).maybeSingle();
+  if (!profile?.company_id) throw new Error("Sin empresa asociada");
+  const companyId = profile.company_id as string;
+  const { data: roles } = await supabase
+    .from("user_roles").select("role")
+    .eq("user_id", userId).eq("company_id", companyId)
+    .in("role", ["director", "administrativo"]);
+  if (!roles || roles.length === 0) throw new Error("Solo director o administrativo puede pagar nómina");
+  return companyId;
+}
+
+export const listSemanasNominaPorPagar = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const companyId = await assertAdmin(supabase, userId);
+
+    const { data: nominas, error } = await supabase
+      .from("obra_nominas")
+      .select("id, obra_id, semana_inicio, semana_fin, monto_total, estatus")
+      .eq("company_id", companyId)
+      .eq("estatus", "cerrada")
+      .order("semana_inicio", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const rows = (nominas ?? []) as any[];
+    if (rows.length === 0) return [] as Array<any>;
+
+    const obraIds = Array.from(new Set(rows.map((r) => r.obra_id)));
+    const { data: obras } = await supabase
+      .from("obras").select("id, nombre").in("id", obraIds);
+    const obraMap = new Map((obras ?? []).map((o: any) => [o.id, o.nombre]));
+
+    // Agrupa por semana_inicio
+    const bySemana = new Map<string, any>();
+    for (const n of rows) {
+      const key = n.semana_inicio;
+      const g = bySemana.get(key) ?? {
+        semana_inicio: n.semana_inicio,
+        semana_fin: n.semana_fin,
+        total: 0,
+        obras: [] as any[],
+        nomina_ids: [] as string[],
+      };
+      g.total += Number(n.monto_total ?? 0);
+      g.obras.push({
+        nomina_id: n.id,
+        obra_id: n.obra_id,
+        obra_nombre: obraMap.get(n.obra_id) ?? "—",
+        monto: Number(n.monto_total ?? 0),
+      });
+      g.nomina_ids.push(n.id);
+      bySemana.set(key, g);
+    }
+
+    return Array.from(bySemana.values()).sort((a, b) =>
+      a.semana_inicio < b.semana_inicio ? 1 : -1,
+    );
+  });
+
+export const listTrabajadoresPagoSemana = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ semanaInicio: z.string() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const companyId = await assertAdmin(supabase, userId);
+
+    const { data: nominas } = await supabase
+      .from("obra_nominas")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("estatus", "cerrada")
+      .eq("semana_inicio", data.semanaInicio);
+    const ids = (nominas ?? []).map((n: any) => n.id);
+    if (ids.length === 0) return [] as Array<any>;
+
+    const { data: rens } = await supabase
+      .from("obra_nomina_renglones")
+      .select("trabajador_id, importe_total")
+      .in("nomina_id", ids);
+
+    const trabIds = Array.from(new Set((rens ?? []).map((r: any) => r.trabajador_id)));
+    const { data: trabs } = await supabase
+      .from("trabajadores")
+      .select("id, nombre_completo, apellido_paterno, apellido_materno")
+      .in("id", trabIds);
+    const trabMap = new Map((trabs ?? []).map((t: any) => {
+      const nombre = [t.nombre_completo, t.apellido_paterno, t.apellido_materno]
+        .filter(Boolean).join(" ").trim() || "Trabajador";
+      return [t.id, nombre];
+    }));
+
+    const agg = new Map<string, number>();
+    for (const r of (rens ?? []) as any[]) {
+      agg.set(r.trabajador_id, (agg.get(r.trabajador_id) ?? 0) + Number(r.importe_total ?? 0));
+    }
+    return Array.from(agg.entries()).map(([id, importe]) => ({
+      trabajador_id: id,
+      nombre: trabMap.get(id) ?? "Trabajador",
+      importe,
+    })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  });
+
+const pagarNominaSchema = z.object({
+  semanaInicio: z.string(),
+  fechaPago: z.string(),
+  notas: z.string().optional().nullable(),
+  cuentaCajaFuerteId: z.string().uuid(),
+  cheques: z.array(z.object({
+    cuentaId: z.string().uuid(),
+    folio: z.string().min(1),
+    trabajadorId: z.string().uuid().nullable(),
+    trabajadorNombre: z.string().min(1),
+    monto: z.number().positive(),
+  })).default([]),
+});
+
+export const pagarNominaSemana = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => pagarNominaSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const companyId = await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Lee nominas de la semana
+    const { data: nominas } = await supabaseAdmin
+      .from("obra_nominas")
+      .select("id, obra_id, semana_inicio, semana_fin, monto_total, estatus")
+      .eq("company_id", companyId)
+      .eq("semana_inicio", data.semanaInicio);
+    const arr = (nominas ?? []) as any[];
+    if (arr.length === 0) throw new Error("No hay nóminas para esa semana");
+    if (arr.some((n) => n.estatus !== "cerrada")) throw new Error("Solo nóminas cerradas se pueden pagar");
+
+    const totalNomina = +arr.reduce((s, n) => s + Number(n.monto_total ?? 0), 0).toFixed(2);
+    const totalCheques = +data.cheques.reduce((s, c) => s + c.monto, 0).toFixed(2);
+    if (totalCheques > totalNomina + 0.01) {
+      throw new Error(`Los cheques (${totalCheques}) exceden la nómina (${totalNomina})`);
+    }
+    const remanente = +(totalNomina - totalCheques).toFixed(2);
+
+    // Verifica caja fuerte
+    const { data: cajaFuerte } = await supabaseAdmin
+      .from("cuentas")
+      .select("id, company_id, tipo, activa, saldo_actual, nombre")
+      .eq("id", data.cuentaCajaFuerteId).maybeSingle();
+    if (!cajaFuerte || cajaFuerte.company_id !== companyId) throw new Error("Caja fuerte no encontrada");
+    if (cajaFuerte.tipo !== "caja_fuerte") throw new Error("La cuenta de vales debe ser caja fuerte");
+    if (!cajaFuerte.activa) throw new Error("La caja fuerte está inactiva");
+
+    // Lee cuentas de cheques
+    const cuentasIds = Array.from(new Set(data.cheques.map((c) => c.cuentaId)));
+    const { data: cuentas } = await supabaseAdmin
+      .from("cuentas")
+      .select("id, company_id, tipo, activa, saldo_actual, nombre")
+      .in("id", cuentasIds);
+    const cuentaMap = new Map((cuentas ?? []).map((c: any) => [c.id, c]));
+    for (const c of data.cheques) {
+      const cta = cuentaMap.get(c.cuentaId) as any;
+      if (!cta || cta.company_id !== companyId) throw new Error("Cuenta de cheque no encontrada");
+      if (cta.tipo !== "bancaria") throw new Error("Los cheques deben salir de cuentas bancarias");
+      if (!cta.activa) throw new Error(`Cuenta ${cta.nombre} inactiva`);
+    }
+
+    // Prorratea remanente por obra (según monto de nómina)
+    const obraIds = arr.map((n) => n.obra_id);
+    const { data: obras } = await supabaseAdmin
+      .from("obras").select("id, nombre").in("id", obraIds);
+    const obraNombreMap = new Map((obras ?? []).map((o: any) => [o.id, o.nombre]));
+
+    const vales: Array<{ obra_id: string; obra_nombre: string; monto: number; nomina_id: string }> = [];
+    if (remanente > 0.005 && totalNomina > 0) {
+      let acumulado = 0;
+      for (let i = 0; i < arr.length; i++) {
+        const n = arr[i];
+        const share = Number(n.monto_total ?? 0) / totalNomina;
+        const raw = remanente * share;
+        const monto = i === arr.length - 1
+          ? +(remanente - acumulado).toFixed(2)
+          : +raw.toFixed(2);
+        acumulado = +(acumulado + monto).toFixed(2);
+        if (monto > 0) {
+          vales.push({
+            obra_id: n.obra_id,
+            obra_nombre: obraNombreMap.get(n.obra_id) ?? "—",
+            monto,
+            nomina_id: n.id,
+          });
+        }
+      }
+    }
+    const totalVales = +vales.reduce((s, v) => s + v.monto, 0).toFixed(2);
+
+    // Insert pago_semana header
+    const { data: header, error: hErr } = await supabaseAdmin
+      .from("nomina_pagos_semana")
+      .insert({
+        company_id: companyId,
+        semana_inicio: arr[0].semana_inicio,
+        semana_fin: arr[0].semana_fin,
+        fecha_pago: data.fechaPago,
+        total_nomina: totalNomina,
+        total_cheques: totalCheques,
+        total_vales: totalVales,
+        notas: data.notas || null,
+        creado_por: userId,
+      })
+      .select("id")
+      .single();
+    if (hErr) throw new Error(hErr.message);
+    const pagoSemanaId = header.id as string;
+
+    const asientoId = crypto.randomUUID();
+    const asientos: any[] = [];
+    const concepto = `Pago nómina semana ${arr[0].semana_inicio} → ${arr[0].semana_fin}`;
+
+    // Cargo total: Nómina por pagar
+    asientos.push({
+      company_id: companyId, asiento_id: asientoId, fecha: data.fechaPago,
+      concepto, referencia: `NOM-${arr[0].semana_inicio}`,
+      origen_tipo: "pago_nomina_semana", origen_id: pagoSemanaId,
+      tipo_movimiento: "cargo", cuenta_contable: "Nómina por pagar",
+      monto: totalNomina, creado_por: userId,
+    });
+
+    // Procesa cheques: pago + movimiento + saldo + abono contable
+    for (const c of data.cheques) {
+      const cta = cuentaMap.get(c.cuentaId) as any;
+      const { data: pago } = await supabaseAdmin.from("pagos").insert({
+        company_id: companyId,
+        cuenta_id: c.cuentaId,
+        fecha: data.fechaPago,
+        monto: c.monto,
+        metodo: "cheque",
+        referencia: c.folio,
+        concepto: `Cheque nómina · ${c.trabajadorNombre}`,
+        notas: null,
+        origen_tipo: "nomina_pago_semana",
+        origen_id: pagoSemanaId,
+        creado_por: userId,
+      }).select("id").single();
+
+      const { data: mov } = await supabaseAdmin.from("cuenta_movimientos").insert({
+        cuenta_id: c.cuentaId, company_id: companyId,
+        fecha: data.fechaPago, tipo: "egreso", monto: c.monto,
+        concepto: `Cheque nómina ${c.folio} · ${c.trabajadorNombre}`,
+        referencia: c.folio,
+        origen: "pago", origen_id: pago!.id, creado_por: userId,
+      }).select("id").single();
+
+      await supabaseAdmin.from("pagos").update({ cuenta_movimiento_id: mov!.id }).eq("id", pago!.id);
+
+      const nuevoSaldo = +(Number(cta.saldo_actual) - c.monto).toFixed(2);
+      await supabaseAdmin.from("cuentas").update({ saldo_actual: nuevoSaldo }).eq("id", c.cuentaId);
+      cta.saldo_actual = nuevoSaldo;
+
+      await supabaseAdmin.from("nomina_pagos_cheque").insert({
+        pago_semana_id: pagoSemanaId, company_id: companyId,
+        cuenta_id: c.cuentaId, folio_cheque: c.folio,
+        trabajador_id: c.trabajadorId, trabajador_nombre: c.trabajadorNombre,
+        monto: c.monto, pago_id: pago!.id,
+      });
+
+      asientos.push({
+        company_id: companyId, asiento_id: asientoId, fecha: data.fechaPago,
+        concepto: `Cheque nómina ${c.folio}`, referencia: c.folio,
+        origen_tipo: "pago_nomina_semana", origen_id: pagoSemanaId,
+        tipo_movimiento: "abono", cuenta_contable: "Bancos",
+        monto: c.monto, creado_por: userId,
+      });
+    }
+
+    // Procesa vales por obra desde caja fuerte
+    if (vales.length > 0) {
+      let cfSaldo = Number(cajaFuerte.saldo_actual);
+      for (const v of vales) {
+        const { data: pago } = await supabaseAdmin.from("pagos").insert({
+          company_id: companyId,
+          cuenta_id: cajaFuerte.id,
+          fecha: data.fechaPago,
+          monto: v.monto,
+          metodo: "efectivo",
+          referencia: null,
+          concepto: `Vale nómina · ${v.obra_nombre}`,
+          notas: null,
+          origen_tipo: "nomina_pago_semana",
+          origen_id: pagoSemanaId,
+          creado_por: userId,
+        }).select("id").single();
+
+        const { data: mov } = await supabaseAdmin.from("cuenta_movimientos").insert({
+          cuenta_id: cajaFuerte.id, company_id: companyId,
+          fecha: data.fechaPago, tipo: "egreso", monto: v.monto,
+          concepto: `Vale nómina · ${v.obra_nombre}`,
+          origen: "pago", origen_id: pago!.id, creado_por: userId,
+        }).select("id").single();
+
+        await supabaseAdmin.from("pagos").update({ cuenta_movimiento_id: mov!.id }).eq("id", pago!.id);
+
+        cfSaldo = +(cfSaldo - v.monto).toFixed(2);
+
+        await supabaseAdmin.from("nomina_pagos_vale").insert({
+          pago_semana_id: pagoSemanaId, company_id: companyId,
+          obra_id: v.obra_id, obra_nombre: v.obra_nombre,
+          cuenta_id: cajaFuerte.id, monto: v.monto,
+          pago_id: pago!.id, nomina_id: v.nomina_id,
+        });
+
+        asientos.push({
+          company_id: companyId, asiento_id: asientoId, fecha: data.fechaPago,
+          concepto: `Vale nómina · ${v.obra_nombre}`, referencia: null,
+          origen_tipo: "pago_nomina_semana", origen_id: pagoSemanaId,
+          tipo_movimiento: "abono", cuenta_contable: "Caja fuerte",
+          monto: v.monto, creado_por: userId,
+        });
+      }
+      await supabaseAdmin.from("cuentas").update({ saldo_actual: cfSaldo }).eq("id", cajaFuerte.id);
+    }
+
+    // Inserta asientos contables
+    await supabaseAdmin.from("asientos_contables").insert(asientos);
+
+    // Marca nóminas como pagadas
+    await supabaseAdmin
+      .from("obra_nominas")
+      .update({ estatus: "pagada" })
+      .in("id", arr.map((n) => n.id));
+
+    return { id: pagoSemanaId, totalNomina, totalCheques, totalVales };
+  });
