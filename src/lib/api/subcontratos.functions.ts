@@ -701,19 +701,18 @@ export const autorizarPresupuestoSubcontrato = createServerFn({ method: "POST" }
       await ensureAnticipoSubcontratoRecord(supabase, p.subcontrato_id, userId);
     }
 
-    if (p.tipo === "adenda") {
-      try {
-        await notifyResidenteOC(supabase, {
-          residenteId: p.enviado_por,
-          actorUserId: userId,
-          obraId: d0!.obra_id,
-          tipo: "oc_subcontrato_autorizada",
-          link: `/app/obras/${d0!.obra_id}`,
-        });
-      } catch (e: any) {
-        console.error("[notificaciones] oc_subcontrato_autorizada error", e?.message);
-      }
+    try {
+      await notifyResidenteOC(supabase, {
+        residenteId: p.enviado_por,
+        actorUserId: userId,
+        obraId: d0!.obra_id,
+        tipo: p.tipo === "adenda" ? "oc_subcontrato_autorizada" : "subcontrato_autorizado",
+        link: `/app/obras/${d0!.obra_id}/subcontratos?subcontrato=${p.subcontrato_id}`,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] subcontrato autorizado error", e?.message);
     }
+
 
     return { ok: true };
   });
