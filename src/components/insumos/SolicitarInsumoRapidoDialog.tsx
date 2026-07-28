@@ -99,7 +99,14 @@ export function SolicitarInsumoRapidoDialog({
               </Select>
             </div>
           </div>
+          <div className="flex items-center gap-2 pt-1">
+            <Checkbox id="disponible-renta" checked={!!disponibleRenta} disabled />
+            <Label htmlFor="disponible-renta" className="text-sm font-normal">
+              Disponible para renta
+            </Label>
+          </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
