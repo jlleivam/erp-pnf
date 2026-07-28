@@ -1,15 +1,14 @@
 ## Objetivo
-Evitar que el "Final" (inv_inicial + recibido − utilizado) sea negativo en el almacén de obra.
+Permitir crear/solicitar un insumo directamente desde el diálogo "Nueva solicitud de renta" cuando el equipo no está en el catálogo, replicando el flujo del sheet de requisiciones.
 
 ## Cambios
 
-**Frontend — `src/components/almacen/SemanaActualPanel.tsx` (`MovRow`)**
-- En el `onBlur` del input `utilizado`: si `n > inv_inicial + recibido`, mostrar `toast` de error ("El utilizado no puede superar el inventario disponible: X"), revertir al valor previo y no llamar `onSave`.
-- Mantener el resaltado rojo actual mientras se escribe (feedback visual), pero bloquear el guardado.
-- Opcional: `max={inv_inicial + recibido}` en el input.
+**`src/components/rentas/NuevaRentaDialog.tsx`**
+- Agregar botón "Solicitar insumo" al lado del label "Equipo" (link/ghost) que abre un dialog interno.
+- Detectar rol director con `useAuth()`/`useRoles()` como se hace en requisiciones (revisar cómo se determina `isDirector` en `NuevaRequisicionSheet.tsx` y replicar).
+- Cargar `insumo_categorias` y `insumo_unidades` con `listCategoriasInsumos` / `listUnidadesInsumos` (los mismos que usa el sheet).
+- Reutilizar el componente `SolicitarInsumoRapidoDialog`: extraerlo de `NuevaRequisicionSheet.tsx` a `src/components/insumos/SolicitarInsumoRapidoDialog.tsx` (export nombrado) y actualizar el import en el sheet de requisiciones para consumirlo desde ahí (sin cambio de comportamiento). Añadir prop opcional `disponibleRenta?: boolean` que se pase a `solicitarInsumo` para que el nuevo insumo quede marcado como disponible para rentas.
+- En el diálogo de renta, pasar `disponibleRenta={true}`. En el sheet de requisiciones no pasarlo (default false), preservando el comportamiento actual.
+- `onCreated`: invalidar `["insumos-renta"]` y, si el usuario es director (insumo creado autorizado con `newId`), pre-seleccionarlo en `insumoId`.
 
-**Backend — `src/lib/api/almacen.functions.ts` (`actualizarUtilizado`)**
-- Traer también `inv_inicial, recibido, insumo:insumos(nombre)` del movimiento.
-- Antes del `update`, validar `data.utilizado <= inv_inicial + recibido`; si no, `throw new Error("El utilizado (X) supera el inventario disponible (Y) para {insumo}")`.
-
-Sin cambios de BD ni de otros flujos (recepciones y traslado de saldos ya operan con cantidades no negativas).
+Sin cambios de BD ni de otros módulos.

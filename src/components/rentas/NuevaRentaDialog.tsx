@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PackagePlus } from "lucide-react";
 import { crearSolicitudRenta } from "@/lib/api/rentas.functions";
-import { listInsumos } from "@/lib/api/insumos.functions";
+import { listInsumos, listCategorias, listUnidades } from "@/lib/api/insumos.functions";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -14,6 +15,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { SolicitarInsumoRapidoDialog } from "@/components/insumos/SolicitarInsumoRapidoDialog";
+import { useEffectiveRoles, isDirector as checkDirector } from "@/stores/auth";
+
 
 export function NuevaRentaDialog({
   obraId,
@@ -39,6 +43,7 @@ export function NuevaRentaDialog({
     : periodicidad === "mensual" ? "meses"
     : "periodos";
 
+  const qc = useQueryClient();
   const listFn = useServerFn(listInsumos);
   const insumosQ = useQuery({
     queryKey: ["insumos-renta"],
@@ -48,6 +53,18 @@ export function NuevaRentaDialog({
     () => (insumosQ.data ?? []).slice().sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)),
     [insumosQ.data],
   );
+
+  const fetchCategorias = useServerFn(listCategorias);
+  const categoriasQ = useQuery({ queryKey: ["insumo-categorias"], queryFn: () => fetchCategorias() });
+  const categorias = (categoriasQ.data ?? []) as Array<{ id: string; nombre: string }>;
+  const fetchUnidades = useServerFn(listUnidades);
+  const unidadesQ = useQuery({ queryKey: ["insumo-unidades"], queryFn: () => fetchUnidades() });
+  const unidades = (unidadesQ.data ?? []) as Array<{ id: string; codigo: string; nombre?: string }>;
+
+  const roles = useEffectiveRoles();
+  const isDirector = checkDirector(roles);
+  const [solicitarOpen, setSolicitarOpen] = useState(false);
+
 
   const crear = useServerFn(crearSolicitudRenta);
   const m = useMutation({
@@ -73,7 +90,20 @@ export function NuevaRentaDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>Equipo</Label>
+            <div className="flex items-center justify-between">
+              <Label>Equipo</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setSolicitarOpen(true)}
+              >
+                <PackagePlus className="size-3.5 mr-1" />
+                {isDirector ? "Nuevo insumo" : "Solicitar insumo"}
+              </Button>
+            </div>
+
             <Select value={insumoId} onValueChange={setInsumoId} disabled={sinInsumos}>
               <SelectTrigger>
                 <SelectValue placeholder={
@@ -192,6 +222,21 @@ export function NuevaRentaDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <SolicitarInsumoRapidoDialog
+        open={solicitarOpen}
+        onOpenChange={setSolicitarOpen}
+        categorias={categorias}
+        unidades={unidades}
+        isDirector={isDirector}
+        disponibleRenta={true}
+        onCreated={(newId) => {
+          qc.invalidateQueries({ queryKey: ["insumos-renta"] });
+          qc.invalidateQueries({ queryKey: ["insumos"] });
+          if (newId) setInsumoId(newId);
+          setSolicitarOpen(false);
+        }}
+      />
     </Dialog>
+
   );
 }
