@@ -130,22 +130,23 @@ export function AppShell() {
 
   const obraNavItems: BottomBarItem[] = obraId
     ? [
-        { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt },
-        { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: BarChart3 },
-        { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList },
-        { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users },
-        { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer },
-        { to: `/app/obras/${obraId}/subcontratos`, label: "Subcontratos", icon: Handshake },
-        { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Warehouse },
-        { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck },
-        { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel },
-        { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins },
-        { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo },
+        { to: `/app/obras/${obraId}/presupuesto`, label: "Presupuesto", icon: Receipt, pendientes: obraPendientes["presupuesto"] },
+        { to: `/app/obras/${obraId}/estimaciones`, label: "Estimaciones", icon: BarChart3, pendientes: obraPendientes["estimaciones"] },
+        { to: `/app/obras/${obraId}/requisiciones`, label: "Requisiciones", icon: ClipboardList, pendientes: obraPendientes["requisiciones"] },
+        { to: `/app/obras/${obraId}/nomina`, label: "Nómina", icon: Users, pendientes: obraPendientes["nomina"] },
+        { to: `/app/obras/${obraId}/destajos`, label: "Destajos", icon: Hammer, pendientes: obraPendientes["destajos"] },
+        { to: `/app/obras/${obraId}/subcontratos`, label: "Subcontratos", icon: Handshake, pendientes: obraPendientes["subcontratos"] },
+        { to: `/app/obras/${obraId}/almacen-obra`, label: "Almacén", icon: Warehouse, pendientes: obraPendientes["almacen-obra"] },
+        { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck, pendientes: obraPendientes["rentas"] },
+        { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel, pendientes: obraPendientes["gasolinas"] },
+        { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins, pendientes: obraPendientes["caja-chica"] },
+        { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo, pendientes: obraPendientes["tareas"] },
         ...(director
           ? [{ to: `/app/obras/${obraId}/configuracion`, label: "Configuración", icon: Settings } as BottomBarItem]
           : []),
       ]
     : [];
+
 
   const renderNav = (onNavigate?: () => void) => (
     <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
