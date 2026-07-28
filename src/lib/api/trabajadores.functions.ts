@@ -280,7 +280,7 @@ export const crearTrabajador = createServerFn({ method: "POST" })
               obra_id: data.obraId ?? null,
               tipo: "trabajador_alta_solicitada",
               titulo: "Solicitud de alta de trabajador",
-              mensaje: `${quien} solicitó dar de alta a ${data.nombre_completo}. Requiere autorización.`,
+              mensaje: `${quien} solicitó dar de alta a ${nombreCompleto}. Requiere autorización.`,
               link: `/app/catalogos/trabajadores?tab=pendientes&id=${trabajador.id}`,
             })),
           );
