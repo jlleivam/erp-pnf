@@ -27,13 +27,10 @@ interface Props { obraId: string }
 
 export function RequisicionesModule({ obraId }: Props) {
   const roles = useEffectiveRoles();
+  const isAdministrativo = roles.includes("administrativo");
   const { can } = usePermisos();
   const puedeCrear = can("requisiciones.crear");
   const puedeRevisar = can("requisiciones.aprobar") || can("requisiciones.rechazar");
-  const puedeCotizar = can("requisiciones.cotizar");
-  const puedeVerOC = can("requisiciones.ver_oc");
-  const vistaAdmin = puedeCotizar || puedeVerOC;
-  void roles;
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
@@ -122,7 +119,7 @@ export function RequisicionesModule({ obraId }: Props) {
             </Card>
           )}
 
-          {vistaAdmin && activas.length > 0 && (
+          {isAdministrativo && activas.length > 0 && (
             <Card className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -169,11 +166,11 @@ export function RequisicionesModule({ obraId }: Props) {
                           <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0 h-5`}>{meta.label}</Badge>
                         </TableCell>
                         <TableCell className="text-right py-1">
-                          {estatus === "enviada" && puedeCotizar ? (
+                          {estatus === "enviada" ? (
                             <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
-                          ) : estatus === "en_cotizacion" && puedeCotizar ? (
+                          ) : estatus === "en_cotizacion" ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
-                          ) : ["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && puedeVerOC ? (
+                          ) : ["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
                           ) : (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Ver</Button>
@@ -187,7 +184,7 @@ export function RequisicionesModule({ obraId }: Props) {
             </Card>
           )}
 
-          {!vistaAdmin && activas.map((r: any) => {
+          {!isAdministrativo && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
             const esBorrador = r.estatus === "borrador";
             const mostrarRevisar = puedeRevisar && r.estatus === "pendiente_autorizacion";
@@ -317,8 +314,8 @@ export function RequisicionesModule({ obraId }: Props) {
                   return (
                     <TableRow key={r.id}>
                       <TableCell
-                        className={`font-medium ${puedeVerOC ? "cursor-pointer" : ""}`}
-                        onClick={puedeVerOC ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
+                        className={`font-medium ${isAdministrativo ? "cursor-pointer" : ""}`}
+                        onClick={isAdministrativo ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
                       >
                         {r.folio}
                       </TableCell>
@@ -331,7 +328,7 @@ export function RequisicionesModule({ obraId }: Props) {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => puedeVerOC ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
+                          onClick={() => isAdministrativo ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
                         >
                           <Eye className="size-4" />
                         </Button>

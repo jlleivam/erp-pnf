@@ -164,8 +164,8 @@ export const guardarPaquete = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId } = await getCtx(supabase, userId);
-    await requirePermission(supabase, userId, "requisiciones.cotizar");
+    const { companyId, roles } = await getCtx(supabase, userId);
+    assertAdmin(roles);
 
     const { data: req } = await supabase
       .from("requisiciones").select("id, company_id").eq("id", data.requisicionId).maybeSingle();
@@ -271,8 +271,8 @@ export const generarOC = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ paqueteId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId } = await getCtx(supabase, userId);
-    await requirePermission(supabase, userId, "requisiciones.generar_oc");
+    const { companyId, roles } = await getCtx(supabase, userId);
+    assertAdmin(roles);
 
     const { data: paquete } = await supabase
       .from("cotizacion_paquetes")
