@@ -1,57 +1,56 @@
-# Implementar permisos por rol en Requisiciones
+# Permisos en Órdenes de Compra y Cotización
 
-Reemplazar los checks basados en rol crudo (`roles.includes("supervisor")`, `isDirector(roles)`, `isAdministrativo`) por los checks del catálogo de permisos (`requisiciones.crear`, `requisiciones.aprobar`, `requisiciones.rechazar`) tanto en UI como en servidor.
+Cablear el catálogo de permisos al flujo de cotización y OC, tanto en UI como en servidor.
 
-## Acciones del catálogo (ya existentes)
-- `requisiciones.crear` — mostrar botón "Nueva requisición" y permitir enviar.
-- `requisiciones.aprobar` — mostrar botón "Autorizar OC" en la comparativa.
-- `requisiciones.rechazar` — mostrar botón "Rechazar OC" en la comparativa.
+## Cambios de catálogo (`src/lib/permisos/catalogo.ts`)
+- Agregar `cotizaciones.gestionar` — módulo "Órdenes de compra", default administrativo.
+- Mantener `oc.crear`, `oc.autorizar`, `oc.cancelar`. Cambiar defaults:
+  - `oc.autorizar`: default supervisor (hoy es NONE) para no romper el flujo actual.
+  - `oc.cancelar`: default administrativo (ya está).
 
-No se agregan acciones nuevas; se cablean las que ya están en `CATALOGO_ACCIONES`.
+## Mapeo de acciones
 
-## Cambios en cliente (visibilidad de botones)
+| Acción | Permiso |
+|---|---|
+| Crear/editar/eliminar solicitud de cotización, marcar SC enviada, capturar respuesta, descartar solicitud, guardar/eliminar paquete | `cotizaciones.gestionar` |
+| Generar OC desde comparativa, enviar OC a supervisor | `oc.crear` |
+| Autorizar OC | `oc.autorizar` |
+| Rechazar OC, reabrir OC, cancelar OC desde `CotizacionSheet` | `oc.cancelar` |
 
-1. `src/components/requisiciones/RequisicionesModule.tsx`
-   - `puedeCrear = can("requisiciones.crear")` (reemplaza el cálculo actual con `isAdministrativo` + roles hardcoded).
-   - `puedeRevisar = can("requisiciones.aprobar") || can("requisiciones.rechazar")` para el botón "Revisar / Autorizar" de renglones `pendiente_autorizacion`.
+Desacopla de `requisiciones.aprobar`/`requisiciones.rechazar` (que quedan sólo para el flujo de aprobación de la requisición en sí).
 
-2. `src/components/requisiciones/NuevaRequisicionSheet.tsx`
-   - Bloquear submit si `!can("requisiciones.crear")`.
-   - Quitar `isDirector` prop-passing basado en rol; usar permiso para decidir si aparece el botón "Enviar" vs solo "Guardar borrador".
+## Cambios en cliente
+
+1. `src/components/requisiciones/SolicitudesTab.tsx`
+   - `puedeGestionar = can("cotizaciones.gestionar")`. Oculta/deshabilita botones de crear/editar/eliminar solicitud, marcar enviada, capturar respuesta y descartar.
+
+2. `src/components/requisiciones/CapturarRespuestaDialog.tsx`
+   - Bloquear submit si `!can("cotizaciones.gestionar")`.
 
 3. `src/components/requisiciones/ComparativaTable.tsx`
-   - `puedeAutorizar = can("requisiciones.aprobar")`, `puedeRechazar = can("requisiciones.rechazar")`.
-   - Sustituye `isSupervisor` para mostrar/ocultar los botones "Autorizar" y "Rechazar" de la OC en estado `pendiente_autorizacion`.
+   - `puedeGenerarOC = can("oc.crear")` para el botón "Generar OC".
+   - `puedeAutorizar = can("oc.autorizar")`, `puedeRechazar = can("oc.cancelar")` (reemplaza los actuales `requisiciones.aprobar/rechazar`).
 
 4. `src/components/requisiciones/CotizacionSheet.tsx`
-   - `puedeCancelarOC = can("requisiciones.rechazar")` (o dejar director-only si prefieres; ver "decisión" abajo). Reemplaza `isDirector` directo.
+   - `puedeCancelarOC = can("oc.cancelar")` (hoy usa `requisiciones.rechazar`).
+   - Botón "Reabrir OC" gated por `oc.cancelar`.
 
-5. `src/routes/_authenticated/app.supervisor.requisiciones.tsx`
-   - Gate de la ruta: si `!can("requisiciones.aprobar") && !can("requisiciones.rechazar")` → mostrar `ModulePlaceholder` "Sin acceso" en lugar del listado.
-   - Quitar `useEffectiveIsDirector` como bypass y confiar en `can()` (el director ya bypasa por diseño).
+5. `src/routes/_authenticated/app.supervisor.requisiciones.tsx` y sidebar en `AppShell.tsx`
+   - Ampliar gate a `can("requisiciones.aprobar") || can("requisiciones.rechazar") || can("oc.autorizar") || can("oc.cancelar")` para que supervisores con permisos de OC sigan viendo la pantalla.
 
-6. `src/components/AppShell.tsx`
-   - El link del sidebar "Supervisión → Por autorizar" queda visible cuando `can("requisiciones.aprobar") || can("requisiciones.rechazar")` (hoy usa `showSupervisor = director || roles.includes("supervisor")`).
+## Cambios en servidor (defensa en profundidad)
 
-## Cambios en servidor (enforcement, defensa en profundidad)
+`src/lib/api/solicitudes-cotizacion.functions.ts` — `requirePermission(..., "cotizaciones.gestionar")` en:
+- `crearSolicitud`, `actualizarSolicitud`, `eliminarSolicitud`, `marcarSCEnviada`, `capturarRespuesta`, `descartarSolicitud`.
 
-Agregar `requirePermission(supabase, userId, "<key>")` al inicio de cada handler:
-
-- `src/lib/api/requisiciones.functions.ts`
-  - `crearRequisicion` → `requisiciones.crear`
-  - `guardarBorradorRequisicion` → `requisiciones.crear`
-  - `enviarBorradorRequisicion` → `requisiciones.crear`
-  - `cancelarRequisicion` — se conserva el gate existente "solo el creador"; no requiere permiso adicional.
-
-- `src/lib/api/cotizaciones.functions.ts`
-  - `autorizarOC` → `requisiciones.aprobar`
-  - `rechazarOC` → `requisiciones.rechazar`
-
-## Decisiones tomadas por defecto
-- La cancelación de OC desde `CotizacionSheet` se ata a `requisiciones.rechazar` (misma semántica de "no proceder"). Si prefieres una acción separada `oc.cancelar` (ya está en el catálogo), la ato a esa en su lugar — indícalo.
-- El director sigue con bypass total (política vigente del sistema).
+`src/lib/api/cotizaciones.functions.ts`:
+- `guardarPaquete`, `eliminarPaquete` → `cotizaciones.gestionar`.
+- `generarOC`, `enviarOCASupervisor` → `oc.crear`.
+- `autorizarOC` → `oc.autorizar` (reemplaza `requisiciones.aprobar`).
+- `rechazarOC`, `reabrirOC` → `oc.cancelar` (reemplaza `requisiciones.rechazar`).
+- `enviarOCAProveedor` → `oc.crear`.
 
 ## Fuera de alcance
-- No se toca RLS de `requisiciones` ni `ordenes_compra` (la validación va por permisos aplicativos, igual que en Obras).
-- No se refactoriza la lógica de negocio, solo los gates.
-- Pruebas E2E de los checks quedan pendientes (fue el plan anterior que descartaste).
+- RLS de `ordenes_compra`, `cotizacion_solicitudes`, `cotizacion_paquetes` (sigue el modelo aplicativo).
+- Cambios de negocio en el flujo de comparativa; sólo se cablean los gates.
+- Pruebas E2E.

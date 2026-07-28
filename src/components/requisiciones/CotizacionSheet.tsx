@@ -25,6 +25,7 @@ import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.func
 import { SolicitudesTab } from "./SolicitudesTab";
 import { ComparativaTable } from "./ComparativaTable";
 import { useEffectiveRoles } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 
 export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs";
 
@@ -114,8 +115,12 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
 
-  const isAdmin = roles.includes("director") || roles.includes("administrativo");
-  const isDirector = roles.includes("director");
+  const { can } = usePermisos();
+  const puedeGestionar = can("cotizaciones.gestionar");
+  const puedeCrearOC = can("oc.crear");
+  const puedeCancelarOC = can("oc.cancelar");
+  const isAdmin = puedeGestionar || puedeCrearOC;
+  void roles;
 
 
   if (!open) return null;
@@ -253,7 +258,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 const cerrada = recepcionCompleta && estadoPago === "pagado";
                 const meta = OC_BADGE[oc.estatus];
                 const puedePagar =
-                  isAdmin &&
+                  can("cxp.registrar_pago") &&
                   (oc.estatus === "autorizada" || oc.estatus === "enviada" || oc.estatus === "recibida_parcial" || oc.estatus === "recibida") &&
                   !fullyPaid;
                 const puedeRecibirRol = roles.includes("director") || roles.includes("residente");
@@ -354,7 +359,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                         <p className="text-sm flex items-center gap-1 text-emerald-700">
                           <CheckCircle2 className="size-4" /> Autorizada {oc.autorizada_at ? `· ${formatDate(oc.autorizada_at)}` : ""}
                         </p>
-                        {isAdmin && (
+                        {puedeCrearOC && (
                           <Button
                             size="sm"
                             onClick={() => enviarProvMut.mutate(oc.id)}
@@ -405,7 +410,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                         ocFolio={oc.folio}
                         saldoPendiente={saldoPendiente}
                         puedePagar={puedePagar}
-                        puedeCancelar={isDirector}
+                        puedeCancelar={puedeCancelarOC}
                         onChange={invalidate}
                       />
                     )}

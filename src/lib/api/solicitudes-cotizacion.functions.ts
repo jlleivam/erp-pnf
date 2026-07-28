@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission } from "@/lib/permisos/require";
 
 async function getCtx(supabase: any, userId: string) {
   const { data: profile } = await supabase
@@ -12,11 +13,6 @@ async function getCtx(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, roles: r };
 }
 
-function assertAdmin(roles: string[]) {
-  if (!roles.includes("director") && !roles.includes("administrativo")) {
-    throw new Error("Solo Director o Administrativo pueden gestionar solicitudes de cotización");
-  }
-}
 
 async function recalcEstatusRequisicion(supabase: any, requisicionId: string, userId?: string) {
   // Reusar regla: si hay SC y aún no hay paquetes/OCs, requisición → en_cotizacion
@@ -78,8 +74,8 @@ export const crearSolicitud = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
+    const { companyId } = await getCtx(supabase, userId);
 
     const { data: req } = await supabase
       .from("requisiciones").select("id, company_id").eq("id", data.requisicionId).maybeSingle();
@@ -127,8 +123,7 @@ export const actualizarSolicitud = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
 
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus").eq("id", data.solicitudId).maybeSingle();
@@ -162,8 +157,7 @@ export const eliminarSolicitud = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ solicitudId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus, requisicion_id").eq("id", data.solicitudId).maybeSingle();
     if (!sc) throw new Error("Solicitud no encontrada");
@@ -181,8 +175,7 @@ export const marcarSCEnviada = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ solicitudId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus").eq("id", data.solicitudId).maybeSingle();
     if (!sc) throw new Error("Solicitud no encontrada");
@@ -206,8 +199,7 @@ export const capturarRespuesta = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: sc } = await supabase
       .from("cotizacion_solicitudes").select("id, estatus").eq("id", data.solicitudId).maybeSingle();
     if (!sc) throw new Error("Solicitud no encontrada");
@@ -243,8 +235,7 @@ export const descartarSolicitud = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ solicitudId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { roles } = await getCtx(supabase, userId);
-    assertAdmin(roles);
+    await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { error } = await supabase
       .from("cotizacion_solicitudes")
       .update({ estatus: "descartada" })

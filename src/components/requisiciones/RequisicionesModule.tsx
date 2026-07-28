@@ -27,10 +27,13 @@ interface Props { obraId: string }
 
 export function RequisicionesModule({ obraId }: Props) {
   const roles = useEffectiveRoles();
-  const isAdministrativo = roles.includes("administrativo");
+  void roles;
   const { can } = usePermisos();
   const puedeCrear = can("requisiciones.crear");
   const puedeRevisar = can("requisiciones.aprobar") || can("requisiciones.rechazar");
+  const puedeGestionar = can("cotizaciones.gestionar") || can("oc.crear");
+  const puedeVerOC = can("requisiciones.ver_oc") || can("oc.autorizar") || can("oc.cancelar");
+  const usarVistaTabla = puedeGestionar || puedeVerOC;
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
@@ -119,7 +122,7 @@ export function RequisicionesModule({ obraId }: Props) {
             </Card>
           )}
 
-          {isAdministrativo && activas.length > 0 && (
+          {usarVistaTabla && activas.length > 0 && (
             <Card className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -184,7 +187,7 @@ export function RequisicionesModule({ obraId }: Props) {
             </Card>
           )}
 
-          {!isAdministrativo && activas.map((r: any) => {
+          {!usarVistaTabla && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
             const esBorrador = r.estatus === "borrador";
             const mostrarRevisar = puedeRevisar && r.estatus === "pendiente_autorizacion";
@@ -314,8 +317,8 @@ export function RequisicionesModule({ obraId }: Props) {
                   return (
                     <TableRow key={r.id}>
                       <TableCell
-                        className={`font-medium ${isAdministrativo ? "cursor-pointer" : ""}`}
-                        onClick={isAdministrativo ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
+                        className={`font-medium ${usarVistaTabla ? "cursor-pointer" : ""}`}
+                        onClick={usarVistaTabla ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
                       >
                         {r.folio}
                       </TableCell>
@@ -328,7 +331,7 @@ export function RequisicionesModule({ obraId }: Props) {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => isAdministrativo ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
+                          onClick={() => usarVistaTabla ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
                         >
                           <Eye className="size-4" />
                         </Button>

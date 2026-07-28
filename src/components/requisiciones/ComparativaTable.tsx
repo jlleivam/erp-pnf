@@ -63,11 +63,15 @@ export function ComparativaTable({
   const reabrirFn = useServerFn(reabrirOC);
   const eliminarFn = useServerFn(eliminarPaquete);
 
-  const isAdmin = roles.includes("director") || roles.includes("administrativo");
   const { can } = usePermisos();
-  const puedeAutorizar = can("requisiciones.aprobar");
-  const puedeRechazar = can("requisiciones.rechazar");
+  const puedeGestionar = can("cotizaciones.gestionar");
+  const puedeCrearOC = can("oc.crear");
+  const puedeAutorizar = can("oc.autorizar");
+  const puedeRechazar = can("oc.cancelar");
   const puedeRevisarOC = puedeAutorizar || puedeRechazar;
+  // isAdmin controla edición de asignaciones (paquetes) → gestionar cotizaciones
+  const isAdmin = puedeGestionar;
+  void roles;
 
   const recibidas = solicitudes.filter((s) => s.estatus === "recibida");
 
@@ -830,7 +834,7 @@ export function ComparativaTable({
             const badge = estatus ? OC_BADGE[estatus] : null;
             const bloqueado = provBloqueado(provId) || isOptimisticPendiente;
             const enviandoEsta = enviandoProv === provId;
-            const puedeEnviar = isAdmin && !bloqueado && !enviandoEsta && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
+            const puedeEnviar = puedeGestionar && puedeCrearOC && !bloqueado && !enviandoEsta && info.lineas.length > 0 && info.lineas.every((l) => l.precio > 0);
 
 
 
@@ -878,7 +882,7 @@ export function ComparativaTable({
                 {/* Acciones por estatus */}
                 <div className="flex items-center justify-end gap-2 flex-wrap">
                   {/* Sin OC o borrador o rechazada → admin envía */}
-                  {(!estatus || estatus === "borrador" || estatus === "rechazada") && isAdmin && (
+                  {(!estatus || estatus === "borrador" || estatus === "rechazada") && (puedeGestionar || puedeCrearOC) && (
                     <>
                       {paquete && (
                         <Button
@@ -961,7 +965,7 @@ export function ComparativaTable({
                     <div className="flex-1">
                       <strong>Motivo del rechazo:</strong> {oc.notas_supervisor}
                     </div>
-                    {isAdmin && (
+                    {puedeRechazar && (
                       <Button
                         size="sm"
                         variant="ghost"

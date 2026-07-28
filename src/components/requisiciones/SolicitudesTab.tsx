@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/solicitudes-cotizacion.functions";
 import { generarPDFSolicitudCotizacion, calcularTotalSC, formatMXN } from "@/lib/pdf/solicitud-cotizacion-pdf";
 import { CapturarRespuestaDialog } from "./CapturarRespuestaDialog";
+import { usePermisos } from "@/hooks/usePermisos";
 
 const SC_BADGE: Record<string, { label: string; className: string }> = {
   borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
@@ -43,6 +44,8 @@ interface Props {
 
 export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes }: Props) {
   const qc = useQueryClient();
+  const { can } = usePermisos();
+  const puedeGestionar = can("cotizaciones.gestionar");
   const eliminarFn = useServerFn(eliminarSolicitud);
   const enviarFn = useServerFn(marcarSCEnviada);
   const descartarFn = useServerFn(descartarSolicitud);
@@ -130,29 +133,29 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => handlePDF(sc.id, sc.estatus === "borrador")}>
+              <Button size="sm" variant="outline" onClick={() => handlePDF(sc.id, sc.estatus === "borrador" && puedeGestionar)}>
                 <Download className="size-4 mr-1" />
-                {sc.estatus === "borrador" ? "Descargar y marcar enviada" : "Descargar PDF"}
+                {sc.estatus === "borrador" && puedeGestionar ? "Descargar y marcar enviada" : "Descargar PDF"}
               </Button>
-              {(sc.estatus === "enviada" || sc.estatus === "recibida") && (
+              {puedeGestionar && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
                 <Button size="sm" onClick={() => setCapturando(sc)}>
                   <ClipboardEdit className="size-4 mr-1" />
                   {sc.estatus === "recibida" ? "Editar respuesta" : "Capturar respuesta"}
                 </Button>
               )}
-              {sc.estatus === "borrador" && (
+              {puedeGestionar && sc.estatus === "borrador" && (
                 <Button size="sm" variant="ghost" onClick={() => handleEliminar(sc.id)}>
                   <Trash2 className="size-4 mr-1" />
                   Eliminar
                 </Button>
               )}
-              {(sc.estatus === "enviada" || sc.estatus === "recibida") && (
+              {puedeGestionar && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
                 <Button size="sm" variant="ghost" onClick={() => handleDescartar(sc.id)}>
                   <XCircle className="size-4 mr-1" />
                   Descartar
                 </Button>
               )}
-              {sc.estatus === "descartada" && (
+              {puedeGestionar && sc.estatus === "descartada" && (
                 <Button size="sm" variant="ghost" onClick={() => handleEliminar(sc.id)}>
                   <Trash2 className="size-4 mr-1" />
                   Eliminar
@@ -163,7 +166,7 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
         );
       })}
 
-      {showForm ? (
+      {puedeGestionar && (showForm ? (
         <NuevaSolicitudForm
           requisicionId={requisicionId}
           reqItems={reqItems}
@@ -174,7 +177,7 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
         <Button variant="outline" className="w-full" onClick={() => setShowForm(true)}>
           <Plus className="size-4 mr-1" /> Nueva solicitud de cotización
         </Button>
-      )}
+      ))}
 
       {capturando && (
         <CapturarRespuestaDialog
