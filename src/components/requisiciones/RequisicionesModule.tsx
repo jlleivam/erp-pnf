@@ -317,8 +317,8 @@ export function RequisicionesModule({ obraId }: Props) {
                   return (
                     <TableRow key={r.id}>
                       <TableCell
-                        className={`font-medium ${isAdministrativo ? "cursor-pointer" : ""}`}
-                        onClick={isAdministrativo ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
+                        className={`font-medium ${puedeVerOC ? "cursor-pointer" : ""}`}
+                        onClick={puedeVerOC ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
                       >
                         {r.folio}
                       </TableCell>
@@ -331,7 +331,7 @@ export function RequisicionesModule({ obraId }: Props) {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => isAdministrativo ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
+                          onClick={() => puedeVerOC ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
                         >
                           <Eye className="size-4" />
                         </Button>
