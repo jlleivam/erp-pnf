@@ -12,7 +12,7 @@ import {
 } from "@/lib/api/obras.functions";
 import { listClientes } from "@/lib/api/clientes.functions";
 import { listUnidadesNegocio } from "@/lib/api/unidades-negocio.functions";
-import { useEffectiveIsDirector } from "@/stores/auth";
+import { usePermisos } from "@/hooks/usePermisos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,22 +51,29 @@ export const Route = createFileRoute("/_authenticated/app/obras/$obraId/configur
 function ConfiguracionObra() {
   const { obraId } = Route.useParams();
   const navigate = useNavigate();
-  const director = useEffectiveIsDirector();
+  const { can, isLoading: permisosLoading } = usePermisos();
+
+  const puedeEditar = can("obras.editar");
+  const puedeAsignarTeam = can("obras.asignar_team");
+  const puedeVerAlgo = puedeEditar || puedeAsignarTeam;
 
   useEffect(() => {
-    if (!director) {
+    if (!permisosLoading && !puedeVerAlgo) {
       navigate({ to: "/app/obras/$obraId", params: { obraId } });
     }
-  }, [director, navigate, obraId]);
+  }, [permisosLoading, puedeVerAlgo, navigate, obraId]);
 
   const fetchCfg = useServerFn(getObraConfiguracion);
   const cfg = useQuery({
     queryKey: ["obra-configuracion", obraId],
     queryFn: () => fetchCfg({ data: { obraId } }),
-    enabled: director,
+    enabled: puedeVerAlgo,
   });
 
-  if (!director) return null;
+  const defaultTab = puedeEditar ? "datos" : "equipo";
+
+  if (permisosLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
+  if (!puedeVerAlgo) return null;
   if (cfg.isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
   if (cfg.error || !cfg.data)
     return <p className="text-sm text-destructive">No se pudo cargar la configuración.</p>;
@@ -80,30 +87,39 @@ function ConfiguracionObra() {
         </p>
       </div>
 
-      <Tabs defaultValue="datos" className="space-y-4">
+      <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="datos">Datos generales</TabsTrigger>
-          <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>
-          <TabsTrigger value="equipo">Equipo</TabsTrigger>
-          <TabsTrigger value="comisiones">Comisiones</TabsTrigger>
+          {puedeEditar && <TabsTrigger value="datos">Datos generales</TabsTrigger>}
+          {puedeEditar && <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>}
+          {puedeAsignarTeam && <TabsTrigger value="equipo">Equipo</TabsTrigger>}
+          {puedeAsignarTeam && <TabsTrigger value="comisiones">Comisiones</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="datos">
-          <DatosTab obraId={obraId} initial={cfg.data.obra} />
-        </TabsContent>
-        <TabsContent value="presupuesto">
-          <PresupuestoModule obraId={obraId} />
-        </TabsContent>
-        <TabsContent value="equipo">
-          <EquipoTab obraId={obraId} initial={cfg.data.team as TeamRow[]} />
-        </TabsContent>
-        <TabsContent value="comisiones">
-          <ComisionesTab obraId={obraId} initial={cfg.data.comisiones as ComisionRow[]} />
-        </TabsContent>
+        {puedeEditar && (
+          <TabsContent value="datos">
+            <DatosTab obraId={obraId} initial={cfg.data.obra} />
+          </TabsContent>
+        )}
+        {puedeEditar && (
+          <TabsContent value="presupuesto">
+            <PresupuestoModule obraId={obraId} />
+          </TabsContent>
+        )}
+        {puedeAsignarTeam && (
+          <TabsContent value="equipo">
+            <EquipoTab obraId={obraId} initial={cfg.data.team as TeamRow[]} />
+          </TabsContent>
+        )}
+        {puedeAsignarTeam && (
+          <TabsContent value="comisiones">
+            <ComisionesTab obraId={obraId} initial={cfg.data.comisiones as ComisionRow[]} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
 }
+
 
 // ============================================================
 // Datos generales
