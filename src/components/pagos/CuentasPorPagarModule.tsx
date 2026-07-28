@@ -166,6 +166,14 @@ export function CuentasPorPagarModule() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="nomina">
+            Nómina
+            {nominaPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {nominaPendientesCount > 99 ? "99+" : nominaPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="proveedores" className="space-y-4 mt-4">
