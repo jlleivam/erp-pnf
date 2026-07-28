@@ -3856,6 +3856,8 @@ export type Database = {
       }
       trabajadores: {
         Row: {
+          apellido_materno: string | null
+          apellido_paterno: string | null
           company_id: string
           correo: string | null
           creado_por: string | null
@@ -3875,6 +3877,7 @@ export type Database = {
           imss_sbc: number | null
           imss_tipo_trabajador: string | null
           nombre_completo: string
+          nombres: string | null
           nss: string | null
           periodicidad_pago:
             | Database["public"]["Enums"]["nomina_oficina_periodicidad"]
@@ -3890,6 +3893,8 @@ export type Database = {
             | null
         }
         Insert: {
+          apellido_materno?: string | null
+          apellido_paterno?: string | null
           company_id: string
           correo?: string | null
           creado_por?: string | null
@@ -3909,6 +3914,7 @@ export type Database = {
           imss_sbc?: number | null
           imss_tipo_trabajador?: string | null
           nombre_completo: string
+          nombres?: string | null
           nss?: string | null
           periodicidad_pago?:
             | Database["public"]["Enums"]["nomina_oficina_periodicidad"]
@@ -3924,6 +3930,8 @@ export type Database = {
             | null
         }
         Update: {
+          apellido_materno?: string | null
+          apellido_paterno?: string | null
           company_id?: string
           correo?: string | null
           creado_por?: string | null
@@ -3943,6 +3951,7 @@ export type Database = {
           imss_sbc?: number | null
           imss_tipo_trabajador?: string | null
           nombre_completo?: string
+          nombres?: string | null
           nss?: string | null
           periodicidad_pago?:
             | Database["public"]["Enums"]["nomina_oficina_periodicidad"]
