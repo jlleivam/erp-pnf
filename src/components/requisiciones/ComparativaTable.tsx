@@ -63,11 +63,15 @@ export function ComparativaTable({
   const reabrirFn = useServerFn(reabrirOC);
   const eliminarFn = useServerFn(eliminarPaquete);
 
-  const isAdmin = roles.includes("director") || roles.includes("administrativo");
   const { can } = usePermisos();
-  const puedeAutorizar = can("requisiciones.aprobar");
-  const puedeRechazar = can("requisiciones.rechazar");
+  const puedeGestionar = can("cotizaciones.gestionar");
+  const puedeCrearOC = can("oc.crear");
+  const puedeAutorizar = can("oc.autorizar");
+  const puedeRechazar = can("oc.cancelar");
   const puedeRevisarOC = puedeAutorizar || puedeRechazar;
+  // isAdmin controla edición de asignaciones (paquetes) → gestionar cotizaciones
+  const isAdmin = puedeGestionar;
+  void roles;
 
   const recibidas = solicitudes.filter((s) => s.estatus === "recibida");
 
