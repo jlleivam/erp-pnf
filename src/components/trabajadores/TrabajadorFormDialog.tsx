@@ -125,11 +125,11 @@ export function TrabajadorFormDialog({
     if (!f.nombres.trim()) return toast.error("Nombre(s) requerido");
     if (!f.apellido_paterno.trim()) return toast.error("Apellido paterno requerido");
     if (!f.apellido_materno?.trim()) return toast.error("Apellido materno requerido");
+    if (!f.puesto) return toast.error("Puesto requerido");
+    if (f.sueldo_diario == null || isNaN(Number(f.sueldo_diario)) || Number(f.sueldo_diario) <= 0)
+      return toast.error("Sueldo semanal requerido");
     if (!isEdit && !canManage) {
       if (!f.sexo) return toast.error("Sexo requerido");
-      if (!f.puesto) return toast.error("Puesto requerido");
-      if (f.sueldo_diario == null || isNaN(Number(f.sueldo_diario)) || Number(f.sueldo_diario) <= 0)
-        return toast.error("Sueldo diario requerido");
     }
     const payload = {
       nombres: f.nombres.trim(),
@@ -302,7 +302,7 @@ export function TrabajadorFormDialog({
           <Section title="Datos laborales">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Puesto{!isEdit && !canManage && <Req />}</Label>
+                <Label>Puesto<Req /></Label>
                 <Select
                   value={f.puesto ?? ""}
                   onValueChange={(v) => set("puesto", v as TrabajadorPuesto)}
@@ -320,7 +320,7 @@ export function TrabajadorFormDialog({
                 </Select>
               </div>
               <div>
-                <Label>Sueldo semanal (MXN){!isEdit && !canManage && <Req />}</Label>
+                <Label>Sueldo semanal (MXN)<Req /></Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Input
                     type="number"
