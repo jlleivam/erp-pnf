@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/solicitudes-cotizacion.functions";
 import { generarPDFSolicitudCotizacion, calcularTotalSC, formatMXN } from "@/lib/pdf/solicitud-cotizacion-pdf";
 import { CapturarRespuestaDialog } from "./CapturarRespuestaDialog";
+import { usePermisos } from "@/hooks/usePermisos";
 
 const SC_BADGE: Record<string, { label: string; className: string }> = {
   borrador: { label: "Borrador", className: "bg-slate-100 text-slate-700" },
