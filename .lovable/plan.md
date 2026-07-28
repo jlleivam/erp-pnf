@@ -1,20 +1,36 @@
 ## Objetivo
-Replicar el comportamiento de "Agregar renglón" del presupuesto de obra en los presupuestos base de **Destajos** y **Subcontratos**: al insertar, el nuevo renglón se coloca justo debajo del renglón activo (no al final), y el renglón activo se resalta visualmente.
+Al registrar una recepción de OC, requerir foto de la remisión física como evidencia. Si no hay remisión, se marca "Sin remisión" (con motivo opcional) y no se sube foto.
 
-## Cambios
+## Backend
 
-### `src/components/destajos/CapturaDestajoSheet.tsx` y `src/components/subcontratos/CapturaSubcontratoSheet.tsx`
+**Storage bucket** (nuevo, privado): `almacen-remisiones`
+- Políticas RLS en `storage.objects`:
+  - INSERT/SELECT para `authenticated` cuya `company_id` (path prefijo) coincida.
+  - Ruta: `{company_id}/{obra_id}/{recepcion_id}/{filename}`.
 
-Ambos archivos comparten la misma estructura, se aplica idéntico refactor:
+**Migración** `almacen_recepciones`:
+- `sin_remision boolean not null default false`
+- `motivo_sin_remision text` (nullable, max 300)
+- `evidencia_path text` (nullable) — ruta en el bucket
 
-1. **Estado activo:** añadir `const [activeRowId, setActiveRowId] = useState<string | null>(null);` y resetearlo a `null` al hidratar `rows` desde `data.renglones`.
-2. **`addRow`:** insertar el nuevo renglón después de `activeRowId` (fallback: al final si no hay activo). Marcar el nuevo renglón como activo.
-3. **`removeRow`:** si se elimina el renglón activo, mover `activeRowId` al vecino anterior o siguiente.
-4. **`handleRowActivate`:** activar en `onFocus` y `onMouseDown` de cada `<tr>`.
-5. **Resaltado visual del `<tr>`:** aplicar la misma cascada de clases del presupuesto (error > padre > activo > hover) incluyendo `ring-1 ring-inset ring-primary/20` cuando `esActivo`.
+**`registrarRecepcion`** (`src/lib/api/almacen.functions.ts`):
+- Añadir al input: `sinRemision: boolean`, `motivoSinRemision: string|null`, `evidenciaPath: string|null`.
+- Reglas:
+  - Si `sinRemision === false` → `evidenciaPath` requerido; `folioRemision` sigue opcional (o requerido, ver Pregunta).
+  - Si `sinRemision === true` → `evidenciaPath` debe ser null; `folioRemision` se ignora.
+- Persistir los nuevos campos en el insert.
 
-Sin cambios en la lógica de cálculo, guardado, validaciones ni columnas. Sin cambios en backend.
+## Frontend (`src/components/almacen/RecepcionDialog.tsx`)
+- Estado nuevo: `sinRemision`, `motivoSinRemision`, `file`, `uploadedPath`.
+- UI en el bloque superior:
+  - Checkbox "Sin remisión física".
+  - Si NO está marcado: input `<Input type="file" accept="image/*,application/pdf">` (obligatorio, marcado con asterisco rojo) + preview y botón para reemplazar.
+  - Si SÍ está marcado: `Textarea` opcional "Motivo (opcional)", oculta folio/archivo.
+- Al guardar:
+  1. Si hay archivo, subirlo con `supabase.storage.from('almacen-remisiones').upload(path, file)` usando `crypto.randomUUID()` + extensión.
+  2. Llamar `registrarRecepcion` con los nuevos campos.
+  3. Validar en cliente antes de mutar (mostrar toast si falta evidencia).
 
-## Fuera de alcance
-- Órdenes de cambio (`CapturaOrdenCambioSheet.tsx`) — no fue mencionado.
-- Otros comportamientos del sheet del presupuesto (headers sticky, imports, etc.) que ya existen o no en estos sheets.
+## Preguntas
+1. Cuando hay remisión física, ¿el **folio de remisión** también debe volverse obligatorio, o sigue opcional (solo la foto es obligatoria)?
+2. ¿Aceptar solo imágenes (jpg/png/heic) o también PDF?
