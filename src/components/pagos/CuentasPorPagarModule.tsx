@@ -90,6 +90,12 @@ export function CuentasPorPagarModule() {
     queryFn: () => fetchCajaChicaCount(),
   });
 
+  const fetchNominaCount = useServerFn(listSemanasNominaPorPagar);
+  const nominaCountQ = useQuery({
+    queryKey: ["nomina-por-pagar"],
+    queryFn: () => fetchNominaCount(),
+  });
+
   const rows: Row[] = ((saldosQ.data ?? []) as Row[])
     .filter((r) => r.razon_social.toLowerCase().includes(q.toLowerCase()));
 
