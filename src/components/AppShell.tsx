@@ -165,9 +165,11 @@ export function AppShell() {
                 icon={<Icon className="size-4" />}
                 active={pathname === m.to || pathname.startsWith(m.to + "/")}
                 onNavigate={onNavigate}
+                pendientes={m.pendientes}
               />
             );
           })}
+
         </div>
       )}
 
