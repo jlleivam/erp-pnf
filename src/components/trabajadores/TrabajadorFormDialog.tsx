@@ -66,6 +66,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function Req() {
+  return <span className="text-destructive ml-0.5" aria-hidden="true">*</span>;
+}
+
+
 export function TrabajadorFormDialog({
   open,
   onClose,
