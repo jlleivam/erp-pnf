@@ -44,6 +44,8 @@ interface Props {
 
 export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes }: Props) {
   const qc = useQueryClient();
+  const { can } = usePermisos();
+  const puedeGestionar = can("cotizaciones.gestionar");
   const eliminarFn = useServerFn(eliminarSolicitud);
   const enviarFn = useServerFn(marcarSCEnviada);
   const descartarFn = useServerFn(descartarSolicitud);
