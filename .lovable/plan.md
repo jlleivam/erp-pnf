@@ -1,11 +1,22 @@
-El bug: en `TrabajadorFormDialog.tsx` la validación de `sexo`, `puesto` y `sueldo_diario` está dentro de `if (!isEdit && !canManage)`, por lo que se omite cuando el usuario tiene permisos de administrar (admin/director). Se permite guardar sin puesto ni sueldo.
+## Objetivo
+Hacer más visual la tabla de captura de nómina coloreando los botones de jornada (0, ½, 1) para identificar rápidamente asistencias, medios días y ausencias.
 
-## Cambios
+## Cambios (archivo único: `src/components/nomina/CapturaNominaSheet.tsx`, componente `DiaCell`)
 
-1. **`src/components/trabajadores/TrabajadorFormDialog.tsx`**
-   - Sacar las validaciones de `puesto` y `sueldo_diario` (>0) del bloque condicional para que apliquen siempre (crear y editar, con o sin permisos).
-   - `sexo` se mantiene como requerido solo en modo solicitud (no aplica al editar/admin), salvo indicación contraria.
-   - Añadir asteriscos rojos permanentes (`<Req />`) a las labels de "Puesto" y "Sueldo semanal (MXN)" para que sean obligatorios siempre visualmente.
+Reemplazar el estilo actual donde solo la opción seleccionada usa `bg-primary`. Nuevo esquema:
 
-2. **`src/lib/api/trabajadores.functions.ts`**
-   - Ajustar el schema Zod: `puesto` requerido (no nullable) y `sueldo_diario` requerido con `min` > 0, aplicando tanto en creación como en actualización.
+- **Opción seleccionada (estado activo):**
+  - `0` (·, ausencia) → fondo rojo (`bg-destructive text-destructive-foreground`)
+  - `½` (medio día) → fondo ámbar (`bg-amber-500 text-white`)
+  - `1` (día completo) → fondo verde (`bg-emerald-600 text-white`)
+- **Opción no seleccionada:** fondo neutro (`bg-background`) con un hover tintado suave del color correspondiente (`hover:bg-destructive/10`, `hover:bg-amber-500/10`, `hover:bg-emerald-500/10`) para dar pista visual sin saturar.
+- Mantener bordes, tamaño y layout actuales (mismo `inline-flex rounded-md border`). Sin cambios en lógica de guardado, en `+h`, ni en columnas de la tabla.
+
+## Detalles técnicos
+- Añadir un mapa `{ v, label, activeClass, hoverClass }` dentro del `.map` de opciones y componer clases con `cn(...)`.
+- Los colores rojo/verde se toman de tokens semánticos (`destructive`) y utilidades Tailwind (`amber-500`, `emerald-600`) para evitar tener que añadir nuevos tokens al design system. Si prefieres tokens semánticos (`--success`, `--warning`) puedo agregarlos en `src/styles.css`; dime si lo hago.
+- No cambia el comportamiento de HE ni el header "HE".
+
+## Fuera de alcance
+- Colorear filas por total de días trabajados.
+- Cambios en otras pestañas o en la vista de nómina cerrada (se aplica también ahí porque usa el mismo `DiaCell`, lo cual es deseable).
