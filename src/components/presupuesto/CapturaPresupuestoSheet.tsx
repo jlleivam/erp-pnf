@@ -148,17 +148,17 @@ export function CapturaPresupuestoSheet({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const autorizar = useServerFn(autorizarPresupuesto);
-  const autorizarM = useMutation({
-    mutationFn: autorizar,
+  const solicitar = useServerFn(solicitarAutorizacionPresupuesto);
+  const solicitarM = useMutation({
+    mutationFn: solicitar,
     onSuccess: () => {
-      toast.success("Presupuesto autorizado");
+      toast.success("Presupuesto enviado a autorización");
       onSaved();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleGuardar = (autorizarDespues: boolean) => {
+  const handleGuardar = (enviarDespues: boolean) => {
     if (calc.errores.length > 0) {
       toast.error("Corrige los errores antes de guardar");
       return;
@@ -176,8 +176,8 @@ export function CapturaPresupuestoSheet({
       { data: { presupuestoId, renglones: payload } },
       {
         onSuccess: () => {
-          if (autorizarDespues) {
-            autorizarM.mutate({ data: { id: presupuestoId } });
+          if (enviarDespues) {
+            solicitarM.mutate({ data: { id: presupuestoId } });
           }
         },
       },
