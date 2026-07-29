@@ -201,7 +201,7 @@ export function RecepcionesTab({ requisicionId }: Props) {
 
             <div className="flex justify-end">
               <Button asChild size="sm" variant="outline">
-                <Link to="/app/obras/$obraId/almacen-obra" params={{ obraId: g.oc.obra_id }}>
+                <Link to="/app/obras/$obraId/$" params={{ obraId: g.oc.obra_id, _splat: "almacen-obra" }}>
                   <ExternalLink className="size-4 mr-1" /> Ir al almacén
                 </Link>
               </Button>
