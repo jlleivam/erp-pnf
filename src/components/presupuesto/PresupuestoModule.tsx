@@ -11,8 +11,9 @@ import {
   rechazarPresupuesto,
   reabrirPresupuesto,
 } from "@/lib/api/presupuestos.functions";
-import { useEffectiveIsDirector } from "@/stores/auth";
-import { useObraRole } from "@/hooks/useObraRole";
+import { usePermisos } from "@/hooks/usePermisos";
+import { useAuthUserId } from "@/stores/auth";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
