@@ -124,17 +124,11 @@ function AdminRequisicionesPage() {
         </TabsContent>
       </Tabs>
 
-      {detalleId && (
-        <RequisicionDetalleSheet
-          id={detalleId}
-          open={!!detalleId}
-          onOpenChange={(o) => !o && setDetalleId(null)}
-        />
-      )}
       {cotizacion && (
         <CotizacionSheet
           requisicionId={cotizacion.id}
           initialTab={cotizacion.tab}
+          readOnly={cotizacion.readOnly}
           open={!!cotizacion}
           onOpenChange={(o) => !o && setCotizacion(null)}
         />
