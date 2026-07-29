@@ -25,6 +25,7 @@ export const CATALOGO_ACCIONES: AccionCatalogo[] = [
   { key: "obras.asignar_team", modulo: "Obras", label: "Asignar equipo a obra", defaults: A },
   // Presupuestos
   { key: "presupuestos.crear_base", modulo: "Presupuestos", label: "Crear/editar presupuesto base", defaults: NONE },
+  { key: "presupuestos.enviar_base", modulo: "Presupuestos", label: "Enviar presupuesto base a autorización", defaults: T },
   { key: "presupuestos.autorizar_base", modulo: "Presupuestos", label: "Autorizar/rechazar presupuesto base", defaults: NONE },
   { key: "presupuestos.eliminar_base", modulo: "Presupuestos", label: "Eliminar presupuesto base", defaults: NONE },
   { key: "presupuestos.crear_oc", modulo: "Presupuestos", label: "Crear/editar orden de cambio", defaults: T },
