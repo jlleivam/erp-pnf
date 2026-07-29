@@ -265,7 +265,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
             <p className="text-sm text-muted-foreground">Cargando…</p>
           ) : !base ? (
             <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
-              Aún no hay presupuesto base. {director && "Crea uno para empezar."}
+              Aún no hay presupuesto base. {puedeCrearBase && "Crea uno para empezar."}
             </Card>
           ) : (
             <PresupuestoCard
