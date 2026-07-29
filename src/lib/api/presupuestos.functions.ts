@@ -247,6 +247,10 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
         throw new Error("No puedes autorizar una OC que tú mismo solicitaste");
     } else {
       await requirePermission(supabase, userId, "presupuestos.autorizar_base");
+      if (pres.estatus !== "solicitada")
+        throw new Error("El presupuesto base debe haber sido enviado a autorización");
+      if (pres.enviado_por && pres.enviado_por === userId && !isDirector)
+        throw new Error("No puedes autorizar un presupuesto que tú mismo enviaste");
     }
 
 
