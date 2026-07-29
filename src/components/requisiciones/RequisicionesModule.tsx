@@ -314,44 +314,35 @@ export function RequisicionesModule({ obraId }: Props) {
                   <TableHead>Fecha</TableHead>
                   <TableHead className="text-center"># insumos</TableHead>
                   <TableHead>Estatus</TableHead>
-                  <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historial.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Sin requisiciones
                     </TableCell>
                   </TableRow>
                 )}
                 {historial.map((r: any) => {
                   const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+                  const handleRowClick = () => {
+                    if (puedeVerOC) return setCotizacion({ id: r.id, tab: "ocs" });
+                    if (puedeCotizar) return setCotizacion({ id: r.id, tab: "requisicion" });
+                    return abrirVisor(r.id);
+                  };
                   return (
-                    <TableRow key={r.id}>
-                      <TableCell
-                        className={`font-medium ${puedeCotizar ? "cursor-pointer" : ""}`}
-                        onClick={puedeCotizar ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
-                      >
-                        {r.folio}
-                      </TableCell>
+                    <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={handleRowClick}>
+                      <TableCell className="font-medium">{r.folio}</TableCell>
                       <TableCell>{formatDate(r.created_at)}</TableCell>
                       <TableCell className="text-center">{r.items?.length ?? 0}</TableCell>
                       <TableCell>
                         <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => puedeVerOC ? setCotizacion({ id: r.id, tab: "ocs" }) : abrirVisor(r.id)}
-                        >
-                          <Eye className="size-4" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   );
                 })}
+
               </TableBody>
             </Table>
           </Card>
