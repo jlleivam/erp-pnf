@@ -399,6 +399,7 @@ type PresupuestoPerms = {
   crearOC: boolean;
   autorizarBase: boolean;
   autorizarOC: boolean;
+  enviarBase: boolean;
   enviarOC: boolean;
   eliminarBase: boolean;
   eliminarOC: boolean;
@@ -437,14 +438,18 @@ function PresupuestoCard({
   const puedeEliminar =
     (p.estatus === "borrador" || p.estatus === "rechazada") &&
     (esOC ? perms.eliminarOC : perms.eliminarBase);
-  const puedeSolicitar = esOC && p.estatus === "borrador" && perms.enviarOC;
-  // No se puede autorizar una OC que uno mismo solicitó (regla de negocio)
+  const puedeSolicitar =
+    p.estatus === "borrador" && (esOC ? perms.enviarOC : perms.enviarBase);
+  // No se puede autorizar un presupuesto que uno mismo solicitó (regla de negocio)
   const solicitadaPorMi = !!perms.userId && p.enviado_por === perms.userId;
-  const puedeAutorizar = esOC
-    ? p.estatus === "solicitada" && perms.autorizarOC && !solicitadaPorMi
-    : p.estatus === "borrador" && perms.autorizarBase;
-  const puedeRechazar = esOC && p.estatus === "solicitada" && perms.autorizarOC;
-  const puedeReabrir = esOC && p.estatus === "rechazada" && perms.crearOC;
+  const puedeAutorizar =
+    p.estatus === "solicitada" &&
+    (esOC ? perms.autorizarOC : perms.autorizarBase) &&
+    !solicitadaPorMi;
+  const puedeRechazar =
+    p.estatus === "solicitada" && (esOC ? perms.autorizarOC : perms.autorizarBase);
+  const puedeReabrir =
+    p.estatus === "rechazada" && (esOC ? perms.crearOC : perms.crearBase);
 
 
   return (
