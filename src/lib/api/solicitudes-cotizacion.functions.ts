@@ -201,9 +201,16 @@ export const capturarRespuesta = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await requirePermission(supabase, userId, "cotizaciones.gestionar");
     const { data: sc } = await supabase
-      .from("cotizacion_solicitudes").select("id, estatus").eq("id", data.solicitudId).maybeSingle();
+      .from("cotizacion_solicitudes").select("id, estatus, requisicion_id").eq("id", data.solicitudId).maybeSingle();
     if (!sc) throw new Error("Solicitud no encontrada");
     if (sc.estatus === "descartada") throw new Error("La solicitud está descartada");
+    const { count: ocCount } = await supabase
+      .from("ordenes_compra")
+      .select("id", { count: "exact", head: true })
+      .eq("requisicion_id", sc.requisicion_id)
+      .neq("estatus", "rechazada");
+    if ((ocCount ?? 0) > 0) throw new Error("Ya existen órdenes de compra; no se puede editar la respuesta.");
+
 
     for (const it of data.items) {
       const patch: any = {
@@ -236,6 +243,15 @@ export const descartarSolicitud = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requirePermission(supabase, userId, "cotizaciones.gestionar");
+    const { data: sc } = await supabase
+      .from("cotizacion_solicitudes").select("id, requisicion_id").eq("id", data.solicitudId).maybeSingle();
+    if (!sc) throw new Error("Solicitud no encontrada");
+    const { count: ocCount } = await supabase
+      .from("ordenes_compra")
+      .select("id", { count: "exact", head: true })
+      .eq("requisicion_id", sc.requisicion_id)
+      .neq("estatus", "rechazada");
+    if ((ocCount ?? 0) > 0) throw new Error("Ya existen órdenes de compra; no se puede descartar la respuesta.");
     const { error } = await supabase
       .from("cotizacion_solicitudes")
       .update({ estatus: "descartada" })

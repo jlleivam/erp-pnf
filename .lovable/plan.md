@@ -1,21 +1,14 @@
-## Problema
-
-El residente tiene override `requisiciones.ver_oc = true` en `role_permissions`, por lo que `usarVistaTabla` se activa y ve la vista tabla. En esa vista, el botón de acción sólo depende del estatus (no del permiso), así que ve "Cotizar", "Continuar" o "Ver OCs" aunque no tenga `cotizaciones.gestionar` ni `oc.crear`.
-
 ## Cambio
 
-En `src/components/requisiciones/RequisicionesModule.tsx`, condicionar cada botón de la columna "Acción" (vista tabla activas e historial) al permiso correspondiente:
+Bloquear edición y descarte de una respuesta de cotización cuando ya existan órdenes de compra en la requisición (cualquier OC, en cualquier estatus salvo "rechazada").
 
-- Borrador → sólo el creador (o quien tenga `requisiciones.crear`) ve "Editar" + eliminar; los demás ven "Ver" (detalle).
-- `enviada` → botón "Cotizar" sólo si `cotizaciones.gestionar`; si no, "Ver".
-- `en_cotizacion` → botón "Continuar" sólo si `cotizaciones.gestionar`; si no, "Ver".
-- `pendiente_autorizacion` / `oc_generada` / `completada` → botón "Ver OCs" sólo si `requisiciones.ver_oc` o `oc.autorizar` o `oc.cancelar`; si no, "Ver".
-- Otros estatus → "Ver" (abre `RequisicionDetalleSheet`).
+### Backend — `src/lib/api/solicitudes-cotizacion.functions.ts`
+- En `capturarRespuesta`: antes de actualizar, obtener `requisicion_id` de la solicitud y contar OCs de esa requisición con `estatus <> 'rechazada'`. Si hay ≥ 1, lanzar `"Ya existen órdenes de compra; no se puede editar la respuesta."`.
+- En `descartarSolicitud`: misma verificación con el mismo mensaje.
 
-El fallback "Ver" abrirá `RequisicionDetalleSheet` (solo lectura), no `CotizacionSheet`, para no exponer acciones de cotización a quien no las puede ejecutar. Lo mismo aplica al click en el Folio.
+### Frontend — `src/components/requisiciones/CotizacionSheet.tsx` y `SolicitudesTab.tsx`
+- Pasar `bloqueadoPorOC = ocs.some(o => o.estatus !== "rechazada")` como prop nueva a `SolicitudesTab`.
+- En `SolicitudesTab` ocultar los botones "Capturar/Editar respuesta" y "Descartar" cuando `bloqueadoPorOC` sea true. Mantener "Descargar PDF" y (para borradores) "Enviar/Eliminar" — un borrador previo a las OCs es raro pero permitido.
+- Mostrar una nota informativa en la parte superior de la pestaña cuando esté bloqueado: "Ya se generaron órdenes de compra; las respuestas quedan como referencia."
 
-No se toca lógica de negocio ni el backend (las funciones ya están gateadas por permiso).
-
-## Nota
-
-Podemos dejar `usarVistaTabla` como está (residente sigue viendo tabla porque tiene el override de ver OC), o cambiarlo a que residentes con sólo `ver_oc` sigan viendo la vista tarjeta. ¿Prefieres mantener la tabla para todos los que tengan cualquier permiso de gestión/visualización, o forzar tarjeta cuando el único permiso es `ver_oc`?
+No se modifica esquema de BD.

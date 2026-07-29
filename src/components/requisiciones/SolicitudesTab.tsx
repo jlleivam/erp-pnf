@@ -40,9 +40,10 @@ interface Props {
   reqItems: any[];
   proveedores: any[];
   solicitudes: any[];
+  bloqueadoPorOC?: boolean;
 }
 
-export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes }: Props) {
+export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes, bloqueadoPorOC = false }: Props) {
   const qc = useQueryClient();
   const { can } = usePermisos();
   const puedeGestionar = can("cotizaciones.gestionar");
@@ -98,6 +99,14 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
         </p>
       </Card>
 
+      {bloqueadoPorOC && (
+        <Card className="p-3 bg-amber-50 border-amber-200">
+          <p className="text-sm text-amber-900">
+            Ya se generaron órdenes de compra; las respuestas quedan como referencia y no pueden editarse ni descartarse.
+          </p>
+        </Card>
+      )}
+
       {solicitudes.length === 0 && !showForm && (
         <Card className="p-8 text-center border-dashed">
           <FileText className="size-8 mx-auto text-muted-foreground" />
@@ -137,7 +146,7 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
                 <Download className="size-4 mr-1" />
                 {sc.estatus === "borrador" && puedeGestionar ? "Descargar y marcar enviada" : "Descargar PDF"}
               </Button>
-              {puedeGestionar && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
+              {puedeGestionar && !bloqueadoPorOC && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
                 <Button size="sm" onClick={() => setCapturando(sc)}>
                   <ClipboardEdit className="size-4 mr-1" />
                   {sc.estatus === "recibida" ? "Editar respuesta" : "Capturar respuesta"}
@@ -149,7 +158,7 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
                   Eliminar
                 </Button>
               )}
-              {puedeGestionar && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
+              {puedeGestionar && !bloqueadoPorOC && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
                 <Button size="sm" variant="ghost" onClick={() => handleDescartar(sc.id)}>
                   <XCircle className="size-4 mr-1" />
                   Descartar
