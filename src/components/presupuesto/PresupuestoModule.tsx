@@ -184,7 +184,19 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
     .reduce((s, a) => s + Number(a.monto_total), 0);
   const totalVigente = totalBase + totalAdendas;
 
-  const puedeCrearOC = director || isResidente;
+  const puedeCrearBase = can("presupuestos.crear_base");
+  const puedeCrearOC = can("presupuestos.crear_oc");
+  const perms = {
+    crearBase: puedeCrearBase,
+    crearOC: puedeCrearOC,
+    autorizarBase: can("presupuestos.autorizar_base"),
+    autorizarOC: can("presupuestos.autorizar_oc"),
+    enviarOC: can("presupuestos.enviar_oc"),
+    eliminarBase: can("presupuestos.eliminar_base"),
+    eliminarOC: can("presupuestos.eliminar_oc"),
+    userId,
+  };
+
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
 
