@@ -1,17 +1,21 @@
 ## Problema
 
-En la vista de tabla de Requisiciones (la que ve el residente en la captura), las requisiciones en estatus `borrador` abren la hoja de Cotización tanto al hacer clic en el folio como en el botón "Ver". Desde ahí no hay forma de editar ni enviar el borrador, así que el residente queda atrapado.
+El residente tiene override `requisiciones.ver_oc = true` en `role_permissions`, por lo que `usarVistaTabla` se activa y ve la vista tabla. En esa vista, el botón de acción sólo depende del estatus (no del permiso), así que ve "Cotizar", "Continuar" o "Ver OCs" aunque no tenga `cotizaciones.gestionar` ni `oc.crear`.
 
-En la vista de tarjetas sí funciona: el borrador abre `NuevaRequisicionSheet` con `borradorId` y muestra los botones "Guardar borrador" y "Enviar".
+## Cambio
 
-## Cambios
+En `src/components/requisiciones/RequisicionesModule.tsx`, condicionar cada botón de la columna "Acción" (vista tabla activas e historial) al permiso correspondiente:
 
-Archivo: `src/components/requisiciones/RequisicionesModule.tsx` (rama `usarVistaTabla`, líneas ~139–184).
+- Borrador → sólo el creador (o quien tenga `requisiciones.crear`) ve "Editar" + eliminar; los demás ven "Ver" (detalle).
+- `enviada` → botón "Cotizar" sólo si `cotizaciones.gestionar`; si no, "Ver".
+- `en_cotizacion` → botón "Continuar" sólo si `cotizaciones.gestionar`; si no, "Ver".
+- `pendiente_autorizacion` / `oc_generada` / `completada` → botón "Ver OCs" sólo si `requisiciones.ver_oc` o `oc.autorizar` o `oc.cancelar`; si no, "Ver".
+- Otros estatus → "Ver" (abre `RequisicionDetalleSheet`).
 
-1. Cuando `r.estatus === "borrador"`:
-   - Clic en el folio → `abrirBorrador(r.id)` (misma función que usa la vista de tarjetas), no abrir `CotizacionSheet`.
-   - Columna "Acción" → botón "Editar" que también llama `abrirBorrador(r.id)`, más un botón de eliminar (ícono papelera) que dispara `eliminarBorrador.mutate(r.id)` con confirmación, igual que en tarjetas.
-   - Mantener el badge "Borrador" en la columna de estatus.
-2. El resto de estatus se comporta igual que hoy.
+El fallback "Ver" abrirá `RequisicionDetalleSheet` (solo lectura), no `CotizacionSheet`, para no exponer acciones de cotización a quien no las puede ejecutar. Lo mismo aplica al click en el Folio.
 
-No se tocan permisos, backend, ni la vista de tarjetas: la lógica de envío (`enviarBorradorRequisicion`) y los permisos (`requisiciones.crear`) ya están bien; el bug es puramente de ruteo de UI en la tabla.
+No se toca lógica de negocio ni el backend (las funciones ya están gateadas por permiso).
+
+## Nota
+
+Podemos dejar `usarVistaTabla` como está (residente sigue viendo tabla porque tiene el override de ver OC), o cambiarlo a que residentes con sólo `ver_oc` sigan viendo la vista tarjeta. ¿Prefieres mantener la tabla para todos los que tengan cualquier permiso de gestión/visualización, o forzar tarjeta cuando el único permiso es `ver_oc`?
