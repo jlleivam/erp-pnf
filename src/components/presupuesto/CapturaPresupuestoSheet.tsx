@@ -517,7 +517,7 @@ export function CapturaPresupuestoSheet({
                   }
                   onClick={() => handleGuardar(true)}
                 >
-                  {solicitarM.isPending ? "Enviando…" : "Guardar y enviar a autorización"}
+                  {solicitarM.isPending ? "Enviando…" : "Enviar a autorización"}
                 </Button>
               )}
             </div>
