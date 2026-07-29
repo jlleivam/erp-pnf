@@ -402,16 +402,20 @@ export const reabrirPresupuesto = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePermission(supabase, userId, "presupuestos.crear_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
       .eq("id", data.id)
       .single();
     if (!pres) throw new Error("Presupuesto no encontrado");
-    if (pres.tipo !== "adenda") throw new Error("Solo aplica a órdenes de cambio");
     if (pres.estatus !== "rechazada")
-      throw new Error("Solo OCs rechazadas se pueden reabrir");
+      throw new Error("Solo presupuestos rechazados se pueden reabrir");
+
+    await requirePermission(
+      supabase,
+      userId,
+      pres.tipo === "adenda" ? "presupuestos.crear_oc" : "presupuestos.crear_base",
+    );
 
     const { error } = await supabase
       .from("obra_presupuestos")
