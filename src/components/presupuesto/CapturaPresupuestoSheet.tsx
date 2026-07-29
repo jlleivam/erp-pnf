@@ -4,11 +4,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   getPresupuesto,
   guardarRenglones,
-  autorizarPresupuesto,
+  solicitarAutorizacionPresupuesto,
   parsearExcelPresupuesto,
   parsearPdfPresupuesto,
   descargarPlantillaPresupuesto,
 } from "@/lib/api/presupuestos.functions";
+import { usePermisos } from "@/hooks/usePermisos";
 import {
   procesarRenglones,
   calcularClavesPadre,
