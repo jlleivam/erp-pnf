@@ -35,6 +35,7 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initialTab?: CotizacionTab;
+  readOnly?: boolean;
 }
 
 const OC_BADGE: Record<string, { label: string; className: string }> = {
