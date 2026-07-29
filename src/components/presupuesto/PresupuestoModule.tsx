@@ -207,7 +207,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Presupuesto</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Presupuesto base + órdenes de cambio. El residente solicita y el supervisor autoriza.
+            Presupuesto base + órdenes de cambio. Envío a autorización y aprobación según permisos por rol.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
