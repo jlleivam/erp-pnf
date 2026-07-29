@@ -106,7 +106,7 @@ function AdminRequisicionesPage() {
             rows={filtered}
             loading={loading}
             emptyText="Sin requisiciones activas en tus obras."
-            onRowClick={setDetalleId}
+            onRowClick={abrirVisor}
             onAction={(r, t) => setCotizacion({ id: r.id, tab: t })}
             fetchDetalle={fetchOne}
           />
@@ -117,7 +117,7 @@ function AdminRequisicionesPage() {
             rows={filtered}
             loading={loading}
             emptyText="Sin historial de requisiciones."
-            onRowClick={setDetalleId}
+            onRowClick={abrirVisor}
             onAction={(r, t) => setCotizacion({ id: r.id, tab: t })}
             fetchDetalle={fetchOne}
           />
