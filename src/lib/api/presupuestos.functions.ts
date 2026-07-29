@@ -251,18 +251,15 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
 
     if (pres.tipo === "adenda") {
-      // OC: solo Supervisor de la obra o Director, y debe estar en "solicitada"
-      const { isSupervisor } = await getObraRole(supabase, userId, pres.obra_id);
-      if (!isDirector && !isSupervisor)
-        throw new Error("Solo el Supervisor de la obra (o el Director) puede autorizar órdenes de cambio");
+      await requirePermission(supabase, userId, "presupuestos.autorizar_oc");
       if (pres.estatus !== "solicitada")
         throw new Error("La orden de cambio debe haber sido solicitada por el residente");
       if (pres.enviado_por && pres.enviado_por === userId && !isDirector)
         throw new Error("No puedes autorizar una OC que tú mismo solicitaste");
     } else {
-      // Base: solo director (puede autorizar desde borrador directamente)
-      if (!isDirector) throw new Error("Solo el Director puede autorizar el presupuesto base");
+      await requirePermission(supabase, userId, "presupuestos.autorizar_base");
     }
+
 
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
