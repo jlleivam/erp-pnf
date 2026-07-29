@@ -1,23 +1,22 @@
 ## Objetivo
-Unificar los permisos de presupuesto base: quien tenga **"Crear/editar presupuesto base"** podrá también enviarlo a autorización. Se elimina el permiso separado `presupuestos.enviar_base`.
+Unificar los permisos de orden de cambio: quien tenga **"Crear/editar orden de cambio"** también podrá enviarla a autorización. Se elimina el permiso separado `presupuestos.enviar_oc`.
 
 ## Cambios
 
-### 1. Catálogo de permisos (`src/lib/permisos/catalogo.ts`)
-- Eliminar la entrada `presupuestos.enviar_base` de la sección PRESUPUESTOS.
-- Dejar únicamente `presupuestos.crear_base` (con su etiqueta actual) y los permisos de autorización.
+### 1. Catálogo (`src/lib/permisos/catalogo.ts`)
+- Eliminar la entrada `presupuestos.enviar_oc`.
 
 ### 2. Backend (`src/lib/api/presupuestos.functions.ts`)
-- En `solicitarAutorizacionPresupuesto`: cambiar el gate de `presupuestos.enviar_base` a `presupuestos.crear_base` para presupuestos base (las adendas siguen con su permiso actual).
+- En `solicitarAutorizacionPresupuesto`: cambiar el gate para adendas de `presupuestos.enviar_oc` a `presupuestos.crear_oc`.
 
 ### 3. UI captura (`src/components/presupuesto/CapturaPresupuestoSheet.tsx`)
-- Reemplazar `puedeEnviar` (que consultaba `enviar_base`) por reutilizar `puedeEditar` (`crear_base`) para mostrar "Guardar y enviar a autorización" en presupuestos base.
+- Reemplazar `enviar_oc` por `crear_oc` en el cálculo de `puedeEnviar`.
 
 ### 4. UI módulo (`src/components/presupuesto/PresupuestoModule.tsx`)
-- Actualizar cualquier flag derivado que use `enviar_base` para usar `crear_base`.
+- Actualizar el flag derivado `enviarOC` para usar `crear_oc` (reutilizando `puedeCrearOC`).
 
-### 5. Migración de datos
-- Migración SQL: `DELETE FROM role_permissions WHERE permiso = 'presupuestos.enviar_base'` para limpiar overrides guardados.
+### 5. Datos
+- `DELETE FROM role_permissions WHERE action_key = 'presupuestos.enviar_oc'` para limpiar overrides.
 
 ## Resultado
-La matriz de permisos muestra un solo renglón "Crear/editar presupuesto base"; cualquier rol con ese check podrá crear, editar y enviar a autorización.
+Un solo renglón "Crear/editar orden de cambio" concentra la capacidad de crearla, editarla y enviarla a autorización.
