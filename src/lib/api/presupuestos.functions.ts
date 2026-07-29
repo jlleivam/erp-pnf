@@ -107,16 +107,14 @@ export const crearPresupuesto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    const { companyId } = await getCompanyAndIsDirector(supabase, userId);
 
     if (data.tipo === "base") {
-      if (!isDirector) throw new Error("Solo el Director puede crear el presupuesto base");
+      await requirePermission(supabase, userId, "presupuestos.crear_base");
     } else {
-      // adenda (orden de cambio): residente de la obra o director
-      const { isResidente } = await getObraRole(supabase, userId, data.obraId);
-      if (!isDirector && !isResidente)
-        throw new Error("Solo el Residente de la obra (o el Director) puede crear órdenes de cambio");
+      await requirePermission(supabase, userId, "presupuestos.crear_oc");
     }
+
 
     let numero = 0;
     if (data.tipo === "adenda") {
