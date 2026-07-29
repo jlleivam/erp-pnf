@@ -1,56 +1,23 @@
 ## Objetivo
-
-Cambiar el flujo del **presupuesto base** para que replique el de las órdenes de cambio:
-
-```text
-borrador ──▶ solicitada ──▶ autorizado
-                 └───▶ rechazada ──▶ (reabrir a borrador)
-```
-
-Hoy el base salta de `borrador` directo a `autorizado` con un solo botón "Guardar y autorizar". A partir de este cambio, quien tenga `crear_base` guarda el borrador y lo envía; quien tenga `autorizar_base` es el único que autoriza o rechaza.
+Unificar los permisos de presupuesto base: quien tenga **"Crear/editar presupuesto base"** podrá también enviarlo a autorización. Se elimina el permiso separado `presupuestos.enviar_base`.
 
 ## Cambios
 
-### 1. Catálogo de permisos — `src/lib/permisos/catalogo.ts`
-- Agregar `presupuestos.enviar_base` con label **"Enviar presupuesto base a autorización"**, defaults iguales a `enviar_oc` (residente por defecto).
+### 1. Catálogo de permisos (`src/lib/permisos/catalogo.ts`)
+- Eliminar la entrada `presupuestos.enviar_base` de la sección PRESUPUESTOS.
+- Dejar únicamente `presupuestos.crear_base` (con su etiqueta actual) y los permisos de autorización.
 
-### 2. API — `src/lib/api/presupuestos.functions.ts`
-- `solicitarAutorizacionPresupuesto`:
-  - Aceptar también `tipo === "base"`.
-  - Elegir permiso según tipo: `enviar_base` para base, `enviar_oc` para adenda.
-  - Requerir renglones cargados (ya lo hace).
-- `autorizarPresupuesto` (rama base):
-  - Requerir `estatus === "solicitada"` (igual que adenda).
-  - Aplicar la regla de no auto-autorizar: si `enviado_por === userId` y no es Director, bloquear.
-- `rechazarPresupuesto`:
-  - Permitir rechazar también base; elegir permiso según tipo (`autorizar_base` / `autorizar_oc`).
-  - Notificar al remitente (`enviado_por`) con un tipo nuevo o reusando el existente (usar el mismo patrón que OC).
-- `reabrirPresupuesto`:
-  - Permitir también base; elegir permiso según tipo (`crear_base` / `crear_oc`).
+### 2. Backend (`src/lib/api/presupuestos.functions.ts`)
+- En `solicitarAutorizacionPresupuesto`: cambiar el gate de `presupuestos.enviar_base` a `presupuestos.crear_base` para presupuestos base (las adendas siguen con su permiso actual).
 
-### 3. UI de captura — `src/components/presupuesto/CapturaPresupuestoSheet.tsx`
-- Leer `data.tipo` y `data.estatus`, y `usePermisos()`.
-- Flags:
-  - `enBorrador = estatus === "borrador"`
-  - `puedeEditar = enBorrador && can(esOC ? "crear_oc" : "crear_base")`
-  - `puedeEnviar = enBorrador && can(esOC ? "enviar_oc" : "enviar_base")`
-- Eliminar el botón **"Guardar y autorizar"**.
-- Botones finales:
-  - **"Guardar borrador"** — visible solo si `puedeEditar`. Persiste renglones sin cambiar estatus.
-  - **"Guardar y enviar a autorización"** — visible solo si `puedeEditar && puedeEnviar`. Guarda renglones y llama `solicitarAutorizacionPresupuesto`.
-- Si `!enBorrador`, mostrar solo "Cerrar" (vista de solo lectura de renglones ya soportada por `yaAutorizado`).
+### 3. UI captura (`src/components/presupuesto/CapturaPresupuestoSheet.tsx`)
+- Reemplazar `puedeEnviar` (que consultaba `enviar_base`) por reutilizar `puedeEditar` (`crear_base`) para mostrar "Guardar y enviar a autorización" en presupuestos base.
 
-### 4. UI del módulo — `src/components/presupuesto/PresupuestoModule.tsx`
-- En `PresupuestoCard`, actualizar flags derivados:
-  - `puedeSolicitar = estatus === "borrador" && (esOC ? enviarOC : enviarBase)` (quitar la restricción `esOC &&`).
-  - `puedeAutorizar` (base) = `estatus === "solicitada" && autorizarBase && !solicitadaPorMi` — reglas iguales a OC.
-  - `puedeRechazar` (base) = `estatus === "solicitada" && autorizarBase`.
-  - `puedeReabrir` (base) = `estatus === "rechazada" && crearBase`.
-- Agregar `enviarBase` a `PresupuestoPerms` y pasarlo desde el módulo (`can("presupuestos.enviar_base")`).
-- Copy del header: reemplazar "El residente solicita y el supervisor autoriza" por texto genérico ("Envío a autorización y aprobación según permisos por rol").
+### 4. UI módulo (`src/components/presupuesto/PresupuestoModule.tsx`)
+- Actualizar cualquier flag derivado que use `enviar_base` para usar `crear_base`.
 
-## Notas
+### 5. Migración de datos
+- Migración SQL: `DELETE FROM role_permissions WHERE permiso = 'presupuestos.enviar_base'` para limpiar overrides guardados.
 
-- Migración de datos: no se requiere. Los presupuestos base ya autorizados quedan como están; los borradores existentes simplemente pasan por el nuevo paso al enviarse.
-- Backend ya valida con `requirePermission`; los cambios UI se alinean para no mostrar acciones no permitidas.
-- Director conserva bypass total vía `usePermisos.can()` y las validaciones backend.
+## Resultado
+La matriz de permisos muestra un solo renglón "Crear/editar presupuesto base"; cualquier rol con ese check podrá crear, editar y enviar a autorización.
