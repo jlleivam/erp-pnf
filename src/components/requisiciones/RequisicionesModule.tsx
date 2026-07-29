@@ -39,8 +39,8 @@ export function RequisicionesModule({ obraId }: Props) {
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
   const [borradorEnEdicion, setBorradorEnEdicion] = useState<string | null>(null);
-  const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab; readOnly?: boolean } | null>(null);
+  const abrirVisor = (id: string) => setCotizacion({ id, tab: "requisicion", readOnly: true });
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
   const eliminarBorradorFn = useServerFn(eliminarBorradorRequisicion);
