@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { listRequisicionesAsignadas, getRequisicion } from "@/lib/api/requisiciones.functions";
-import { RequisicionDetalleSheet } from "@/components/requisiciones/RequisicionDetalleSheet";
 import { CotizacionSheet, type CotizacionTab } from "@/components/requisiciones/CotizacionSheet";
 import { ESTATUS_META, type RequisicionEstatus } from "@/components/requisiciones/constants";
 import { formatDate } from "@/lib/format";
