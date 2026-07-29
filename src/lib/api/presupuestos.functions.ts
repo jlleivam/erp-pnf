@@ -176,15 +176,19 @@ export const guardarRenglones = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
-    if (!isDirector) throw new Error("Solo el Director puede editar presupuestos");
 
     const { data: presupuesto } = await supabase
-      .from("obra_presupuestos").select("id, estatus")
+      .from("obra_presupuestos").select("id, estatus, tipo")
       .eq("id", data.presupuestoId).single();
     if (!presupuesto) throw new Error("Presupuesto no encontrado");
+    await requirePermission(
+      supabase,
+      userId,
+      presupuesto.tipo === "adenda" ? "presupuestos.crear_oc" : "presupuestos.crear_base",
+    );
     if (presupuesto.estatus === "autorizado")
       throw new Error("El presupuesto está autorizado y no se puede editar. Crea una adenda.");
+
 
     const { renglones, errores, montoTotal } = procesarRenglones(data.renglones as RenglonInput[]);
     if (errores.length > 0) {
