@@ -169,7 +169,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   const reabrirM = useMutation({
     mutationFn: reabrir,
     onSuccess: () => {
-      toast.success("OC reabierta a borrador");
+      toast.success("Presupuesto reabierto a borrador");
       qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
     },
     onError: (e: Error) => toast.error(e.message),
