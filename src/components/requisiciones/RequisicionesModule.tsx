@@ -146,9 +146,10 @@ export function RequisicionesModule({ obraId }: Props) {
                     const minF = fechas.length > 0 ? Math.min(...fechas) : null;
                     const urgent = minF !== null && Math.ceil((minF - Date.now()) / 86400000) <= 3;
                     const estatus = r.estatus as RequisicionEstatus;
+                    const esBorrador = estatus === "borrador";
                     return (
                       <TableRow key={r.id} className="hover:bg-muted/50 h-9">
-                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>
+                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => esBorrador ? abrirBorrador(r.id) : setCotizacion({ id: r.id, tab: "requisicion" })}>
                           {r.folio}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
@@ -169,7 +170,23 @@ export function RequisicionesModule({ obraId }: Props) {
                           <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0 h-5`}>{meta.label}</Badge>
                         </TableCell>
                         <TableCell className="text-right py-1">
-                          {estatus === "enviada" ? (
+                          {esBorrador ? (
+                            <div className="inline-flex items-center gap-1">
+                              <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => abrirBorrador(r.id)}>
+                                <Pencil className="size-3 mr-1" />Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-destructive"
+                                disabled={eliminarBorrador.isPending}
+                                onClick={() => { if (confirm("¿Eliminar este borrador?")) eliminarBorrador.mutate(r.id); }}
+                                aria-label="Eliminar borrador"
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            </div>
+                          ) : estatus === "enviada" ? (
                             <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
                           ) : estatus === "en_cotizacion" ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
