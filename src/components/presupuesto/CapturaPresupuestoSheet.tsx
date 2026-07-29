@@ -274,6 +274,11 @@ export function CapturaPresupuestoSheet({
 
 
   const presupuesto = data?.presupuesto;
+  const esOC = presupuesto?.tipo === "adenda";
+  const enBorrador = presupuesto?.estatus === "borrador";
+  const { can } = usePermisos();
+  const puedeEditar = enBorrador && can(esOC ? "presupuestos.crear_oc" : "presupuestos.crear_base");
+  const puedeEnviar = enBorrador && can(esOC ? "presupuestos.enviar_oc" : "presupuestos.enviar_base");
   const yaAutorizado = presupuesto?.estatus === "autorizado";
 
   return (
