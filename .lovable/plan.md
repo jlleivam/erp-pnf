@@ -1,56 +1,17 @@
-# Permisos en Órdenes de Compra y Cotización
+## Problema
 
-Cablear el catálogo de permisos al flujo de cotización y OC, tanto en UI como en servidor.
+`listObras` devuelve todas las obras de la empresa sin filtrar por participación. Por eso Arturo (residente) ve obras donde no está asignado.
 
-## Cambios de catálogo (`src/lib/permisos/catalogo.ts`)
-- Agregar `cotizaciones.gestionar` — módulo "Órdenes de compra", default administrativo.
-- Mantener `oc.crear`, `oc.autorizar`, `oc.cancelar`. Cambiar defaults:
-  - `oc.autorizar`: default supervisor (hoy es NONE) para no romper el flujo actual.
-  - `oc.cancelar`: default administrativo (ya está).
+## Regla de visibilidad
 
-## Mapeo de acciones
+- **Director**: ve todas las obras de la empresa.
+- **Cualquier otro rol** (incluye administrativo, supervisor, residente, auxiliar): solo ve las obras donde está en `obra_team`.
 
-| Acción | Permiso |
-|---|---|
-| Crear/editar/eliminar solicitud de cotización, marcar SC enviada, capturar respuesta, descartar solicitud, guardar/eliminar paquete | `cotizaciones.gestionar` |
-| Generar OC desde comparativa, enviar OC a supervisor | `oc.crear` |
-| Autorizar OC | `oc.autorizar` |
-| Rechazar OC, reabrir OC, cancelar OC desde `CotizacionSheet` | `oc.cancelar` |
+## Cambio
 
-Desacopla de `requisiciones.aprobar`/`requisiciones.rechazar` (que quedan sólo para el flujo de aprobación de la requisición en sí).
+**`src/lib/api/obras.functions.ts` → `listObras`**:
+1. Leer `company_id` del perfil y roles del usuario en `user_roles`.
+2. Si es `director`: query actual (todas las obras).
+3. Si no: filtrar con `inner join` a `obra_team` por `user_id = context.userId`, usando `.select("..., obra_team!inner(user_id)").eq("obra_team.user_id", userId)`.
 
-## Cambios en cliente
-
-1. `src/components/requisiciones/SolicitudesTab.tsx`
-   - `puedeGestionar = can("cotizaciones.gestionar")`. Oculta/deshabilita botones de crear/editar/eliminar solicitud, marcar enviada, capturar respuesta y descartar.
-
-2. `src/components/requisiciones/CapturarRespuestaDialog.tsx`
-   - Bloquear submit si `!can("cotizaciones.gestionar")`.
-
-3. `src/components/requisiciones/ComparativaTable.tsx`
-   - `puedeGenerarOC = can("oc.crear")` para el botón "Generar OC".
-   - `puedeAutorizar = can("oc.autorizar")`, `puedeRechazar = can("oc.cancelar")` (reemplaza los actuales `requisiciones.aprobar/rechazar`).
-
-4. `src/components/requisiciones/CotizacionSheet.tsx`
-   - `puedeCancelarOC = can("oc.cancelar")` (hoy usa `requisiciones.rechazar`).
-   - Botón "Reabrir OC" gated por `oc.cancelar`.
-
-5. `src/routes/_authenticated/app.supervisor.requisiciones.tsx` y sidebar en `AppShell.tsx`
-   - Ampliar gate a `can("requisiciones.aprobar") || can("requisiciones.rechazar") || can("oc.autorizar") || can("oc.cancelar")` para que supervisores con permisos de OC sigan viendo la pantalla.
-
-## Cambios en servidor (defensa en profundidad)
-
-`src/lib/api/solicitudes-cotizacion.functions.ts` — `requirePermission(..., "cotizaciones.gestionar")` en:
-- `crearSolicitud`, `actualizarSolicitud`, `eliminarSolicitud`, `marcarSCEnviada`, `capturarRespuesta`, `descartarSolicitud`.
-
-`src/lib/api/cotizaciones.functions.ts`:
-- `guardarPaquete`, `eliminarPaquete` → `cotizaciones.gestionar`.
-- `generarOC`, `enviarOCASupervisor` → `oc.crear`.
-- `autorizarOC` → `oc.autorizar` (reemplaza `requisiciones.aprobar`).
-- `rechazarOC`, `reabrirOC` → `oc.cancelar` (reemplaza `requisiciones.rechazar`).
-- `enviarOCAProveedor` → `oc.crear`.
-
-## Fuera de alcance
-- RLS de `ordenes_compra`, `cotizacion_solicitudes`, `cotizacion_paquetes` (sigue el modelo aplicativo).
-- Cambios de negocio en el flujo de comparativa; sólo se cablean los gates.
-- Pruebas E2E.
+No se toca UI ni el catálogo de permisos.
