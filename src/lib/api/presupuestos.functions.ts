@@ -432,20 +432,19 @@ export const eliminarPresupuesto = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
     const { data: p } = await supabase
       .from("obra_presupuestos").select("estatus, tipo, obra_id").eq("id", data.id).single();
     if (!p) throw new Error("Presupuesto no encontrado");
+    await requirePermission(
+      supabase,
+      userId,
+      p.tipo === "adenda" ? "presupuestos.eliminar_oc" : "presupuestos.eliminar_base",
+    );
     if (p.estatus === "autorizado")
       throw new Error("No se puede eliminar un presupuesto autorizado");
     if (p.estatus === "solicitada")
       throw new Error("No se puede eliminar una OC en solicitud. Rechaza primero.");
-    if (p.tipo === "adenda") {
-      const { isResidente } = await getObraRole(supabase, userId, p.obra_id);
-      if (!isDirector && !isResidente) throw new Error("Sin permisos");
-    } else {
-      if (!isDirector) throw new Error("Solo el Director puede eliminar el presupuesto base");
-    }
+
     const { error } = await supabase
       .from("obra_presupuestos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
