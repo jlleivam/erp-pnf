@@ -65,8 +65,8 @@ export const registrarPagoOC = createServerFn({ method: "POST" })
       .eq("id", data.ocId).maybeSingle();
     if (ocErr) throw new Error(ocErr.message);
     if (!oc || oc.company_id !== companyId) throw new Error("OC no encontrada");
-    if (!["autorizada", "enviada"].includes(oc.estatus)) {
-      throw new Error("Solo se pueden pagar OCs autorizadas o enviadas al proveedor");
+    if (!["autorizada", "enviada", "recibida_parcial", "recibida"].includes(oc.estatus)) {
+      throw new Error("Solo se pueden pagar OCs autorizadas, enviadas o recibidas");
     }
 
     const total = Number(oc.total);
