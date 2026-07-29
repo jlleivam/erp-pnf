@@ -4378,6 +4378,10 @@ export type Database = {
       is_member_of_obra: { Args: { _obra_id: string }; Returns: boolean }
       is_residente_de_obra: { Args: { _obra_id: string }; Returns: boolean }
       is_supervisor_de_obra: { Args: { _obra_id: string }; Returns: boolean }
+      recompute_requisicion_estatus: {
+        Args: { _req_id: string }
+        Returns: undefined
+      }
       siguiente_codigo_insumo: {
         Args: { _categoria_id: string; _company_id: string }
         Returns: string

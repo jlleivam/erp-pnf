@@ -24,10 +24,11 @@ import { RecepcionDialog } from "@/components/almacen/RecepcionDialog";
 import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
 import { SolicitudesTab } from "./SolicitudesTab";
 import { ComparativaTable } from "./ComparativaTable";
+import { RecepcionesTab } from "./RecepcionesTab";
 import { useEffectiveRoles } from "@/stores/auth";
 import { usePermisos } from "@/hooks/usePermisos";
 
-export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs";
+export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs" | "recepciones";
 
 interface Props {
   requisicionId: string;
@@ -145,11 +146,12 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
           <p className="mt-6 text-sm text-muted-foreground">Cargando…</p>
         ) : (
           <Tabs value={tab} onValueChange={(v) => setTab(v as CotizacionTab)} className="mt-4">
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-5 w-full">
               <TabsTrigger value="requisicion">Requisición</TabsTrigger>
               <TabsTrigger value="solicitudes">Cotizaciones ({(solsQ.data ?? []).length})</TabsTrigger>
               <TabsTrigger value="comparativa">Comparativa</TabsTrigger>
               <TabsTrigger value="ocs">OCs ({ocs.length})</TabsTrigger>
+              <TabsTrigger value="recepciones">Recepciones</TabsTrigger>
             </TabsList>
 
             <TabsContent value="requisicion" className="mt-4 space-y-4">
@@ -418,6 +420,10 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                   </Card>
                 );
               })}
+            </TabsContent>
+
+            <TabsContent value="recepciones" className="mt-4">
+              <RecepcionesTab requisicionId={requisicionId} />
             </TabsContent>
           </Tabs>
         )}

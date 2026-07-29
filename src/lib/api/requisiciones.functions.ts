@@ -524,3 +524,111 @@ export const getBorradorRequisicion = createServerFn({ method: "POST" })
     return req;
   });
 
+export const getRequisicionRecepciones = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ requisicionId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: ocs, error: ocsErr } = await supabase
+      .from("ordenes_compra")
+      .select(`
+        id, folio, estatus, total, monto_pagado, estado_pago, obra_id,
+        proveedor:terceros(razon_social),
+        paquete:cotizacion_paquetes(items:cotizacion_paquete_insumos(
+          insumo_id, cantidad,
+          insumo:insumos(id, nombre, unidad)
+        ))
+      `)
+      .eq("requisicion_id", data.requisicionId)
+      .neq("estatus", "rechazada")
+      .order("folio", { ascending: true });
+    if (ocsErr) throw new Error(ocsErr.message);
+
+    const ocIds = (ocs ?? []).map((o: any) => o.id);
+    let recepciones: any[] = [];
+    if (ocIds.length > 0) {
+      const { data: recs, error: recErr } = await supabase
+        .from("almacen_recepciones")
+        .select(`
+          id, oc_id, fecha, folio_remision, sin_remision, motivo_sin_remision,
+          evidencia_path, recibido_por,
+          partidas:almacen_recepcion_partidas(insumo_id, cantidad, precio_unitario)
+        `)
+        .in("oc_id", ocIds)
+        .order("fecha", { ascending: true });
+      if (recErr) throw new Error(recErr.message);
+      recepciones = recs ?? [];
+    }
+
+    // Firmar URLs de evidencia
+    const paths = recepciones.map((r) => r.evidencia_path).filter(Boolean) as string[];
+    const signedMap = new Map<string, string>();
+    if (paths.length > 0) {
+      const { data: signed } = await supabase.storage
+        .from("almacen-remisiones")
+        .createSignedUrls(paths, 3600);
+      for (const s of signed ?? []) {
+        if (s.path && s.signedUrl) signedMap.set(s.path, s.signedUrl);
+      }
+    }
+
+    // Nombres de quien recibió
+    const userIds = Array.from(new Set(recepciones.map((r) => r.recibido_por).filter(Boolean))) as string[];
+    const profMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles").select("id, nombre_completo, email").in("id", userIds);
+      for (const p of profs ?? []) profMap.set(p.id, p.nombre_completo || p.email || "—");
+    }
+
+    return (ocs ?? []).map((oc: any) => {
+      const items = (oc.paquete?.items ?? []) as any[];
+      const recsOC = recepciones.filter((r) => r.oc_id === oc.id);
+      const recibidoPorInsumo: Record<string, number> = {};
+      for (const r of recsOC) {
+        for (const p of (r.partidas ?? []) as any[]) {
+          recibidoPorInsumo[p.insumo_id] = (recibidoPorInsumo[p.insumo_id] ?? 0) + Number(p.cantidad);
+        }
+      }
+      const insumos = items.map((it: any) => {
+        const pedido = Number(it.cantidad);
+        const recibido = Number(recibidoPorInsumo[it.insumo_id] ?? 0);
+        return {
+          insumo_id: it.insumo_id,
+          nombre: it.insumo?.nombre ?? "—",
+          unidad: it.insumo?.unidad ?? "",
+          pedido,
+          recibido,
+          pendiente: +Math.max(0, pedido - recibido).toFixed(4),
+        };
+      });
+      return {
+        oc: {
+          id: oc.id,
+          folio: oc.folio,
+          estatus: oc.estatus,
+          total: Number(oc.total),
+          monto_pagado: Number(oc.monto_pagado ?? 0),
+          estado_pago: oc.estado_pago ?? "pendiente",
+          obra_id: oc.obra_id,
+          proveedor: oc.proveedor?.razon_social ?? "—",
+        },
+        insumos,
+        recepciones: recsOC.map((r) => ({
+          id: r.id,
+          fecha: r.fecha,
+          folio_remision: r.folio_remision,
+          sin_remision: r.sin_remision,
+          motivo_sin_remision: r.motivo_sin_remision,
+          evidencia_url: r.evidencia_path ? signedMap.get(r.evidencia_path) ?? null : null,
+          recibido_por_nombre: r.recibido_por ? profMap.get(r.recibido_por) ?? "—" : "—",
+          partidas: (r.partidas ?? []).map((p: any) => ({
+            insumo_id: p.insumo_id,
+            cantidad: Number(p.cantidad),
+          })),
+        })),
+      };
+    });
+  });
+
