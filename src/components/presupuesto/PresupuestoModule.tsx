@@ -192,7 +192,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
     autorizarBase: can("presupuestos.autorizar_base"),
     autorizarOC: can("presupuestos.autorizar_oc"),
     enviarBase: puedeCrearBase,
-    enviarOC: can("presupuestos.enviar_oc"),
+    enviarOC: puedeCrearOC,
     eliminarBase: can("presupuestos.eliminar_base"),
     eliminarOC: can("presupuestos.eliminar_oc"),
     userId,

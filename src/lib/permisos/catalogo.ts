@@ -29,7 +29,7 @@ export const CATALOGO_ACCIONES: AccionCatalogo[] = [
   { key: "presupuestos.autorizar_base", modulo: "Presupuestos", label: "Autorizar/rechazar presupuesto base", defaults: NONE },
   { key: "presupuestos.eliminar_base", modulo: "Presupuestos", label: "Eliminar presupuesto base", defaults: NONE },
   { key: "presupuestos.crear_oc", modulo: "Presupuestos", label: "Crear/editar orden de cambio", defaults: T },
-  { key: "presupuestos.enviar_oc", modulo: "Presupuestos", label: "Enviar orden de cambio a autorización", defaults: T },
+  
   { key: "presupuestos.autorizar_oc", modulo: "Presupuestos", label: "Autorizar/rechazar orden de cambio", defaults: S },
   { key: "presupuestos.eliminar_oc", modulo: "Presupuestos", label: "Eliminar orden de cambio", defaults: T },
 

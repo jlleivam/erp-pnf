@@ -308,7 +308,7 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
     await requirePermission(
       supabase,
       userId,
-      pres.tipo === "adenda" ? "presupuestos.enviar_oc" : "presupuestos.crear_base",
+      pres.tipo === "adenda" ? "presupuestos.crear_oc" : "presupuestos.crear_base",
     );
 
     const { count } = await supabase
