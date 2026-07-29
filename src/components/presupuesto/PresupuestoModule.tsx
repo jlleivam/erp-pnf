@@ -294,9 +294,8 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
               <PresupuestoCard
                 key={a.id}
                 p={a}
-                director={director}
-                isResidente={isResidente}
-                isSupervisor={isSupervisor}
+                perms={perms}
+
                 onView={() => setViewing(a.id)}
                 onEdit={() => setEditing({ id: a.id, tipo: "adenda" })}
                 onDelete={() => setToDelete(a)}
