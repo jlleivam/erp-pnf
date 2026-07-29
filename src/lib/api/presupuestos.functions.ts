@@ -403,7 +403,7 @@ export const reabrirPresupuesto = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.crear_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
@@ -413,8 +413,7 @@ export const reabrirPresupuesto = createServerFn({ method: "POST" })
     if (pres.tipo !== "adenda") throw new Error("Solo aplica a órdenes de cambio");
     if (pres.estatus !== "rechazada")
       throw new Error("Solo OCs rechazadas se pueden reabrir");
-    const { isResidente } = await getObraRole(supabase, userId, pres.obra_id);
-    if (!isDirector && !isResidente) throw new Error("Sin permisos");
+
     const { error } = await supabase
       .from("obra_presupuestos")
       .update({
