@@ -118,10 +118,11 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
   });
 
   const { can } = usePermisos();
-  const puedeGestionar = can("cotizaciones.gestionar");
-  const puedeCrearOC = can("oc.crear");
-  const puedeCancelarOC = can("oc.cancelar");
+  const puedeGestionar = !readOnly && can("cotizaciones.gestionar");
+  const puedeCrearOC = !readOnly && can("oc.crear");
+  const puedeCancelarOC = !readOnly && can("oc.cancelar");
   const isAdmin = puedeGestionar || puedeCrearOC;
+  void isAdmin;
   void roles;
 
 
