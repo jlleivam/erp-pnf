@@ -1,22 +1,17 @@
-## Objetivo
-Unificar los permisos de orden de cambio: quien tenga **"Crear/editar orden de cambio"** también podrá enviarla a autorización. Se elimina el permiso separado `presupuestos.enviar_oc`.
+## Problema
+
+En la vista de tabla de Requisiciones (la que ve el residente en la captura), las requisiciones en estatus `borrador` abren la hoja de Cotización tanto al hacer clic en el folio como en el botón "Ver". Desde ahí no hay forma de editar ni enviar el borrador, así que el residente queda atrapado.
+
+En la vista de tarjetas sí funciona: el borrador abre `NuevaRequisicionSheet` con `borradorId` y muestra los botones "Guardar borrador" y "Enviar".
 
 ## Cambios
 
-### 1. Catálogo (`src/lib/permisos/catalogo.ts`)
-- Eliminar la entrada `presupuestos.enviar_oc`.
+Archivo: `src/components/requisiciones/RequisicionesModule.tsx` (rama `usarVistaTabla`, líneas ~139–184).
 
-### 2. Backend (`src/lib/api/presupuestos.functions.ts`)
-- En `solicitarAutorizacionPresupuesto`: cambiar el gate para adendas de `presupuestos.enviar_oc` a `presupuestos.crear_oc`.
+1. Cuando `r.estatus === "borrador"`:
+   - Clic en el folio → `abrirBorrador(r.id)` (misma función que usa la vista de tarjetas), no abrir `CotizacionSheet`.
+   - Columna "Acción" → botón "Editar" que también llama `abrirBorrador(r.id)`, más un botón de eliminar (ícono papelera) que dispara `eliminarBorrador.mutate(r.id)` con confirmación, igual que en tarjetas.
+   - Mantener el badge "Borrador" en la columna de estatus.
+2. El resto de estatus se comporta igual que hoy.
 
-### 3. UI captura (`src/components/presupuesto/CapturaPresupuestoSheet.tsx`)
-- Reemplazar `enviar_oc` por `crear_oc` en el cálculo de `puedeEnviar`.
-
-### 4. UI módulo (`src/components/presupuesto/PresupuestoModule.tsx`)
-- Actualizar el flag derivado `enviarOC` para usar `crear_oc` (reutilizando `puedeCrearOC`).
-
-### 5. Datos
-- `DELETE FROM role_permissions WHERE action_key = 'presupuestos.enviar_oc'` para limpiar overrides.
-
-## Resultado
-Un solo renglón "Crear/editar orden de cambio" concentra la capacidad de crearla, editarla y enviarla a autorización.
+No se tocan permisos, backend, ni la vista de tarjetas: la lógica de envío (`enviarBorradorRequisicion`) y los permisos (`requisiciones.crear`) ya están bien; el bug es puramente de ruteo de UI en la tabla.
