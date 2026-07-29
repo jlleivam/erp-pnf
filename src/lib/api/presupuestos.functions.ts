@@ -247,6 +247,10 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
         throw new Error("No puedes autorizar una OC que tú mismo solicitaste");
     } else {
       await requirePermission(supabase, userId, "presupuestos.autorizar_base");
+      if (pres.estatus !== "solicitada")
+        throw new Error("El presupuesto base debe haber sido enviado a autorización");
+      if (pres.enviado_por && pres.enviado_por === userId && !isDirector)
+        throw new Error("No puedes autorizar un presupuesto que tú mismo enviaste");
     }
 
 
@@ -292,23 +296,26 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePermission(supabase, userId, "presupuestos.enviar_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
       .eq("id", data.id)
       .single();
     if (!pres) throw new Error("Presupuesto no encontrado");
-    if (pres.tipo !== "adenda")
-      throw new Error("Solo las órdenes de cambio se envían a autorización");
     if (pres.estatus !== "borrador")
       throw new Error("Solo se puede solicitar desde borrador");
+
+    await requirePermission(
+      supabase,
+      userId,
+      pres.tipo === "adenda" ? "presupuestos.enviar_oc" : "presupuestos.enviar_base",
+    );
 
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
       .select("id", { count: "exact", head: true })
       .eq("presupuesto_id", data.id);
-    if (!count) throw new Error("La OC no tiene movimientos capturados");
+    if (!count) throw new Error("El presupuesto no tiene renglones capturados");
     const { error } = await supabase
       .from("obra_presupuestos")
       .update({
@@ -347,17 +354,20 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePermission(supabase, userId, "presupuestos.autorizar_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus, enviado_por")
       .eq("id", data.id)
       .single();
     if (!pres) throw new Error("Presupuesto no encontrado");
-    if (pres.tipo !== "adenda")
-      throw new Error("Solo se rechazan órdenes de cambio");
     if (pres.estatus !== "solicitada")
       throw new Error("Solo se puede rechazar una solicitud pendiente");
+
+    await requirePermission(
+      supabase,
+      userId,
+      pres.tipo === "adenda" ? "presupuestos.autorizar_oc" : "presupuestos.autorizar_base",
+    );
 
     const { error } = await supabase
       .from("obra_presupuestos")
@@ -376,7 +386,7 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
         actorUserId: userId,
         obraId: pres.obra_id,
         tipo: "oc_presupuesto_rechazada",
-        link: `/app/obras/${pres.obra_id}/presupuesto?tab=adendas&ver=${data.id}`,
+        link: `/app/obras/${pres.obra_id}/presupuesto?tab=${pres.tipo === "adenda" ? "adendas" : "base"}&ver=${data.id}`,
         motivo: data.motivo,
       });
     } catch (e: any) {
@@ -392,16 +402,20 @@ export const reabrirPresupuesto = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePermission(supabase, userId, "presupuestos.crear_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
       .eq("id", data.id)
       .single();
     if (!pres) throw new Error("Presupuesto no encontrado");
-    if (pres.tipo !== "adenda") throw new Error("Solo aplica a órdenes de cambio");
     if (pres.estatus !== "rechazada")
-      throw new Error("Solo OCs rechazadas se pueden reabrir");
+      throw new Error("Solo presupuestos rechazados se pueden reabrir");
+
+    await requirePermission(
+      supabase,
+      userId,
+      pres.tipo === "adenda" ? "presupuestos.crear_oc" : "presupuestos.crear_base",
+    );
 
     const { error } = await supabase
       .from("obra_presupuestos")

@@ -1,49 +1,56 @@
 ## Objetivo
 
-Agregar la sección **Presupuestos** al catálogo de permisos para gobernar presupuesto base y órdenes de cambio, y reemplazar los checks por rol hardcodeados en cliente y servidor.
+Cambiar el flujo del **presupuesto base** para que replique el de las órdenes de cambio:
 
-## Nuevas acciones en `src/lib/permisos/catalogo.ts`
+```text
+borrador ──▶ solicitada ──▶ autorizado
+                 └───▶ rechazada ──▶ (reabrir a borrador)
+```
 
-Módulo **Presupuestos**:
-- `presupuestos.crear_base` — Crear/editar presupuesto base (default: NONE; hoy solo Director por bypass).
-- `presupuestos.autorizar_base` — Autorizar/rechazar presupuesto base (default: NONE; hoy solo Director).
-- `presupuestos.eliminar_base` — Eliminar presupuesto base (default: NONE).
-- `presupuestos.crear_oc` — Crear orden de cambio (default: residente).
-- `presupuestos.enviar_oc` — Enviar OC a autorización (default: residente).
-- `presupuestos.autorizar_oc` — Autorizar/rechazar orden de cambio (default: supervisor).
-- `presupuestos.eliminar_oc` — Eliminar orden de cambio en borrador (default: residente).
+Hoy el base salta de `borrador` directo a `autorizado` con un solo botón "Guardar y autorizar". A partir de este cambio, quien tenga `crear_base` guarda el borrador y lo envía; quien tenga `autorizar_base` es el único que autoriza o rechaza.
 
-Director siempre bypasea (comportamiento actual del framework).
+## Cambios
 
-## Cambios en servidor — `src/lib/api/presupuestos.functions.ts`
+### 1. Catálogo de permisos — `src/lib/permisos/catalogo.ts`
+- Agregar `presupuestos.enviar_base` con label **"Enviar presupuesto base a autorización"**, defaults iguales a `enviar_oc` (residente por defecto).
 
-Sustituir los checks por rol por `requirePermission(supabase, userId, <key>)`:
+### 2. API — `src/lib/api/presupuestos.functions.ts`
+- `solicitarAutorizacionPresupuesto`:
+  - Aceptar también `tipo === "base"`.
+  - Elegir permiso según tipo: `enviar_base` para base, `enviar_oc` para adenda.
+  - Requerir renglones cargados (ya lo hace).
+- `autorizarPresupuesto` (rama base):
+  - Requerir `estatus === "solicitada"` (igual que adenda).
+  - Aplicar la regla de no auto-autorizar: si `enviado_por === userId` y no es Director, bloquear.
+- `rechazarPresupuesto`:
+  - Permitir rechazar también base; elegir permiso según tipo (`autorizar_base` / `autorizar_oc`).
+  - Notificar al remitente (`enviado_por`) con un tipo nuevo o reusando el existente (usar el mismo patrón que OC).
+- `reabrirPresupuesto`:
+  - Permitir también base; elegir permiso según tipo (`crear_base` / `crear_oc`).
 
-- `guardarPresupuesto` (base) → `presupuestos.crear_base`.
-- `guardarPresupuesto` (OC) → `presupuestos.crear_oc`.
-- `actualizarPresupuesto` → `presupuestos.crear_base` si base / `presupuestos.crear_oc` si OC.
-- `enviarPresupuesto` OC → `presupuestos.enviar_oc`.
-- `autorizarPresupuesto` base → `presupuestos.autorizar_base`.
-- `autorizarPresupuesto` OC → `presupuestos.autorizar_oc`.
-- `rechazarPresupuesto` base → `presupuestos.autorizar_base`; OC → `presupuestos.autorizar_oc`.
-- `eliminarPresupuesto` base → `presupuestos.eliminar_base`; OC → `presupuestos.eliminar_oc`.
-- Regla "quien envía no puede autorizar su propia OC" se mantiene además del permiso.
+### 3. UI de captura — `src/components/presupuesto/CapturaPresupuestoSheet.tsx`
+- Leer `data.tipo` y `data.estatus`, y `usePermisos()`.
+- Flags:
+  - `enBorrador = estatus === "borrador"`
+  - `puedeEditar = enBorrador && can(esOC ? "crear_oc" : "crear_base")`
+  - `puedeEnviar = enBorrador && can(esOC ? "enviar_oc" : "enviar_base")`
+- Eliminar el botón **"Guardar y autorizar"**.
+- Botones finales:
+  - **"Guardar borrador"** — visible solo si `puedeEditar`. Persiste renglones sin cambiar estatus.
+  - **"Guardar y enviar a autorización"** — visible solo si `puedeEditar && puedeEnviar`. Guarda renglones y llama `solicitarAutorizacionPresupuesto`.
+- Si `!enBorrador`, mostrar solo "Cerrar" (vista de solo lectura de renglones ya soportada por `yaAutorizado`).
 
-Se conserva el helper `getCompanyAndIsDirector` solo para consultas de estado, no para autorización.
+### 4. UI del módulo — `src/components/presupuesto/PresupuestoModule.tsx`
+- En `PresupuestoCard`, actualizar flags derivados:
+  - `puedeSolicitar = estatus === "borrador" && (esOC ? enviarOC : enviarBase)` (quitar la restricción `esOC &&`).
+  - `puedeAutorizar` (base) = `estatus === "solicitada" && autorizarBase && !solicitadaPorMi` — reglas iguales a OC.
+  - `puedeRechazar` (base) = `estatus === "solicitada" && autorizarBase`.
+  - `puedeReabrir` (base) = `estatus === "rechazada" && crearBase`.
+- Agregar `enviarBase` a `PresupuestoPerms` y pasarlo desde el módulo (`can("presupuestos.enviar_base")`).
+- Copy del header: reemplazar "El residente solicita y el supervisor autoriza" por texto genérico ("Envío a autorización y aprobación según permisos por rol").
 
-## Cambios en UI — `src/components/presupuesto/PresupuestoModule.tsx`
+## Notas
 
-Reemplazar `director / isResidente / isSupervisor` en la lógica de visibilidad de botones por `can(<key>)` del hook `usePermisos`:
-
-- Botón "Nueva orden de cambio" / crear base → `presupuestos.crear_base` / `presupuestos.crear_oc`.
-- Editar → `presupuestos.crear_base` / `presupuestos.crear_oc`.
-- Enviar OC → `presupuestos.enviar_oc`.
-- Autorizar/Rechazar → `presupuestos.autorizar_base` / `presupuestos.autorizar_oc`.
-- Eliminar → `presupuestos.eliminar_base` / `presupuestos.eliminar_oc`.
-
-Se mantiene el flag "no autorizar propia OC" en cliente para no mostrar el botón al propio remitente.
-
-## Fuera de alcance
-
-- No se toca RLS ni migraciones.
-- No se cambia comportamiento por defecto: los defaults reproducen el estado actual (Director-only para base; residente/supervisor para OC).
+- Migración de datos: no se requiere. Los presupuestos base ya autorizados quedan como están; los borradores existentes simplemente pasan por el nuevo paso al enviarse.
+- Backend ya valida con `requirePermission`; los cambios UI se alinean para no mostrar acciones no permitidas.
+- Director conserva bypass total vía `usePermisos.can()` y las validaciones backend.

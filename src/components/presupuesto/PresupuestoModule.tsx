@@ -148,7 +148,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   const solicitarM = useMutation({
     mutationFn: solicitar,
     onSuccess: () => {
-      toast.success("Solicitud enviada al supervisor");
+      toast.success("Solicitud enviada a autorización");
       qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -158,7 +158,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   const autorizarM = useMutation({
     mutationFn: autorizar,
     onSuccess: () => {
-      toast.success("Orden de cambio autorizada");
+      toast.success("Presupuesto autorizado");
       qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
       qc.invalidateQueries({ queryKey: ["presupuesto-vigente", obraId] });
     },
@@ -169,7 +169,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   const reabrirM = useMutation({
     mutationFn: reabrir,
     onSuccess: () => {
-      toast.success("OC reabierta a borrador");
+      toast.success("Presupuesto reabierto a borrador");
       qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -191,6 +191,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
     crearOC: puedeCrearOC,
     autorizarBase: can("presupuestos.autorizar_base"),
     autorizarOC: can("presupuestos.autorizar_oc"),
+    enviarBase: can("presupuestos.enviar_base"),
     enviarOC: can("presupuestos.enviar_oc"),
     eliminarBase: can("presupuestos.eliminar_base"),
     eliminarOC: can("presupuestos.eliminar_oc"),
@@ -206,7 +207,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Presupuesto</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Presupuesto base + órdenes de cambio. El residente solicita y el supervisor autoriza.
+            Presupuesto base + órdenes de cambio. Envío a autorización y aprobación según permisos por rol.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -398,6 +399,7 @@ type PresupuestoPerms = {
   crearOC: boolean;
   autorizarBase: boolean;
   autorizarOC: boolean;
+  enviarBase: boolean;
   enviarOC: boolean;
   eliminarBase: boolean;
   eliminarOC: boolean;
@@ -436,14 +438,18 @@ function PresupuestoCard({
   const puedeEliminar =
     (p.estatus === "borrador" || p.estatus === "rechazada") &&
     (esOC ? perms.eliminarOC : perms.eliminarBase);
-  const puedeSolicitar = esOC && p.estatus === "borrador" && perms.enviarOC;
-  // No se puede autorizar una OC que uno mismo solicitó (regla de negocio)
+  const puedeSolicitar =
+    p.estatus === "borrador" && (esOC ? perms.enviarOC : perms.enviarBase);
+  // No se puede autorizar un presupuesto que uno mismo solicitó (regla de negocio)
   const solicitadaPorMi = !!perms.userId && p.enviado_por === perms.userId;
-  const puedeAutorizar = esOC
-    ? p.estatus === "solicitada" && perms.autorizarOC && !solicitadaPorMi
-    : p.estatus === "borrador" && perms.autorizarBase;
-  const puedeRechazar = esOC && p.estatus === "solicitada" && perms.autorizarOC;
-  const puedeReabrir = esOC && p.estatus === "rechazada" && perms.crearOC;
+  const puedeAutorizar =
+    p.estatus === "solicitada" &&
+    (esOC ? perms.autorizarOC : perms.autorizarBase) &&
+    !solicitadaPorMi;
+  const puedeRechazar =
+    p.estatus === "solicitada" && (esOC ? perms.autorizarOC : perms.autorizarBase);
+  const puedeReabrir =
+    p.estatus === "rechazada" && (esOC ? perms.crearOC : perms.crearBase);
 
 
   return (

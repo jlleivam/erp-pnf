@@ -4,11 +4,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   getPresupuesto,
   guardarRenglones,
-  autorizarPresupuesto,
+  solicitarAutorizacionPresupuesto,
   parsearExcelPresupuesto,
   parsearPdfPresupuesto,
   descargarPlantillaPresupuesto,
 } from "@/lib/api/presupuestos.functions";
+import { usePermisos } from "@/hooks/usePermisos";
 import {
   procesarRenglones,
   calcularClavesPadre,
@@ -147,17 +148,17 @@ export function CapturaPresupuestoSheet({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const autorizar = useServerFn(autorizarPresupuesto);
-  const autorizarM = useMutation({
-    mutationFn: autorizar,
+  const solicitar = useServerFn(solicitarAutorizacionPresupuesto);
+  const solicitarM = useMutation({
+    mutationFn: solicitar,
     onSuccess: () => {
-      toast.success("Presupuesto autorizado");
+      toast.success("Presupuesto enviado a autorización");
       onSaved();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleGuardar = (autorizarDespues: boolean) => {
+  const handleGuardar = (enviarDespues: boolean) => {
     if (calc.errores.length > 0) {
       toast.error("Corrige los errores antes de guardar");
       return;
@@ -175,8 +176,8 @@ export function CapturaPresupuestoSheet({
       { data: { presupuestoId, renglones: payload } },
       {
         onSuccess: () => {
-          if (autorizarDespues) {
-            autorizarM.mutate({ data: { id: presupuestoId } });
+          if (enviarDespues) {
+            solicitarM.mutate({ data: { id: presupuestoId } });
           }
         },
       },
@@ -273,6 +274,11 @@ export function CapturaPresupuestoSheet({
 
 
   const presupuesto = data?.presupuesto;
+  const esOC = presupuesto?.tipo === "adenda";
+  const enBorrador = presupuesto?.estatus === "borrador";
+  const { can } = usePermisos();
+  const puedeEditar = enBorrador && can(esOC ? "presupuestos.crear_oc" : "presupuestos.crear_base");
+  const puedeEnviar = enBorrador && can(esOC ? "presupuestos.enviar_oc" : "presupuestos.enviar_base");
   const yaAutorizado = presupuesto?.estatus === "autorizado";
 
   return (
@@ -494,22 +500,26 @@ export function CapturaPresupuestoSheet({
 
             <div className="flex items-center justify-end gap-2 shrink-0 border-t bg-background px-6 py-3">
               <Button variant="outline" onClick={onClose} disabled={importing}>Cerrar</Button>
-              <Button
-                disabled={importing || guardarM.isPending || calc.errores.length > 0 || yaAutorizado}
-                onClick={() => handleGuardar(false)}
-              >
-                {guardarM.isPending ? "Guardando…" : "Guardar borrador"}
-              </Button>
-              <Button
-                disabled={
-                  importing || guardarM.isPending || autorizarM.isPending ||
-                  calc.errores.length > 0 || yaAutorizado ||
-                  calc.renglones.length === 0
-                }
-                onClick={() => handleGuardar(true)}
-              >
-                Guardar y autorizar
-              </Button>
+              {puedeEditar && (
+                <Button
+                  variant="outline"
+                  disabled={importing || guardarM.isPending || calc.errores.length > 0}
+                  onClick={() => handleGuardar(false)}
+                >
+                  {guardarM.isPending && !solicitarM.isPending ? "Guardando…" : "Guardar borrador"}
+                </Button>
+              )}
+              {puedeEditar && puedeEnviar && (
+                <Button
+                  disabled={
+                    importing || guardarM.isPending || solicitarM.isPending ||
+                    calc.errores.length > 0 || calc.renglones.length === 0
+                  }
+                  onClick={() => handleGuardar(true)}
+                >
+                  {solicitarM.isPending ? "Enviando…" : "Guardar y enviar a autorización"}
+                </Button>
+              )}
             </div>
           </div>
         )}
