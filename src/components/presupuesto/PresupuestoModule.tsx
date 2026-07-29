@@ -158,7 +158,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   const autorizarM = useMutation({
     mutationFn: autorizar,
     onSuccess: () => {
-      toast.success("Orden de cambio autorizada");
+      toast.success("Presupuesto autorizado");
       qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
       qc.invalidateQueries({ queryKey: ["presupuesto-vigente", obraId] });
     },
