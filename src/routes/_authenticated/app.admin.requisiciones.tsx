@@ -33,7 +33,7 @@ function AdminRequisicionesPage() {
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [obraFilter, setObraFilter] = useState<string>("todas");
   const abrirVisor = (id: string) => setCotizacion({ id, tab: "requisicion", readOnly: true });
-  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab; readOnly?: boolean } | null>(null);
 
   const fetchList = useServerFn(listRequisicionesAsignadas);
   const fetchOne = useServerFn(getRequisicion);
