@@ -222,6 +222,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 proveedores={proveedores}
                 solicitudes={solsQ.data ?? []}
                 bloqueadoPorOC={ocs.some((o: any) => o.estatus !== "rechazada")}
+                readOnly={readOnly}
               />
             </TabsContent>
 
@@ -237,6 +238,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 ocs={ocs}
                 requisicionId={requisicionId}
                 roles={roles}
+                readOnly={readOnly}
               />
             </TabsContent>
 
