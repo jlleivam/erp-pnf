@@ -215,7 +215,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
               <Eye className="size-4 mr-1" /> Ver vigente
             </Button>
           )}
-          {director && !base && (
+          {puedeCrearBase && !base && (
             <Button onClick={() => setCreating("base")}>
               <Plus className="size-4 mr-1" /> Crear presupuesto base
             </Button>
