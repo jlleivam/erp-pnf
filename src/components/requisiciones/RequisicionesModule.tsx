@@ -374,17 +374,11 @@ export function RequisicionesModule({ obraId }: Props) {
           borradorId={borradorEnEdicion}
         />
       )}
-      {detalleId && (
-        <RequisicionDetalleSheet
-          id={detalleId}
-          open={!!detalleId}
-          onOpenChange={(o) => !o && setCotizacion(null)}
-        />
-      )}
       {cotizacion && (
         <CotizacionSheet
           requisicionId={cotizacion.id}
           initialTab={cotizacion.tab}
+          readOnly={cotizacion.readOnly}
           open={!!cotizacion}
           onOpenChange={(o) => !o && setCotizacion(null)}
         />
