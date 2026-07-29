@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, FileText, ShieldCheck, ChevronRight, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
