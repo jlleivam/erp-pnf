@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { listRequisicionesAsignadas, getRequisicion } from "@/lib/api/requisiciones.functions";
-import { RequisicionDetalleSheet } from "@/components/requisiciones/RequisicionDetalleSheet";
 import { CotizacionSheet, type CotizacionTab } from "@/components/requisiciones/CotizacionSheet";
 import { ESTATUS_META, type RequisicionEstatus } from "@/components/requisiciones/constants";
 import { formatDate } from "@/lib/format";
@@ -33,8 +32,8 @@ function AdminRequisicionesPage() {
 
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [obraFilter, setObraFilter] = useState<string>("todas");
-  const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+  const abrirVisor = (id: string) => setCotizacion({ id, tab: "requisicion", readOnly: true });
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab; readOnly?: boolean } | null>(null);
 
   const fetchList = useServerFn(listRequisicionesAsignadas);
   const fetchOne = useServerFn(getRequisicion);
@@ -107,7 +106,7 @@ function AdminRequisicionesPage() {
             rows={filtered}
             loading={loading}
             emptyText="Sin requisiciones activas en tus obras."
-            onRowClick={setDetalleId}
+            onRowClick={abrirVisor}
             onAction={(r, t) => setCotizacion({ id: r.id, tab: t })}
             fetchDetalle={fetchOne}
           />
@@ -118,24 +117,18 @@ function AdminRequisicionesPage() {
             rows={filtered}
             loading={loading}
             emptyText="Sin historial de requisiciones."
-            onRowClick={setDetalleId}
+            onRowClick={abrirVisor}
             onAction={(r, t) => setCotizacion({ id: r.id, tab: t })}
             fetchDetalle={fetchOne}
           />
         </TabsContent>
       </Tabs>
 
-      {detalleId && (
-        <RequisicionDetalleSheet
-          id={detalleId}
-          open={!!detalleId}
-          onOpenChange={(o) => !o && setDetalleId(null)}
-        />
-      )}
       {cotizacion && (
         <CotizacionSheet
           requisicionId={cotizacion.id}
           initialTab={cotizacion.tab}
+          readOnly={cotizacion.readOnly}
           open={!!cotizacion}
           onOpenChange={(o) => !o && setCotizacion(null)}
         />

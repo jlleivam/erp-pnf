@@ -31,6 +31,7 @@ interface Props {
   ocs: any[];
   requisicionId: string;
   roles: AppRole[];
+  readOnly?: boolean;
 }
 
 const mxn = (n: number) =>
@@ -52,7 +53,7 @@ const OC_BADGE: Record<string, { label: string; className: string }> = {
 
 
 export function ComparativaTable({
-  reqItems, solicitudes, paquetes, ocs, requisicionId, roles,
+  reqItems, solicitudes, paquetes, ocs, requisicionId, roles, readOnly = false,
 }: Props) {
   const qc = useQueryClient();
   const guardarFn = useServerFn(guardarPaquete);
@@ -64,10 +65,10 @@ export function ComparativaTable({
   const eliminarFn = useServerFn(eliminarPaquete);
 
   const { can } = usePermisos();
-  const puedeGestionar = can("cotizaciones.gestionar");
-  const puedeCrearOC = can("oc.crear");
-  const puedeAutorizar = can("oc.autorizar");
-  const puedeRechazar = can("oc.cancelar");
+  const puedeGestionar = !readOnly && can("cotizaciones.gestionar");
+  const puedeCrearOC = !readOnly && can("oc.crear");
+  const puedeAutorizar = !readOnly && can("oc.autorizar");
+  const puedeRechazar = !readOnly && can("oc.cancelar");
   const puedeRevisarOC = puedeAutorizar || puedeRechazar;
   // isAdmin controla edición de asignaciones (paquetes) → gestionar cotizaciones
   const isAdmin = puedeGestionar;

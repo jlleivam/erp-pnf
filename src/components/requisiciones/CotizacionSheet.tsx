@@ -35,6 +35,7 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initialTab?: CotizacionTab;
+  readOnly?: boolean;
 }
 
 const OC_BADGE: Record<string, { label: string; className: string }> = {
@@ -63,7 +64,7 @@ const REQ_BADGE: Record<string, { label: string; className: string }> = {
 
 const mxn = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "requisicion" }: Props) {
+export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "requisicion", readOnly = false }: Props) {
   const qc = useQueryClient();
   const fetchCot = useServerFn(getCotizacionRequisicion);
   const fetchProv = useServerFn(listProveedores);
@@ -117,10 +118,11 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
   });
 
   const { can } = usePermisos();
-  const puedeGestionar = can("cotizaciones.gestionar");
-  const puedeCrearOC = can("oc.crear");
-  const puedeCancelarOC = can("oc.cancelar");
+  const puedeGestionar = !readOnly && can("cotizaciones.gestionar");
+  const puedeCrearOC = !readOnly && can("oc.crear");
+  const puedeCancelarOC = !readOnly && can("oc.cancelar");
   const isAdmin = puedeGestionar || puedeCrearOC;
+  void isAdmin;
   void roles;
 
 
@@ -220,6 +222,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 proveedores={proveedores}
                 solicitudes={solsQ.data ?? []}
                 bloqueadoPorOC={ocs.some((o: any) => o.estatus !== "rechazada")}
+                readOnly={readOnly}
               />
             </TabsContent>
 
@@ -235,6 +238,7 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 ocs={ocs}
                 requisicionId={requisicionId}
                 roles={roles}
+                readOnly={readOnly}
               />
             </TabsContent>
 

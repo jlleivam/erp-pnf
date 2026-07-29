@@ -41,12 +41,13 @@ interface Props {
   proveedores: any[];
   solicitudes: any[];
   bloqueadoPorOC?: boolean;
+  readOnly?: boolean;
 }
 
-export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes, bloqueadoPorOC = false }: Props) {
+export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes, bloqueadoPorOC = false, readOnly = false }: Props) {
   const qc = useQueryClient();
   const { can } = usePermisos();
-  const puedeGestionar = can("cotizaciones.gestionar");
+  const puedeGestionar = !readOnly && can("cotizaciones.gestionar");
   const eliminarFn = useServerFn(eliminarSolicitud);
   const enviarFn = useServerFn(marcarSCEnviada);
   const descartarFn = useServerFn(descartarSolicitud);

@@ -16,7 +16,6 @@ import {
 } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
-import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
 import { CotizacionSheet, type CotizacionTab } from "./CotizacionSheet";
 import { useEffectiveRoles } from "@/stores/auth";
 import { usePermisos } from "@/hooks/usePermisos";
@@ -40,8 +39,8 @@ export function RequisicionesModule({ obraId }: Props) {
   const [tab, setTab] = useState<"activas" | "historial">("activas");
   const [openNueva, setOpenNueva] = useState(false);
   const [borradorEnEdicion, setBorradorEnEdicion] = useState<string | null>(null);
-  const [detalleId, setDetalleId] = useState<string | null>(null);
-  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab } | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; tab: CotizacionTab; readOnly?: boolean } | null>(null);
+  const abrirVisor = (id: string) => setCotizacion({ id, tab: "requisicion", readOnly: true });
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
   const eliminarBorradorFn = useServerFn(eliminarBorradorRequisicion);
@@ -151,7 +150,7 @@ export function RequisicionesModule({ obraId }: Props) {
                     const esBorrador = estatus === "borrador";
                     return (
                       <TableRow key={r.id} className="hover:bg-muted/50 h-9">
-                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => esBorrador ? abrirBorrador(r.id) : (puedeCotizar ? setCotizacion({ id: r.id, tab: "requisicion" }) : setDetalleId(r.id))}>
+                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => esBorrador ? abrirBorrador(r.id) : (puedeCotizar ? setCotizacion({ id: r.id, tab: "requisicion" }) : abrirVisor(r.id))}>
                           {r.folio}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
@@ -195,7 +194,7 @@ export function RequisicionesModule({ obraId }: Props) {
                           ) : ["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && puedeVerOC ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
                           ) : (
-                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setDetalleId(r.id)}>Ver</Button>
+                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => abrirVisor(r.id)}>Ver</Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -216,7 +215,7 @@ export function RequisicionesModule({ obraId }: Props) {
               <Card
                 key={r.id}
                 className={`p-3 cursor-pointer hover:border-primary/40 transition-colors ${esBorrador ? "border-dashed" : ""}`}
-                onClick={() => (esBorrador ? abrirBorrador(r.id) : setDetalleId(r.id))}
+                onClick={() => (esBorrador ? abrirBorrador(r.id) : abrirVisor(r.id))}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -285,7 +284,7 @@ export function RequisicionesModule({ obraId }: Props) {
                         <span
                           key={it.id}
                           className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-muted text-foreground cursor-pointer"
-                          onClick={() => setDetalleId(r.id)}
+                          onClick={() => abrirVisor(r.id)}
                         >
                           <strong>{Number(it.cantidad)}</strong> {it.insumo?.unidad}
                           <span className="text-muted-foreground">·</span>
@@ -350,7 +349,7 @@ export function RequisicionesModule({ obraId }: Props) {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => puedeVerOC ? setCotizacion({ id: r.id, tab: "ocs" }) : setDetalleId(r.id)}
+                          onClick={() => puedeVerOC ? setCotizacion({ id: r.id, tab: "ocs" }) : abrirVisor(r.id)}
                         >
                           <Eye className="size-4" />
                         </Button>
@@ -375,17 +374,11 @@ export function RequisicionesModule({ obraId }: Props) {
           borradorId={borradorEnEdicion}
         />
       )}
-      {detalleId && (
-        <RequisicionDetalleSheet
-          id={detalleId}
-          open={!!detalleId}
-          onOpenChange={(o) => !o && setDetalleId(null)}
-        />
-      )}
       {cotizacion && (
         <CotizacionSheet
           requisicionId={cotizacion.id}
           initialTab={cotizacion.tab}
+          readOnly={cotizacion.readOnly}
           open={!!cotizacion}
           onOpenChange={(o) => !o && setCotizacion(null)}
         />
