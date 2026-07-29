@@ -23,6 +23,15 @@ export const CATALOGO_ACCIONES: AccionCatalogo[] = [
   { key: "obras.editar", modulo: "Obras", label: "Editar obra", defaults: A },
   { key: "obras.eliminar", modulo: "Obras", label: "Eliminar obra", defaults: NONE },
   { key: "obras.asignar_team", modulo: "Obras", label: "Asignar equipo a obra", defaults: A },
+  // Presupuestos
+  { key: "presupuestos.crear_base", modulo: "Presupuestos", label: "Crear/editar presupuesto base", defaults: NONE },
+  { key: "presupuestos.autorizar_base", modulo: "Presupuestos", label: "Autorizar/rechazar presupuesto base", defaults: NONE },
+  { key: "presupuestos.eliminar_base", modulo: "Presupuestos", label: "Eliminar presupuesto base", defaults: NONE },
+  { key: "presupuestos.crear_oc", modulo: "Presupuestos", label: "Crear/editar orden de cambio", defaults: T },
+  { key: "presupuestos.enviar_oc", modulo: "Presupuestos", label: "Enviar orden de cambio a autorización", defaults: T },
+  { key: "presupuestos.autorizar_oc", modulo: "Presupuestos", label: "Autorizar/rechazar orden de cambio", defaults: S },
+  { key: "presupuestos.eliminar_oc", modulo: "Presupuestos", label: "Eliminar orden de cambio", defaults: T },
+
 
   // Requisiciones
   { key: "requisiciones.crear", modulo: "Requisiciones", label: "Crear requisición", defaults: { ...T, supervisor: true } },
