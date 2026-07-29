@@ -1,32 +1,15 @@
-## Objetivo
+**Diagnóstico confirmado**
+- La requisición **REQ-2026-001** sigue en `oc_generada`.
+- Sus dos OCs (**OC-2026-001** y **OC-2026-002**) están `recibida` y con `estado_pago = pagado`.
+- La función de base de datos que debe cerrarla tiene un typo: compara `estado_pago <> 'pagada'`, pero el valor real del campo es **`pagado`**. Por eso el trigger no la cerró automáticamente.
 
-Eliminar la pantalla actual de "detalle simple" (imagen 1) y hacer que al abrir cualquier requisición se muestre siempre `CotizacionSheet` (imagen 2), con sus 5 pestañas (Requisición, Cotizaciones, Comparativa, OCs, Recepciones). Si el usuario no tiene permisos para actuar, el sheet se abre en modo **solo lectura**: se ven los datos y pestañas, pero sin botones de acción.
+**Plan**
+1. Crear una migración que corrija `public.recompute_requisicion_estatus` para usar `estado_pago = 'pagado'`.
+2. Mantener el trigger actual sobre `ordenes_compra`, pero con la función corregida.
+3. Ejecutar un backfill dentro de la migración para recalcular requisiciones activas existentes, incluyendo **REQ-2026-001**, y cerrarlas si todas sus OCs están recibidas y pagadas.
+4. Revisar si hay lógica duplicada en código (`recalcEstatusRequisicion`) que cierre requisiciones solo por recepción sin pago, y alinearla para que el criterio sea consistente: **cerrar solo cuando todas las OCs no rechazadas estén recibidas/pagadas y pagadas**.
+5. Verificar con una consulta que **REQ-2026-001** quede en `completada` y ya no aparezca en Activas.
 
-## Cambios
-
-### 1. `src/components/requisiciones/CotizacionSheet.tsx`
-- Agregar prop `readOnly?: boolean`.
-- Cuando `readOnly` sea `true`, ocultar todos los botones y controles de acción del sheet y sus subcomponentes:
-  - Botón "Enviar solicitud a proveedores", "Nueva cotización", "Editar respuesta", "Descartar" (tab Cotizaciones/Solicitudes).
-  - Botón "Generar OC" y controles de la Comparativa.
-  - Botones "Autorizar/Rechazar OC", "Cancelar OC", "Registrar pago" (tab OCs / `OCPagosPanel`).
-  - Cualquier input editable de la comparativa (dejarlo como lectura).
-- Propagar `readOnly` a `SolicitudesTab`, `ComparativaTable`, `OCPagosPanel` y `RecepcionesTab` (esta última ya es solo lectura).
-- Los permisos siguen aplicando además de `readOnly` (defensa en profundidad); `readOnly` fuerza el mínimo.
-
-### 2. `src/components/requisiciones/RequisicionesModule.tsx`
-- Reemplazar todos los puntos donde hoy se abre `RequisicionDetalleSheet` (fallback "Ver" cuando el usuario no tiene permisos) por `CotizacionSheet` con `readOnly`.
-- Unificar el estado: eliminar `detalleId` y usar solo `cotizacion = { id, tab, readOnly }`.
-- La lógica de decisión al hacer click en el folio/botón "Ver":
-  - Si el usuario tiene `cotizaciones.gestionar` → abrir en tab "solicitudes", editable.
-  - Si tiene `oc.crear` / `oc.autorizar` / `oc.cancelar` / `requisiciones.ver_oc` → abrir en tab "ocs", editable (los botones se ocultan según cada permiso puntual como hoy).
-  - En cualquier otro caso → abrir `CotizacionSheet` con `readOnly={true}` en tab "requisicion".
-- Borrar la importación y uso de `RequisicionDetalleSheet`.
-
-### 3. `src/components/requisiciones/RequisicionDetalleSheet.tsx`
-- Eliminar el archivo (ya no se usa).
-
-## Notas técnicas
-- Los permisos existentes (`can("cotizaciones.gestionar")`, `can("oc.*")`, etc.) siguen siendo la fuente de verdad para mostrar cada botón. `readOnly` es un "gran interruptor" adicional que apaga todo.
-- No se cambia backend ni permisos; es un ajuste puramente de UI.
-- Las tabs de Recepciones y Requisición ya son informativas — se ven igual en ambos modos.
+**Resultado esperado**
+- REQ-2026-001 se cerrará automáticamente.
+- Las próximas requisiciones se cerrarán solas cuando todo el material esté recibido y todas las OCs estén pagadas.
