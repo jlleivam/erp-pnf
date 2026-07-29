@@ -421,6 +421,10 @@ export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab 
                 );
               })}
             </TabsContent>
+
+            <TabsContent value="recepciones" className="mt-4">
+              <RecepcionesTab requisicionId={requisicionId} />
+            </TabsContent>
           </Tabs>
         )}
       </SheetContent>
