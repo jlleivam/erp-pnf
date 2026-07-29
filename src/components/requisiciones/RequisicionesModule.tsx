@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Eye, Plus, FileText, ShieldCheck, ChevronRight, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, FileText, ShieldCheck, ChevronRight, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -133,7 +133,6 @@ export function RequisicionesModule({ obraId }: Props) {
                     <TableHead className="hidden md:table-cell text-right py-1 text-xs"># insumos</TableHead>
                     <TableHead className="py-1 text-xs">Fecha más próxima</TableHead>
                     <TableHead className="py-1 text-xs">Estatus</TableHead>
-                    <TableHead className="text-right py-1 text-xs">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -148,10 +147,18 @@ export function RequisicionesModule({ obraId }: Props) {
                     const urgent = minF !== null && Math.ceil((minF - Date.now()) / 86400000) <= 3;
                     const estatus = r.estatus as RequisicionEstatus;
                     const esBorrador = estatus === "borrador";
+                    const handleRowClick = () => {
+                      if (esBorrador) return abrirBorrador(r.id);
+                      if ((estatus === "enviada" || estatus === "en_cotizacion") && puedeCotizar) {
+                        return setCotizacion({ id: r.id, tab: "requisicion" });
+                      }
+                      if (puedeVerOC) return setCotizacion({ id: r.id, tab: "ocs" });
+                      return abrirVisor(r.id);
+                    };
                     return (
-                      <TableRow key={r.id} className="hover:bg-muted/50 h-9">
-                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => esBorrador ? abrirBorrador(r.id) : (puedeCotizar ? setCotizacion({ id: r.id, tab: "requisicion" }) : abrirVisor(r.id))}>
-                          {r.folio}
+                      <TableRow key={r.id} className="hover:bg-muted/50 h-9 cursor-pointer" onClick={handleRowClick}>
+                        <TableCell className="py-1 font-medium text-sm whitespace-nowrap">
+                          {esBorrador ? "Borrador" : r.folio}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
                           {r.solicitante?.nombre_completo ?? "—"}
@@ -168,34 +175,21 @@ export function RequisicionesModule({ obraId }: Props) {
                           )}
                         </TableCell>
                         <TableCell className="py-1">
-                          <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0 h-5`}>{meta.label}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right py-1">
-                          {esBorrador ? (
-                            <div className="inline-flex items-center gap-1">
-                              <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => abrirBorrador(r.id)}>
-                                <Pencil className="size-3 mr-1" />Editar
-                              </Button>
+                          <div className="flex items-center justify-between gap-2">
+                            <Badge className={`${meta.badge} border-0 text-[10px] px-2 py-0 h-5`}>{meta.label}</Badge>
+                            {esBorrador && (
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 className="h-6 w-6 p-0 text-destructive"
                                 disabled={eliminarBorrador.isPending}
-                                onClick={() => { if (confirm("¿Eliminar este borrador?")) eliminarBorrador.mutate(r.id); }}
+                                onClick={(e) => { e.stopPropagation(); if (confirm("¿Eliminar este borrador?")) eliminarBorrador.mutate(r.id); }}
                                 aria-label="Eliminar borrador"
                               >
                                 <Trash2 className="size-3" />
                               </Button>
-                            </div>
-                          ) : estatus === "enviada" && puedeCotizar ? (
-                            <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
-                          ) : estatus === "en_cotizacion" && puedeCotizar ? (
-                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
-                          ) : ["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && puedeVerOC ? (
-                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
-                          ) : (
-                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => abrirVisor(r.id)}>Ver</Button>
-                          )}
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -204,6 +198,7 @@ export function RequisicionesModule({ obraId }: Props) {
               </Table>
             </Card>
           )}
+
 
           {!usarVistaTabla && activas.map((r: any) => {
             const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
@@ -319,44 +314,35 @@ export function RequisicionesModule({ obraId }: Props) {
                   <TableHead>Fecha</TableHead>
                   <TableHead className="text-center"># insumos</TableHead>
                   <TableHead>Estatus</TableHead>
-                  <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historial.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Sin requisiciones
                     </TableCell>
                   </TableRow>
                 )}
                 {historial.map((r: any) => {
                   const meta = ESTATUS_META[r.estatus as RequisicionEstatus];
+                  const handleRowClick = () => {
+                    if (puedeVerOC) return setCotizacion({ id: r.id, tab: "ocs" });
+                    if (puedeCotizar) return setCotizacion({ id: r.id, tab: "requisicion" });
+                    return abrirVisor(r.id);
+                  };
                   return (
-                    <TableRow key={r.id}>
-                      <TableCell
-                        className={`font-medium ${puedeCotizar ? "cursor-pointer" : ""}`}
-                        onClick={puedeCotizar ? () => setCotizacion({ id: r.id, tab: "requisicion" }) : undefined}
-                      >
-                        {r.folio}
-                      </TableCell>
+                    <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={handleRowClick}>
+                      <TableCell className="font-medium">{r.folio}</TableCell>
                       <TableCell>{formatDate(r.created_at)}</TableCell>
                       <TableCell className="text-center">{r.items?.length ?? 0}</TableCell>
                       <TableCell>
                         <Badge className={`${meta.badge} border-0`}>{meta.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => puedeVerOC ? setCotizacion({ id: r.id, tab: "ocs" }) : abrirVisor(r.id)}
-                        >
-                          <Eye className="size-4" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   );
                 })}
+
               </TableBody>
             </Table>
           </Card>

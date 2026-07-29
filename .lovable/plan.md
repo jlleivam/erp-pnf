@@ -1,15 +1,27 @@
-**Diagnóstico confirmado**
-- La requisición **REQ-2026-001** sigue en `oc_generada`.
-- Sus dos OCs (**OC-2026-001** y **OC-2026-002**) están `recibida` y con `estado_pago = pagado`.
-- La función de base de datos que debe cerrarla tiene un typo: compara `estado_pago <> 'pagada'`, pero el valor real del campo es **`pagado`**. Por eso el trigger no la cerró automáticamente.
+## Cambio
 
-**Plan**
-1. Crear una migración que corrija `public.recompute_requisicion_estatus` para usar `estado_pago = 'pagado'`.
-2. Mantener el trigger actual sobre `ordenes_compra`, pero con la función corregida.
-3. Ejecutar un backfill dentro de la migración para recalcular requisiciones activas existentes, incluyendo **REQ-2026-001**, y cerrarlas si todas sus OCs están recibidas y pagadas.
-4. Revisar si hay lógica duplicada en código (`recalcEstatusRequisicion`) que cierre requisiciones solo por recepción sin pago, y alinearla para que el criterio sea consistente: **cerrar solo cuando todas las OCs no rechazadas estén recibidas/pagadas y pagadas**.
-5. Verificar con una consulta que **REQ-2026-001** quede en `completada` y ya no aparezca en Activas.
+En `src/components/requisiciones/RequisicionesModule.tsx`, quitar la columna "Acción" de las tablas de requisiciones (vista desktop, pestañas "Activas" e "Historial"/otras) y hacer que toda la fila sea clicable, reemplazando los botones (`Cotizar`, `Continuar`, `Ver OCs`, `Ver`, `Editar borrador`) con un único destino determinado por el estado y los permisos del usuario.
 
-**Resultado esperado**
-- REQ-2026-001 se cerrará automáticamente.
-- Las próximas requisiciones se cerrarán solas cuando todo el material esté recibido y todas las OCs estén pagadas.
+## Reglas de destino al hacer click en la fila
+
+Se conserva exactamente la misma lógica de routing que hoy tienen los botones:
+
+- Si es **borrador** → abrir editor de borrador (`abrirBorrador`).
+- Si estatus = `enviada` y tiene `cotizaciones.gestionar` → abrir cotización, tab `requisicion`.
+- Si estatus = `en_cotizacion` y tiene `cotizaciones.gestionar` → abrir cotización, tab `requisicion` (Continuar).
+- Si tiene `requisiciones.ver_oc` → abrir cotización, tab `ocs`.
+- En cualquier otro caso → abrir visor de solo lectura (`abrirVisor`).
+
+Esta es la misma cascada que ya existe hoy, sólo unificada en un handler de fila.
+
+## Detalles UI
+
+- Eliminar `<TableHead>Acción</TableHead>` y su `<TableCell>` correspondiente en las dos tablas afectadas.
+- Añadir `onClick` y `cursor-pointer` a `<TableRow>`; quitar los `onClick` individuales del folio.
+- Para borradores, mantener la acción destructiva "Eliminar borrador" como un pequeño ícono al final del renglón (dentro de la última celda visible), con `e.stopPropagation()` para no disparar el click de la fila. Sin esto se pierde la única forma de borrar un borrador desde la lista.
+- No se toca la vista mobile (cards) ni ninguna otra pantalla.
+
+## Fuera de alcance
+
+- No se cambian permisos, APIs ni lógica de negocio.
+- No se modifica la tabla de "Recepciones" ni otras pestañas fuera de las dos listas de requisiciones.
