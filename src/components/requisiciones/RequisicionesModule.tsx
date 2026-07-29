@@ -31,7 +31,9 @@ export function RequisicionesModule({ obraId }: Props) {
   const { can } = usePermisos();
   const puedeCrear = can("requisiciones.crear");
   const puedeRevisar = can("requisiciones.aprobar") || can("requisiciones.rechazar");
-  const puedeGestionar = can("cotizaciones.gestionar") || can("oc.crear");
+  const puedeCotizar = can("cotizaciones.gestionar");
+  const puedeCrearOC = can("oc.crear");
+  const puedeGestionar = puedeCotizar || puedeCrearOC;
   const puedeVerOC = can("requisiciones.ver_oc") || can("oc.autorizar") || can("oc.cancelar");
   const usarVistaTabla = puedeGestionar || puedeVerOC;
 
