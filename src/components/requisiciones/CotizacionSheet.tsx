@@ -24,10 +24,11 @@ import { RecepcionDialog } from "@/components/almacen/RecepcionDialog";
 import { getSolicitudesRequisicion } from "@/lib/api/solicitudes-cotizacion.functions";
 import { SolicitudesTab } from "./SolicitudesTab";
 import { ComparativaTable } from "./ComparativaTable";
+import { RecepcionesTab } from "./RecepcionesTab";
 import { useEffectiveRoles } from "@/stores/auth";
 import { usePermisos } from "@/hooks/usePermisos";
 
-export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs";
+export type CotizacionTab = "requisicion" | "solicitudes" | "comparativa" | "ocs" | "recepciones";
 
 interface Props {
   requisicionId: string;
