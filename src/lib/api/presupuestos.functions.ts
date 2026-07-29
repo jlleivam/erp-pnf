@@ -296,23 +296,26 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePermission(supabase, userId, "presupuestos.enviar_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
       .eq("id", data.id)
       .single();
     if (!pres) throw new Error("Presupuesto no encontrado");
-    if (pres.tipo !== "adenda")
-      throw new Error("Solo las órdenes de cambio se envían a autorización");
     if (pres.estatus !== "borrador")
       throw new Error("Solo se puede solicitar desde borrador");
+
+    await requirePermission(
+      supabase,
+      userId,
+      pres.tipo === "adenda" ? "presupuestos.enviar_oc" : "presupuestos.enviar_base",
+    );
 
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
       .select("id", { count: "exact", head: true })
       .eq("presupuesto_id", data.id);
-    if (!count) throw new Error("La OC no tiene movimientos capturados");
+    if (!count) throw new Error("El presupuesto no tiene renglones capturados");
     const { error } = await supabase
       .from("obra_presupuestos")
       .update({
