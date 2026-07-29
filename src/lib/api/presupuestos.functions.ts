@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission } from "@/lib/permisos/require";
 import { notifySupervisoresOC, notifyResidenteOC } from "./_oc-notify.server";
+
 import {
   procesarRenglones,
   procesarOrdenCambio,
