@@ -1,54 +1,32 @@
-# Nueva pestaña "Recepciones" en la requisición + cierre correcto
+## Objetivo
 
-## 1. Nueva pestaña "Recepciones" en `CotizacionSheet`
+Eliminar la pantalla actual de "detalle simple" (imagen 1) y hacer que al abrir cualquier requisición se muestre siempre `CotizacionSheet` (imagen 2), con sus 5 pestañas (Requisición, Cotizaciones, Comparativa, OCs, Recepciones). Si el usuario no tiene permisos para actuar, el sheet se abre en modo **solo lectura**: se ven los datos y pestañas, pero sin botones de acción.
 
-Después de la pestaña "OCs", agregar `Recepciones ({n})` que muestre, por cada OC de la requisición:
+## Cambios
 
-- Folio de OC + proveedor + estatus de OC (pendiente / recibida parcial / recibida) y estatus de pago (pendiente / parcial / pagada).
-- Por insumo: cantidad pedida, cantidad recibida acumulada, pendiente por llegar (resaltado si > 0).
-- Lista cronológica de recepciones (fecha, folio de remisión o "Sin remisión + motivo", quién recibió, link a evidencia).
-- Resumen arriba: "Material recibido: X% · Pagado: Y%" y una línea final "Faltan N insumos por llegar y $M por pagar".
+### 1. `src/components/requisiciones/CotizacionSheet.tsx`
+- Agregar prop `readOnly?: boolean`.
+- Cuando `readOnly` sea `true`, ocultar todos los botones y controles de acción del sheet y sus subcomponentes:
+  - Botón "Enviar solicitud a proveedores", "Nueva cotización", "Editar respuesta", "Descartar" (tab Cotizaciones/Solicitudes).
+  - Botón "Generar OC" y controles de la Comparativa.
+  - Botones "Autorizar/Rechazar OC", "Cancelar OC", "Registrar pago" (tab OCs / `OCPagosPanel`).
+  - Cualquier input editable de la comparativa (dejarlo como lectura).
+- Propagar `readOnly` a `SolicitudesTab`, `ComparativaTable`, `OCPagosPanel` y `RecepcionesTab` (esta última ya es solo lectura).
+- Los permisos siguen aplicando además de `readOnly` (defensa en profundidad); `readOnly` fuerza el mínimo.
 
-Solo lectura desde esta pestaña — el registro sigue haciéndose en el módulo de almacén de obra. Al pie, botón "Ir al almacén de obra" que abre el módulo correspondiente.
+### 2. `src/components/requisiciones/RequisicionesModule.tsx`
+- Reemplazar todos los puntos donde hoy se abre `RequisicionDetalleSheet` (fallback "Ver" cuando el usuario no tiene permisos) por `CotizacionSheet` con `readOnly`.
+- Unificar el estado: eliminar `detalleId` y usar solo `cotizacion = { id, tab, readOnly }`.
+- La lógica de decisión al hacer click en el folio/botón "Ver":
+  - Si el usuario tiene `cotizaciones.gestionar` → abrir en tab "solicitudes", editable.
+  - Si tiene `oc.crear` / `oc.autorizar` / `oc.cancelar` / `requisiciones.ver_oc` → abrir en tab "ocs", editable (los botones se ocultan según cada permiso puntual como hoy).
+  - En cualquier otro caso → abrir `CotizacionSheet` con `readOnly={true}` en tab "requisicion".
+- Borrar la importación y uso de `RequisicionDetalleSheet`.
 
-## 2. Nueva regla de cierre de requisición
+### 3. `src/components/requisiciones/RequisicionDetalleSheet.tsx`
+- Eliminar el archivo (ya no se usa).
 
-Una requisición pasa a `completada` **solo cuando**:
-
-- Todas sus OCs (no rechazadas) tienen `estatus = 'recibida'` **y** `estado_pago = 'pagada'`.
-
-Hoy la promoción vive dentro de `registrarRecepcion` (`src/lib/api/almacen.functions.ts`) usando el cliente autenticado. Si el usuario que confirma no tiene permiso RLS sobre `requisiciones`, el UPDATE falla en silencio y la requisición queda desincronizada. Ya vimos ese caso en REQ-2026-001.
-
-Solución: mover la lógica a un **trigger de base de datos** (`SECURITY DEFINER`) que se dispare tras cualquier cambio de estatus o de pago:
-
-- Trigger `AFTER INSERT OR UPDATE OF estatus, estado_pago ON ordenes_compra` → recalcula el estatus de la requisición padre.
-- Función `public.recompute_requisicion_estatus(_req_id uuid)`:
-  - Si existen OCs no rechazadas AND todas están `recibida` AND todas están `pagada` → marcar requisición como `completada` (setear `completada_at = now()`, `completada_por = COALESCE(current_setting('request.jwt.claim.sub', true)::uuid, autorizacion_por, creado_por)`).
-  - Nunca degradar otros estatus.
-- Backfill: `UPDATE requisiciones` que ya cumplan la condición nueva.
-- Quitar el bloque de auto-completado dentro de `registrarRecepcion` para que el trigger sea la única fuente de verdad.
-
-## 3. Backend
-
-Nuevo server fn `getRequisicionRecepciones({ requisicionId })` en `src/lib/api/requisiciones.functions.ts` que devuelva, por OC:
-
-```
-{ oc: { id, folio, proveedor, estatus, estado_pago, monto_pagado, total },
-  insumos: [{ insumo_id, nombre, unidad, pedido, recibido, pendiente }],
-  recepciones: [{ id, fecha, folio_remision, sin_remision, motivo_sin_remision, evidencia_url, recibido_por_nombre, partidas: [...] }] }
-```
-
-`evidencia_url` se genera con `createSignedUrl` sobre el bucket `almacen-remisiones` (60 min).
-
-## 4. UI
-
-- Nuevo componente `src/components/requisiciones/RecepcionesTab.tsx` (colapsables por OC, tablas compactas siguiendo el patrón existente con `TruncatedCell` + tooltips).
-- Badges reutilizando `Badge` shadcn: verde "Completa", ámbar "Parcial", gris "Pendiente"; y para pago: verde "Pagada", ámbar "Parcial", gris "Pendiente".
-
-## Archivos afectados
-
-- Migración: función + trigger + backfill.
-- `src/lib/api/almacen.functions.ts`: eliminar bloque de auto-completado en `registrarRecepcion`.
-- `src/lib/api/requisiciones.functions.ts`: nuevo `getRequisicionRecepciones`.
-- `src/components/requisiciones/CotizacionSheet.tsx`: agregar TabsTrigger + TabsContent "recepciones".
-- `src/components/requisiciones/RecepcionesTab.tsx`: nuevo.
+## Notas técnicas
+- Los permisos existentes (`can("cotizaciones.gestionar")`, `can("oc.*")`, etc.) siguen siendo la fuente de verdad para mostrar cada botón. `readOnly` es un "gran interruptor" adicional que apaga todo.
+- No se cambia backend ni permisos; es un ajuste puramente de UI.
+- Las tabs de Recepciones y Requisición ya son informativas — se ven igual en ambos modos.
