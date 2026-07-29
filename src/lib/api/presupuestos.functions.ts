@@ -358,7 +358,7 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.autorizar_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus, enviado_por")
@@ -369,9 +369,7 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
       throw new Error("Solo se rechazan órdenes de cambio");
     if (pres.estatus !== "solicitada")
       throw new Error("Solo se puede rechazar una solicitud pendiente");
-    const { isSupervisor } = await getObraRole(supabase, userId, pres.obra_id);
-    if (!isDirector && !isSupervisor)
-      throw new Error("Solo el Supervisor de la obra (o el Director) puede rechazar");
+
     const { error } = await supabase
       .from("obra_presupuestos")
       .update({
