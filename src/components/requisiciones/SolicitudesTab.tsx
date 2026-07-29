@@ -146,7 +146,7 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
                 <Download className="size-4 mr-1" />
                 {sc.estatus === "borrador" && puedeGestionar ? "Descargar y marcar enviada" : "Descargar PDF"}
               </Button>
-              {puedeGestionar && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
+              {puedeGestionar && !bloqueadoPorOC && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
                 <Button size="sm" onClick={() => setCapturando(sc)}>
                   <ClipboardEdit className="size-4 mr-1" />
                   {sc.estatus === "recibida" ? "Editar respuesta" : "Capturar respuesta"}
@@ -158,7 +158,7 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
                   Eliminar
                 </Button>
               )}
-              {puedeGestionar && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
+              {puedeGestionar && !bloqueadoPorOC && (sc.estatus === "enviada" || sc.estatus === "recibida") && (
                 <Button size="sm" variant="ghost" onClick={() => handleDescartar(sc.id)}>
                   <XCircle className="size-4 mr-1" />
                   Descartar
