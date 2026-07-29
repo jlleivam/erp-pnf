@@ -99,6 +99,14 @@ export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitud
         </p>
       </Card>
 
+      {bloqueadoPorOC && (
+        <Card className="p-3 bg-amber-50 border-amber-200">
+          <p className="text-sm text-amber-900">
+            Ya se generaron órdenes de compra; las respuestas quedan como referencia y no pueden editarse ni descartarse.
+          </p>
+        </Card>
+      )}
+
       {solicitudes.length === 0 && !showForm && (
         <Card className="p-8 text-center border-dashed">
           <FileText className="size-8 mx-auto text-muted-foreground" />
