@@ -303,7 +303,7 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.enviar_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
@@ -314,9 +314,7 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
       throw new Error("Solo las órdenes de cambio se envían a autorización");
     if (pres.estatus !== "borrador")
       throw new Error("Solo se puede solicitar desde borrador");
-    const { isResidente } = await getObraRole(supabase, userId, pres.obra_id);
-    if (!isDirector && !isResidente)
-      throw new Error("Solo el Residente de la obra (o el Director) puede solicitar la autorización");
+
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
       .select("id", { count: "exact", head: true })
