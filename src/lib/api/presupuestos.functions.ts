@@ -25,17 +25,6 @@ async function getCompanyAndIsDirector(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, isDirector: !!dir };
 }
 
-async function getObraRole(supabase: any, userId: string, obraId: string) {
-  const { data } = await supabase
-    .from("obra_team").select("role")
-    .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
-  const role = (data?.role ?? null) as string | null;
-  return {
-    isResidente: role === "residente",
-    isSupervisor: role === "supervisor",
-    role,
-  };
-}
 
 /**
  * Recalcula obras.monto_contratado como la suma del monto_total de todos los
