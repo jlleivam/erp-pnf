@@ -64,7 +64,7 @@ const REQ_BADGE: Record<string, { label: string; className: string }> = {
 
 const mxn = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "requisicion" }: Props) {
+export function CotizacionSheet({ requisicionId, open, onOpenChange, initialTab = "requisicion", readOnly = false }: Props) {
   const qc = useQueryClient();
   const fetchCot = useServerFn(getCotizacionRequisicion);
   const fetchProv = useServerFn(listProveedores);
