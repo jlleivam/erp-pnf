@@ -11,8 +11,10 @@ import {
   rechazarPresupuesto,
   reabrirPresupuesto,
 } from "@/lib/api/presupuestos.functions";
-import { useEffectiveIsDirector } from "@/stores/auth";
-import { useObraRole } from "@/hooks/useObraRole";
+import { usePermisos } from "@/hooks/usePermisos";
+import { useAuthStore } from "@/stores/auth";
+
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -94,8 +96,9 @@ function estatusVariant(e: EstatusPresupuesto): "default" | "secondary" | "destr
 }
 
 export function PresupuestoModule({ obraId }: { obraId: string }) {
-  const director = useEffectiveIsDirector();
-  const { isResidente, isSupervisor } = useObraRole(obraId);
+  const { can } = usePermisos();
+  const userId = useAuthStore((s) => s.userId);
+
   const qc = useQueryClient();
   const fetchList = useServerFn(listPresupuestos);
   const listQ = useQuery({
@@ -181,7 +184,19 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
     .reduce((s, a) => s + Number(a.monto_total), 0);
   const totalVigente = totalBase + totalAdendas;
 
-  const puedeCrearOC = director || isResidente;
+  const puedeCrearBase = can("presupuestos.crear_base");
+  const puedeCrearOC = can("presupuestos.crear_oc");
+  const perms = {
+    crearBase: puedeCrearBase,
+    crearOC: puedeCrearOC,
+    autorizarBase: can("presupuestos.autorizar_base"),
+    autorizarOC: can("presupuestos.autorizar_oc"),
+    enviarOC: can("presupuestos.enviar_oc"),
+    eliminarBase: can("presupuestos.eliminar_base"),
+    eliminarOC: can("presupuestos.eliminar_oc"),
+    userId,
+  };
+
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["presupuestos", obraId] });
 
@@ -200,7 +215,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
               <Eye className="size-4 mr-1" /> Ver vigente
             </Button>
           )}
-          {director && !base && (
+          {puedeCrearBase && !base && (
             <Button onClick={() => setCreating("base")}>
               <Plus className="size-4 mr-1" /> Crear presupuesto base
             </Button>
@@ -250,14 +265,13 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
             <p className="text-sm text-muted-foreground">Cargando…</p>
           ) : !base ? (
             <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
-              Aún no hay presupuesto base. {director && "Crea uno para empezar."}
+              Aún no hay presupuesto base. {puedeCrearBase && "Crea uno para empezar."}
             </Card>
           ) : (
             <PresupuestoCard
               p={base}
-              director={director}
-              isResidente={isResidente}
-              isSupervisor={isSupervisor}
+              perms={perms}
+
               onView={() => setViewing(base.id)}
               onEdit={() => setEditing({ id: base.id, tipo: "base" })}
               onDelete={() => setToDelete(base)}
@@ -280,9 +294,8 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
               <PresupuestoCard
                 key={a.id}
                 p={a}
-                director={director}
-                isResidente={isResidente}
-                isSupervisor={isSupervisor}
+                perms={perms}
+
                 onView={() => setViewing(a.id)}
                 onEdit={() => setEditing({ id: a.id, tipo: "adenda" })}
                 onDelete={() => setToDelete(a)}
@@ -380,11 +393,20 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
   );
 }
 
+type PresupuestoPerms = {
+  crearBase: boolean;
+  crearOC: boolean;
+  autorizarBase: boolean;
+  autorizarOC: boolean;
+  enviarOC: boolean;
+  eliminarBase: boolean;
+  eliminarOC: boolean;
+  userId: string | null;
+};
+
 function PresupuestoCard({
   p,
-  director,
-  isResidente,
-  isSupervisor,
+  perms,
   onView,
   onEdit,
   onDelete,
@@ -395,9 +417,7 @@ function PresupuestoCard({
   busy,
 }: {
   p: Presupuesto;
-  director: boolean;
-  isResidente: boolean;
-  isSupervisor: boolean;
+  perms: PresupuestoPerms;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -412,21 +432,19 @@ function PresupuestoCard({
 
   // Permisos derivados por estado
   const puedeEditar =
-    p.estatus === "borrador" &&
-    (esOC ? director || isResidente : director);
+    p.estatus === "borrador" && (esOC ? perms.crearOC : perms.crearBase);
   const puedeEliminar =
     (p.estatus === "borrador" || p.estatus === "rechazada") &&
-    (esOC ? director || isResidente : director);
-  const puedeSolicitar =
-    esOC && p.estatus === "borrador" && (director || isResidente);
-  const puedeAutorizar =
-    esOC
-      ? p.estatus === "solicitada" && (director || isSupervisor)
-      : p.estatus === "borrador" && director;
-  const puedeRechazar =
-    esOC && p.estatus === "solicitada" && (director || isSupervisor);
-  const puedeReabrir =
-    esOC && p.estatus === "rechazada" && (director || isResidente);
+    (esOC ? perms.eliminarOC : perms.eliminarBase);
+  const puedeSolicitar = esOC && p.estatus === "borrador" && perms.enviarOC;
+  // No se puede autorizar una OC que uno mismo solicitó (regla de negocio)
+  const solicitadaPorMi = !!perms.userId && p.enviado_por === perms.userId;
+  const puedeAutorizar = esOC
+    ? p.estatus === "solicitada" && perms.autorizarOC && !solicitadaPorMi
+    : p.estatus === "borrador" && perms.autorizarBase;
+  const puedeRechazar = esOC && p.estatus === "solicitada" && perms.autorizarOC;
+  const puedeReabrir = esOC && p.estatus === "rechazada" && perms.crearOC;
+
 
   return (
     <Card className="p-4">

@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission } from "@/lib/permisos/require";
 import { notifySupervisoresOC, notifyResidenteOC } from "./_oc-notify.server";
+
 import {
   procesarRenglones,
   procesarOrdenCambio,
@@ -23,17 +25,6 @@ async function getCompanyAndIsDirector(supabase: any, userId: string) {
   return { companyId: profile.company_id as string, isDirector: !!dir };
 }
 
-async function getObraRole(supabase: any, userId: string, obraId: string) {
-  const { data } = await supabase
-    .from("obra_team").select("role")
-    .eq("obra_id", obraId).eq("user_id", userId).maybeSingle();
-  const role = (data?.role ?? null) as string | null;
-  return {
-    isResidente: role === "residente",
-    isSupervisor: role === "supervisor",
-    role,
-  };
-}
 
 /**
  * Recalcula obras.monto_contratado como la suma del monto_total de todos los
@@ -105,16 +96,14 @@ export const crearPresupuesto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { companyId, isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    const { companyId } = await getCompanyAndIsDirector(supabase, userId);
 
     if (data.tipo === "base") {
-      if (!isDirector) throw new Error("Solo el Director puede crear el presupuesto base");
+      await requirePermission(supabase, userId, "presupuestos.crear_base");
     } else {
-      // adenda (orden de cambio): residente de la obra o director
-      const { isResidente } = await getObraRole(supabase, userId, data.obraId);
-      if (!isDirector && !isResidente)
-        throw new Error("Solo el Residente de la obra (o el Director) puede crear órdenes de cambio");
+      await requirePermission(supabase, userId, "presupuestos.crear_oc");
     }
+
 
     let numero = 0;
     if (data.tipo === "adenda") {
@@ -176,15 +165,19 @@ export const guardarRenglones = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
-    if (!isDirector) throw new Error("Solo el Director puede editar presupuestos");
 
     const { data: presupuesto } = await supabase
-      .from("obra_presupuestos").select("id, estatus")
+      .from("obra_presupuestos").select("id, estatus, tipo")
       .eq("id", data.presupuestoId).single();
     if (!presupuesto) throw new Error("Presupuesto no encontrado");
+    await requirePermission(
+      supabase,
+      userId,
+      presupuesto.tipo === "adenda" ? "presupuestos.crear_oc" : "presupuestos.crear_base",
+    );
     if (presupuesto.estatus === "autorizado")
       throw new Error("El presupuesto está autorizado y no se puede editar. Crea una adenda.");
+
 
     const { renglones, errores, montoTotal } = procesarRenglones(data.renglones as RenglonInput[]);
     if (errores.length > 0) {
@@ -247,18 +240,15 @@ export const autorizarPresupuesto = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
 
     if (pres.tipo === "adenda") {
-      // OC: solo Supervisor de la obra o Director, y debe estar en "solicitada"
-      const { isSupervisor } = await getObraRole(supabase, userId, pres.obra_id);
-      if (!isDirector && !isSupervisor)
-        throw new Error("Solo el Supervisor de la obra (o el Director) puede autorizar órdenes de cambio");
+      await requirePermission(supabase, userId, "presupuestos.autorizar_oc");
       if (pres.estatus !== "solicitada")
         throw new Error("La orden de cambio debe haber sido solicitada por el residente");
       if (pres.enviado_por && pres.enviado_por === userId && !isDirector)
         throw new Error("No puedes autorizar una OC que tú mismo solicitaste");
     } else {
-      // Base: solo director (puede autorizar desde borrador directamente)
-      if (!isDirector) throw new Error("Solo el Director puede autorizar el presupuesto base");
+      await requirePermission(supabase, userId, "presupuestos.autorizar_base");
     }
+
 
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
@@ -302,7 +292,7 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.enviar_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
@@ -313,9 +303,7 @@ export const solicitarAutorizacionPresupuesto = createServerFn({ method: "POST" 
       throw new Error("Solo las órdenes de cambio se envían a autorización");
     if (pres.estatus !== "borrador")
       throw new Error("Solo se puede solicitar desde borrador");
-    const { isResidente } = await getObraRole(supabase, userId, pres.obra_id);
-    if (!isDirector && !isResidente)
-      throw new Error("Solo el Residente de la obra (o el Director) puede solicitar la autorización");
+
     const { count } = await supabase
       .from("obra_presupuesto_renglones")
       .select("id", { count: "exact", head: true })
@@ -359,7 +347,7 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.autorizar_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus, enviado_por")
@@ -370,9 +358,7 @@ export const rechazarPresupuesto = createServerFn({ method: "POST" })
       throw new Error("Solo se rechazan órdenes de cambio");
     if (pres.estatus !== "solicitada")
       throw new Error("Solo se puede rechazar una solicitud pendiente");
-    const { isSupervisor } = await getObraRole(supabase, userId, pres.obra_id);
-    if (!isDirector && !isSupervisor)
-      throw new Error("Solo el Supervisor de la obra (o el Director) puede rechazar");
+
     const { error } = await supabase
       .from("obra_presupuestos")
       .update({
@@ -406,7 +392,7 @@ export const reabrirPresupuesto = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.crear_oc");
     const { data: pres } = await supabase
       .from("obra_presupuestos")
       .select("obra_id, tipo, estatus")
@@ -416,8 +402,7 @@ export const reabrirPresupuesto = createServerFn({ method: "POST" })
     if (pres.tipo !== "adenda") throw new Error("Solo aplica a órdenes de cambio");
     if (pres.estatus !== "rechazada")
       throw new Error("Solo OCs rechazadas se pueden reabrir");
-    const { isResidente } = await getObraRole(supabase, userId, pres.obra_id);
-    if (!isDirector && !isResidente) throw new Error("Sin permisos");
+
     const { error } = await supabase
       .from("obra_presupuestos")
       .update({
@@ -436,20 +421,19 @@ export const eliminarPresupuesto = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
     const { data: p } = await supabase
       .from("obra_presupuestos").select("estatus, tipo, obra_id").eq("id", data.id).single();
     if (!p) throw new Error("Presupuesto no encontrado");
+    await requirePermission(
+      supabase,
+      userId,
+      p.tipo === "adenda" ? "presupuestos.eliminar_oc" : "presupuestos.eliminar_base",
+    );
     if (p.estatus === "autorizado")
       throw new Error("No se puede eliminar un presupuesto autorizado");
     if (p.estatus === "solicitada")
       throw new Error("No se puede eliminar una OC en solicitud. Rechaza primero.");
-    if (p.tipo === "adenda") {
-      const { isResidente } = await getObraRole(supabase, userId, p.obra_id);
-      if (!isDirector && !isResidente) throw new Error("Sin permisos");
-    } else {
-      if (!isDirector) throw new Error("Solo el Director puede eliminar el presupuesto base");
-    }
+
     const { error } = await supabase
       .from("obra_presupuestos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -735,7 +719,7 @@ export const guardarRenglonesOC = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.crear_oc");
 
     const { data: presupuesto } = await supabase
       .from("obra_presupuestos")
@@ -748,9 +732,6 @@ export const guardarRenglonesOC = createServerFn({ method: "POST" })
     if (presupuesto.estatus !== "borrador")
       throw new Error("Solo se puede editar una OC en borrador. Reábrela si fue rechazada.");
 
-    const { isResidente } = await getObraRole(supabase, userId, presupuesto.obra_id);
-    if (!isDirector && !isResidente)
-      throw new Error("Solo el Residente de la obra (o el Director) puede editar órdenes de cambio");
 
 
     // Reconstruir el vigente SIN incluir esta OC (aunque no esté autorizada, igual la excluimos)
