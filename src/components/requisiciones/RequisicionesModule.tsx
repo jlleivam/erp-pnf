@@ -16,7 +16,6 @@ import {
 } from "@/lib/api/requisiciones.functions";
 import { ESTATUS_META, type RequisicionEstatus } from "./constants";
 import { NuevaRequisicionSheet } from "./NuevaRequisicionSheet";
-import { RequisicionDetalleSheet } from "./RequisicionDetalleSheet";
 import { CotizacionSheet, type CotizacionTab } from "./CotizacionSheet";
 import { useEffectiveRoles } from "@/stores/auth";
 import { usePermisos } from "@/hooks/usePermisos";
