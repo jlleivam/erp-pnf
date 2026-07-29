@@ -7,16 +7,47 @@ import { requirePermission } from "@/lib/permisos/require";
 export const listObras = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", userId)
+      .maybeSingle();
+    const companyId = (profile as any)?.company_id as string | null;
+
+    let isDirector = false;
+    if (companyId) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("company_id", companyId)
+        .eq("role", "director");
+      isDirector = (roles ?? []).length > 0;
+    }
+
+    const select =
+      "id, nombre, unidad_negocio:unidades_negocio(id, nombre), numero_contrato, ubicacion, fecha_inicio, fecha_terminacion, cliente:clientes(razon_social)";
+
+    if (isDirector) {
+      const { data, error } = await supabase
+        .from("obras")
+        .select(select)
+        .order("created_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }
+
     const { data, error } = await supabase
       .from("obras")
-      .select(
-        "id, nombre, unidad_negocio:unidades_negocio(id, nombre), numero_contrato, ubicacion, fecha_inicio, fecha_terminacion, cliente:clientes(razon_social)"
-      )
+      .select(`${select}, obra_team!inner(user_id)`)
+      .eq("obra_team.user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
 
 export const getObraDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
