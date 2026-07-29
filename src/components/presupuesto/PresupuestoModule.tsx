@@ -96,8 +96,9 @@ function estatusVariant(e: EstatusPresupuesto): "default" | "secondary" | "destr
 }
 
 export function PresupuestoModule({ obraId }: { obraId: string }) {
-  const director = useEffectiveIsDirector();
-  const { isResidente, isSupervisor } = useObraRole(obraId);
+  const { can } = usePermisos();
+  const userId = useAuthStore((s) => s.userId);
+
   const qc = useQueryClient();
   const fetchList = useServerFn(listPresupuestos);
   const listQ = useQuery({
