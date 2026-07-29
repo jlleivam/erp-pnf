@@ -12,7 +12,8 @@ import {
   reabrirPresupuesto,
 } from "@/lib/api/presupuestos.functions";
 import { usePermisos } from "@/hooks/usePermisos";
-import { useAuthUserId } from "@/stores/auth";
+import { useAuthStore } from "@/stores/auth";
+
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
