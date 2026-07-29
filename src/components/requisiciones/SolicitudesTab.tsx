@@ -40,9 +40,10 @@ interface Props {
   reqItems: any[];
   proveedores: any[];
   solicitudes: any[];
+  bloqueadoPorOC?: boolean;
 }
 
-export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes }: Props) {
+export function SolicitudesTab({ requisicionId, reqItems, proveedores, solicitudes, bloqueadoPorOC = false }: Props) {
   const qc = useQueryClient();
   const { can } = usePermisos();
   const puedeGestionar = can("cotizaciones.gestionar");
