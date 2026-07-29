@@ -151,7 +151,7 @@ export function RequisicionesModule({ obraId }: Props) {
                     const esBorrador = estatus === "borrador";
                     return (
                       <TableRow key={r.id} className="hover:bg-muted/50 h-9">
-                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => esBorrador ? abrirBorrador(r.id) : setCotizacion({ id: r.id, tab: "requisicion" })}>
+                        <TableCell className="py-1 font-medium text-sm cursor-pointer whitespace-nowrap" onClick={() => esBorrador ? abrirBorrador(r.id) : (puedeCotizar ? setCotizacion({ id: r.id, tab: "requisicion" }) : setDetalleId(r.id))}>
                           {r.folio}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell py-1 text-sm text-muted-foreground whitespace-nowrap">
@@ -188,14 +188,14 @@ export function RequisicionesModule({ obraId }: Props) {
                                 <Trash2 className="size-3" />
                               </Button>
                             </div>
-                          ) : estatus === "enviada" ? (
+                          ) : estatus === "enviada" && puedeCotizar ? (
                             <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Cotizar</Button>
-                          ) : estatus === "en_cotizacion" ? (
+                          ) : estatus === "en_cotizacion" && puedeCotizar ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Continuar</Button>
-                          ) : ["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) ? (
+                          ) : ["pendiente_autorizacion", "oc_generada", "completada"].includes(estatus) && puedeVerOC ? (
                             <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "ocs" })}>Ver OCs</Button>
                           ) : (
-                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setCotizacion({ id: r.id, tab: "requisicion" })}>Ver</Button>
+                            <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setDetalleId(r.id)}>Ver</Button>
                           )}
                         </TableCell>
                       </TableRow>
