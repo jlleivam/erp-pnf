@@ -438,7 +438,7 @@ function PresupuestoCard({
     (esOC ? perms.eliminarOC : perms.eliminarBase);
   const puedeSolicitar = esOC && p.estatus === "borrador" && perms.enviarOC;
   // No se puede autorizar una OC que uno mismo solicitó (regla de negocio)
-  const solicitadaPorMi = !!perms.userId && p.solicitada_por === perms.userId;
+  const solicitadaPorMi = !!perms.userId && p.enviado_por === perms.userId;
   const puedeAutorizar = esOC
     ? p.estatus === "solicitada" && perms.autorizarOC && !solicitadaPorMi
     : p.estatus === "borrador" && perms.autorizarBase;
