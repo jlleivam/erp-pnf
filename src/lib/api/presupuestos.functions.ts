@@ -730,7 +730,7 @@ export const guardarRenglonesOC = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isDirector } = await getCompanyAndIsDirector(supabase, userId);
+    await requirePermission(supabase, userId, "presupuestos.crear_oc");
 
     const { data: presupuesto } = await supabase
       .from("obra_presupuestos")
@@ -743,9 +743,6 @@ export const guardarRenglonesOC = createServerFn({ method: "POST" })
     if (presupuesto.estatus !== "borrador")
       throw new Error("Solo se puede editar una OC en borrador. Reábrela si fue rechazada.");
 
-    const { isResidente } = await getObraRole(supabase, userId, presupuesto.obra_id);
-    if (!isDirector && !isResidente)
-      throw new Error("Solo el Residente de la obra (o el Director) puede editar órdenes de cambio");
 
 
     // Reconstruir el vigente SIN incluir esta OC (aunque no esté autorizada, igual la excluimos)
