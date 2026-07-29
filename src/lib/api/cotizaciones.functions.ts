@@ -22,13 +22,13 @@ async function recalcEstatusRequisicion(supabase: any, requisicionId: string, us
   const { data: paquetes } = await supabase
     .from("cotizacion_paquetes").select("id").eq("requisicion_id", requisicionId);
   const { data: ocs } = await supabase
-    .from("ordenes_compra").select("estatus").eq("requisicion_id", requisicionId);
+    .from("ordenes_compra").select("estatus, estado_pago").eq("requisicion_id", requisicionId);
 
-  const ocList = (ocs ?? []) as Array<{ estatus: string }>;
+  const ocList = (ocs ?? []) as Array<{ estatus: string; estado_pago: string | null }>;
   const enOC = ["autorizada", "enviada", "recibida_parcial", "recibida", "pagada"];
   let nuevo: string | null = null;
   if (ocList.length > 0) {
-    if (ocList.every((o) => o.estatus === "recibida" || o.estatus === "pagada"))
+    if (ocList.every((o) => (o.estatus === "recibida" || o.estatus === "pagada") && o.estado_pago === "pagado"))
       nuevo = "completada";
     else if (ocList.every((o) => enOC.includes(o.estatus)))
       nuevo = "oc_generada";
