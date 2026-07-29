@@ -460,19 +460,10 @@ export const registrarRecepcion = createServerFn({ method: "POST" })
     }
 
 
-    // Recalcular estatus requisición (puede pasar a completada)
-    const { data: paquetes } = await supabase
-      .from("cotizacion_paquetes").select("id").eq("requisicion_id", oc.requisicion_id);
-    const { data: ocs } = await supabase
-      .from("ordenes_compra").select("estatus").eq("requisicion_id", oc.requisicion_id);
-    const ocList = (ocs ?? []) as Array<{ estatus: string }>;
-    if (ocList.length > 0 && (paquetes ?? []).length > 0) {
-      if (ocList.every((o) => o.estatus === "recibida" || o.estatus === "pagada")) {
-        await supabase.from("requisiciones")
-          .update({ estatus: "completada", completada_at: new Date().toISOString(), completada_por: userId })
-          .eq("id", oc.requisicion_id);
-      }
-    }
+    // El cierre de la requisición lo maneja el trigger `oc_recompute_requisicion`
+    // en la base de datos: se marca como completada solo cuando todas las OCs
+    // estén recibidas y pagadas.
+
 
     return { ok: true, recepcionId: rec.id, ocEstatus: nuevoEstatus };
   });
