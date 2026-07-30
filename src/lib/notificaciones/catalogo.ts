@@ -61,6 +61,12 @@ export const CATALOGO_NOTIFICACIONES: TipoNotificacion[] = [
   { key: "almacen_desbloqueo_solicitado", modulo: "Almacén", label: "Solicitud de desbloqueo de semana", defaults: DA },
   { key: "almacen_desbloqueo_resuelto", modulo: "Almacén", label: "Resolución de desbloqueo", defaults: DR },
 
+  // Gastos de obra
+  { key: "gasto_obra_solicitado", modulo: "Gastos de obra", label: "Gasto de obra por autorizar", defaults: DS },
+  { key: "gasto_obra_autorizado", modulo: "Gastos de obra", label: "Gasto de obra autorizado", defaults: DAR },
+  { key: "gasto_obra_rechazado", modulo: "Gastos de obra", label: "Gasto de obra rechazado", defaults: DAR },
+  { key: "gasto_obra_pagado", modulo: "Gastos de obra", label: "Gasto de obra pagado", defaults: DAR },
+
   // Caja chica
   { key: "caja_chica_fondo_solicitado", modulo: "Caja chica", label: "Fondo solicitado", defaults: DA },
   { key: "caja_chica_fondo_autorizado", modulo: "Caja chica", label: "Fondo autorizado", defaults: DR },

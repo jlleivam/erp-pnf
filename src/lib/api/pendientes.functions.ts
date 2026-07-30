@@ -267,6 +267,30 @@ export const getPendientes = createServerFn({ method: "GET" })
           })(),
         );
 
+        // Gastos de obra
+        tasks.push(
+          (async () => {
+            if (isSuperv) {
+              c["gastos-obra"] = (c["gastos-obra"] ?? 0) + await safeCount("obra.gastos.sup",
+                supabase
+                  .from("obra_gastos_directos")
+                  .select("id", { count: "exact", head: true })
+                  .eq("obra_id", obraId)
+                  .eq("estatus", "solicitado"),
+              );
+            }
+            if (isResidente) {
+              c["gastos-obra"] = (c["gastos-obra"] ?? 0) + await safeCount("obra.gastos.res",
+                supabase
+                  .from("obra_gastos_directos")
+                  .select("id", { count: "exact", head: true })
+                  .eq("obra_id", obraId)
+                  .in("estatus", ["borrador", "rechazado"]),
+              );
+            }
+          })(),
+        );
+
         // Tareas
         tasks.push(
           (async () => {
