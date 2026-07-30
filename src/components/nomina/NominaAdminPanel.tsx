@@ -472,9 +472,10 @@ function AjusteAsistenciaDialog({
   trabajadorNombre: string;
   onClose: () => void;
 }) {
+  const yaAjustada = !!asistencia?.ajustado_at;
   const [jornada, setJornada] = useState<number>(asistencia?.jornada ?? 0);
   const [horas, setHoras] = useState<string>(String(asistencia?.horas_extras ?? 0));
-  const [motivo, setMotivo] = useState("");
+  const [motivo, setMotivo] = useState(asistencia?.ajuste_motivo ?? "");
   const [saving, setSaving] = useState(false);
   const qc = useQueryClient();
   const ajustar = useServerFn(ajustarAsistenciaAdmin);
