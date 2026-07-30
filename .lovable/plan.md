@@ -1,27 +1,51 @@
-## Cambio
+## Problema
 
-En `src/components/requisiciones/RequisicionesModule.tsx`, quitar la columna "Acción" de las tablas de requisiciones (vista desktop, pestañas "Activas" e "Historial"/otras) y hacer que toda la fila sea clicable, reemplazando los botones (`Cotizar`, `Continuar`, `Ver OCs`, `Ver`, `Editar borrador`) con un único destino determinado por el estado y los permisos del usuario.
+Dos residentes cierran su nómina y el mismo trabajador queda con jornadas que suman más de 1.0 en un día. Hoy el panel global (`/app/admin/nomina`) sólo **detecta** el duplicado: lo marca en rojo y lo lista en el detalle, pero no permite corregirlo, porque una nómina `cerrada` bloquea la edición tanto en la API como en las reglas de acceso de la base de datos. La semana se puede pagar igual, arrastrando el error.
 
-## Reglas de destino al hacer click en la fila
+## Solución
 
-Se conserva exactamente la misma lógica de routing que hoy tienen los botones:
+El administrativo (y el director) podrán ajustar la asistencia directamente desde el panel global, aun con la nómina cerrada, dejando registro; y no se podrá enviar a pagos una semana con duplicados sin resolver.
 
-- Si es **borrador** → abrir editor de borrador (`abrirBorrador`).
-- Si estatus = `enviada` y tiene `cotizaciones.gestionar` → abrir cotización, tab `requisicion`.
-- Si estatus = `en_cotizacion` y tiene `cotizaciones.gestionar` → abrir cotización, tab `requisicion` (Continuar).
-- Si tiene `requisiciones.ver_oc` → abrir cotización, tab `ocs`.
-- En cualquier otro caso → abrir visor de solo lectura (`abrirVisor`).
+### 1. Ajuste directo con bitácora
 
-Esta es la misma cascada que ya existe hoy, sólo unificada en un handler de fila.
+En el detalle del trabajador (el diálogo que ya existe al hacer click en su renglón), cada celda día × obra se vuelve editable para admin/director:
 
-## Detalles UI
+- Selector de jornada (0 / 0.5 / 1) y horas extras.
+- Motivo del ajuste obligatorio (mínimo 5 caracteres) — se pide una vez por ajuste.
+- La celda ajustada muestra un indicador y, al pasar el cursor, quién ajustó, cuándo, el valor anterior y el motivo.
+- La fila "Suma diaria" se recalcula al momento: en rojo mientras pase de 1.0 jornada, en verde cuando queda cuadrado.
 
-- Eliminar `<TableHead>Acción</TableHead>` y su `<TableCell>` correspondiente en las dos tablas afectadas.
-- Añadir `onClick` y `cursor-pointer` a `<TableRow>`; quitar los `onClick` individuales del folio.
-- Para borradores, mantener la acción destructiva "Eliminar borrador" como un pequeño ícono al final del renglón (dentro de la última celda visible), con `e.stopPropagation()` para no disparar el click de la fila. Sin esto se pierde la única forma de borrar un borrador desde la lista.
-- No se toca la vista mobile (cards) ni ninguna otra pantalla.
+Cada ajuste recalcula el importe del renglón, el `monto_total` de la nómina de esa obra y, por lo tanto, el reparto del costo entre obras.
+
+### 2. Bloqueo del pago
+
+- El panel global muestra el conteo de "Con duplicados" y, si es mayor a cero, un aviso de que la semana no puede pagarse.
+- En la pestaña de pagos (Cuentas por pagar → Nómina), la semana con duplicados aparece marcada y su botón de pago queda deshabilitado, con un enlace al panel global.
+- El servidor también rechaza el pago si detecta duplicados en la semana, para que el bloqueo no dependa sólo de la interfaz.
+
+### 3. Quién puede hacerlo
+
+Sólo director y administrativo. El residente sigue sin poder tocar una nómina cerrada.
+
+## Detalles técnicos
+
+**Base de datos** (una migración sobre `obra_nomina_asistencias`):
+- `jornada_original`, `horas_extras_original` (numeric, nullable) — snapshot del valor previo al primer ajuste.
+- `ajustado_por` (uuid), `ajustado_at` (timestamptz), `ajuste_motivo` (text).
+
+No se cambian las políticas de acceso: la edición sobre nóminas cerradas se hace desde el servidor con privilegios elevados, después de verificar rol y empresa.
+
+**Server functions** en `src/lib/api/nominas.functions.ts`:
+- `ajustarAsistenciaAdmin({ renglonId, fecha, jornada, horasExtras, motivo })`: valida rol director/administrativo y misma empresa, exige motivo, guarda snapshot original la primera vez, hace upsert/borrado de la asistencia, recalcula el renglón y el `monto_total` de la nómina. Rechaza nóminas ya `pagada`.
+- `getPanelGlobalNomina`: devolver también, por asistencia, los campos de ajuste para pintar el indicador.
+- Helper `semanaTieneDuplicados(companyId, semanaInicio)`; usarlo en `listSemanasNominaPorPagar` (para marcar la semana) y en `pagarNominaSemana` (para abortar con mensaje claro).
+
+**UI**:
+- `src/components/nomina/NominaAdminPanel.tsx`: celdas editables + diálogo de motivo en `DetalleTrabajadorDialog`, banner de bloqueo, invalidación de la query `nomina-panel` tras cada ajuste.
+- `src/components/pagos/NominaPorPagarTab.tsx`: badge de conflicto y botón de pago deshabilitado con tooltip.
 
 ## Fuera de alcance
 
-- No se cambian permisos, APIs ni lógica de negocio.
-- No se modifica la tabla de "Recepciones" ni otras pestañas fuera de las dos listas de requisiciones.
+- No se reabre la nómina ni se devuelve al residente.
+- No se agrega un estado de "duplicado justificado": toda suma mayor a 1.0 debe corregirse.
+- No se tocan las capturas de nómina en obra ni la contabilidad del pago.
