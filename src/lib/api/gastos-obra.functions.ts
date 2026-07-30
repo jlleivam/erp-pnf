@@ -123,7 +123,7 @@ export const guardarGastoObra = createServerFn({ method: "POST" })
     await requirePermission(supabase, userId, "gastos_obra.crear");
 
     const nowIso = new Date().toISOString();
-    const payload: Record<string, unknown> = {
+    const payload: any = {
       company_id: companyId,
       obra_id: data.obraId,
       tipo: data.tipo,
