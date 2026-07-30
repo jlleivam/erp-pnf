@@ -53,6 +53,10 @@ export const CATALOGO_ACCIONES: AccionCatalogo[] = [
   { key: "almacen.cerrar_semana", modulo: "Almacén", label: "Cerrar semana de almacén", defaults: T },
   { key: "almacen.desbloquear_semana", modulo: "Almacén", label: "Autorizar desbloqueo de semana", defaults: A },
 
+  // Gastos de obra
+  { key: "gastos_obra.crear", modulo: "Gastos de obra", label: "Solicitar gasto directo de obra", defaults: T },
+  { key: "gastos_obra.autorizar", modulo: "Gastos de obra", label: "Autorizar gasto directo de obra", defaults: S },
+
   // Caja chica
   { key: "caja_chica.solicitar_fondo", modulo: "Caja chica", label: "Solicitar fondo", defaults: T },
   { key: "caja_chica.autorizar_fondo", modulo: "Caja chica", label: "Autorizar fondo", defaults: A },
