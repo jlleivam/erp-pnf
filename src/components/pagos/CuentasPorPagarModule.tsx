@@ -14,6 +14,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { listCxPGastosObra } from "@/lib/api/gastos-obra.functions";
 import { GastosObraPorPagarTab } from "./GastosObraPorPagarTab";
 import { TruncatedCell } from "./TruncatedCell";
 import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes, listCxPSubcontratoPendientes } from "@/lib/api/pagos.functions";
@@ -89,6 +90,12 @@ export function CuentasPorPagarModule() {
   const cajaChicaCountQ = useQuery({
     queryKey: ["caja-chica-por-pagar"],
     queryFn: () => fetchCajaChicaCount(),
+  });
+
+  const fetchGastosObraCount = useServerFn(listCxPGastosObra);
+  const gastosObraCountQ = useQuery({
+    queryKey: ["gastos-obra-por-pagar"],
+    queryFn: () => fetchGastosObraCount(),
   });
 
   const fetchNominaCount = useServerFn(listSemanasNominaPorPagar);
