@@ -227,16 +227,26 @@ export const getCondensadoSemanal = createServerFn({ method: "POST" })
     // Gastos comprobados de caja chica → costo real de la obra
     const { data: ccGastos, error: ccErr } = await supabase
       .from("caja_chica_gastos")
-      .select("id, fecha, monto, concepto, descripcion, obra_id, estatus, tipo_comprobante, obra:obras(id, nombre)")
+      .select("id, fecha, monto, concepto, descripcion, obra_id, estatus, tipo_comprobante")
       .eq("company_id", companyId)
       .in("estatus", ["aprobado", "reembolsado"])
       .gte("fecha", inicio)
       .lte("fecha", fin);
     if (ccErr) throw ccErr;
 
+    // Nombres de obra (no hay relación declarada entre caja_chica_gastos y obras)
+    const obraIds = [...new Set(((ccGastos ?? []) as any[]).map((g) => g.obra_id).filter(Boolean))];
+    const obraNombres = new Map<string, string>();
+    if (obraIds.length) {
+      const { data: obrasRows } = await supabase
+        .from("obras").select("id, nombre").in("id", obraIds);
+      for (const o of (obrasRows ?? []) as any[]) obraNombres.set(o.id, o.nombre);
+    }
+
     for (const gto of (ccGastos ?? []) as any[]) {
       const obraId: string | null = gto.obra_id ?? null;
-      const obraNombre = gto.obra?.nombre ?? "Oficina (sin obra)";
+      const obraNombre = (obraId && obraNombres.get(obraId)) || "Oficina (sin obra)";
+
       const monto = Number(gto.monto ?? 0);
       const g = ensureGrupo(obraId, obraNombre);
       const c = ensureConcepto(g, "caja_chica");
