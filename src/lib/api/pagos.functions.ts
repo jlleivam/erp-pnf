@@ -447,6 +447,14 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
       }
     }
 
+    // Gasto de obra: factura -> cuenta bancaria; nota/sin comprobante -> caja fuerte
+    if (cxp.origen_tipo === "gasto_obra_factura" && cuenta.tipo !== "bancaria") {
+      throw new Error("Los gastos de obra con factura deben pagarse desde una cuenta bancaria");
+    }
+    if (cxp.origen_tipo === "gasto_obra_nota" && cuenta.tipo !== "caja_fuerte") {
+      throw new Error("Los gastos de obra con nota deben pagarse desde la caja fuerte");
+    }
+
     const total = Number(cxp.monto_total);
     const pagado = Number(cxp.monto_pagado);
     const pendiente = +(total - pagado).toFixed(2);
@@ -537,7 +545,9 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
               ? "Cuentas por pagar - Caja chica"
               : cxp.origen_tipo === "gasto_oficina"
                 ? "Gastos de administración"
-                : "Cuentas por pagar";
+                : cxp.origen_tipo === "gasto_obra_factura" || cxp.origen_tipo === "gasto_obra_nota"
+                  ? "Cuentas por pagar - Gastos de obra"
+                  : "Cuentas por pagar";
     const cuentaActivo = cuenta.tipo === "bancaria" ? "Bancos" : "Caja fuerte";
 
     const asientoId = crypto.randomUUID();
@@ -570,6 +580,36 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
       },
     ];
     await supabaseAdmin.from("asientos_contables").insert(renglones);
+
+    // 7b. Gasto de obra pagado -> marcar el gasto y notificar al residente
+    if (
+      (cxp.origen_tipo === "gasto_obra_factura" || cxp.origen_tipo === "gasto_obra_nota") &&
+      nuevoEstado === "pagada" &&
+      cxp.origen_id
+    ) {
+      const { data: gasto } = await supabaseAdmin
+        .from("obra_gastos_directos")
+        .select("id, folio, solicitado_por, obra_id")
+        .eq("id", cxp.origen_id)
+        .maybeSingle();
+      if (gasto) {
+        await supabaseAdmin
+          .from("obra_gastos_directos")
+          .update({ estatus: "pagado", pagado_at: new Date().toISOString() })
+          .eq("id", gasto.id);
+        if (gasto.solicitado_por) {
+          await supabaseAdmin.from("notificaciones").insert({
+            user_id: gasto.solicitado_por,
+            company_id: companyId,
+            obra_id: gasto.obra_id,
+            tipo: "gasto_obra_pagado",
+            titulo: "Gasto de obra pagado",
+            mensaje: `Se pagó ${gasto.folio} por $${data.monto.toFixed(2)}`,
+            link: gasto.obra_id ? `/app/obras/${gasto.obra_id}/gastos-obra` : "/app",
+          });
+        }
+      }
+    }
 
     // 7. Hook por origen: caja chica fondo → marcar fondo como entregado y notificar
     if (cxp.origen_tipo === "caja_chica_fondo" && nuevoEstado === "pagada" && cxp.origen_id) {
