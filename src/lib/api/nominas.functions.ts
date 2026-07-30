@@ -442,10 +442,21 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
       obra_id: string;
       nombre: string;
       nomina_id: string;
+      renglon_id: string;
+      estatus: string;
       dias: number;
       horas_extras: number;
       importe: number;
-      asistencias: { fecha: string; jornada: number; horas_extras: number; nota_extras: string | null }[];
+      asistencias: {
+        fecha: string;
+        jornada: number;
+        horas_extras: number;
+        nota_extras: string | null;
+        jornada_original: number | null;
+        horas_extras_original: number | null;
+        ajustado_at: string | null;
+        ajuste_motivo: string | null;
+      }[];
     };
     type Resumen = {
       trabajador_id: string;
