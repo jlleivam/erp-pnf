@@ -124,13 +124,13 @@ export function GastosObraPorPagarTab() {
                 <TableCell className="whitespace-nowrap font-medium">{r.folio}</TableCell>
                 <TableCell className="whitespace-nowrap">{formatDate(r.fecha_emision)}</TableCell>
                 <TableCell className="max-w-[140px]">
-                  <TruncatedCell text={r.obra_nombre ?? "—"} />
+                  <TruncatedCell>{r.obra_nombre ?? "—"}</TruncatedCell>
                 </TableCell>
                 <TableCell className="max-w-[160px]">
-                  <TruncatedCell text={r.beneficiario_nombre} />
+                  <TruncatedCell>{r.beneficiario_nombre}</TruncatedCell>
                 </TableCell>
                 <TableCell className="max-w-[200px]">
-                  <TruncatedCell text={r.concepto} />
+                  <TruncatedCell>{r.concepto}</TruncatedCell>
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <Badge variant={r.requiere_banco ? "default" : "secondary"}>
