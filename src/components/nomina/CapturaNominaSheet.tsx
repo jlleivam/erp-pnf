@@ -200,6 +200,26 @@ export function CapturaNominaSheet({
               </div>
             )}
 
+            {ajustes.length > 0 && (
+              <Card className="p-3 bg-edited border-edited-border">
+                <div className="flex items-start gap-2">
+                  <Pencil className="size-4 text-edited-foreground mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-edited-foreground">
+                      Esta nómina fue ajustada por administración ({ajustes.length}{" "}
+                      {ajustes.length === 1 ? "cambio" : "cambios"})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Los días con fondo amarillo fueron modificados. Pasa el cursor sobre la celda
+                      para ver el valor original y el motivo.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+
+
 
             {renglones.length === 0 ? (
               <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
