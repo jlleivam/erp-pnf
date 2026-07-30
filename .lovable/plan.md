@@ -1,35 +1,25 @@
-## Objetivo
+# Badge de Nómina: por qué sigue encendido
 
-Convertir la pestaña **Nómina** de Cuentas por pagar en un monitor semanal completo: hoy sólo muestra nóminas ya cerradas, así que el administrativo no ve si un residente aún tiene su nómina abierta (borrador) o ni siquiera la ha iniciado.
+## Diagnóstico (verificado)
 
-## Qué se verá
+El globo del ícono de Nómina para el administrativo **no cuenta duplicados**. Cuenta nóminas de obra con estatus `cerrada` (es decir, cerradas por el residente y **pendientes de pagar**).
 
-Por cada semana, una fila con:
-- Rango de la semana.
-- Un resumen de estado de las obras: `2 cerradas · 1 abierta · 1 sin capturar`.
-- Total de la semana (cerradas) y, aparte, monto en captura (borradores).
-- Badge rojo de duplicados (se conserva).
-- Botón **Pagar semana**, deshabilitado con tooltip cuando hay duplicados **o** cuando aún hay nóminas abiertas/sin capturar (con opción de pagar sólo las cerradas mediante confirmación; ver preguntas abajo — por defecto se permite pagar sólo las cerradas y se avisa).
+Datos actuales de la semana 27-jul – 02-ago 2026:
 
-Al expandir la fila (chevron), se lista cada obra activa de esa semana con:
-- Nombre de la obra y residente responsable.
-- Estado: `Cerrada` (verde), `Abierta` (ámbar), `Pagada` (gris), `Sin capturar` (outline).
-- Fecha/hora de cierre (`cerrada_at`) cuando aplica.
-- Monto.
+- Canalización Larmex La Pila: nómina **cerrada** (aún no pagada) → cuenta 1
+- Highly 57: nómina en **borrador** → no cuenta
 
-## Cambios técnicos
+Por eso el badge muestra 1 aunque ya hayas cuadrado los duplicados: seguirá encendido hasta que la semana se pague desde CxP.
 
-**`src/lib/api/nominas.functions.ts`** — reescribir `listSemanasNominaPorPagar`:
-- Traer nóminas con estatus `borrador` y `cerrada` (no sólo cerradas), incluyendo `cerrada_at`.
-- Traer las obras activas de la empresa y su residente (vía `obra_team` / `profiles`) para calcular las obras "sin capturar" en cada semana listada.
-- Devolver por semana: `total_cerrado`, `total_borrador`, `obras[]` con `{ obra_id, obra_nombre, residente, estatus: 'cerrada'|'borrador'|'sin_capturar', monto, cerrada_at, nomina_id }`, `nomina_ids` (sólo cerradas, para el pago), contadores `cerradas/abiertas/sin_capturar` y `duplicados`.
-- Mantener `assertAdmin` y el conteo de duplicados actual.
+## Opciones
 
-**`src/components/pagos/NominaPorPagarTab.tsx`**:
-- Actualizar el tipo `SemanaNominaRow`.
-- Fila expandible con el desglose por obra y badges de estado.
-- Columna "Estado obras" con el resumen y tooltips donde el texto no quepa.
-- El botón `Pagar semana` sigue mandando sólo `nomina_ids` de nóminas cerradas al sheet existente; si hay abiertas, mostrar aviso en el tooltip de que quedarán fuera del pago.
-- Encabezado y descripción del panel actualizados ("Monitor semanal de nóminas").
+1. **Dejarlo como está** y solo aclarar el significado: el badge = "nóminas cerradas por pagar". Agregar tooltip/leyenda en el ícono.
+2. **Cambiar el criterio** para que el badge cuente únicamente lo que requiere acción de cuadre (trabajadores con días duplicados en la semana) y no las cerradas pendientes de pago.
+3. **Separar señales**: badge de Nómina = duplicados por cuadrar; badge de CxP = nóminas cerradas por pagar (que ya es donde se ejecuta el pago).
 
-No se toca `PagarNominaSemanaSheet` ni `pagarNominaSemana`, ni se requiere migración de base de datos.
+Recomendación: opción 3, porque el pago vive en CxP y el panel de Nómina admin es el de cuadre.
+
+## Detalles técnicos
+
+- Origen del conteo: `src/lib/api/pendientes.functions.ts`, bloque `admin.nomina` (`obra_nominas` con `estatus = 'cerrada'`).
+- Para la opción 2/3 habría que calcular duplicados a nivel semana (trabajador con asistencia en más de una obra el mismo día) en ese mismo server fn, y mover/duplicar el conteo de cerradas al módulo `cuentas-por-pagar`.
