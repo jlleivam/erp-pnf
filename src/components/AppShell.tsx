@@ -100,7 +100,7 @@ export function AppShell() {
 
   const { can: canPerm } = usePermisos();
   const puedeCrearObra = canPerm("obras.crear");
-  const showSupervisor = director || effRoles.includes("supervisor") || canPerm("requisiciones.aprobar") || canPerm("requisiciones.rechazar");
+  
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
