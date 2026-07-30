@@ -35,10 +35,13 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   onSaved?: () => void;
   defaultCuentaTipo?: "caja_fuerte" | "bancaria";
+  /** Si es true, sólo se pueden elegir cuentas del tipo indicado en defaultCuentaTipo. */
+  restringirCuentaTipo?: boolean;
 }
 
 export function RegistrarPagoCxPDialog({
   cxpId, folio, beneficiarioNombre, saldoPendiente, open, onOpenChange, onSaved, defaultCuentaTipo,
+  restringirCuentaTipo,
 }: Props) {
   const hoy = new Date().toISOString().slice(0, 10);
   const fetchCuentas = useServerFn(listCuentas);
@@ -50,10 +53,13 @@ export function RegistrarPagoCxPDialog({
     enabled: open,
   });
 
-  const cuentas: Cuenta[] = useMemo(
-    () => ((cuentasQ.data ?? []) as unknown as Cuenta[]).filter((c) => c.activa),
-    [cuentasQ.data],
-  );
+  const cuentas: Cuenta[] = useMemo(() => {
+    const activas = ((cuentasQ.data ?? []) as unknown as Cuenta[]).filter((c) => c.activa);
+    if (restringirCuentaTipo && defaultCuentaTipo) {
+      return activas.filter((c) => c.tipo === defaultCuentaTipo);
+    }
+    return activas;
+  }, [cuentasQ.data, restringirCuentaTipo, defaultCuentaTipo]);
 
   const [cuentaId, setCuentaId] = useState<string>("");
   const [metodo, setMetodo] = useState<Metodo>("transferencia");
@@ -139,7 +145,13 @@ export function RegistrarPagoCxPDialog({
               </SelectTrigger>
               <SelectContent>
                 {cuentas.length === 0 && (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">No hay cuentas activas</div>
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    {restringirCuentaTipo && defaultCuentaTipo === "bancaria"
+                      ? "No hay cuentas bancarias activas"
+                      : restringirCuentaTipo && defaultCuentaTipo === "caja_fuerte"
+                        ? "No hay caja fuerte activa"
+                        : "No hay cuentas activas"}
+                  </div>
                 )}
                 {cuentas.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
