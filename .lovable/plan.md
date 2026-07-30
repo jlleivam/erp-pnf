@@ -38,6 +38,14 @@ Campos comunes:
 
 Al autorizarse se genera una CxP con folio propio, beneficiario = proveedor, obra asignada y concepto del gasto. Aparece en el módulo de CxP del administrativo junto con el resto y se paga con el flujo de pago existente. Si el material fue a almacén, la CxP y el movimiento de almacén quedan ligados a la misma solicitud para trazabilidad.
 
+**Origen del pago según el comprobante:**
+
+- Comprobante **factura** → el pago sale de una **cuenta bancaria** (transferencia o cheque). El diálogo de pago preselecciona una cuenta bancaria y no permite elegir caja fuerte / efectivo.
+- Comprobante **nota** (o sin comprobante) → el pago sale de la **caja fuerte** en efectivo. El diálogo preselecciona la caja fuerte y no permite cuentas bancarias.
+
+La restricción se aplica tanto en la interfaz (filtrado de cuentas y método) como en el servidor al registrar el pago, para que no se pueda saltar.
+
+
 ## Permisos (nueva sección "Gastos de obra")
 
 - Crear/editar y enviar solicitud — residente por defecto.
