@@ -394,9 +394,13 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
         .from("obras").select("id, nombre").in("id", obraIds);
       obrasMap = new Map((obrasRows ?? []).map((o: any) => [o.id, o.nombre]));
     }
-    const obraNamePorNomina = new Map<string, { id: string; nombre: string }>();
+    const obraNamePorNomina = new Map<string, { id: string; nombre: string; estatus: string }>();
     for (const n of nominasArr) {
-      obraNamePorNomina.set(n.id, { id: n.obra_id, nombre: obrasMap.get(n.obra_id) ?? "—" });
+      obraNamePorNomina.set(n.id, {
+        id: n.obra_id,
+        nombre: obrasMap.get(n.obra_id) ?? "—",
+        estatus: String(n.estatus),
+      });
     }
 
     if (nominaIds.length === 0) {
