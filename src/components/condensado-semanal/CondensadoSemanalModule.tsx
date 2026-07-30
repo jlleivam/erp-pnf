@@ -204,7 +204,7 @@ export function CondensadoSemanalModule() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {g.conceptos.map((c) => {
+                        {g.conceptos.filter((c) => !c.informativo).map((c) => {
                           const pend = Math.round((c.devengado - c.pagado) * 100) / 100;
                           return (
                             <TableRow key={c.tipo}>
@@ -222,6 +222,28 @@ export function CondensadoSemanalModule() {
                       </TableBody>
                     </Table>
                   </div>
+
+                  {/* Movimientos informativos (traspasos de activo, no gasto) */}
+                  {g.conceptos.some((c) => c.informativo) && (
+                    <div className="rounded border border-dashed overflow-hidden mb-3 bg-muted/30">
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        Movimientos de fondos — no representan gasto de la obra (traspaso de caja fuerte a caja chica del residente)
+                      </div>
+                      <Table className="table-fixed w-full">
+                        <TableBody>
+                          {g.conceptos.filter((c) => c.informativo).map((c) => (
+                            <TableRow key={c.tipo} className="text-muted-foreground">
+                              <TableCell><TruncatedCell>{c.label}</TruncatedCell></TableCell>
+                              <TableCell className="w-32 text-right tabular-nums">{formatMXN(c.devengado)}</TableCell>
+                              <TableCell className="w-32 text-right tabular-nums">{formatMXN(c.pagado)}</TableCell>
+                              <TableCell className="w-32 text-right text-xs">no suma al costo</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
 
                   {/* Detalle */}
                   <details className="group">
