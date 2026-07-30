@@ -595,7 +595,7 @@ export const registrarPagoCxP = createServerFn({ method: "POST" })
       if (gasto) {
         await supabaseAdmin
           .from("obra_gastos_directos")
-          .update({ estatus: "pagado", pagado_at: new Date().toISOString() })
+          .update({ estatus: "pagado" })
           .eq("id", gasto.id);
         if (gasto.solicitado_por) {
           await supabaseAdmin.from("notificaciones").insert({
