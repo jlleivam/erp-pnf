@@ -564,6 +564,168 @@ async function assertAdmin(supabase: any, userId: string): Promise<string> {
   return companyId;
 }
 
+/**
+ * Cuenta trabajadores con jornadas duplicadas (suma > 1.0 en un mismo día,
+ * cruzando obras) dentro de una semana de la empresa.
+ */
+async function contarTrabajadoresDuplicados(
+  client: any,
+  companyId: string,
+  semanaInicio: string,
+): Promise<number> {
+  const { data: nominas } = await client
+    .from("obra_nominas")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("semana_inicio", semanaInicio)
+    .neq("estatus", "pagada");
+  const nominaIds = (nominas ?? []).map((n: any) => n.id);
+  if (nominaIds.length === 0) return 0;
+
+  const { data: renglones } = await client
+    .from("obra_nomina_renglones")
+    .select("id, trabajador_id")
+    .in("nomina_id", nominaIds);
+  const rens = (renglones ?? []) as any[];
+  if (rens.length === 0) return 0;
+  const trabPorRenglon = new Map<string, string>(rens.map((r) => [r.id, r.trabajador_id]));
+
+  const { data: asistencias } = await client
+    .from("obra_nomina_asistencias")
+    .select("renglon_id, fecha, jornada")
+    .in("renglon_id", Array.from(trabPorRenglon.keys()));
+
+  const sumas = new Map<string, number>();
+  for (const a of (asistencias ?? []) as any[]) {
+    const trabId = trabPorRenglon.get(a.renglon_id);
+    if (!trabId) continue;
+    const key = `${trabId}|${a.fecha}`;
+    sumas.set(key, (sumas.get(key) ?? 0) + Number(a.jornada ?? 0));
+  }
+  const conflictivos = new Set<string>();
+  for (const [key, suma] of sumas) {
+    if (suma > 1.0001) conflictivos.add(key.split("|")[0]);
+  }
+  return conflictivos.size;
+}
+
+/**
+ * Ajuste administrativo de asistencia sobre nóminas ya cerradas.
+ * Sólo director o administrativo, con motivo obligatorio y bitácora.
+ */
+export const ajustarAsistenciaAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      renglonId: z.string().uuid(),
+      fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      jornada: z.number().refine((v) => v === 0 || v === 0.5 || v === 1, "Jornada inválida"),
+      horasExtras: z.number().min(0).max(24),
+      motivo: z.string().trim().min(5).max(500),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const companyId = await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: renglon } = await supabaseAdmin
+      .from("obra_nomina_renglones")
+      .select("id, nomina_id, sueldo_diario_snapshot")
+      .eq("id", data.renglonId)
+      .maybeSingle();
+    if (!renglon) throw new Error("Renglón no encontrado");
+
+    const { data: nomina } = await supabaseAdmin
+      .from("obra_nominas")
+      .select("id, company_id, estatus, semana_inicio, semana_fin")
+      .eq("id", renglon.nomina_id)
+      .maybeSingle();
+    if (!nomina || nomina.company_id !== companyId) throw new Error("Nómina no encontrada");
+    if (nomina.estatus === "pagada") throw new Error("La nómina ya fue pagada; no se puede ajustar");
+    if (data.fecha < nomina.semana_inicio || data.fecha > nomina.semana_fin)
+      throw new Error("Fecha fuera de la semana de la nómina");
+
+    const { data: actual } = await supabaseAdmin
+      .from("obra_nomina_asistencias")
+      .select("id, jornada, horas_extras, nota_extras, jornada_original, horas_extras_original")
+      .eq("renglon_id", data.renglonId)
+      .eq("fecha", data.fecha)
+      .maybeSingle();
+
+    const jornadaOriginal =
+      actual?.jornada_original != null ? Number(actual.jornada_original) : Number(actual?.jornada ?? 0);
+    const horasOriginal =
+      actual?.horas_extras_original != null
+        ? Number(actual.horas_extras_original)
+        : Number(actual?.horas_extras ?? 0);
+
+    const ahora = new Date().toISOString();
+
+    if (data.jornada === 0 && data.horasExtras === 0) {
+      if (actual) {
+        // Se conserva el registro en cero para no perder la bitácora del ajuste.
+        const { error } = await supabaseAdmin
+          .from("obra_nomina_asistencias")
+          .update({
+            jornada: 0,
+            horas_extras: 0,
+            nota_extras: null,
+            jornada_original: jornadaOriginal,
+            horas_extras_original: horasOriginal,
+            ajustado_por: userId,
+            ajustado_at: ahora,
+            ajuste_motivo: data.motivo,
+          })
+          .eq("id", actual.id);
+        if (error) throw new Error(error.message);
+      }
+    } else {
+      const { error } = await supabaseAdmin.from("obra_nomina_asistencias").upsert(
+        {
+          renglon_id: data.renglonId,
+          fecha: data.fecha,
+          jornada: data.jornada,
+          horas_extras: data.horasExtras,
+          nota_extras: actual?.nota_extras ?? null,
+          jornada_original: jornadaOriginal,
+          horas_extras_original: horasOriginal,
+          ajustado_por: userId,
+          ajustado_at: ahora,
+          ajuste_motivo: data.motivo,
+        },
+        { onConflict: "renglon_id,fecha" },
+      );
+      if (error) throw new Error(error.message);
+    }
+
+    // Recalcular renglón
+    const { data: asistencias } = await supabaseAdmin
+      .from("obra_nomina_asistencias")
+      .select("jornada, horas_extras")
+      .eq("renglon_id", data.renglonId);
+    const totals = recalcRenglon(
+      (asistencias ?? []) as any[],
+      Number(renglon.sueldo_diario_snapshot),
+    );
+    await supabaseAdmin.from("obra_nomina_renglones").update(totals).eq("id", data.renglonId);
+
+    // Recalcular monto de la nómina
+    const { data: allRenglones } = await supabaseAdmin
+      .from("obra_nomina_renglones")
+      .select("importe_total")
+      .eq("nomina_id", nomina.id);
+    const monto = ((allRenglones ?? []) as any[]).reduce(
+      (s, r) => s + Number(r.importe_total ?? 0),
+      0,
+    );
+    await supabaseAdmin.from("obra_nominas").update({ monto_total: monto }).eq("id", nomina.id);
+
+    return { ok: true, importeRenglon: totals.importe_total, montoNomina: monto };
+  });
+
+
+
 export const listSemanasNominaPorPagar = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
