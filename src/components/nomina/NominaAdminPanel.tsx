@@ -472,9 +472,10 @@ function AjusteAsistenciaDialog({
   trabajadorNombre: string;
   onClose: () => void;
 }) {
+  const yaAjustada = !!asistencia?.ajustado_at;
   const [jornada, setJornada] = useState<number>(asistencia?.jornada ?? 0);
   const [horas, setHoras] = useState<string>(String(asistencia?.horas_extras ?? 0));
-  const [motivo, setMotivo] = useState("");
+  const [motivo, setMotivo] = useState(asistencia?.ajuste_motivo ?? "");
   const [saving, setSaving] = useState(false);
   const qc = useQueryClient();
   const ajustar = useServerFn(ajustarAsistenciaAdmin);
@@ -510,13 +511,29 @@ function AjusteAsistenciaDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Ajustar asistencia</DialogTitle>
+          <DialogTitle>{yaAjustada ? "Editar ajuste" : "Ajustar asistencia"}</DialogTitle>
           <DialogDescription>
             {trabajadorNombre} · {obra.nombre} · {fecha}
           </DialogDescription>
         </DialogHeader>
 
+        {yaAjustada && (
+          <Card className="p-3 bg-muted/40 text-xs space-y-1">
+            <p className="font-medium">
+              Ajustado el {formatDateTime(asistencia!.ajustado_at)}
+            </p>
+            <p className="text-muted-foreground">
+              Valores originales: {Number(asistencia!.jornada_original ?? 0).toFixed(1)} jornada ·{" "}
+              {Number(asistencia!.horas_extras_original ?? 0).toFixed(1)} h extra
+            </p>
+            <p className="text-muted-foreground">
+              Al guardar se actualiza este mismo ajuste (no se crea uno nuevo).
+            </p>
+          </Card>
+        )}
+
         <div className="space-y-4">
+
           <div>
             <Label className="text-xs">Jornada</Label>
             <div className="flex gap-2 mt-1">
@@ -567,8 +584,9 @@ function AjusteAsistenciaDialog({
             Cancelar
           </Button>
           <Button onClick={guardar} disabled={!valido || saving}>
-            {saving ? "Guardando…" : "Guardar ajuste"}
+            {saving ? "Guardando…" : yaAjustada ? "Actualizar ajuste" : "Guardar ajuste"}
           </Button>
+
         </DialogFooter>
       </DialogContent>
     </Dialog>
