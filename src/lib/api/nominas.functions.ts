@@ -498,14 +498,21 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
         obra_id: obraInfo.id,
         nombre: obraInfo.nombre,
         nomina_id: r.nomina_id,
+        renglon_id: r.id,
+        estatus: obraInfo.estatus,
         dias: Number(r.dias_trabajados ?? 0),
         horas_extras: Number(r.horas_extras_total ?? 0),
         importe: Number(r.importe_total ?? 0),
         asistencias: asist.map((a) => ({
-          fecha: a.fecha,
+          fecha: String(a.fecha),
           jornada: Number(a.jornada),
           horas_extras: Number(a.horas_extras ?? 0),
           nota_extras: (a.nota_extras ?? null) as string | null,
+          jornada_original: a.jornada_original == null ? null : Number(a.jornada_original),
+          horas_extras_original:
+            a.horas_extras_original == null ? null : Number(a.horas_extras_original),
+          ajustado_at: (a.ajustado_at ?? null) as string | null,
+          ajuste_motivo: (a.ajuste_motivo ?? null) as string | null,
         })),
       });
     }
