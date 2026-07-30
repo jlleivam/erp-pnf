@@ -426,7 +426,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
     if (renglonIds.length > 0) {
       const { data } = await supabase
         .from("obra_nomina_asistencias")
-        .select("renglon_id, fecha, jornada, horas_extras, nota_extras")
+        .select("renglon_id, fecha, jornada, horas_extras, nota_extras, jornada_original, horas_extras_original, ajustado_por, ajustado_at, ajuste_motivo")
         .in("renglon_id", renglonIds);
       asistencias = data ?? [];
     }
