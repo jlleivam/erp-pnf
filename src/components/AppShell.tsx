@@ -322,7 +322,7 @@ export function AppShell() {
           items={[
             { to: "/app/admin/cuentas-por-pagar", label: "CXP", icon: FileText, pendientes: adminPendientes["cuentas-por-pagar"] },
             { to: "/app/admin/nomina", label: "Nómina", icon: Users, pendientes: adminPendientes["nomina"] },
-            { to: "/app", label: "Obras", icon: HardHat, exact: true },
+            { to: "/app/obras", label: "Obras", icon: HardHat, exact: true },
             { to: "/app/admin/condensado-semanal", label: "Condensado", icon: CalendarRange },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
