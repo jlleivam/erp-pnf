@@ -2350,29 +2350,44 @@ export type Database = {
       }
       obra_nomina_asistencias: {
         Row: {
+          ajustado_at: string | null
+          ajustado_por: string | null
+          ajuste_motivo: string | null
           created_at: string
           fecha: string
           horas_extras: number
+          horas_extras_original: number | null
           id: string
           jornada: number
+          jornada_original: number | null
           nota_extras: string | null
           renglon_id: string
         }
         Insert: {
+          ajustado_at?: string | null
+          ajustado_por?: string | null
+          ajuste_motivo?: string | null
           created_at?: string
           fecha: string
           horas_extras?: number
+          horas_extras_original?: number | null
           id?: string
           jornada?: number
+          jornada_original?: number | null
           nota_extras?: string | null
           renglon_id: string
         }
         Update: {
+          ajustado_at?: string | null
+          ajustado_por?: string | null
+          ajuste_motivo?: string | null
           created_at?: string
           fecha?: string
           horas_extras?: number
+          horas_extras_original?: number | null
           id?: string
           jornada?: number
+          jornada_original?: number | null
           nota_extras?: string | null
           renglon_id?: string
         }
