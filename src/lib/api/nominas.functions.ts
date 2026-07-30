@@ -770,9 +770,16 @@ export const listSemanasNominaPorPagar = createServerFn({ method: "GET" })
       bySemana.set(key, g);
     }
 
-    return Array.from(bySemana.values()).sort((a, b) =>
+    const semanas = Array.from(bySemana.values()).sort((a, b) =>
       a.semana_inicio < b.semana_inicio ? 1 : -1,
     );
+
+    // Marca semanas con trabajadores duplicados (bloquean el pago)
+    for (const s of semanas) {
+      s.duplicados = await contarTrabajadoresDuplicados(supabase, companyId, s.semana_inicio);
+    }
+
+    return semanas;
   });
 
 export const listTrabajadoresPagoSemana = createServerFn({ method: "POST" })
