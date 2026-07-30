@@ -375,6 +375,11 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
       .from("profiles").select("company_id").eq("id", userId).maybeSingle();
     const companyId = profile?.company_id;
     if (!companyId) throw new Error("Sin empresa");
+    const { data: rolesRows } = await supabase
+      .from("user_roles").select("role")
+      .eq("user_id", userId).eq("company_id", companyId);
+    const roleSet = new Set((rolesRows ?? []).map((r: any) => r.role));
+    const puedeAjustar = roleSet.has("director") || roleSet.has("administrativo");
     const semana = calcularSemana(data.semanaInicio);
 
     // Todas las nóminas de la company esa semana
