@@ -73,6 +73,7 @@ export type CondensadoItem = {
 export type CondensadoConcepto = {
   tipo: string;
   label: string;
+  informativo: boolean; // true = traspaso de activo, no suma al costo
   devengado: number;
   pagado: number;
   items: CondensadoItem[];
