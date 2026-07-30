@@ -70,6 +70,10 @@ type Asistencia = {
   jornada: number;
   horas_extras: number;
   nota_extras: string | null;
+  jornada_original?: number | null;
+  horas_extras_original?: number | null;
+  ajustado_at?: string | null;
+  ajuste_motivo?: string | null;
 };
 
 export function CapturaNominaSheet({
