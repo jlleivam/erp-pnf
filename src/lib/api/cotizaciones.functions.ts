@@ -359,7 +359,7 @@ export const enviarOCASupervisor = createServerFn({ method: "POST" })
             tipo: "oc_pendiente_autorizacion",
             titulo: `OC ${oc.folio} pendiente de autorizar`,
             mensaje: `Hay una OC esperando tu autorización${req?.folio ? ` (req. ${req.folio})` : ""}.`,
-            link: `/app/supervisor/requisiciones`,
+            link: `/app/obras/${oc.obra_id}/requisiciones`,
             requisicion_id: oc.requisicion_id,
             oc_id: oc.id,
           })),
