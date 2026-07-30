@@ -33,21 +33,28 @@ const BUCKET_LABEL: Record<string, string> = {
   caja_chica: "Caja chica",
   insumos: "Insumos / CxP proveedor",
   gasto_oficina: "Gastos oficina",
+  traspaso_fondo: "Fondo de caja chica (traspaso)",
   otro: "Otros",
 };
 
+// Conceptos que NO representan costo: son traspasos entre cuentas de activo
+const BUCKETS_INFORMATIVOS = new Set<string>(["traspaso_fondo"]);
+
 function bucketFromOrigen(origen: string | null | undefined, obraId: string | null): string {
   const o = (origen ?? "").toLowerCase();
+  // Entrega/reposición de fondo de caja chica: traspaso de activo, no gasto
+  if (o.includes("caja_chica_fondo") || o.includes("reembolso")) return "traspaso_fondo";
   if (o.includes("nomina")) return obraId ? "nomina_obra" : "nomina_oficina";
   if (o.includes("destajo")) return "destajo";
   if (o.includes("subcontrato")) return "subcontrato";
   if (o.includes("renta")) return "renta";
   if (o.includes("gasolina") || o.includes("vale")) return "gasolina";
-  if (o.includes("caja_chica") || o.includes("reembolso")) return "caja_chica";
+  if (o.includes("caja_chica")) return "traspaso_fondo";
   if (o.includes("gasto_oficina")) return "gasto_oficina";
   if (o === "oc" || o === "cxp" || o.includes("requisicion") || o.includes("recepcion")) return "insumos";
   return obraId ? "otro" : "gasto_oficina";
 }
+
 
 // ============================================================
 // Output types
