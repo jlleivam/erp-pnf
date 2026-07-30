@@ -22,6 +22,7 @@ const REALTIME_TABLES = [
   "obra_estimaciones",
   "obra_destajos",
   "obra_subcontratos",
+  "obra_gastos_directos",
 ] as const;
 
 export function usePendientes() {
