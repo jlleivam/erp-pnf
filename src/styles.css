@@ -37,6 +37,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-edited: var(--edited);
+  --color-edited-foreground: var(--edited-foreground);
+  --color-edited-border: var(--edited-border);
 }
 
 /* ERP PNF — Paleta neutra con azul oscuro corporativo */
@@ -80,6 +83,11 @@
   --sidebar-accent-foreground: oklch(0.99 0 0);
   --sidebar-border: oklch(0.26 0.05 255);
   --sidebar-ring: oklch(0.55 0.08 255);
+
+  /* Marca de "editado / ajustado por administración" */
+  --edited: oklch(0.95 0.09 95);
+  --edited-foreground: oklch(0.42 0.11 75);
+  --edited-border: oklch(0.83 0.13 90);
 }
 
 .dark {
@@ -110,6 +118,10 @@
   --sidebar-accent-foreground: oklch(0.97 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.55 0.05 255);
+
+  --edited: oklch(0.34 0.06 90);
+  --edited-foreground: oklch(0.90 0.09 95);
+  --edited-border: oklch(0.48 0.09 90);
 }
 
 @layer base {

@@ -37,6 +37,12 @@ function shiftSemana(inicio: string, deltaDias: number): string {
   return calcularSemana(d).inicio;
 }
 
+function tieneAjustes(t: { obras: { asistencias: { ajustado_at: string | null }[] }[] }): boolean {
+  return t.obras.some((o) => o.asistencias.some((a) => !!a.ajustado_at));
+}
+
+
+
 type AsistenciaPanel = {
   fecha: string;
   jornada: number;
@@ -210,12 +216,15 @@ export function NominaAdminPanel() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t) => (
+              {filtered.map((t) => {
+                const ajustado = tieneAjustes(t);
+                return (
                 <tr
                   key={t.trabajador_id}
                   className={cn(
                     "border-t border-border hover:bg-muted/30 cursor-pointer",
-                    t.duplicados.length > 0 && "bg-destructive/5",
+                    ajustado && "bg-edited hover:bg-edited",
+                    t.duplicados.length > 0 && "bg-destructive/5 hover:bg-destructive/5",
                   )}
                   onClick={() => setVerDetalleId(t.trabajador_id)}
                 >
@@ -224,12 +233,23 @@ export function NominaAdminPanel() {
                       {t.duplicados.length > 0 && (
                         <AlertTriangle className="size-3.5 text-destructive shrink-0" />
                       )}
+                      {ajustado && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Pencil className="size-3 text-edited-foreground shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent className="text-xs">
+                            Ajustado desde el panel global
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       <span className="font-medium truncate">{t.nombre}</span>
                       {t.puesto && (
                         <span className="text-xs text-muted-foreground truncate">· {t.puesto}</span>
                       )}
                     </div>
                   </td>
+
                   <td className="py-2 px-2 text-center tabular-nums text-xs">
                     {formatMXN(t.sueldo_diario)}
                   </td>
@@ -250,10 +270,22 @@ export function NominaAdminPanel() {
                     {formatMXN(t.importe_total)}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+          <div className="flex flex-wrap items-center gap-4 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded-sm bg-destructive/20 border border-destructive/40" />
+              Días duplicados por cuadrar
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded-sm bg-edited border border-edited-border" />
+              Asistencia ajustada por administración
+            </span>
+          </div>
         </Card>
+
 
       )}
 
@@ -363,7 +395,7 @@ function DetalleTrabajadorDialog({
                         <div className="flex flex-col items-center leading-tight">
                           <span className="inline-flex items-center gap-0.5">
                             {a && a.jornada > 0 ? a.jornada.toFixed(1) : "—"}
-                            {ajustada && <Pencil className="size-2.5 text-primary" />}
+                            {ajustada && <Pencil className="size-2.5 text-edited-foreground" />}
                           </span>
                           {a && a.horas_extras > 0 && (
                             <span
@@ -382,7 +414,8 @@ function DetalleTrabajadorDialog({
                           className={cn(
                             "p-1 text-center tabular-nums text-xs",
                             editable && "cursor-pointer hover:bg-muted/50 rounded",
-                            ajustada && "bg-primary/5",
+                            ajustada &&
+                              "bg-edited text-edited-foreground font-medium ring-1 ring-inset ring-edited-border rounded hover:bg-edited",
                           )}
                           onClick={
                             editable
