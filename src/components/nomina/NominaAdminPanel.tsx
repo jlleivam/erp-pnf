@@ -1,18 +1,21 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { getPanelGlobalNomina } from "@/lib/api/nominas.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getPanelGlobalNomina, ajustarAsistenciaAdmin } from "@/lib/api/nominas.functions";
 import { calcularSemana, formatRangoSemana, toISODate } from "@/lib/estimacion-utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { formatMXN } from "@/lib/format";
-import { AlertTriangle, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatMXN, formatDateTime } from "@/lib/format";
+import { AlertTriangle, ChevronLeft, ChevronRight, MessageSquare, Pencil, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const DOW = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -34,6 +37,29 @@ function shiftSemana(inicio: string, deltaDias: number): string {
   return calcularSemana(d).inicio;
 }
 
+type AsistenciaPanel = {
+  fecha: string;
+  jornada: number;
+  horas_extras: number;
+  nota_extras: string | null;
+  jornada_original: number | null;
+  horas_extras_original: number | null;
+  ajustado_at: string | null;
+  ajuste_motivo: string | null;
+};
+
+type ObraPanel = {
+  obra_id: string;
+  nombre: string;
+  nomina_id: string;
+  renglon_id: string;
+  estatus: string;
+  dias: number;
+  horas_extras: number;
+  importe: number;
+  asistencias: AsistenciaPanel[];
+};
+
 type TrabajadorPanel = {
   trabajador_id: string;
   nombre: string;
@@ -42,15 +68,7 @@ type TrabajadorPanel = {
   dias_totales: number;
   horas_extras_totales: number;
   importe_total: number;
-  obras: {
-    obra_id: string;
-    nombre: string;
-    nomina_id: string;
-    dias: number;
-    horas_extras: number;
-    importe: number;
-    asistencias: { fecha: string; jornada: number; horas_extras: number; nota_extras: string | null }[];
-  }[];
+  obras: ObraPanel[];
   duplicados: { fecha: string; suma: number }[];
 };
 
@@ -60,7 +78,7 @@ export function NominaAdminPanel() {
   );
   const [filtroDup, setFiltroDup] = useState(false);
   const [filtroNombre, setFiltroNombre] = useState("");
-  const [verDetalle, setVerDetalle] = useState<TrabajadorPanel | null>(null);
+  const [verDetalleId, setVerDetalleId] = useState<string | null>(null);
 
   const fetchPanel = useServerFn(getPanelGlobalNomina);
   const panelQ = useQuery({
@@ -71,6 +89,7 @@ export function NominaAdminPanel() {
   const semana = useMemo(() => calcularSemana(semanaInicio), [semanaInicio]);
   const trabajadores = (panelQ.data?.trabajadores ?? []) as TrabajadorPanel[];
   const obrasConNomina = panelQ.data?.obrasConNomina ?? 0;
+  const puedeAjustar = !!panelQ.data?.puedeAjustar;
 
   const filtered = trabajadores.filter((t) => {
     if (filtroDup && t.duplicados.length === 0) return false;
@@ -80,6 +99,7 @@ export function NominaAdminPanel() {
 
   const totalImporte = trabajadores.reduce((s, t) => s + t.importe_total, 0);
   const totalDuplicados = trabajadores.filter((t) => t.duplicados.length > 0).length;
+  const verDetalle = trabajadores.find((t) => t.trabajador_id === verDetalleId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -114,6 +134,21 @@ export function NominaAdminPanel() {
           Semana <span className="font-medium">{formatRangoSemana(semana.inicio, semana.fin)}</span>
         </p>
       </Card>
+
+      {totalDuplicados > 0 && (
+        <Card className="p-3 border-destructive/50 bg-destructive/5">
+          <p className="text-sm font-medium text-destructive flex items-center gap-2">
+            <AlertTriangle className="size-4 shrink-0" />
+            {totalDuplicados} trabajador(es) con días duplicados. Esta semana no se puede enviar a
+            pagos hasta cuadrarla.
+          </p>
+          {puedeAjustar && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Abre el trabajador y ajusta la jornada por obra y día indicando el motivo.
+            </p>
+          )}
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Card className="p-4">
@@ -182,7 +217,7 @@ export function NominaAdminPanel() {
                     "border-t border-border hover:bg-muted/30 cursor-pointer",
                     t.duplicados.length > 0 && "bg-destructive/5",
                   )}
-                  onClick={() => setVerDetalle(t)}
+                  onClick={() => setVerDetalleId(t.trabajador_id)}
                 >
                   <td className="py-2 px-2 text-left">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -226,7 +261,9 @@ export function NominaAdminPanel() {
         <DetalleTrabajadorDialog
           trabajador={verDetalle}
           dias={diasSemana(semanaInicio)}
-          onClose={() => setVerDetalle(null)}
+          semanaInicio={semanaInicio}
+          puedeAjustar={puedeAjustar}
+          onClose={() => setVerDetalleId(null)}
         />
       )}
     </div>
@@ -234,12 +271,20 @@ export function NominaAdminPanel() {
 }
 
 function DetalleTrabajadorDialog({
-  trabajador, dias, onClose,
+  trabajador, dias, semanaInicio, puedeAjustar, onClose,
 }: {
   trabajador: TrabajadorPanel;
   dias: string[];
+  semanaInicio: string;
+  puedeAjustar: boolean;
   onClose: () => void;
 }) {
+  const [editando, setEditando] = useState<{
+    obra: ObraPanel;
+    fecha: string;
+    asistencia: AsistenciaPanel | null;
+  } | null>(null);
+
   // sumar por fecha entre obras
   const sumaPorFecha = new Map<string, number>();
   for (const o of trabajador.obras) {
@@ -258,7 +303,7 @@ function DetalleTrabajadorDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {trabajador.duplicados.length > 0 && (
+        {trabajador.duplicados.length > 0 ? (
           <Card className="p-3 border-destructive/50 bg-destructive/5">
             <p className="text-sm font-medium text-destructive flex items-center gap-2">
               <AlertTriangle className="size-4" />
@@ -272,6 +317,20 @@ function DetalleTrabajadorDialog({
               ))}
             </ul>
           </Card>
+        ) : (
+          <Card className="p-3 border-primary/30 bg-primary/5">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-primary" />
+              Semana cuadrada: ningún día excede una jornada.
+            </p>
+          </Card>
+        )}
+
+        {puedeAjustar && (
+          <p className="text-xs text-muted-foreground">
+            Haz click en una celda para ajustar la jornada u horas extras de esa obra y día. Cada
+            ajuste requiere motivo y queda registrado.
+          </p>
         )}
 
         <div className="overflow-x-auto">
@@ -293,22 +352,62 @@ function DetalleTrabajadorDialog({
             <tbody>
               {trabajador.obras.map((o) => {
                 const map = new Map(o.asistencias.map((a) => [a.fecha, a]));
+                const editable = puedeAjustar && o.estatus !== "pagada";
                 return (
                   <tr key={o.nomina_id} className="border-t border-border">
                     <td className="p-2 font-medium">{o.nombre}</td>
                     {dias.map((f) => {
-                      const a = map.get(f);
-                      return (
-                        <td key={f} className="p-1 text-center tabular-nums text-xs">
-                          {a && a.jornada > 0 ? a.jornada.toFixed(1) : "—"}
+                      const a = map.get(f) ?? null;
+                      const ajustada = !!a?.ajustado_at;
+                      const contenido = (
+                        <div className="flex flex-col items-center leading-tight">
+                          <span className="inline-flex items-center gap-0.5">
+                            {a && a.jornada > 0 ? a.jornada.toFixed(1) : "—"}
+                            {ajustada && <Pencil className="size-2.5 text-primary" />}
+                          </span>
                           {a && a.horas_extras > 0 && (
-                            <div
-                              className="text-[10px] text-primary inline-flex items-center gap-0.5 cursor-help"
+                            <span
+                              className="text-[10px] text-primary inline-flex items-center gap-0.5"
                               title={a.nota_extras ?? "Sin nota"}
                             >
                               +{a.horas_extras}h
                               {a.nota_extras && <MessageSquare className="size-2.5 opacity-70" />}
-                            </div>
+                            </span>
+                          )}
+                        </div>
+                      );
+                      return (
+                        <td
+                          key={f}
+                          className={cn(
+                            "p-1 text-center tabular-nums text-xs",
+                            editable && "cursor-pointer hover:bg-muted/50 rounded",
+                            ajustada && "bg-primary/5",
+                          )}
+                          onClick={
+                            editable
+                              ? () => setEditando({ obra: o, fecha: f, asistencia: a })
+                              : undefined
+                          }
+                        >
+                          {ajustada ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>{contenido}</div>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs text-xs">
+                                <p>
+                                  Ajustado {formatDateTime(a!.ajustado_at)} · antes{" "}
+                                  {Number(a!.jornada_original ?? 0).toFixed(1)} jornada
+                                  {a!.horas_extras_original
+                                    ? ` / ${Number(a!.horas_extras_original).toFixed(1)}h extra`
+                                    : ""}
+                                </p>
+                                <p className="mt-1 opacity-80">{a!.ajuste_motivo}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            contenido
                           )}
                         </td>
                       );
@@ -347,6 +446,130 @@ function DetalleTrabajadorDialog({
             </tbody>
           </table>
         </div>
+
+        {editando && (
+          <AjusteAsistenciaDialog
+            obra={editando.obra}
+            fecha={editando.fecha}
+            asistencia={editando.asistencia}
+            semanaInicio={semanaInicio}
+            trabajadorNombre={trabajador.nombre}
+            onClose={() => setEditando(null)}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AjusteAsistenciaDialog({
+  obra, fecha, asistencia, semanaInicio, trabajadorNombre, onClose,
+}: {
+  obra: ObraPanel;
+  fecha: string;
+  asistencia: AsistenciaPanel | null;
+  semanaInicio: string;
+  trabajadorNombre: string;
+  onClose: () => void;
+}) {
+  const [jornada, setJornada] = useState<number>(asistencia?.jornada ?? 0);
+  const [horas, setHoras] = useState<string>(String(asistencia?.horas_extras ?? 0));
+  const [motivo, setMotivo] = useState("");
+  const [saving, setSaving] = useState(false);
+  const qc = useQueryClient();
+  const ajustar = useServerFn(ajustarAsistenciaAdmin);
+
+  const horasNum = Number(horas) || 0;
+  const valido = motivo.trim().length >= 5 && horasNum >= 0 && horasNum <= 24;
+
+  async function guardar() {
+    if (!valido) return;
+    setSaving(true);
+    try {
+      await ajustar({
+        data: {
+          renglonId: obra.renglon_id,
+          fecha,
+          jornada,
+          horasExtras: horasNum,
+          motivo: motivo.trim(),
+        },
+      });
+      await qc.invalidateQueries({ queryKey: ["nomina-panel", semanaInicio] });
+      await qc.invalidateQueries({ queryKey: ["nomina-por-pagar"] });
+      toast.success("Asistencia ajustada");
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo ajustar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Ajustar asistencia</DialogTitle>
+          <DialogDescription>
+            {trabajadorNombre} · {obra.nombre} · {fecha}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label className="text-xs">Jornada</Label>
+            <div className="flex gap-2 mt-1">
+              {[0, 0.5, 1].map((v) => (
+                <Button
+                  key={v}
+                  type="button"
+                  size="sm"
+                  variant={jornada === v ? "default" : "outline"}
+                  onClick={() => setJornada(v)}
+                >
+                  {v === 0 ? "Falta" : v === 0.5 ? "Medio día" : "Día completo"}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Horas extras</Label>
+            <Input
+              type="number"
+              min={0}
+              max={24}
+              step="0.5"
+              value={horas}
+              onChange={(e) => setHoras(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">
+              Motivo del ajuste <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ej. El trabajador estuvo medio día en esta obra; el resto en la otra."
+              rows={3}
+              className="mt-1"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">Mínimo 5 caracteres.</p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={guardar} disabled={!valido || saving}>
+            {saving ? "Guardando…" : "Guardar ajuste"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

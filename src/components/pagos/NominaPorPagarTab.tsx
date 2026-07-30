@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Users } from "lucide-react";
+import { AlertTriangle, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -17,6 +19,7 @@ export type SemanaNominaRow = {
   total: number;
   obras: Array<{ nomina_id: string; obra_id: string; obra_nombre: string; monto: number }>;
   nomina_ids: string[];
+  duplicados?: number;
 };
 
 export function NominaPorPagarTab() {
@@ -74,13 +77,35 @@ export function NominaPorPagarTab() {
                   {formatDate(r.semana_inicio)} → {formatDate(r.semana_fin)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {r.obras.length} obra{r.obras.length === 1 ? "" : "s"}
+                  <span className="inline-flex items-center gap-2">
+                    {r.obras.length} obra{r.obras.length === 1 ? "" : "s"}
+                    {(r.duplicados ?? 0) > 0 && (
+                      <Badge variant="destructive" className="text-[11px] gap-1">
+                        <AlertTriangle className="size-3" />
+                        {r.duplicados} con duplicados
+                      </Badge>
+                    )}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap font-semibold">
                   {formatMXN(r.total)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" onClick={() => setPagar(r)}>Pagar semana</Button>
+                  {(r.duplicados ?? 0) > 0 ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block">
+                          <Button size="sm" disabled>Pagar semana</Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-xs">
+                        Hay trabajadores con días duplicados. Cuadra la semana en Nómina → Panel
+                        global antes de pagar.
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button size="sm" onClick={() => setPagar(r)}>Pagar semana</Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
