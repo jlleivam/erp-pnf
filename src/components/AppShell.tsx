@@ -197,6 +197,7 @@ export function AppShell() {
           Corporativo
         </p>
         <NavItem to="/app" label="Dashboard" icon={<LayoutDashboard className="size-4" />} active={pathname === "/app"} onNavigate={onNavigate} />
+        <NavItem to="/app/obras" label="Obras" icon={<HardHat className="size-4" />} active={pathname === "/app/obras"} onNavigate={onNavigate} />
         <NavItem to="/app/catalogos" label="Catálogos" icon={<BookOpen className="size-4" />} active={pathname.startsWith("/app/catalogos")} onNavigate={onNavigate} />
         {puedeCrearObra && (
           <NavItem to="/app/obras/nueva" label="Nueva obra" icon={<HardHat className="size-4" />} active={pathname === "/app/obras/nueva"} onNavigate={onNavigate} />
