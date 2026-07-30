@@ -37,6 +37,12 @@ function shiftSemana(inicio: string, deltaDias: number): string {
   return calcularSemana(d).inicio;
 }
 
+function tieneAjustes(t: { obras: { asistencias: { ajustado_at: string | null }[] }[] }): boolean {
+  return t.obras.some((o) => o.asistencias.some((a) => !!a.ajustado_at));
+}
+
+
+
 type AsistenciaPanel = {
   fecha: string;
   jornada: number;
