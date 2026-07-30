@@ -264,10 +264,22 @@ export function NominaAdminPanel() {
                     {formatMXN(t.importe_total)}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+          <div className="flex flex-wrap items-center gap-4 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded-sm bg-destructive/20 border border-destructive/40" />
+              Días duplicados por cuadrar
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded-sm bg-edited border border-edited-border" />
+              Asistencia ajustada por administración
+            </span>
+          </div>
         </Card>
+
 
       )}
 
