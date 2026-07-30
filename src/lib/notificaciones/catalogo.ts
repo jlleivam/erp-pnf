@@ -108,6 +108,9 @@ export const CATALOGO_NOTIFICACIONES: TipoNotificacion[] = [
   { key: "gasto_oficina_autorizado", modulo: "Gastos de oficina", label: "Gasto de oficina autorizado", defaults: DA },
   { key: "gasto_oficina_rechazado", modulo: "Gastos de oficina", label: "Gasto de oficina rechazado", defaults: DA },
 
+  // Nómina
+  { key: "nomina_ajustada", modulo: "Nómina", label: "Nómina ajustada por administración", defaults: DR },
+
   // Vales de gasolina
   { key: "vale_gasolina_solicitado", modulo: "Vales de gasolina", label: "Vale de gasolina solicitado", defaults: DA },
   { key: "vale_gasolina_autorizado", modulo: "Vales de gasolina", label: "Vale de gasolina autorizado", defaults: DR },

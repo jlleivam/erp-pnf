@@ -631,14 +631,14 @@ export const ajustarAsistenciaAdmin = createServerFn({ method: "POST" })
 
     const { data: renglon } = await supabaseAdmin
       .from("obra_nomina_renglones")
-      .select("id, nomina_id, sueldo_diario_snapshot")
+      .select("id, nomina_id, trabajador_id, sueldo_diario_snapshot")
       .eq("id", data.renglonId)
       .maybeSingle();
     if (!renglon) throw new Error("Renglón no encontrado");
 
     const { data: nomina } = await supabaseAdmin
       .from("obra_nominas")
-      .select("id, company_id, estatus, semana_inicio, semana_fin")
+      .select("id, obra_id, company_id, estatus, semana_inicio, semana_fin")
       .eq("id", renglon.nomina_id)
       .maybeSingle();
     if (!nomina || nomina.company_id !== companyId) throw new Error("Nómina no encontrada");
@@ -721,8 +721,118 @@ export const ajustarAsistenciaAdmin = createServerFn({ method: "POST" })
     );
     await supabaseAdmin.from("obra_nominas").update({ monto_total: monto }).eq("id", nomina.id);
 
+    // Avisar a los residentes de la obra
+    try {
+      await notificarAjusteResidentes(supabaseAdmin, {
+        userId,
+        companyId,
+        nomina,
+        trabajadorId: renglon.trabajador_id,
+        fecha: data.fecha,
+        jornadaAnterior: jornadaOriginal,
+        jornadaNueva: data.jornada,
+        horasNuevas: data.horasExtras,
+        motivo: data.motivo,
+      });
+    } catch (e: any) {
+      console.error("[notificaciones] nomina_ajustada error", e?.message);
+    }
+
     return { ok: true, importeRenglon: totals.importe_total, montoNomina: monto };
   });
+
+async function notificarAjusteResidentes(
+  supabaseAdmin: any,
+  args: {
+    userId: string;
+    companyId: string;
+    nomina: { id: string; obra_id: string; semana_inicio: string; semana_fin: string };
+    trabajadorId: string;
+    fecha: string;
+    jornadaAnterior: number;
+    jornadaNueva: number;
+    horasNuevas: number;
+    motivo: string;
+  },
+) {
+  const { userId, companyId, nomina } = args;
+
+  const { data: team } = await supabaseAdmin
+    .from("obra_team")
+    .select("user_id")
+    .eq("obra_id", nomina.obra_id)
+    .eq("role", "residente");
+  const destinatarios = Array.from(
+    new Set(
+      ((team ?? []) as Array<{ user_id: string }>)
+        .map((t) => t.user_id)
+        .filter((u) => u && u !== userId),
+    ),
+  );
+  if (destinatarios.length === 0) return;
+
+  // Preferencia de la empresa para el rol residente
+  const { data: pref } = await supabaseAdmin
+    .from("notificacion_preferencias")
+    .select("habilitado")
+    .eq("company_id", companyId)
+    .eq("role", "residente")
+    .eq("tipo", "nomina_ajustada")
+    .maybeSingle();
+  if (pref && pref.habilitado === false) return;
+
+  const [{ data: obra }, { data: trabajador }, { data: quien }] = await Promise.all([
+    supabaseAdmin.from("obras").select("nombre").eq("id", nomina.obra_id).maybeSingle(),
+    supabaseAdmin
+      .from("trabajadores")
+      .select("nombre_completo")
+      .eq("id", args.trabajadorId)
+      .maybeSingle(),
+    supabaseAdmin.from("profiles").select("nombre_completo").eq("id", userId).maybeSingle(),
+  ]);
+
+  const fmt = (f: string) => `${f.slice(8)}/${f.slice(5, 7)}`;
+  const jornadaTxt = (v: number) => (v === 0 ? "falta" : v === 0.5 ? "medio día" : "día completo");
+  const titulo = `Nómina ajustada${obra?.nombre ? ` · ${obra.nombre}` : ""}`;
+  const mensaje =
+    `${quien?.nombre_completo ?? "Administración"} ajustó la semana ` +
+    `${fmt(nomina.semana_inicio)}–${fmt(nomina.semana_fin)}: ` +
+    `${trabajador?.nombre_completo ?? "Trabajador"} · ${fmt(args.fecha)} ` +
+    `de ${jornadaTxt(args.jornadaAnterior)} a ${jornadaTxt(args.jornadaNueva)}` +
+    (args.horasNuevas > 0 ? ` (+${args.horasNuevas}h extra)` : "") +
+    `. Motivo: ${args.motivo}`;
+  const link = `/app/obras/${nomina.obra_id}/nomina`;
+  const ahora = new Date().toISOString();
+
+  for (const uid of destinatarios) {
+    const { data: existente } = await supabaseAdmin
+      .from("notificaciones")
+      .select("id")
+      .eq("user_id", uid)
+      .eq("tipo", "nomina_ajustada")
+      .eq("obra_id", nomina.obra_id)
+      .eq("link", link)
+      .is("leida_at", null)
+      .maybeSingle();
+
+    if (existente) {
+      await supabaseAdmin
+        .from("notificaciones")
+        .update({ titulo, mensaje, created_at: ahora })
+        .eq("id", existente.id);
+    } else {
+      await supabaseAdmin.from("notificaciones").insert({
+        user_id: uid,
+        company_id: companyId,
+        obra_id: nomina.obra_id,
+        tipo: "nomina_ajustada",
+        titulo,
+        mensaje,
+        link,
+      });
+    }
+  }
+}
 
 
 

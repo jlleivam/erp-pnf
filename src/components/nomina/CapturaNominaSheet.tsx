@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
-import { UserPlus, Lock, Plus, MessageSquare } from "lucide-react";
+import { UserPlus, Lock, Plus, MessageSquare, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrabajadorFormDialog } from "@/components/trabajadores/TrabajadorFormDialog";
 import { useEffectiveRoles } from "@/stores/auth";
@@ -70,6 +70,10 @@ type Asistencia = {
   jornada: number;
   horas_extras: number;
   nota_extras: string | null;
+  jornada_original?: number | null;
+  horas_extras_original?: number | null;
+  ajustado_at?: string | null;
+  ajuste_motivo?: string | null;
 };
 
 export function CapturaNominaSheet({
@@ -134,6 +138,11 @@ export function CapturaNominaSheet({
     return m;
   }, [asistencias]);
 
+  const ajustes = useMemo(
+    () => asistencias.filter((a) => !!a.ajustado_at),
+    [asistencias],
+  );
+
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-[1100px] overflow-y-auto">
@@ -190,6 +199,26 @@ export function CapturaNominaSheet({
                 </Button>
               </div>
             )}
+
+            {ajustes.length > 0 && (
+              <Card className="p-3 bg-edited border-edited-border">
+                <div className="flex items-start gap-2">
+                  <Pencil className="size-4 text-edited-foreground mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-edited-foreground">
+                      Esta nómina fue ajustada por administración ({ajustes.length}{" "}
+                      {ajustes.length === 1 ? "cambio" : "cambios"})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Los días con fondo amarillo fueron modificados. Pasa el cursor sobre la celda
+                      para ver el valor original y el motivo.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+
 
 
             {renglones.length === 0 ? (
@@ -248,8 +277,30 @@ export function CapturaNominaSheet({
                         </td>
                         {dias.map((fecha) => {
                           const a = asistMap.get(`${r.id}|${fecha}`);
+                          const ajustada = !!a?.ajustado_at;
+                          const jornadaTxt = (v: number) =>
+                            v === 0 ? "falta" : v === 0.5 ? "medio día" : "día completo";
+                          const tip = ajustada
+                            ? `Ajustado por administración · original: ${jornadaTxt(
+                                Number(a?.jornada_original ?? 0),
+                              )}${
+                                a?.horas_extras_original != null
+                                  ? ` (+${Number(a.horas_extras_original)}h)`
+                                  : ""
+                              }${a?.ajuste_motivo ? ` · Motivo: ${a.ajuste_motivo}` : ""}`
+                            : undefined;
                           return (
-                            <td key={fecha} className="p-1 text-center align-middle">
+                            <td
+                              key={fecha}
+                              title={tip}
+                              className={cn(
+                                "p-1 text-center align-middle",
+                                ajustada && "bg-edited",
+                              )}
+                            >
+                              {ajustada && (
+                                <Pencil className="size-2.5 text-edited-foreground mx-auto mb-0.5" />
+                              )}
                               <DiaCell
                                 renglonId={r.id}
                                 fecha={fecha}
