@@ -14,6 +14,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GastosObraPorPagarTab } from "./GastosObraPorPagarTab";
 import { TruncatedCell } from "./TruncatedCell";
 import { getSaldosProveedores, getDetalleSaldoProveedor, listCxPDestajoPendientes, listCxPSubcontratoPendientes } from "@/lib/api/pagos.functions";
 import { listAnticiposDestajoPendientes } from "@/lib/api/destajos.functions";
@@ -112,6 +113,8 @@ export function CuentasPorPagarModule() {
   const gasolinasPendientesCount = ((valesCountQ.data ?? []) as unknown[]).length;
   const cajaChicaPendientesCount = ((cajaChicaCountQ.data ?? []) as unknown[]).length;
   const nominaPendientesCount = ((nominaCountQ.data ?? []) as unknown[]).length;
+  const gastosObraPendientesCount = ((gastosObraCountQ.data ?? []) as Array<{ pendiente: number }>)
+    .filter((r) => r.pendiente > 0.009).length;
 
 
   return (
@@ -163,6 +166,14 @@ export function CuentasPorPagarModule() {
             {cajaChicaPendientesCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
                 {cajaChicaPendientesCount > 99 ? "99+" : cajaChicaPendientesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="gastos-obra">
+            Gastos de obra
+            {gastosObraPendientesCount > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+                {gastosObraPendientesCount > 99 ? "99+" : gastosObraPendientesCount}
               </span>
             )}
           </TabsTrigger>
@@ -254,6 +265,10 @@ export function CuentasPorPagarModule() {
 
         <TabsContent value="caja-chica" className="mt-4">
           <CajaChicaPorPagarTab />
+        </TabsContent>
+
+        <TabsContent value="gastos-obra" className="mt-4">
+          <GastosObraPorPagarTab />
         </TabsContent>
 
         <TabsContent value="nomina" className="mt-4">

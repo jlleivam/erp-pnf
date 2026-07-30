@@ -11,6 +11,7 @@ import { DestajosModule } from "@/components/destajos/DestajosModule";
 import { SubcontratosModule } from "@/components/subcontratos/SubcontratosModule";
 import { RentasModule } from "@/components/rentas/RentasModule";
 import { GasolinasModule } from "@/components/gasolinas/GasolinasModule";
+import { GastosObraModule } from "@/components/gastos-obra/GastosObraModule";
 import { CajaChicaModule } from "@/components/caja-chica/CajaChicaModule";
 import { EstadoResultadosModule } from "@/components/estado-resultados/EstadoResultadosModule";
 import { TareasModule } from "@/components/tareas/TareasModule";
@@ -27,6 +28,7 @@ const LABELS: Record<string, string> = {
   rentas: "Rentas",
   gasolinas: "Gasolinas",
   "caja-chica": "Caja chica",
+  "gastos-obra": "Gastos de obra",
   "estado-resultados": "Estado de resultados",
   "almacen-obra": "Almacén de obra",
   tareas: "Tareas",
@@ -57,6 +59,7 @@ function ObraModule() {
   else if (slug === "rentas") content = <RentasModule obraId={obraId} />;
   else if (slug === "gasolinas") content = <GasolinasModule obraId={obraId} scope="obra" />;
   else if (slug === "caja-chica") content = <CajaChicaModule obraId={obraId} scope="obra" />;
+  else if (slug === "gastos-obra") content = <GastosObraModule obraId={obraId} />;
   else if (slug === "estado-resultados") content = <EstadoResultadosModule obraId={obraId} />;
   else if (slug === "tareas") content = <TareasModule obraId={obraId} />;
   else {

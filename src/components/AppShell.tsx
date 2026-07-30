@@ -157,6 +157,7 @@ export function AppShell() {
         { to: `/app/obras/${obraId}/rentas`, label: "Rentas", icon: Truck, pendientes: obraPendientes["rentas"] },
         { to: `/app/obras/${obraId}/gasolinas`, label: "Gasolinas", icon: Fuel, pendientes: obraPendientes["gasolinas"] },
         { to: `/app/obras/${obraId}/caja-chica`, label: "Caja chica", icon: Coins, pendientes: obraPendientes["caja-chica"] },
+        { to: `/app/obras/${obraId}/gastos-obra`, label: "Gastos de obra", icon: Receipt, pendientes: obraPendientes["gastos-obra"] },
         { to: `/app/obras/${obraId}/tareas`, label: "Tareas", icon: ListTodo, pendientes: obraPendientes["tareas"] },
         ...(puedeConfigurarObra
           ? [{ to: `/app/obras/${obraId}/configuracion`, label: "Configuración", icon: Settings } as BottomBarItem]
