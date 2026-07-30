@@ -408,7 +408,8 @@ function DetalleTrabajadorDialog({
                           className={cn(
                             "p-1 text-center tabular-nums text-xs",
                             editable && "cursor-pointer hover:bg-muted/50 rounded",
-                            ajustada && "bg-primary/5",
+                            ajustada &&
+                              "bg-edited text-edited-foreground font-medium ring-1 ring-inset ring-edited-border rounded hover:bg-edited",
                           )}
                           onClick={
                             editable
