@@ -801,7 +801,7 @@ async function notificarAjusteResidentes(
     `de ${jornadaTxt(args.jornadaAnterior)} a ${jornadaTxt(args.jornadaNueva)}` +
     (args.horasNuevas > 0 ? ` (+${args.horasNuevas}h extra)` : "") +
     `. Motivo: ${args.motivo}`;
-  const link = `/app/obras/${nomina.obra_id}/nomina?semana=${nomina.semana_inicio}`;
+  const link = `/app/obras/${nomina.obra_id}/nomina`;
   const ahora = new Date().toISOString();
 
   for (const uid of destinatarios) {
