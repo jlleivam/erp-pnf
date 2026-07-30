@@ -117,7 +117,7 @@ export function AppShell() {
     queryClient.invalidateQueries({ queryKey: ["obras"] });
     queryClient.invalidateQueries({ queryKey: ["pendientes"] });
     queryClient.invalidateQueries({ queryKey: ["notificaciones"] });
-    navigate({ to: "/app" });
+    navigate({ to: "/app/obras" });
   };
 
   const handleLogout = async () => {
@@ -197,6 +197,7 @@ export function AppShell() {
           Corporativo
         </p>
         <NavItem to="/app" label="Dashboard" icon={<LayoutDashboard className="size-4" />} active={pathname === "/app"} onNavigate={onNavigate} />
+        <NavItem to="/app/obras" label="Obras" icon={<HardHat className="size-4" />} active={pathname === "/app/obras"} onNavigate={onNavigate} />
         <NavItem to="/app/catalogos" label="Catálogos" icon={<BookOpen className="size-4" />} active={pathname.startsWith("/app/catalogos")} onNavigate={onNavigate} />
         {puedeCrearObra && (
           <NavItem to="/app/obras/nueva" label="Nueva obra" icon={<HardHat className="size-4" />} active={pathname === "/app/obras/nueva"} onNavigate={onNavigate} />
@@ -321,7 +322,7 @@ export function AppShell() {
           items={[
             { to: "/app/admin/cuentas-por-pagar", label: "CXP", icon: FileText, pendientes: adminPendientes["cuentas-por-pagar"] },
             { to: "/app/admin/nomina", label: "Nómina", icon: Users, pendientes: adminPendientes["nomina"] },
-            { to: "/app", label: "Obras", icon: HardHat, exact: true },
+            { to: "/app/obras", label: "Obras", icon: HardHat, exact: true },
             { to: "/app/admin/condensado-semanal", label: "Condensado", icon: CalendarRange },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             { to: "/app/admin/tesoreria", label: "Tesorería", icon: Wallet },
@@ -335,6 +336,7 @@ export function AppShell() {
           pathname={pathname}
           items={[
             { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+            { to: "/app/obras", label: "Obras", icon: HardHat, exact: true },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             ...(director
               ? [{ to: "/app/configuracion", label: "Config", icon: Settings }]
@@ -425,7 +427,7 @@ function DevUserSwitcher() {
         queryClient.invalidateQueries({ queryKey: ["notificaciones"] }),
       ]);
       queryClient.clear();
-      navigate({ to: "/app", replace: true });
+      navigate({ to: "/app/obras", replace: true });
       window.location.reload();
     } catch (e) {
       console.error("Dev impersonate failed", e);

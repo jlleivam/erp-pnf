@@ -21,6 +21,7 @@ import { Route as AuthenticatedAppEquipoRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app.configuracion'
 import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated/app.clientes'
 import { Route as AuthenticatedAppCatalogosRouteImport } from './routes/_authenticated/app.catalogos'
+import { Route as AuthenticatedAppObrasIndexRouteImport } from './routes/_authenticated/app.obras.index'
 import { Route as AuthenticatedAppCatalogosIndexRouteImport } from './routes/_authenticated/app.catalogos.index'
 import { Route as ApiPublicHooksDevengarRentasRouteImport } from './routes/api/public/hooks/devengar-rentas'
 import { Route as AuthenticatedAppObrasNuevaRouteImport } from './routes/_authenticated/app.obras.nueva'
@@ -100,6 +101,12 @@ const AuthenticatedAppCatalogosRoute =
   AuthenticatedAppCatalogosRouteImport.update({
     id: '/catalogos',
     path: '/catalogos',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppObrasIndexRoute =
+  AuthenticatedAppObrasIndexRouteImport.update({
+    id: '/obras/',
+    path: '/obras/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppCatalogosIndexRoute =
@@ -222,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
   '/api/public/hooks/devengar-rentas': typeof ApiPublicHooksDevengarRentasRoute
   '/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
+  '/app/obras/': typeof AuthenticatedAppObrasIndexRoute
   '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
   '/app/obras/$obraId/configuracion': typeof AuthenticatedAppObrasObraIdConfiguracionRoute
@@ -248,6 +256,7 @@ export interface FileRoutesByTo {
   '/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
   '/api/public/hooks/devengar-rentas': typeof ApiPublicHooksDevengarRentasRoute
   '/app/catalogos': typeof AuthenticatedAppCatalogosIndexRoute
+  '/app/obras': typeof AuthenticatedAppObrasIndexRoute
   '/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
   '/app/obras/$obraId/configuracion': typeof AuthenticatedAppObrasObraIdConfiguracionRoute
@@ -279,6 +288,7 @@ export interface FileRoutesById {
   '/_authenticated/app/obras/nueva': typeof AuthenticatedAppObrasNuevaRoute
   '/api/public/hooks/devengar-rentas': typeof ApiPublicHooksDevengarRentasRoute
   '/_authenticated/app/catalogos/': typeof AuthenticatedAppCatalogosIndexRoute
+  '/_authenticated/app/obras/': typeof AuthenticatedAppObrasIndexRoute
   '/_authenticated/app/catalogos/clientes/$clienteId': typeof AuthenticatedAppCatalogosClientesClienteIdRoute
   '/_authenticated/app/obras/$obraId/$': typeof AuthenticatedAppObrasObraIdSplatRoute
   '/_authenticated/app/obras/$obraId/configuracion': typeof AuthenticatedAppObrasObraIdConfiguracionRoute
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/app/obras/nueva'
     | '/api/public/hooks/devengar-rentas'
     | '/app/catalogos/'
+    | '/app/obras/'
     | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
     | '/app/obras/$obraId/configuracion'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/app/obras/nueva'
     | '/api/public/hooks/devengar-rentas'
     | '/app/catalogos'
+    | '/app/obras'
     | '/app/catalogos/clientes/$clienteId'
     | '/app/obras/$obraId/$'
     | '/app/obras/$obraId/configuracion'
@@ -366,6 +378,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/obras/nueva'
     | '/api/public/hooks/devengar-rentas'
     | '/_authenticated/app/catalogos/'
+    | '/_authenticated/app/obras/'
     | '/_authenticated/app/catalogos/clientes/$clienteId'
     | '/_authenticated/app/obras/$obraId/$'
     | '/_authenticated/app/obras/$obraId/configuracion'
@@ -465,6 +478,13 @@ declare module '@tanstack/react-router' {
       path: '/catalogos'
       fullPath: '/app/catalogos'
       preLoaderRoute: typeof AuthenticatedAppCatalogosRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/obras/': {
+      id: '/_authenticated/app/obras/'
+      path: '/obras'
+      fullPath: '/app/obras/'
+      preLoaderRoute: typeof AuthenticatedAppObrasIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/catalogos/': {
@@ -662,6 +682,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdminRequisicionesRoute: typeof AuthenticatedAppAdminRequisicionesRoute
   AuthenticatedAppObrasObraIdRoute: typeof AuthenticatedAppObrasObraIdRouteWithChildren
   AuthenticatedAppObrasNuevaRoute: typeof AuthenticatedAppObrasNuevaRoute
+  AuthenticatedAppObrasIndexRoute: typeof AuthenticatedAppObrasIndexRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -678,6 +699,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppObrasObraIdRoute:
     AuthenticatedAppObrasObraIdRouteWithChildren,
   AuthenticatedAppObrasNuevaRoute: AuthenticatedAppObrasNuevaRoute,
+  AuthenticatedAppObrasIndexRoute: AuthenticatedAppObrasIndexRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
