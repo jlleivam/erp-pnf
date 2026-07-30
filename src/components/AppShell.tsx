@@ -207,20 +207,6 @@ export function AppShell() {
       </div>
 
 
-      {showSupervisor && (
-        <div>
-          <p className="px-3 mb-2 text-xs uppercase tracking-wider text-sidebar-foreground/50">
-            Supervisión
-          </p>
-          <NavItem
-            to="/app/supervisor/requisiciones"
-            label="Por autorizar"
-            icon={<ShieldCheck className="size-4" />}
-            active={pathname.startsWith("/app/supervisor/requisiciones")}
-            onNavigate={onNavigate}
-          />
-        </div>
-      )}
 
       {showAdmin && (
         <div>
