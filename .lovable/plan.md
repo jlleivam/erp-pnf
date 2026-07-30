@@ -1,51 +1,23 @@
-## Problema
+## Objetivo
 
-Dos residentes cierran su nómina y el mismo trabajador queda con jornadas que suman más de 1.0 en un día. Hoy el panel global (`/app/admin/nomina`) sólo **detecta** el duplicado: lo marca en rojo y lo lista en el detalle, pero no permite corregirlo, porque una nómina `cerrada` bloquea la edición tanto en la API como en las reglas de acceso de la base de datos. La semana se puede pagar igual, arrastrando el error.
+Al reabrir una celda que ya fue ajustada, el diálogo "Ajustar asistencia" debe mostrar la información previamente guardada, no un formulario en blanco.
 
-## Solución
+## Situación actual
 
-El administrativo (y el director) podrán ajustar la asistencia directamente desde el panel global, aun con la nómina cerrada, dejando registro; y no se podrá enviar a pagos una semana con duplicados sin resolver.
+En `src/components/nomina/NominaAdminPanel.tsx`, el diálogo ya precarga la jornada y las horas extras desde la asistencia, pero el campo **Motivo del ajuste** siempre arranca vacío, aunque en la base ya exista un motivo guardado (`ajuste_motivo`). Eso obliga a reescribirlo cada vez y da la impresión de estar creando un ajuste nuevo.
 
-### 1. Ajuste directo con bitácora
+## Cambio
 
-En el detalle del trabajador (el diálogo que ya existe al hacer click en su renglón), cada celda día × obra se vuelve editable para admin/director:
+En `AjusteAsistenciaDialog` (dentro de `NominaAdminPanel.tsx`):
 
-- Selector de jornada (0 / 0.5 / 1) y horas extras.
-- Motivo del ajuste obligatorio (mínimo 5 caracteres) — se pide una vez por ajuste.
-- La celda ajustada muestra un indicador y, al pasar el cursor, quién ajustó, cuándo, el valor anterior y el motivo.
-- La fila "Suma diaria" se recalcula al momento: en rojo mientras pase de 1.0 jornada, en verde cuando queda cuadrado.
-
-Cada ajuste recalcula el importe del renglón, el `monto_total` de la nómina de esa obra y, por lo tanto, el reparto del costo entre obras.
-
-### 2. Bloqueo del pago
-
-- El panel global muestra el conteo de "Con duplicados" y, si es mayor a cero, un aviso de que la semana no puede pagarse.
-- En la pestaña de pagos (Cuentas por pagar → Nómina), la semana con duplicados aparece marcada y su botón de pago queda deshabilitado, con un enlace al panel global.
-- El servidor también rechaza el pago si detecta duplicados en la semana, para que el bloqueo no dependa sólo de la interfaz.
-
-### 3. Quién puede hacerlo
-
-Sólo director y administrativo. El residente sigue sin poder tocar una nómina cerrada.
-
-## Detalles técnicos
-
-**Base de datos** (una migración sobre `obra_nomina_asistencias`):
-- `jornada_original`, `horas_extras_original` (numeric, nullable) — snapshot del valor previo al primer ajuste.
-- `ajustado_por` (uuid), `ajustado_at` (timestamptz), `ajuste_motivo` (text).
-
-No se cambian las políticas de acceso: la edición sobre nóminas cerradas se hace desde el servidor con privilegios elevados, después de verificar rol y empresa.
-
-**Server functions** en `src/lib/api/nominas.functions.ts`:
-- `ajustarAsistenciaAdmin({ renglonId, fecha, jornada, horasExtras, motivo })`: valida rol director/administrativo y misma empresa, exige motivo, guarda snapshot original la primera vez, hace upsert/borrado de la asistencia, recalcula el renglón y el `monto_total` de la nómina. Rechaza nóminas ya `pagada`.
-- `getPanelGlobalNomina`: devolver también, por asistencia, los campos de ajuste para pintar el indicador.
-- Helper `semanaTieneDuplicados(companyId, semanaInicio)`; usarlo en `listSemanasNominaPorPagar` (para marcar la semana) y en `pagarNominaSemana` (para abortar con mensaje claro).
-
-**UI**:
-- `src/components/nomina/NominaAdminPanel.tsx`: celdas editables + diálogo de motivo en `DetalleTrabajadorDialog`, banner de bloqueo, invalidación de la query `nomina-panel` tras cada ajuste.
-- `src/components/pagos/NominaPorPagarTab.tsx`: badge de conflicto y botón de pago deshabilitado con tooltip.
+- Inicializar el motivo con el valor guardado: `useState(asistencia?.ajuste_motivo ?? "")`.
+- Cuando la celda ya tiene un ajuste previo, mostrar arriba del formulario una línea informativa de solo lectura con:
+  - quién/cuándo se ajustó (`ajustado_at`, formateado con `formatDateTime`), y
+  - los valores originales previos al primer ajuste (`jornada_original`, `horas_extras_original`).
+- Cambiar el título/botón según el caso: "Ajustar asistencia" / "Guardar ajuste" cuando es la primera vez, y "Editar ajuste" / "Actualizar ajuste" cuando ya existe uno.
+- Dejar el motivo editable: al guardar se sobrescribe el mismo registro (comportamiento actual del backend), pero partiendo del texto anterior en vez de vacío.
 
 ## Fuera de alcance
 
-- No se reabre la nómina ni se devuelve al residente.
-- No se agrega un estado de "duplicado justificado": toda suma mayor a 1.0 debe corregirse.
-- No se tocan las capturas de nómina en obra ni la contabilidad del pago.
+- No se cambia el backend (`ajustarAsistenciaAdmin` sigue haciendo upsert sobre la misma fila).
+- No se agrega bitácora histórica de múltiples ajustes.
