@@ -857,6 +857,13 @@ export const pagarNominaSemana = createServerFn({ method: "POST" })
     if (arr.length === 0) throw new Error("No hay nóminas para esa semana");
     if (arr.some((n) => n.estatus !== "cerrada")) throw new Error("Solo nóminas cerradas se pueden pagar");
 
+    const duplicados = await contarTrabajadoresDuplicados(supabaseAdmin, companyId, data.semanaInicio);
+    if (duplicados > 0) {
+      throw new Error(
+        `Hay ${duplicados} trabajador(es) con días duplicados en esta semana. Cuadra la nómina en el panel global antes de pagar.`,
+      );
+    }
+
     const totalNomina = +arr.reduce((s, n) => s + Number(n.monto_total ?? 0), 0).toFixed(2);
     const totalCheques = +data.cheques.reduce((s, c) => s + c.monto, 0).toFixed(2);
     if (totalCheques > totalNomina + 0.01) {
