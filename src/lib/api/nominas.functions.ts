@@ -734,19 +734,37 @@ export const listSemanasNominaPorPagar = createServerFn({ method: "GET" })
 
     const { data: nominas, error } = await supabase
       .from("obra_nominas")
-      .select("id, obra_id, semana_inicio, semana_fin, monto_total, estatus")
+      .select("id, obra_id, semana_inicio, semana_fin, monto_total, estatus, cerrada_at")
       .eq("company_id", companyId)
-      .eq("estatus", "cerrada")
+      .in("estatus", ["borrador", "cerrada"])
       .order("semana_inicio", { ascending: false });
     if (error) throw new Error(error.message);
 
     const rows = (nominas ?? []) as any[];
     if (rows.length === 0) return [] as Array<any>;
 
-    const obraIds = Array.from(new Set(rows.map((r) => r.obra_id)));
+    // Obras de la empresa + residentes (para detectar obras sin capturar)
     const { data: obras } = await supabase
-      .from("obras").select("id, nombre").in("id", obraIds);
-    const obraMap = new Map((obras ?? []).map((o: any) => [o.id, o.nombre]));
+      .from("obras").select("id, nombre, fecha_terminacion").eq("company_id", companyId);
+    const obrasList = (obras ?? []) as any[];
+    const obraMap = new Map(obrasList.map((o: any) => [o.id, o.nombre]));
+
+    const { data: team } = await supabase
+      .from("obra_team").select("obra_id, user_id, role").eq("role", "residente");
+    const teamRows = ((team ?? []) as any[]).filter((t) => obraMap.has(t.obra_id));
+    const residenteIds = Array.from(new Set(teamRows.map((t) => t.user_id)));
+    let profMap = new Map<string, string>();
+    if (residenteIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles").select("id, nombre_completo").in("id", residenteIds);
+      profMap = new Map(((profs ?? []) as any[]).map((p) => [p.id, p.nombre_completo]));
+    }
+    const residentePorObra = new Map<string, string>();
+    for (const t of teamRows) {
+      if (!residentePorObra.has(t.obra_id)) {
+        residentePorObra.set(t.obra_id, profMap.get(t.user_id) ?? "—");
+      }
+    }
 
     // Agrupa por semana_inicio
     const bySemana = new Map<string, any>();
@@ -756,17 +774,27 @@ export const listSemanasNominaPorPagar = createServerFn({ method: "GET" })
         semana_inicio: n.semana_inicio,
         semana_fin: n.semana_fin,
         total: 0,
+        total_borrador: 0,
         obras: [] as any[],
         nomina_ids: [] as string[],
       };
-      g.total += Number(n.monto_total ?? 0);
+      const monto = Number(n.monto_total ?? 0);
+      const cerrada = n.estatus === "cerrada";
+      if (cerrada) {
+        g.total += monto;
+        g.nomina_ids.push(n.id);
+      } else {
+        g.total_borrador += monto;
+      }
       g.obras.push({
         nomina_id: n.id,
         obra_id: n.obra_id,
         obra_nombre: obraMap.get(n.obra_id) ?? "—",
-        monto: Number(n.monto_total ?? 0),
+        residente: residentePorObra.get(n.obra_id) ?? "—",
+        estatus: cerrada ? "cerrada" : "borrador",
+        cerrada_at: n.cerrada_at ?? null,
+        monto,
       });
-      g.nomina_ids.push(n.id);
       bySemana.set(key, g);
     }
 
@@ -774,13 +802,32 @@ export const listSemanasNominaPorPagar = createServerFn({ method: "GET" })
       a.semana_inicio < b.semana_inicio ? 1 : -1,
     );
 
-    // Marca semanas con trabajadores duplicados (bloquean el pago)
     for (const s of semanas) {
+      // Obras activas durante esa semana sin nómina capturada
+      const conNomina = new Set(s.obras.map((o: any) => o.obra_id));
+      for (const o of obrasList) {
+        if (conNomina.has(o.id)) continue;
+        if (o.fecha_terminacion && String(o.fecha_terminacion) < s.semana_inicio) continue;
+        s.obras.push({
+          nomina_id: null,
+          obra_id: o.id,
+          obra_nombre: o.nombre,
+          residente: residentePorObra.get(o.id) ?? "—",
+          estatus: "sin_capturar",
+          cerrada_at: null,
+          monto: 0,
+        });
+      }
+      s.obras.sort((a: any, b: any) => String(a.obra_nombre).localeCompare(String(b.obra_nombre)));
+      s.cerradas = s.obras.filter((o: any) => o.estatus === "cerrada").length;
+      s.abiertas = s.obras.filter((o: any) => o.estatus === "borrador").length;
+      s.sin_capturar = s.obras.filter((o: any) => o.estatus === "sin_capturar").length;
       s.duplicados = await contarTrabajadoresDuplicados(supabase, companyId, s.semana_inicio);
     }
 
     return semanas;
   });
+
 
 export const listTrabajadoresPagoSemana = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
