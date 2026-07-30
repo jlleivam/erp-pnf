@@ -2348,6 +2348,155 @@ export type Database = {
         }
         Relationships: []
       }
+      obra_gasto_directo_partidas: {
+        Row: {
+          cantidad: number
+          created_at: string
+          gasto_id: string
+          id: string
+          insumo_id: string
+          precio_unitario: number
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          gasto_id: string
+          id?: string
+          insumo_id: string
+          precio_unitario?: number
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          gasto_id?: string
+          id?: string
+          insumo_id?: string
+          precio_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_gasto_directo_partidas_gasto_id_fkey"
+            columns: ["gasto_id"]
+            isOneToOne: false
+            referencedRelation: "obra_gastos_directos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_gasto_directo_partidas_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obra_gastos_directos: {
+        Row: {
+          autorizado_at: string | null
+          autorizado_por: string | null
+          company_id: string
+          comprobante_path: string | null
+          concepto: string
+          creado_por: string
+          created_at: string
+          cxp_id: string | null
+          estatus: Database["public"]["Enums"]["gasto_obra_estatus"]
+          fecha: string
+          folio: string
+          id: string
+          monto_total: number
+          motivo_rechazo: string | null
+          notas: string | null
+          obra_id: string
+          proveedor_id: string | null
+          recepcion_id: string | null
+          solicitado_at: string | null
+          solicitado_por: string | null
+          tipo: Database["public"]["Enums"]["gasto_obra_tipo"]
+          tipo_comprobante: Database["public"]["Enums"]["gasto_obra_comprobante"]
+          updated_at: string
+        }
+        Insert: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          company_id: string
+          comprobante_path?: string | null
+          concepto: string
+          creado_por: string
+          created_at?: string
+          cxp_id?: string | null
+          estatus?: Database["public"]["Enums"]["gasto_obra_estatus"]
+          fecha?: string
+          folio: string
+          id?: string
+          monto_total?: number
+          motivo_rechazo?: string | null
+          notas?: string | null
+          obra_id: string
+          proveedor_id?: string | null
+          recepcion_id?: string | null
+          solicitado_at?: string | null
+          solicitado_por?: string | null
+          tipo?: Database["public"]["Enums"]["gasto_obra_tipo"]
+          tipo_comprobante?: Database["public"]["Enums"]["gasto_obra_comprobante"]
+          updated_at?: string
+        }
+        Update: {
+          autorizado_at?: string | null
+          autorizado_por?: string | null
+          company_id?: string
+          comprobante_path?: string | null
+          concepto?: string
+          creado_por?: string
+          created_at?: string
+          cxp_id?: string | null
+          estatus?: Database["public"]["Enums"]["gasto_obra_estatus"]
+          fecha?: string
+          folio?: string
+          id?: string
+          monto_total?: number
+          motivo_rechazo?: string | null
+          notas?: string | null
+          obra_id?: string
+          proveedor_id?: string | null
+          recepcion_id?: string | null
+          solicitado_at?: string | null
+          solicitado_por?: string | null
+          tipo?: Database["public"]["Enums"]["gasto_obra_tipo"]
+          tipo_comprobante?: Database["public"]["Enums"]["gasto_obra_comprobante"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_gastos_directos_cxp_id_fkey"
+            columns: ["cxp_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_por_pagar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_gastos_directos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_gastos_directos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "terceros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_gastos_directos_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "almacen_recepciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_nomina_asistencias: {
         Row: {
           ajustado_at: string | null
@@ -4414,6 +4563,10 @@ export type Database = {
         Returns: string
       }
       siguiente_folio_cxp: { Args: { _company_id: string }; Returns: string }
+      siguiente_folio_gasto_obra: {
+        Args: { _company_id: string }
+        Returns: string
+      }
       siguiente_folio_gasto_oficina: {
         Args: { _company_id: string }
         Returns: string
@@ -4468,6 +4621,15 @@ export type Database = {
         | "pagada"
       destajo_presupuesto_tipo: "base" | "adenda"
       estimacion_estatus: "borrador" | "cerrada"
+      gasto_obra_comprobante: "factura" | "nota" | "ninguno"
+      gasto_obra_estatus:
+        | "borrador"
+        | "solicitado"
+        | "autorizado"
+        | "rechazado"
+        | "cancelado"
+        | "pagado"
+      gasto_obra_tipo: "servicio" | "material"
       gasto_oficina_estatus:
         | "pendiente_aprobacion"
         | "aprobada"
@@ -4724,6 +4886,16 @@ export const Constants = {
       ],
       destajo_presupuesto_tipo: ["base", "adenda"],
       estimacion_estatus: ["borrador", "cerrada"],
+      gasto_obra_comprobante: ["factura", "nota", "ninguno"],
+      gasto_obra_estatus: [
+        "borrador",
+        "solicitado",
+        "autorizado",
+        "rechazado",
+        "cancelado",
+        "pagado",
+      ],
+      gasto_obra_tipo: ["servicio", "material"],
       gasto_oficina_estatus: [
         "pendiente_aprobacion",
         "aprobada",
