@@ -165,7 +165,14 @@ export const getCondensadoSemanal = createServerFn({ method: "POST" })
     const ensureConcepto = (g: ReturnType<typeof ensureGrupo>, tipo: string) => {
       let c = g.conceptos.get(tipo);
       if (!c) {
-        c = { tipo, label: BUCKET_LABEL[tipo] ?? tipo, devengado: 0, pagado: 0, items: [] };
+        c = {
+          tipo,
+          label: BUCKET_LABEL[tipo] ?? tipo,
+          informativo: BUCKETS_INFORMATIVOS.has(tipo),
+          devengado: 0,
+          pagado: 0,
+          items: [],
+        };
         g.conceptos.set(tipo, c);
       }
       return c;
@@ -179,7 +186,7 @@ export const getCondensadoSemanal = createServerFn({ method: "POST" })
       const monto = Number(r.monto_total ?? 0);
       const g = ensureGrupo(obraId, obraNombre);
       const c = ensureConcepto(g, tipo);
-      g.devengado += monto;
+      if (!c.informativo) g.devengado += monto;
       c.devengado += monto;
       c.items.push({
         id: `cxp-${r.id}`,
@@ -203,7 +210,7 @@ export const getCondensadoSemanal = createServerFn({ method: "POST" })
       const monto = Number(p.monto ?? 0);
       const g = ensureGrupo(obraId, obraNombre);
       const c = ensureConcepto(g, tipo);
-      g.pagado += monto;
+      if (!c.informativo) g.pagado += monto;
       c.pagado += monto;
       c.items.push({
         id: `pago-${p.id}`,
@@ -216,6 +223,40 @@ export const getCondensadoSemanal = createServerFn({ method: "POST" })
         pagado: monto,
       });
     }
+
+    // Gastos comprobados de caja chica → costo real de la obra
+    const { data: ccGastos, error: ccErr } = await supabase
+      .from("caja_chica_gastos")
+      .select("id, fecha, monto, concepto, descripcion, obra_id, estatus, tipo_comprobante, obra:obras(id, nombre)")
+      .eq("company_id", companyId)
+      .in("estatus", ["aprobado", "reembolsado"])
+      .gte("fecha", inicio)
+      .lte("fecha", fin);
+    if (ccErr) throw ccErr;
+
+    for (const gto of (ccGastos ?? []) as any[]) {
+      const obraId: string | null = gto.obra_id ?? null;
+      const obraNombre = gto.obra?.nombre ?? "Oficina (sin obra)";
+      const monto = Number(gto.monto ?? 0);
+      const g = ensureGrupo(obraId, obraNombre);
+      const c = ensureConcepto(g, "caja_chica");
+      const pagado = gto.estatus === "reembolsado" ? monto : 0;
+      g.devengado += monto;
+      g.pagado += pagado;
+      c.devengado += monto;
+      c.pagado += pagado;
+      c.items.push({
+        id: `ccg-${gto.id}`,
+        fuente: "cxp",
+        folio: null,
+        fecha: gto.fecha,
+        concepto: gto.concepto ?? gto.descripcion ?? "Gasto de caja chica",
+        beneficiario: gto.tipo_comprobante ? `Comprobante: ${gto.tipo_comprobante}` : null,
+        devengado: monto,
+        pagado: pagado,
+      });
+    }
+
 
     // Sort: obras first (alpha), oficina last
     const gruposArr: CondensadoGrupo[] = [...grupos.values()]
