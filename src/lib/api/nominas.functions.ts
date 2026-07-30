@@ -631,14 +631,14 @@ export const ajustarAsistenciaAdmin = createServerFn({ method: "POST" })
 
     const { data: renglon } = await supabaseAdmin
       .from("obra_nomina_renglones")
-      .select("id, nomina_id, sueldo_diario_snapshot")
+      .select("id, nomina_id, trabajador_id, sueldo_diario_snapshot")
       .eq("id", data.renglonId)
       .maybeSingle();
     if (!renglon) throw new Error("Renglón no encontrado");
 
     const { data: nomina } = await supabaseAdmin
       .from("obra_nominas")
-      .select("id, company_id, estatus, semana_inicio, semana_fin")
+      .select("id, obra_id, company_id, estatus, semana_inicio, semana_fin")
       .eq("id", renglon.nomina_id)
       .maybeSingle();
     if (!nomina || nomina.company_id !== companyId) throw new Error("Nómina no encontrada");
