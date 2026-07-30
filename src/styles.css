@@ -83,6 +83,11 @@
   --sidebar-accent-foreground: oklch(0.99 0 0);
   --sidebar-border: oklch(0.26 0.05 255);
   --sidebar-ring: oklch(0.55 0.08 255);
+
+  /* Marca de "editado / ajustado por administración" */
+  --edited: oklch(0.95 0.09 95);
+  --edited-foreground: oklch(0.42 0.11 75);
+  --edited-border: oklch(0.83 0.13 90);
 }
 
 .dark {
