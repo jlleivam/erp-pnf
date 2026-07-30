@@ -138,6 +138,11 @@ export function CapturaNominaSheet({
     return m;
   }, [asistencias]);
 
+  const ajustes = useMemo(
+    () => asistencias.filter((a) => !!a.ajustado_at),
+    [asistencias],
+  );
+
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-[1100px] overflow-y-auto">
