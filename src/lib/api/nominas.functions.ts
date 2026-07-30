@@ -409,7 +409,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
     }
 
     if (nominaIds.length === 0) {
-      return { semana, trabajadores: [], obrasConNomina: 0 };
+      return { semana, trabajadores: [], obrasConNomina: 0, puedeAjustar };
     }
 
     const { data: renglones } = await supabase
