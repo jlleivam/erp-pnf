@@ -14,7 +14,7 @@ import {
   HardHat,
   FileText,
   Wallet,
-  ShieldCheck,
+  
   Receipt,
   Banknote,
   ClipboardList,
@@ -100,7 +100,7 @@ export function AppShell() {
 
   const { can: canPerm } = usePermisos();
   const puedeCrearObra = canPerm("obras.crear");
-  const showSupervisor = director || effRoles.includes("supervisor") || canPerm("requisiciones.aprobar") || canPerm("requisiciones.rechazar");
+  
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
@@ -207,20 +207,6 @@ export function AppShell() {
       </div>
 
 
-      {showSupervisor && (
-        <div>
-          <p className="px-3 mb-2 text-xs uppercase tracking-wider text-sidebar-foreground/50">
-            Supervisión
-          </p>
-          <NavItem
-            to="/app/supervisor/requisiciones"
-            label="Por autorizar"
-            icon={<ShieldCheck className="size-4" />}
-            active={pathname.startsWith("/app/supervisor/requisiciones")}
-            onNavigate={onNavigate}
-          />
-        </div>
-      )}
 
       {showAdmin && (
         <div>
