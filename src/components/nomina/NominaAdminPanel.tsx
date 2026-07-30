@@ -210,12 +210,15 @@ export function NominaAdminPanel() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t) => (
+              {filtered.map((t) => {
+                const ajustado = tieneAjustes(t);
+                return (
                 <tr
                   key={t.trabajador_id}
                   className={cn(
                     "border-t border-border hover:bg-muted/30 cursor-pointer",
-                    t.duplicados.length > 0 && "bg-destructive/5",
+                    ajustado && "bg-edited hover:bg-edited",
+                    t.duplicados.length > 0 && "bg-destructive/5 hover:bg-destructive/5",
                   )}
                   onClick={() => setVerDetalleId(t.trabajador_id)}
                 >
@@ -224,12 +227,23 @@ export function NominaAdminPanel() {
                       {t.duplicados.length > 0 && (
                         <AlertTriangle className="size-3.5 text-destructive shrink-0" />
                       )}
+                      {ajustado && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Pencil className="size-3 text-edited-foreground shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent className="text-xs">
+                            Ajustado desde el panel global
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       <span className="font-medium truncate">{t.nombre}</span>
                       {t.puesto && (
                         <span className="text-xs text-muted-foreground truncate">· {t.puesto}</span>
                       )}
                     </div>
                   </td>
+
                   <td className="py-2 px-2 text-center tabular-nums text-xs">
                     {formatMXN(t.sueldo_diario)}
                   </td>
