@@ -544,7 +544,7 @@ export const getPanelGlobalNomina = createServerFn({ method: "POST" })
       a.nombre.localeCompare(b.nombre),
     );
 
-    return { semana, trabajadores, obrasConNomina: nominasArr.length };
+    return { semana, trabajadores, obrasConNomina: nominasArr.length, puedeAjustar };
   });
 
 // ============================================================
