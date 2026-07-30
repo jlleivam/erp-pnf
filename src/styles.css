@@ -85,9 +85,9 @@
   --sidebar-ring: oklch(0.55 0.08 255);
 
   /* Marca de "editado / ajustado por administración" */
-  --edited: oklch(0.95 0.09 95);
+  --edited: oklch(0.975 0.035 95);
   --edited-foreground: oklch(0.42 0.11 75);
-  --edited-border: oklch(0.83 0.13 90);
+  --edited-border: oklch(0.90 0.06 90);
 }
 
 .dark {
@@ -119,9 +119,9 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.55 0.05 255);
 
-  --edited: oklch(0.34 0.06 90);
+  --edited: oklch(0.28 0.035 90);
   --edited-foreground: oklch(0.90 0.09 95);
-  --edited-border: oklch(0.48 0.09 90);
+  --edited-border: oklch(0.38 0.05 90);
 }
 
 @layer base {
