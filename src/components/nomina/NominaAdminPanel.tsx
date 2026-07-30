@@ -389,7 +389,7 @@ function DetalleTrabajadorDialog({
                         <div className="flex flex-col items-center leading-tight">
                           <span className="inline-flex items-center gap-0.5">
                             {a && a.jornada > 0 ? a.jornada.toFixed(1) : "—"}
-                            {ajustada && <Pencil className="size-2.5 text-primary" />}
+                            {ajustada && <Pencil className="size-2.5 text-edited-foreground" />}
                           </span>
                           {a && a.horas_extras > 0 && (
                             <span
