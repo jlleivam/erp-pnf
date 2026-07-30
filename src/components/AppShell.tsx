@@ -16,6 +16,7 @@ import {
   Wallet,
   ShieldCheck,
   Receipt,
+  Banknote,
   ClipboardList,
   Users,
   Hammer,
