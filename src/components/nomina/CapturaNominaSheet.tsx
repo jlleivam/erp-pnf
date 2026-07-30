@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { formatMXN } from "@/lib/format";
-import { UserPlus, Lock, Plus, MessageSquare } from "lucide-react";
+import { UserPlus, Lock, Plus, MessageSquare, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrabajadorFormDialog } from "@/components/trabajadores/TrabajadorFormDialog";
 import { useEffectiveRoles } from "@/stores/auth";
