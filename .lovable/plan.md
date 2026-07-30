@@ -1,38 +1,20 @@
 ## Objetivo
 
-Resaltar en amarillo claro todo lo que fue ajustado desde el panel global de nómina: las celdas editadas en el detalle del trabajador y el renglón completo del trabajador en la tabla principal.
+Bajar la intensidad del amarillo que marca las asistencias y renglones ajustados en el panel global de nómina.
 
-## 1. Token de diseño
+## Cambio
 
-En `src/styles.css`, agregar un par de tokens semánticos para "editado/ajustado" (amarillo claro), en `:root`, en `.dark` (versión ámbar apagada para no deslumbrar en modo oscuro) y registrarlos en `@theme inline`:
+Único archivo: `src/styles.css` (tokens semánticos, sin tocar componentes).
 
-- `--edited` — fondo amarillo claro
-- `--edited-foreground` — texto legible sobre ese fondo
-- `--edited-border` — borde ámbar sutil para el contorno de la celda
+Tema claro:
+- `--edited`: de `oklch(0.95 0.09 95)` a `oklch(0.975 0.035 95)` — fondo apenas teñido.
+- `--edited-border`: de `oklch(0.83 0.13 90)` a `oklch(0.90 0.06 90)` — borde más discreto.
+- `--edited-foreground`: se mantiene oscuro para conservar contraste del texto y del ícono de lápiz.
 
-Esto permite usar `bg-edited`, `text-edited-foreground` y `border-edited-border` sin hardcodear colores.
+Tema oscuro:
+- `--edited`: de `oklch(0.34 0.06 90)` a `oklch(0.28 0.035 90)`.
+- `--edited-border`: de `oklch(0.48 0.09 90)` a `oklch(0.38 0.05 90)`.
 
-## 2. Celdas editadas (imagen 1)
+## Nota técnica
 
-En `src/components/nomina/NominaAdminPanel.tsx`, dentro del detalle del trabajador:
-
-- La celda ajustada pasa de `bg-primary/5` a fondo `bg-edited` con texto `text-edited-foreground`, borde inferior/anillo `border-edited-border` y el ícono de lápiz en el mismo tono, para que se lea claramente como "editado".
-- Se conserva el tooltip actual con fecha, valores originales y motivo.
-- El hover de celdas editables no debe pisar el amarillo: se ajusta para que la celda editada mantenga su color.
-
-## 3. Renglón del trabajador (imagen 2)
-
-En la tabla principal del panel global:
-
-- Calcular por trabajador si tiene al menos una asistencia con `ajustado_at` en cualquiera de sus obras.
-- Si la tiene, sombrear todo el renglón con el mismo amarillo claro (`bg-edited`), respetando la precedencia: si el trabajador tiene duplicados sin resolver, gana el rojo (`bg-destructive/5`) porque es un estado que bloquea el pago.
-- Agregar un ícono de lápiz pequeño junto al nombre, con tooltip "Ajustado desde el panel global", para que el amarillo tenga explicación.
-
-## 4. Leyenda
-
-Debajo de la tabla principal, una leyenda compacta de dos marcas de color: rojo = días duplicados por cuadrar, amarillo = asistencia ajustada por administración.
-
-## Fuera de alcance
-
-- No cambia lógica de negocio, permisos ni el backend.
-- No se toca la pestaña de pagos.
+Como `NominaAdminPanel.tsx` ya usa `bg-edited` / `ring-edited-border`, el ajuste se propaga a las celdas del detalle, al renglón del trabajador y a la leyenda sin editar componentes.
