@@ -236,7 +236,7 @@ export const autorizarGastoObra = createServerFn({ method: "POST" })
         fecha_emision: new Date().toISOString().slice(0, 10),
         fecha_vencimiento: gasto.fecha,
         beneficiario_tipo: "tercero",
-        beneficiario_id: gasto.proveedor_id,
+        beneficiario_id: gasto.proveedor_id as string,
         beneficiario_nombre: (gasto as any).proveedor?.razon_social ?? "Proveedor",
         concepto: `${gasto.folio} · ${gasto.concepto}`,
         origen_tipo: origenTipo,
