@@ -277,8 +277,30 @@ export function CapturaNominaSheet({
                         </td>
                         {dias.map((fecha) => {
                           const a = asistMap.get(`${r.id}|${fecha}`);
+                          const ajustada = !!a?.ajustado_at;
+                          const jornadaTxt = (v: number) =>
+                            v === 0 ? "falta" : v === 0.5 ? "medio día" : "día completo";
+                          const tip = ajustada
+                            ? `Ajustado por administración · original: ${jornadaTxt(
+                                Number(a?.jornada_original ?? 0),
+                              )}${
+                                a?.horas_extras_original != null
+                                  ? ` (+${Number(a.horas_extras_original)}h)`
+                                  : ""
+                              }${a?.ajuste_motivo ? ` · Motivo: ${a.ajuste_motivo}` : ""}`
+                            : undefined;
                           return (
-                            <td key={fecha} className="p-1 text-center align-middle">
+                            <td
+                              key={fecha}
+                              title={tip}
+                              className={cn(
+                                "p-1 text-center align-middle",
+                                ajustada && "bg-edited",
+                              )}
+                            >
+                              {ajustada && (
+                                <Pencil className="size-2.5 text-edited-foreground mx-auto mb-0.5" />
+                              )}
                               <DiaCell
                                 renglonId={r.id}
                                 fecha={fecha}
