@@ -584,8 +584,9 @@ function AjusteAsistenciaDialog({
             Cancelar
           </Button>
           <Button onClick={guardar} disabled={!valido || saving}>
-            {saving ? "Guardando…" : "Guardar ajuste"}
+            {saving ? "Guardando…" : yaAjustada ? "Actualizar ajuste" : "Guardar ajuste"}
           </Button>
+
         </DialogFooter>
       </DialogContent>
     </Dialog>
