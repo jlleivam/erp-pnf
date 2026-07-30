@@ -336,6 +336,7 @@ export function AppShell() {
           pathname={pathname}
           items={[
             { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+            { to: "/app/obras", label: "Obras", icon: HardHat, exact: true },
             { to: "/app/catalogos", label: "Catálogos", icon: BookOpen },
             ...(director
               ? [{ to: "/app/configuracion", label: "Config", icon: Settings }]
