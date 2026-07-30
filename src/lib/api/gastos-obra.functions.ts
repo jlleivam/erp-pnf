@@ -217,6 +217,7 @@ export const autorizarGastoObra = createServerFn({ method: "POST" })
     if (gasto.solicitado_por === userId) {
       throw new Error("No puedes autorizar un gasto que tú solicitaste");
     }
+    if (!gasto.proveedor_id) throw new Error("El gasto no tiene proveedor asignado");
 
     // 1. Cuenta por pagar para el administrativo
     const { data: folioCxp, error: fErr } = await supabase
