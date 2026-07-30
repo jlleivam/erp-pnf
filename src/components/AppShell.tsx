@@ -117,7 +117,7 @@ export function AppShell() {
     queryClient.invalidateQueries({ queryKey: ["obras"] });
     queryClient.invalidateQueries({ queryKey: ["pendientes"] });
     queryClient.invalidateQueries({ queryKey: ["notificaciones"] });
-    navigate({ to: "/app" });
+    navigate({ to: "/app/obras" });
   };
 
   const handleLogout = async () => {
@@ -427,7 +427,7 @@ function DevUserSwitcher() {
         queryClient.invalidateQueries({ queryKey: ["notificaciones"] }),
       ]);
       queryClient.clear();
-      navigate({ to: "/app", replace: true });
+      navigate({ to: "/app/obras", replace: true });
       window.location.reload();
     } catch (e) {
       console.error("Dev impersonate failed", e);
