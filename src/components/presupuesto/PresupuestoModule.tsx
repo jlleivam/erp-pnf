@@ -1,3 +1,4 @@
+import { useEffectiveRoles } from "@/stores/auth";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -97,6 +98,7 @@ function estatusVariant(e: EstatusPresupuesto): "default" | "secondary" | "destr
 
 export function PresupuestoModule({ obraId }: { obraId: string }) {
   const { can } = usePermisos();
+  const rolesEfectivos = useEffectiveRoles();
   const userId = useAuthStore((s) => s.userId);
 
   const qc = useQueryClient();
@@ -196,6 +198,7 @@ export function PresupuestoModule({ obraId }: { obraId: string }) {
     eliminarBase: can("presupuestos.eliminar_base"),
     eliminarOC: can("presupuestos.eliminar_oc"),
     userId,
+    esDirector: rolesEfectivos.includes("director"),
   };
 
 
@@ -404,6 +407,7 @@ type PresupuestoPerms = {
   eliminarBase: boolean;
   eliminarOC: boolean;
   userId: string | null;
+  esDirector: boolean;
 };
 
 function PresupuestoCard({
@@ -445,7 +449,7 @@ function PresupuestoCard({
   const puedeAutorizar =
     p.estatus === "solicitada" &&
     (esOC ? perms.autorizarOC : perms.autorizarBase) &&
-    !solicitadaPorMi;
+    (!solicitadaPorMi || perms.esDirector);
   const puedeRechazar =
     p.estatus === "solicitada" && (esOC ? perms.autorizarOC : perms.autorizarBase);
   const puedeReabrir =
