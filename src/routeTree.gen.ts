@@ -9,39 +9,43 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
-import { Route as AuthenticatedAppNotificacionesRouteImport } from './routes/_authenticated/app.notificaciones'
-import { Route as AuthenticatedAppMiCuentaRouteImport } from './routes/_authenticated/app.mi-cuenta'
-import { Route as AuthenticatedAppEquipoRouteImport } from './routes/_authenticated/app.equipo'
-import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app.configuracion'
-import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated/app.clientes'
 import { Route as AuthenticatedAppCatalogosRouteImport } from './routes/_authenticated/app.catalogos'
-import { Route as AuthenticatedAppObrasIndexRouteImport } from './routes/_authenticated/app.obras.index'
-import { Route as AuthenticatedAppCatalogosIndexRouteImport } from './routes/_authenticated/app.catalogos.index'
-import { Route as ApiPublicHooksDevengarRentasRouteImport } from './routes/api/public/hooks/devengar-rentas'
-import { Route as AuthenticatedAppObrasNuevaRouteImport } from './routes/_authenticated/app.obras.nueva'
-import { Route as AuthenticatedAppObrasObraIdRouteImport } from './routes/_authenticated/app.obras.$obraId'
-import { Route as AuthenticatedAppCatalogosTrabajadoresRouteImport } from './routes/_authenticated/app.catalogos.trabajadores'
-import { Route as AuthenticatedAppCatalogosSubcontratistasRouteImport } from './routes/_authenticated/app.catalogos.subcontratistas'
-import { Route as AuthenticatedAppCatalogosProveedoresRouteImport } from './routes/_authenticated/app.catalogos.proveedores'
-import { Route as AuthenticatedAppCatalogosInsumosRouteImport } from './routes/_authenticated/app.catalogos.insumos'
-import { Route as AuthenticatedAppCatalogosClientesRouteImport } from './routes/_authenticated/app.catalogos.clientes'
-import { Route as AuthenticatedAppAdminRequisicionesRouteImport } from './routes/_authenticated/app.admin.requisiciones'
+import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated/app.clientes'
+import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app.configuracion'
+import { Route as AuthenticatedAppEquipoRouteImport } from './routes/_authenticated/app.equipo'
+import { Route as AuthenticatedAppMiCuentaRouteImport } from './routes/_authenticated/app.mi-cuenta'
+import { Route as AuthenticatedAppNotificacionesRouteImport } from './routes/_authenticated/app.notificaciones'
 import { Route as AuthenticatedAppAdminSplatRouteImport } from './routes/_authenticated/app.admin.$'
-import { Route as AuthenticatedAppObrasObraIdIndexRouteImport } from './routes/_authenticated/app.obras.$obraId.index'
-import { Route as AuthenticatedAppObrasObraIdRequisicionesRouteImport } from './routes/_authenticated/app.obras.$obraId.requisiciones'
-import { Route as AuthenticatedAppObrasObraIdConfiguracionRouteImport } from './routes/_authenticated/app.obras.$obraId.configuracion'
-import { Route as AuthenticatedAppObrasObraIdSplatRouteImport } from './routes/_authenticated/app.obras.$obraId.$'
+import { Route as AuthenticatedAppAdminRequisicionesRouteImport } from './routes/_authenticated/app.admin.requisiciones'
+import { Route as AuthenticatedAppCatalogosIndexRouteImport } from './routes/_authenticated/app.catalogos.index'
+import { Route as AuthenticatedAppCatalogosClientesRouteImport } from './routes/_authenticated/app.catalogos.clientes'
+import { Route as AuthenticatedAppCatalogosInsumosRouteImport } from './routes/_authenticated/app.catalogos.insumos'
+import { Route as AuthenticatedAppCatalogosProveedoresRouteImport } from './routes/_authenticated/app.catalogos.proveedores'
+import { Route as AuthenticatedAppCatalogosSubcontratistasRouteImport } from './routes/_authenticated/app.catalogos.subcontratistas'
+import { Route as AuthenticatedAppCatalogosTrabajadoresRouteImport } from './routes/_authenticated/app.catalogos.trabajadores'
+import { Route as AuthenticatedAppObrasIndexRouteImport } from './routes/_authenticated/app.obras.index'
+import { Route as AuthenticatedAppObrasObraIdRouteImport } from './routes/_authenticated/app.obras.$obraId'
+import { Route as AuthenticatedAppObrasNuevaRouteImport } from './routes/_authenticated/app.obras.nueva'
+import { Route as ApiPublicHooksDevengarRentasRouteImport } from './routes/api/public/hooks/devengar-rentas'
 import { Route as AuthenticatedAppCatalogosClientesClienteIdRouteImport } from './routes/_authenticated/app.catalogos.clientes.$clienteId'
+import { Route as AuthenticatedAppObrasObraIdIndexRouteImport } from './routes/_authenticated/app.obras.$obraId.index'
+import { Route as AuthenticatedAppObrasObraIdSplatRouteImport } from './routes/_authenticated/app.obras.$obraId.$'
+import { Route as AuthenticatedAppObrasObraIdConfiguracionRouteImport } from './routes/_authenticated/app.obras.$obraId.configuracion'
+import { Route as AuthenticatedAppObrasObraIdRequisicionesRouteImport } from './routes/_authenticated/app.obras.$obraId.requisiciones'
 
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -49,13 +53,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
@@ -68,27 +68,10 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppNotificacionesRoute =
-  AuthenticatedAppNotificacionesRouteImport.update({
-    id: '/notificaciones',
-    path: '/notificaciones',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppMiCuentaRoute =
-  AuthenticatedAppMiCuentaRouteImport.update({
-    id: '/mi-cuenta',
-    path: '/mi-cuenta',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppEquipoRoute = AuthenticatedAppEquipoRouteImport.update({
-  id: '/equipo',
-  path: '/equipo',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppConfiguracionRoute =
-  AuthenticatedAppConfiguracionRouteImport.update({
-    id: '/configuracion',
-    path: '/configuracion',
+const AuthenticatedAppCatalogosRoute =
+  AuthenticatedAppCatalogosRouteImport.update({
+    id: '/catalogos',
+    path: '/catalogos',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppClientesRoute =
@@ -97,76 +80,27 @@ const AuthenticatedAppClientesRoute =
     path: '/clientes',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppCatalogosRoute =
-  AuthenticatedAppCatalogosRouteImport.update({
-    id: '/catalogos',
-    path: '/catalogos',
+const AuthenticatedAppConfiguracionRoute =
+  AuthenticatedAppConfiguracionRouteImport.update({
+    id: '/configuracion',
+    path: '/configuracion',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppObrasIndexRoute =
-  AuthenticatedAppObrasIndexRouteImport.update({
-    id: '/obras/',
-    path: '/obras/',
+const AuthenticatedAppEquipoRoute = AuthenticatedAppEquipoRouteImport.update({
+  id: '/equipo',
+  path: '/equipo',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppMiCuentaRoute =
+  AuthenticatedAppMiCuentaRouteImport.update({
+    id: '/mi-cuenta',
+    path: '/mi-cuenta',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppCatalogosIndexRoute =
-  AuthenticatedAppCatalogosIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAppCatalogosRoute,
-  } as any)
-const ApiPublicHooksDevengarRentasRoute =
-  ApiPublicHooksDevengarRentasRouteImport.update({
-    id: '/api/public/hooks/devengar-rentas',
-    path: '/api/public/hooks/devengar-rentas',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedAppObrasNuevaRoute =
-  AuthenticatedAppObrasNuevaRouteImport.update({
-    id: '/obras/nueva',
-    path: '/obras/nueva',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppObrasObraIdRoute =
-  AuthenticatedAppObrasObraIdRouteImport.update({
-    id: '/obras/$obraId',
-    path: '/obras/$obraId',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppCatalogosTrabajadoresRoute =
-  AuthenticatedAppCatalogosTrabajadoresRouteImport.update({
-    id: '/trabajadores',
-    path: '/trabajadores',
-    getParentRoute: () => AuthenticatedAppCatalogosRoute,
-  } as any)
-const AuthenticatedAppCatalogosSubcontratistasRoute =
-  AuthenticatedAppCatalogosSubcontratistasRouteImport.update({
-    id: '/subcontratistas',
-    path: '/subcontratistas',
-    getParentRoute: () => AuthenticatedAppCatalogosRoute,
-  } as any)
-const AuthenticatedAppCatalogosProveedoresRoute =
-  AuthenticatedAppCatalogosProveedoresRouteImport.update({
-    id: '/proveedores',
-    path: '/proveedores',
-    getParentRoute: () => AuthenticatedAppCatalogosRoute,
-  } as any)
-const AuthenticatedAppCatalogosInsumosRoute =
-  AuthenticatedAppCatalogosInsumosRouteImport.update({
-    id: '/insumos',
-    path: '/insumos',
-    getParentRoute: () => AuthenticatedAppCatalogosRoute,
-  } as any)
-const AuthenticatedAppCatalogosClientesRoute =
-  AuthenticatedAppCatalogosClientesRouteImport.update({
-    id: '/clientes',
-    path: '/clientes',
-    getParentRoute: () => AuthenticatedAppCatalogosRoute,
-  } as any)
-const AuthenticatedAppAdminRequisicionesRoute =
-  AuthenticatedAppAdminRequisicionesRouteImport.update({
-    id: '/admin/requisiciones',
-    path: '/admin/requisiciones',
+const AuthenticatedAppNotificacionesRoute =
+  AuthenticatedAppNotificacionesRouteImport.update({
+    id: '/notificaciones',
+    path: '/notificaciones',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppAdminSplatRoute =
@@ -175,22 +109,82 @@ const AuthenticatedAppAdminSplatRoute =
     path: '/admin/$',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdminRequisicionesRoute =
+  AuthenticatedAppAdminRequisicionesRouteImport.update({
+    id: '/admin/requisiciones',
+    path: '/admin/requisiciones',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppCatalogosIndexRoute =
+  AuthenticatedAppCatalogosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosClientesRoute =
+  AuthenticatedAppCatalogosClientesRouteImport.update({
+    id: '/clientes',
+    path: '/clientes',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosInsumosRoute =
+  AuthenticatedAppCatalogosInsumosRouteImport.update({
+    id: '/insumos',
+    path: '/insumos',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosProveedoresRoute =
+  AuthenticatedAppCatalogosProveedoresRouteImport.update({
+    id: '/proveedores',
+    path: '/proveedores',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosSubcontratistasRoute =
+  AuthenticatedAppCatalogosSubcontratistasRouteImport.update({
+    id: '/subcontratistas',
+    path: '/subcontratistas',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppCatalogosTrabajadoresRoute =
+  AuthenticatedAppCatalogosTrabajadoresRouteImport.update({
+    id: '/trabajadores',
+    path: '/trabajadores',
+    getParentRoute: () => AuthenticatedAppCatalogosRoute,
+  } as any)
+const AuthenticatedAppObrasIndexRoute =
+  AuthenticatedAppObrasIndexRouteImport.update({
+    id: '/obras/',
+    path: '/obras/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppObrasObraIdRoute =
+  AuthenticatedAppObrasObraIdRouteImport.update({
+    id: '/obras/$obraId',
+    path: '/obras/$obraId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppObrasNuevaRoute =
+  AuthenticatedAppObrasNuevaRouteImport.update({
+    id: '/obras/nueva',
+    path: '/obras/nueva',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const ApiPublicHooksDevengarRentasRoute =
+  ApiPublicHooksDevengarRentasRouteImport.update({
+    id: '/api/public/hooks/devengar-rentas',
+    path: '/api/public/hooks/devengar-rentas',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAppCatalogosClientesClienteIdRoute =
+  AuthenticatedAppCatalogosClientesClienteIdRouteImport.update({
+    id: '/$clienteId',
+    path: '/$clienteId',
+    getParentRoute: () => AuthenticatedAppCatalogosClientesRoute,
+  } as any)
 const AuthenticatedAppObrasObraIdIndexRoute =
   AuthenticatedAppObrasObraIdIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
-  } as any)
-const AuthenticatedAppObrasObraIdRequisicionesRoute =
-  AuthenticatedAppObrasObraIdRequisicionesRouteImport.update({
-    id: '/requisiciones',
-    path: '/requisiciones',
-    getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
-  } as any)
-const AuthenticatedAppObrasObraIdConfiguracionRoute =
-  AuthenticatedAppObrasObraIdConfiguracionRouteImport.update({
-    id: '/configuracion',
-    path: '/configuracion',
     getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
   } as any)
 const AuthenticatedAppObrasObraIdSplatRoute =
@@ -199,11 +193,17 @@ const AuthenticatedAppObrasObraIdSplatRoute =
     path: '/$',
     getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
   } as any)
-const AuthenticatedAppCatalogosClientesClienteIdRoute =
-  AuthenticatedAppCatalogosClientesClienteIdRouteImport.update({
-    id: '/$clienteId',
-    path: '/$clienteId',
-    getParentRoute: () => AuthenticatedAppCatalogosClientesRoute,
+const AuthenticatedAppObrasObraIdConfiguracionRoute =
+  AuthenticatedAppObrasObraIdConfiguracionRouteImport.update({
+    id: '/configuracion',
+    path: '/configuracion',
+    getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
+  } as any)
+const AuthenticatedAppObrasObraIdRequisicionesRoute =
+  AuthenticatedAppObrasObraIdRequisicionesRouteImport.update({
+    id: '/requisiciones',
+    path: '/requisiciones',
+    getParentRoute: () => AuthenticatedAppObrasObraIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -396,18 +396,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -417,11 +410,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app': {
@@ -438,32 +438,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/notificaciones': {
-      id: '/_authenticated/app/notificaciones'
-      path: '/notificaciones'
-      fullPath: '/app/notificaciones'
-      preLoaderRoute: typeof AuthenticatedAppNotificacionesRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/mi-cuenta': {
-      id: '/_authenticated/app/mi-cuenta'
-      path: '/mi-cuenta'
-      fullPath: '/app/mi-cuenta'
-      preLoaderRoute: typeof AuthenticatedAppMiCuentaRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/equipo': {
-      id: '/_authenticated/app/equipo'
-      path: '/equipo'
-      fullPath: '/app/equipo'
-      preLoaderRoute: typeof AuthenticatedAppEquipoRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/configuracion': {
-      id: '/_authenticated/app/configuracion'
-      path: '/configuracion'
-      fullPath: '/app/configuracion'
-      preLoaderRoute: typeof AuthenticatedAppConfiguracionRouteImport
+    '/_authenticated/app/catalogos': {
+      id: '/_authenticated/app/catalogos'
+      path: '/catalogos'
+      fullPath: '/app/catalogos'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/clientes': {
@@ -473,88 +452,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppClientesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/catalogos': {
-      id: '/_authenticated/app/catalogos'
-      path: '/catalogos'
-      fullPath: '/app/catalogos'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosRouteImport
+    '/_authenticated/app/configuracion': {
+      id: '/_authenticated/app/configuracion'
+      path: '/configuracion'
+      fullPath: '/app/configuracion'
+      preLoaderRoute: typeof AuthenticatedAppConfiguracionRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/obras/': {
-      id: '/_authenticated/app/obras/'
-      path: '/obras'
-      fullPath: '/app/obras/'
-      preLoaderRoute: typeof AuthenticatedAppObrasIndexRouteImport
+    '/_authenticated/app/equipo': {
+      id: '/_authenticated/app/equipo'
+      path: '/equipo'
+      fullPath: '/app/equipo'
+      preLoaderRoute: typeof AuthenticatedAppEquipoRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/catalogos/': {
-      id: '/_authenticated/app/catalogos/'
-      path: '/'
-      fullPath: '/app/catalogos/'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosIndexRouteImport
-      parentRoute: typeof AuthenticatedAppCatalogosRoute
-    }
-    '/api/public/hooks/devengar-rentas': {
-      id: '/api/public/hooks/devengar-rentas'
-      path: '/api/public/hooks/devengar-rentas'
-      fullPath: '/api/public/hooks/devengar-rentas'
-      preLoaderRoute: typeof ApiPublicHooksDevengarRentasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/app/obras/nueva': {
-      id: '/_authenticated/app/obras/nueva'
-      path: '/obras/nueva'
-      fullPath: '/app/obras/nueva'
-      preLoaderRoute: typeof AuthenticatedAppObrasNuevaRouteImport
+    '/_authenticated/app/mi-cuenta': {
+      id: '/_authenticated/app/mi-cuenta'
+      path: '/mi-cuenta'
+      fullPath: '/app/mi-cuenta'
+      preLoaderRoute: typeof AuthenticatedAppMiCuentaRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/obras/$obraId': {
-      id: '/_authenticated/app/obras/$obraId'
-      path: '/obras/$obraId'
-      fullPath: '/app/obras/$obraId'
-      preLoaderRoute: typeof AuthenticatedAppObrasObraIdRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/catalogos/trabajadores': {
-      id: '/_authenticated/app/catalogos/trabajadores'
-      path: '/trabajadores'
-      fullPath: '/app/catalogos/trabajadores'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosTrabajadoresRouteImport
-      parentRoute: typeof AuthenticatedAppCatalogosRoute
-    }
-    '/_authenticated/app/catalogos/subcontratistas': {
-      id: '/_authenticated/app/catalogos/subcontratistas'
-      path: '/subcontratistas'
-      fullPath: '/app/catalogos/subcontratistas'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosSubcontratistasRouteImport
-      parentRoute: typeof AuthenticatedAppCatalogosRoute
-    }
-    '/_authenticated/app/catalogos/proveedores': {
-      id: '/_authenticated/app/catalogos/proveedores'
-      path: '/proveedores'
-      fullPath: '/app/catalogos/proveedores'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosProveedoresRouteImport
-      parentRoute: typeof AuthenticatedAppCatalogosRoute
-    }
-    '/_authenticated/app/catalogos/insumos': {
-      id: '/_authenticated/app/catalogos/insumos'
-      path: '/insumos'
-      fullPath: '/app/catalogos/insumos'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosInsumosRouteImport
-      parentRoute: typeof AuthenticatedAppCatalogosRoute
-    }
-    '/_authenticated/app/catalogos/clientes': {
-      id: '/_authenticated/app/catalogos/clientes'
-      path: '/clientes'
-      fullPath: '/app/catalogos/clientes'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosClientesRouteImport
-      parentRoute: typeof AuthenticatedAppCatalogosRoute
-    }
-    '/_authenticated/app/admin/requisiciones': {
-      id: '/_authenticated/app/admin/requisiciones'
-      path: '/admin/requisiciones'
-      fullPath: '/app/admin/requisiciones'
-      preLoaderRoute: typeof AuthenticatedAppAdminRequisicionesRouteImport
+    '/_authenticated/app/notificaciones': {
+      id: '/_authenticated/app/notificaciones'
+      path: '/notificaciones'
+      fullPath: '/app/notificaciones'
+      preLoaderRoute: typeof AuthenticatedAppNotificacionesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/admin/$': {
@@ -564,25 +487,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminSplatRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/admin/requisiciones': {
+      id: '/_authenticated/app/admin/requisiciones'
+      path: '/admin/requisiciones'
+      fullPath: '/app/admin/requisiciones'
+      preLoaderRoute: typeof AuthenticatedAppAdminRequisicionesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/catalogos/': {
+      id: '/_authenticated/app/catalogos/'
+      path: '/'
+      fullPath: '/app/catalogos/'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosIndexRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/clientes': {
+      id: '/_authenticated/app/catalogos/clientes'
+      path: '/clientes'
+      fullPath: '/app/catalogos/clientes'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosClientesRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/insumos': {
+      id: '/_authenticated/app/catalogos/insumos'
+      path: '/insumos'
+      fullPath: '/app/catalogos/insumos'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosInsumosRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/proveedores': {
+      id: '/_authenticated/app/catalogos/proveedores'
+      path: '/proveedores'
+      fullPath: '/app/catalogos/proveedores'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosProveedoresRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/subcontratistas': {
+      id: '/_authenticated/app/catalogos/subcontratistas'
+      path: '/subcontratistas'
+      fullPath: '/app/catalogos/subcontratistas'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosSubcontratistasRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/catalogos/trabajadores': {
+      id: '/_authenticated/app/catalogos/trabajadores'
+      path: '/trabajadores'
+      fullPath: '/app/catalogos/trabajadores'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosTrabajadoresRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosRoute
+    }
+    '/_authenticated/app/obras/': {
+      id: '/_authenticated/app/obras/'
+      path: '/obras'
+      fullPath: '/app/obras/'
+      preLoaderRoute: typeof AuthenticatedAppObrasIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/obras/$obraId': {
+      id: '/_authenticated/app/obras/$obraId'
+      path: '/obras/$obraId'
+      fullPath: '/app/obras/$obraId'
+      preLoaderRoute: typeof AuthenticatedAppObrasObraIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/obras/nueva': {
+      id: '/_authenticated/app/obras/nueva'
+      path: '/obras/nueva'
+      fullPath: '/app/obras/nueva'
+      preLoaderRoute: typeof AuthenticatedAppObrasNuevaRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/hooks/devengar-rentas': {
+      id: '/api/public/hooks/devengar-rentas'
+      path: '/api/public/hooks/devengar-rentas'
+      fullPath: '/api/public/hooks/devengar-rentas'
+      preLoaderRoute: typeof ApiPublicHooksDevengarRentasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app/catalogos/clientes/$clienteId': {
+      id: '/_authenticated/app/catalogos/clientes/$clienteId'
+      path: '/$clienteId'
+      fullPath: '/app/catalogos/clientes/$clienteId'
+      preLoaderRoute: typeof AuthenticatedAppCatalogosClientesClienteIdRouteImport
+      parentRoute: typeof AuthenticatedAppCatalogosClientesRoute
+    }
     '/_authenticated/app/obras/$obraId/': {
       id: '/_authenticated/app/obras/$obraId/'
       path: '/'
       fullPath: '/app/obras/$obraId/'
       preLoaderRoute: typeof AuthenticatedAppObrasObraIdIndexRouteImport
-      parentRoute: typeof AuthenticatedAppObrasObraIdRoute
-    }
-    '/_authenticated/app/obras/$obraId/requisiciones': {
-      id: '/_authenticated/app/obras/$obraId/requisiciones'
-      path: '/requisiciones'
-      fullPath: '/app/obras/$obraId/requisiciones'
-      preLoaderRoute: typeof AuthenticatedAppObrasObraIdRequisicionesRouteImport
-      parentRoute: typeof AuthenticatedAppObrasObraIdRoute
-    }
-    '/_authenticated/app/obras/$obraId/configuracion': {
-      id: '/_authenticated/app/obras/$obraId/configuracion'
-      path: '/configuracion'
-      fullPath: '/app/obras/$obraId/configuracion'
-      preLoaderRoute: typeof AuthenticatedAppObrasObraIdConfiguracionRouteImport
       parentRoute: typeof AuthenticatedAppObrasObraIdRoute
     }
     '/_authenticated/app/obras/$obraId/$': {
@@ -592,12 +585,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppObrasObraIdSplatRouteImport
       parentRoute: typeof AuthenticatedAppObrasObraIdRoute
     }
-    '/_authenticated/app/catalogos/clientes/$clienteId': {
-      id: '/_authenticated/app/catalogos/clientes/$clienteId'
-      path: '/$clienteId'
-      fullPath: '/app/catalogos/clientes/$clienteId'
-      preLoaderRoute: typeof AuthenticatedAppCatalogosClientesClienteIdRouteImport
-      parentRoute: typeof AuthenticatedAppCatalogosClientesRoute
+    '/_authenticated/app/obras/$obraId/configuracion': {
+      id: '/_authenticated/app/obras/$obraId/configuracion'
+      path: '/configuracion'
+      fullPath: '/app/obras/$obraId/configuracion'
+      preLoaderRoute: typeof AuthenticatedAppObrasObraIdConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedAppObrasObraIdRoute
+    }
+    '/_authenticated/app/obras/$obraId/requisiciones': {
+      id: '/_authenticated/app/obras/$obraId/requisiciones'
+      path: '/requisiciones'
+      fullPath: '/app/obras/$obraId/requisiciones'
+      preLoaderRoute: typeof AuthenticatedAppObrasObraIdRequisicionesRouteImport
+      parentRoute: typeof AuthenticatedAppObrasObraIdRoute
     }
   }
 }
