@@ -36,7 +36,7 @@ const LABELS: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/_authenticated/app/obras/$obraId/$")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { destajo?: string } => ({
     destajo: typeof s.destajo === "string" ? s.destajo : undefined,
   }),
   component: ObraModule,
